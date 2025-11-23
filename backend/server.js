@@ -196,6 +196,8 @@ for (const item of data.data) {
 
   // الحالة جديدة؟ إذا نعم → حدث واحسب
   if (order.status !== mapped) {
+    await adjustStock(order.id, mapped);
+
     await update(ref(db, `orders/${order.id}`), { status: mapped });
     updateCount++;
   }
@@ -208,6 +210,104 @@ if (updateCount === 0) {
 
   } catch (err) {
     console.error("❌ Auto Update Error:", err);
+  }
+}
+// =======================================================
+// 🟢 دالة تحديث المخزون عند تغيير الحالة
+// =======================================================
+async function adjustStock(orderId, newStatus) {
+  try {
+    const snap = await get(ref(db, `orders/${orderId}`));
+    if (!snap.exists()) return;
+    const order = snap.val();
+
+    const products = [];
+
+    function addProduct(name, qty, variants) {
+      if (!name || qty <= 0) return;
+      const variantKey = variants && Object.keys(variants).length > 0
+        ? Object.entries(variants).map(([k, v]) => `${k} | ${v}`).join(" | ")
+        : "بدون متغير";
+      products.push({ name, qty, variants, variantKey });
+    }
+
+    // المنتج الرئيسي
+    addProduct(order.productName, Number(order.quantity), order.selectedVariants || {});
+
+    // المنتجات الإضافية
+    if (Array.isArray(order.extraProducts)) {
+      order.extraProducts.forEach(p => {
+        addProduct(p.name, Number(p.qty), p.selectedVariants || {});
+      });
+    }
+
+    // المنتجات التفصيلية
+    if (Array.isArray(order.productsDetailed)) {
+      order.productsDetailed.forEach(p => {
+        addProduct(p.name, Number(p.qty), p.variants || {});
+      });
+    }
+
+    for (const item of products) {
+      const { name, qty, variants, variantKey } = item;
+
+      const warehouseRef = ref(db, `warehouse/${name}`);
+      const warehouseSnap = await get(warehouseRef);
+      if (!warehouseSnap.exists()) continue;
+
+      const w = warehouseSnap.val();
+      const stock = w.stock || {};
+      const processed = w.processedOrders || {};
+
+      const variantId = variantKey.replace(/\s+/g, "_");
+      const unique = `${orderId}_${name}_${variantId}`;
+
+      let foundKey = null;
+      const variantValues = Object.values(variants).map(v => v.trim().toLowerCase());
+
+      for (const key of Object.keys(stock)) {
+        const kNorm = key.toLowerCase();
+        const matches = variantValues.filter(v => kNorm.includes(v)).length;
+        if (matches === variantValues.length && matches > 0) {
+          foundKey = key;
+          break;
+        }
+      }
+
+      // 🔽 الخصم
+      if (newStatus === "قيد التوصيل" && !processed[`deduct_${unique}`]) {
+        if (foundKey && stock[foundKey] !== undefined) {
+          stock[foundKey] -= qty;
+        } else if (stock["إجمالي الكمية"] !== undefined) {
+          stock["إجمالي الكمية"] -= qty;
+        }
+        processed[`deduct_${unique}`] = true;
+      }
+
+      // 🔼 الإرجاع
+      if (newStatus === "تم استلام الراجع" && processed[`deduct_${unique}`] && !processed[`return_${unique}`]) {
+        if (foundKey && stock[foundKey] !== undefined) {
+          stock[foundKey] += qty;
+        } else if (stock["إجمالي الكمية"] !== undefined) {
+          stock["إجمالي الكمية"] += qty;
+        }
+        processed[`return_${unique}`] = true;
+      }
+
+      // إعادة الحساب
+      let totalQty = 0;
+      for (const val of Object.values(stock)) totalQty += Number(val) || 0;
+
+      await update(warehouseRef, {
+        stock,
+        totalQty,
+        processedOrders: processed,
+        lastUpdate: new Date().toISOString()
+      });
+    }
+
+  } catch (err) {
+    console.error("❌ خطأ تعديل المخزون:", err);
   }
 }
 
@@ -236,6 +336,29 @@ cron.schedule("* * * * *", async () => {
   isUpdating = false;
 });
 
+
+// =======================================================
+// 🟢 8) API خارجي لتحديث المخزن من صفحة التفاصيل
+// =======================================================
+app.post("/api/update-stock-on-status", async (req, res) => {
+  try {
+    const { orderId, status } = req.body;
+
+    if (!orderId || !status) {
+      return res.json({ success: false, msg: "Missing data" });
+    }
+
+    console.log("🔥 API استلم طلب تحديث مخزن:", orderId, status);
+
+    await adjustStock(orderId, status);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in update-stock-on-status:", err);
+    res.json({ success: false, msg: "Server error" });
+  }
+});
 
 
 // =======================================================
