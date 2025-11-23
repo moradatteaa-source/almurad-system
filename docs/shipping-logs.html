@@ -426,17 +426,25 @@ function generateReceiptHTML(order, pageNumber) {
 <!-- السطر العلوي: شعار المراد + QR + شعار الوسيط -->
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0mm;">
 
-  <!-- شعار المراد مكبر -->
-  <img src="almurad-logo.png" style="width:20mm; height:auto;">
+  <!-- شعار المراد -->
+<img src="almurad-logo.png" style="width:20mm; height:auto; margin-top:-2mm;">
 
-  <!-- QR كود مكبر ومنزول -->
+  <!-- QR كود -->
+<div style="display:flex; justify-content:center; align-items:center; width:100%;">
   <img 
-    src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${order.receiptNum}" 
-    style="width:16mm; height:16mm; margin-top:3mm;"
+    src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${order.receiptNum}" 
+    style="width:20mm; height:20mm; margin-top:2mm;"
   >
+</div>
+
+
 
   <!-- شعار الوسيط -->
-  <img src="alwaseet-logo.png" style="width:15mm; height:auto;">
+  <div style="text-align:center;">
+    <img src="alwaseet-logo.png" style="width:15mm; height:auto;">
+    <div style="font-size:9px; margin-top:1mm; font-weight:bold;">KRK9</div>
+  </div>
+
 </div>
 
 <!-- رقم الوصل -->
@@ -456,7 +464,7 @@ function generateReceiptHTML(order, pageNumber) {
 
 <hr style="margin:2mm 0 1mm;">
 
-<!-- صندوقين بجانب بعض -->
+<!-- الصندوقين -->
 <div style="display:flex; gap:2mm; margin-top:0mm;">
 
   <div style="flex:1; border:1px solid #000; padding:2mm; border-radius:3px; font-size:10px;">
@@ -477,6 +485,18 @@ function generateReceiptHTML(order, pageNumber) {
 
 </div>
 
+<!-- 🔥🔥 مربع الملاحظات فوق الجدول -->
+<div style="
+  border:1px solid #000;
+  padding:2mm;
+  border-radius:3px;
+  margin-top:2mm;
+  font-size:10px;
+">
+  <b>ملاحظات:</b><br>
+  ${order.notes || "لا توجد"}
+</div>
+
 <!-- جدول المنتجات -->
 <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2mm;">
   <thead>
@@ -491,46 +511,30 @@ function generateReceiptHTML(order, pageNumber) {
 
   <tbody>
     ${
-    order.productsDetailed?.map((p, i)=>`
-  <tr>
-    <td style="border:1px solid #000; text-align:center;">${i+1}</td>
-    <td style="border:1px solid #000;">${p.name}</td>
-
-    <td style="border:1px solid #000;">
-      ${
-        p.variants
-          ? Object.entries(p.variants)
-              .map(([key, val]) => `${key}: ${val}`)
-              .join(" | ")
-          : ""
-      }
-    </td>
-
-    <td style="border:1px solid #000; text-align:center;">${p.qty}</td>
-    <td style="border:1px solid #000;">${p.price}</td>
-  </tr>
-`).join("")
-
+      order.productsDetailed?.map((p, i)=>`
+        <tr>
+          <td style="border:1px solid #000; text-align:center;">${i+1}</td>
+          <td style="border:1px solid #000;">${p.name}</td>
+          <td style="border:1px solid #000;">
+            ${p.variants ? Object.entries(p.variants).map(([k,v])=>`${k}: ${v}`).join(" | ") : ""}
+          </td>
+          <td style="border:1px solid #000; text-align:center;">${p.qty}</td>
+          <td style="border:1px solid #000;">${p.price}</td>
+        </tr>
+      `).join("")
     }
   </tbody>
 </table>
 
-<!-- رقم الصفحة أسفل الوصل -->
-<div style="
-  position:absolute;
-  bottom:2mm;
-  left:0;
-  right:0;
-  text-align:center;
-  font-size:11px;
-  font-weight:bold;
-">
+<!-- رقم الصفحة -->
+<div style="text-align:center; font-size:11px; margin-top:3mm;">
   ${pageNumber}
 </div>
 
 </div>
 `;
 }
+
 
 // ========== 1) تحويل HTML إلى PDF بدون html2canvas ==========
 async function generatePDF(html, fileName) {
