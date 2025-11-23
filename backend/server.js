@@ -13,7 +13,7 @@ import { getDatabase, ref, get, update } from "firebase/database";
 // ------------------------------
 // 🟦 وارد من deliveryService.js (اللازم فقط)
 // ------------------------------
-import { waseetStatusMap, loginToWaseet } from "../deliveryService.js";
+import { waseetStatusMap, loginToWaseet } from "../docs/deliveryService.js";
 
 
 // =======================================================
