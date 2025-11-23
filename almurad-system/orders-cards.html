@@ -170,10 +170,6 @@ body {
   }
 </style>
 
- <div class="menu-item" id="updateFromWaseet" style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
-  🔁 تحديث الطلبات
-</div>
-
 <div class="menu-item" id="sendToWaseet" style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
   📤 رفع الطلبات للشحن
 </div>
@@ -495,34 +491,14 @@ document.getElementById("ordersList").style.marginTop = "150px";
 <script type="module">
 import {
   sendOrdersToWaseet,
-  updateOrdersStatusFromWaseet,
   loginToWaseet
-} from "./deliveryService.js";
+} from "../deliveryService.js";
+
 
 document.getElementById("sendToWaseet").onclick = () => {
   window.location.href = "send-shipping.html";
 };
 
-
-
-// ⭐ زر: تحديث الحالات من الوسيط
-document.getElementById("updateFromWaseet").onclick = async () => {
-  const sentOrders = masterOrders.filter(o => o.receiptNum);
-
-  if (sentOrders.length === 0) {
-    alert("لا توجد طلبات مرتبطة بالوسيط.");
-    return;
-  }
-
-  alert("جاري جلب الحالات...");
-
-  const statuses = await updateOrdersStatusFromWaseet(sentOrders);
-
-  console.log(statuses);
-  alert("تم تحديث الحالات.");
-
-  location.reload();
-};
 
 
 document.getElementById("shippingLogs").onclick = () => {
@@ -829,4 +805,4 @@ document.getElementById("advSearch").oninput = () => {
 </script>
 
 </body>
-</html>
+</html> 
