@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سجلات الشحن</title>
+
+  <!-- خط تجوال -->
+  <style>
+    @font-face {
+      font-family: 'Tajawal';
+      src: url('Tajawal-Regular.ttf');
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+
+    /* هيدر ثابت */
+    header {
+      background: #043B64;
+      color: #fff;
+      padding: 14px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 9999;
+    }
+
+    .back-arrow {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .page {
+      padding: 90px 15px 20px;
+    }
+
+    /* كارت السجل */
+    .log-card {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 15px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      cursor: pointer;
+    }
+
+    .print-btn {
+      color: #5a3cff;
+      font-size: 15px;
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* كارت الطلب */
+    .order-card {
+      background: white;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      margin-bottom: 14px;
+    }
+
+    .status-success {
+      background: #d5ffd5;
+      color: #008000;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .status-fail {
+      background: #ffd2d2;
+      color: #b00000;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    /* صندوق ملخص الشحنة */
+    .summary-box {
+      background: #fff;
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid #ddd;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+
+    .label { font-size: 13px; color: #555; }
+    .value { font-size: 20px; font-weight: bold; }
+
+    .green { color: green; }
+    .red { color: red; }
+    .blue { color: #043B64; }
+@media print {
+  body {
+    width: 80mm;
+    height: 120mm;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@page {
+  size: 80mm 120mm;
+  margin: 0;
+}
+
+  </style>
+</head>
+
+<body>
+
+<header>
+<span id="mainBackArrow" class="back-arrow">❮</span>
+<span id="backBtn" class="back-arrow" style="display:none;">❮</span>
+  <span id="headerTitle">سجلات الشحن</span>
+</header>
+
+<!-- صفحة السجلات -->
+<div id="logsPage" class="page">
+  <div id="logsList">جاري التحميل...</div>
+</div>
+
+<!-- صفحة التفاصيل -->
+<div id="detailsPage" class="page" style="display:none;">
+  <div id="summaryBox"></div>
+  <h3 style="margin:5px 0 15px;">الطلبات</h3>
+  <div id="ordersList"></div>
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+});
+
+const db = getDatabase(app);
+
+const logsPage = document.getElementById("logsPage");
+const detailsPage = document.getElementById("detailsPage");
+const logsList = document.getElementById("logsList");
+const summaryBox = document.getElementById("summaryBox");
+const ordersList = document.getElementById("ordersList");
+
+const backBtn = document.getElementById("backBtn");
+const headerTitle = document.getElementById("headerTitle");
+
+
+// تحميل السجلات
+async function loadLogs() {
+  const snapshot = await get(ref(db, "shippingLogs"));
+  if (!snapshot.exists()) {
+    logsList.innerHTML = "لا توجد سجلات شحن";
+    return;
+  }
+
+  logsList.innerHTML = "";
+  const logs = snapshot.val();
+
+  Object.entries(logs)
+    .sort((a,b)=> b[0]-a[0])
+    .forEach(([logId, log]) => {
+
+     const card = document.createElement("div");
+card.className = "log-card";
+
+card.innerHTML = `
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+      
+      <!-- التاريخ يسار أعلى -->
+      <div style="font-size:13px; color:#555;">
+        ${new Date(log.createdAt).toLocaleString()}
+      </div>
+
+      <!-- اسم الشركة -->
+      <div style="font-size:17px; font-weight:bold; color:#043B64;">
+        ${log.provider}
+      </div>
+  </div>
+
+  <!-- عدد الطلبات -->
+  <div style="margin-top:6px; font-size:14px; color:#333; text-align:right;">
+      إجمالي الطلبات: ${log.total}
+  </div>
+
+  <!-- تم الرفع بواسطة -->
+  <div style="margin-top:3px; font-size:13px; color:#777; text-align:right;">
+تم الرفع بواسطة: ${log.uploadedBy || "غير محدد"}
+  </div>
+
+  <!-- خط فاصل صغير -->
+  <div style="margin:10px 0; height:1px; background:#eee;"></div>
+
+  <!-- الأسفل: زر التفاصيل يسار + طباعة يمين -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+
+      <!-- عرض التفاصيل -->
+      <div style="color:#0066ff; font-size:15px; cursor:pointer;">
+        <span style="font-size:18px;">❯</span> عرض التفاصيل
+      </div>
+
+      <!-- زر الطباعة -->
+   <div onclick="event.stopPropagation(); printInvoice('${logId}')"
+     style="color:#5a3cff; font-size:15px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+  طباعة <span style="font-size:18px;">🖨️</span>
+</div>
+
+
+  </div>
+`;
+
+
+      card.onclick = (e) => {
+        if (e.target.classList.contains("print-btn")) return;
+        openDetails(logId, log);
+      };
+
+      logsList.appendChild(card);
+    });
+}
+
+loadLogs();
+
+
+// فتح التفاصيل
+async function openDetails(id, log) {
+  logsPage.style.display = "none";
+  detailsPage.style.display = "block";
+
+  backBtn.style.display = "block";
+  headerTitle.textContent = "تفاصيل سجل الشحنة";
+
+ summaryBox.innerHTML = `
+  <div class="summary-box">
+
+    <div style="font-size:17px; font-weight:bold;">${log.provider}</div>
+
+    <!-- معرف الشحنة -->
+    <div style="margin-top:6px; font-size:14px; color:#043B64;">
+      معرف الشحنة: ${id}
+    </div>
+
+    <!-- تم الرفع بواسطة -->
+    <div style="margin-top:4px; font-size:13px; color:#777;">
+تم الرفع بواسطة: ${log.uploadedBy || "غير محدد"}
+    </div>
+
+    <div style="color:#555; margin-top:6px;">
+      ${new Date(log.createdAt).toLocaleString()}
+    </div>
+
+    <div class="summary-row">
+      <div>
+        <div class="value blue">${log.total}</div>
+        <div class="label">إجمالي</div>
+      </div>
+      <div>
+        <div class="value green">${log.successCount}</div>
+        <div class="label">نجح</div>
+      </div>
+      <div>
+        <div class="value red">${log.failCount}</div>
+        <div class="label">فشل</div>
+      </div>
+    </div>
+
+  </div>
+`;
+
+
+  const snapshot = await get(ref(db, `shippingLogs/${id}/orders`));
+  const data = snapshot.exists() ? snapshot.val() : {};
+
+  ordersList.innerHTML = "";
+
+Object.values(data).forEach(order => {
+
+  const card = document.createElement("div");
+  card.className = "order-card";
+  card.style.position = "relative";
+  card.style.padding = "16px 14px 45px";
+  card.style.borderRadius = "14px";
+
+
+  // 🔶 طلب رقم (#) أعلى الكارت بلون برتقالي
+  const orderNumberHTML = `
+    <div style="
+      font-size:17px;
+      font-weight:bold;
+      color:#FF6B2D;
+      margin-bottom:8px;
+    ">
+      طلب #${order.orderId}
+    </div>
+  `;
+
+
+  // الحالة (نجح / فشل)
+  const statusBadge = order.status === "success"
+    ? `<div style="
+        background:#d5ffd5;
+        color:#008000;
+        padding:4px 14px;
+        border-radius:20px;
+        font-size:13px;
+        font-weight:bold;
+        position:absolute;
+        top:14px;
+        left:14px;
+      ">نجح</div>`
+    : `<div style="
+        background:#ffd2d2;
+        color:#b00000;
+        padding:4px 14px;
+        border-radius:20px;
+        font-size:13px;
+        font-weight:bold;
+        position:absolute;
+        top:14px;
+        left:14px;
+      ">فشل</div>`;
+
+const printBtn = order.status === "success" ? `
+  <div onclick="event.stopPropagation(); printSingleOrder('${order.orderId}')" 
+       style="
+         position:absolute;
+         bottom:10px;
+         left:14px;
+         color:#5a3cff;
+         display:flex;
+         align-items:center;
+         gap:6px;
+         font-size:15px;
+         cursor:pointer;
+       ">
+    <span style="font-size:18px;">🖨️</span>
+    <span>طباعة</span>
+  </div>
+` : "";
+
+
+
+  // السبب فقط إذا فشل
+  const reasonHTML = order.status === "fail" && order.reason
+    ? `<div style="margin-top:6px; color:#b00000; font-size:14px;">السبب: ${order.reason}</div>`
+    : "";
+
+
+  // محتوى الكارت
+  card.innerHTML = `
+    ${orderNumberHTML}
+    ${statusBadge}
+    ${order.receiptNum ? `<div style="font-size:14px; color:#444;">التتبع: ${order.receiptNum}</div>` : ""}
+    ${reasonHTML}
+    ${printBtn}
+  `;
+
+  ordersList.appendChild(card);
+});
+
+
+
+}
+
+
+// زر الرجوع
+backBtn.onclick = () => {
+  detailsPage.style.display = "none";
+  logsPage.style.display = "block";
+
+  backBtn.style.display = "none";
+  headerTitle.textContent = "سجلات الشحن";
+};
+
+document.getElementById("mainBackArrow").onclick = () => {
+  window.location.href = "send-shipping.html";
+};
+function generateReceiptHTML(order, pageNumber) {
+  return `
+<div style="width:80mm; min-height:120mm; padding:2mm; box-sizing:border-box; font-family:'Tajawal', sans-serif;">
+
+<!-- السطر العلوي: شعار المراد + QR + شعار الوسيط -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0mm;">
+
+  <!-- شعار المراد مكبر -->
+  <img src="almurad-logo.png" style="width:20mm; height:auto;">
+
+  <!-- QR كود مكبر ومنزول -->
+  <img 
+    src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${order.receiptNum}" 
+    style="width:16mm; height:16mm; margin-top:3mm;"
+  >
+
+  <!-- شعار الوسيط -->
+  <img src="alwaseet-logo.png" style="width:15mm; height:auto;">
+</div>
+
+<!-- رقم الوصل -->
+<div style="
+  text-align:center; 
+  font-size:11px; 
+  margin-top:3mm; 
+  font-weight:bold;">
+  رقم الوصل: ${order.receiptNum || "--"}
+</div>
+
+<!-- التاريخ + رقم الطلب -->
+<div style="display:flex; justify-content:space-between; margin-top:0mm; font-size:11px;">
+  <div>التاريخ: ${new Date().toLocaleDateString()}</div>
+  <div>طلب رقم: ${order.id}</div>
+</div>
+
+<hr style="margin:2mm 0 1mm;">
+
+<!-- صندوقين بجانب بعض -->
+<div style="display:flex; gap:2mm; margin-top:0mm;">
+
+  <div style="flex:1; border:1px solid #000; padding:2mm; border-radius:3px; font-size:10px;">
+    <b>تفاصيل الطلب</b><br>
+    مجموع السعر: ${order.totalPrice} د.ع<br>
+    عدد القطع: ${order.totalQty}<br>
+    نوع البضاعة: ${order.totalProducts}
+  </div>
+
+  <div style="flex:1; border:1px solid #000; padding:2mm; border-radius:3px; font-size:10px;">
+    <b>عنوان الشحن</b><br>
+    الشركة: AL-MURAD<br>
+    المحافظة: ${order.city || ""}<br>
+    المنطقة: ${order.area || ""}<br>
+    أقرب نقطة: ${order.address || ""}<br>
+    اسم الزبون: ${order.advertiser || ""}
+  </div>
+
+</div>
+
+<!-- جدول المنتجات -->
+<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2mm;">
+  <thead>
+    <tr style="border-top:1px solid #000;">
+      <th style="border:1px solid #000;">#</th>
+      <th style="border:1px solid #000;">المنتج</th>
+      <th style="border:1px solid #000;">المتغير</th>
+      <th style="border:1px solid #000;">الكمية</th>
+      <th style="border:1px solid #000;">السعر</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    ${
+    order.productsDetailed?.map((p, i)=>`
+  <tr>
+    <td style="border:1px solid #000; text-align:center;">${i+1}</td>
+    <td style="border:1px solid #000;">${p.name}</td>
+
+    <td style="border:1px solid #000;">
+      ${
+        p.variants
+          ? Object.entries(p.variants)
+              .map(([key, val]) => `${key}: ${val}`)
+              .join(" | ")
+          : ""
+      }
+    </td>
+
+    <td style="border:1px solid #000; text-align:center;">${p.qty}</td>
+    <td style="border:1px solid #000;">${p.price}</td>
+  </tr>
+`).join("")
+
+    }
+  </tbody>
+</table>
+
+<!-- رقم الصفحة أسفل الوصل -->
+<div style="
+  position:absolute;
+  bottom:2mm;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:11px;
+  font-weight:bold;
+">
+  ${pageNumber}
+</div>
+
+</div>
+`;
+}
+
+// ========== 1) تحويل HTML إلى PDF بدون html2canvas ==========
+async function generatePDF(html, fileName) {
+  const { jsPDF } = window.jspdf;
+
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [80, 120],
+  });
+
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  temp.style.width = "80mm";
+  temp.style.position = "absolute";
+  temp.style.left = "-9999px";
+  document.body.appendChild(temp);
+
+  // تحويل الصفحة كلها إلى صورة بدقة عالية
+  const canvas = await html2canvas(temp, {
+    scale: 4,
+    useCORS: true,
+    backgroundColor: "#ffffff"
+  });
+
+  const img = canvas.toDataURL("image/png");
+
+  pdf.addImage(img, "PNG", 0, 0, 80, 120);
+
+  document.body.removeChild(temp);
+
+  const blob = pdf.output("blob");
+  const pdfFile = new File([blob], fileName, { type: "application/pdf" });
+
+  if (navigator.share) {
+    await navigator.share({
+      title: fileName,
+      files: [pdfFile]
+    });
+  } else {
+    const url = URL.createObjectURL(pdfFile);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+  }
+}
+
+
+
+// ========== 2) طباعة وصل واحد ==========
+window.printSingleOrder = async function (orderId) {
+  const snap = await get(ref(db, "orders/" + orderId));
+  if (!snap.exists()) {
+    alert("الطلب غير موجود");
+    return;
+  }
+
+  const order = snap.val();
+  order.id = orderId;
+  order.totalPrice = order.totalPrice || 0;
+  order.totalQty = order.totalQty || 0;
+  order.totalProducts = order.totalProducts || "";
+  order.productsDetailed = order.productsDetailed || [];
+  order.receiptNum = order.receiptNum || "";
+
+  const html = generateReceiptHTML(order, 1);
+
+  await generatePDF(html, `order_${orderId}.pdf`);
+};
+
+
+
+// ========== 3) طباعة كل الطلبات في سجل واحد ==========
+window.printInvoice = async function (logId) {
+  const snap = await get(ref(db, "shippingLogs/" + logId + "/orders"));
+  if (!snap.exists()) return alert("لا توجد طلبات للطباعة");
+
+  const orders = Object.values(snap.val()).filter(o => o.status === "success");
+  if (orders.length === 0) return alert("لا توجد طلبات ناجحة");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [80, 120],
+  });
+
+  let firstPage = true;
+  let pageNum = 1;
+
+  for (const o of orders) {
+
+    const orderSnap = await get(ref(db, "orders/" + o.orderId));
+    if (!orderSnap.exists()) continue;
+
+    const order = orderSnap.val();
+    order.id = o.orderId;
+    order.receiptNum = o.receiptNum || "";
+    order.totalPrice = order.totalPrice || 0;
+    order.totalQty = order.totalQty || 0;
+    order.totalProducts = order.totalProducts || "";
+    order.productsDetailed = order.productsDetailed || [];
+
+    const html = generateReceiptHTML(order, pageNum);
+
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    temp.style.width = "80mm";
+    temp.style.position = "absolute";
+    temp.style.left = "-9999px";
+    document.body.appendChild(temp);
+
+    const canvas = await html2canvas(temp, {
+      scale: 4,
+      useCORS: true,
+      backgroundColor: "#ffffff"
+    });
+
+    const img = canvas.toDataURL("image/png");
+
+    if (!firstPage) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(img, "PNG", 0, 0, 80, 120);
+
+    firstPage = false;
+    pageNum++;
+
+    document.body.removeChild(temp);
+  }
+
+  // الإخراج النهائي
+  const blob = pdf.output("blob");
+  const file = new File([blob], `invoice_${logId}.pdf`, { type: "application/pdf" });
+
+  if (navigator.share) {
+    await navigator.share({
+      title: `invoice_${logId}`,
+      files: [file]
+    });
+  } else {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoice_${logId}.pdf`;
+    link.click();
+  }
+};
+
+
+
+
+</script>
+<!-- 🧾 منطقة الطباعة بالنسبة للوصل -->
+<div id="printArea" style="display:none;"></div>
+
+</body>
+</html>

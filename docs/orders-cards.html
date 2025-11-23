@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الطلبات</title>
+
+<style>
+  #searchIcon {
+  stroke: #FF6B2D80; /* برتقالي خفيف */
+}
+
+.header-fixed {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 9999;
+  background: #043B64;
+  color: white;
+  padding: 14px;
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* سهم الرجوع */
+.back-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* حتى لا تتغطى الطلبات */
+body {
+  padding-top: 60px !important;
+}
+
+  /* ▼ تحميل خط Tajawal المحلي ▼ */
+  @font-face {
+    font-family: 'Tajawal';
+    src: url('Tajawal-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  body {
+    font-family: 'Tajawal', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f4f4f4;
+  }
+
+  .order-card {
+    background: #fff;
+    margin: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    cursor: pointer;
+  }
+
+  /* ▼ يمين الكارت — المنتج + رقم الطلب + التاريخ ▼ */
+  .right-side {
+    text-align: right;
+  }
+
+  .date {
+    font-size: 11px;
+    color: #777;
+    opacity: 0.8;
+    margin-bottom: 4px;
+    font-weight: normal !important;
+  }
+
+  .order-id {
+    font-size: 12px;
+    color: #222;
+    font-weight: normal !important;
+  }
+
+.product-name {
+    color: #FF6B2D;
+    font-size: 12px;   /* 🔥 صغرنا الخط */
+    font-weight: bold;
+    margin-top: 3px;
+}
+
+
+  /* ▼ يسار الكارت — العدد + السعر + المعلن ▼ */
+  .left-side {
+    text-align: left;
+  }
+
+  .qty {
+    font-size: 12px;
+    color: #333;
+    font-weight: normal !important;
+  }
+
+  .price {
+    font-size: 13px;
+    color: #000;
+    font-weight: normal !important;
+    margin-top: 4px;
+  }
+
+  .advertiser {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    font-weight: normal !important;
+  }
+
+  .line {
+    height: 1px;
+    background: #ddd;
+    margin: 6px 0 0 0;
+  }
+#ordersList { margin-top: 0; transition: 0.2s; }
+
+</style>
+
+</head>
+
+<body>
+
+<h2 id="pageTitle" class="header-fixed">
+  <span id="backBtn" class="back-arrow">❮</span>
+  <span id="titleText">الطلبات</span>
+<!-- 1️⃣ ثلاث نقاط -->
+<span id="menuIcon" style="
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:22px;
+  cursor:pointer;
+">⋮</span>
+<!-- ▼▼▼ القائمة الخاصة بالوسيط ▼▼▼ -->
+<div id="menuDropdown" style="
+    display:none;
+    position:absolute;
+    left:10px;
+    top:60px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.2);
+    z-index:99999;
+    width:180px;
+  
+">
+<style>
+  #menuDropdown .menu-item {
+    color: #043B64 !important;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  #menuDropdown .menu-item:hover {
+    background: #f2f2f2;
+  }
+</style>
+
+<div class="menu-item" id="sendToWaseet" style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+  📤 رفع الطلبات للشحن
+</div>
+
+<div class="menu-item" id="shippingLogs" style="padding:10px; cursor:pointer;">
+  📦 سجل الشحنات
+</div>
+
+
+</div>
+<!-- ▲▲▲ نهاية القائمة ▲▲▲ -->
+
+<!-- 2️⃣ البحث (SVG) -->
+<svg id="searchIcon" xmlns="http://www.w3.org/2000/svg"
+  width="20" height="20" viewBox="0 0 24 24"
+  fill="none" stroke="#FF6B2D" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"
+  style="cursor:pointer; position:absolute; left:45px; top:50%; transform:translateY(-50%);">
+  <circle cx="11" cy="11" r="8"></circle>
+  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+</svg>
+
+
+<!-- 3️⃣ الفلترة — SVG احترافي -->
+<svg id="filterIcon" xmlns="http://www.w3.org/2000/svg" 
+  width="20" height="20" viewBox="0 0 24 24" 
+  fill="none"stroke="#FF6B2D" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"
+  style="cursor:pointer; position:absolute; left:75px; top:50%; transform:translateY(-50%);">
+  <polygon points="3 4 21 4 14 12 14 20 10 20 10 12 3 4"></polygon>
+</svg>
+
+</h2>
+
+<!-- ⭐ صندوق الفلترة الجديد الاحترافي -->
+<div id="filterBoxContainer" style="
+  display:none;
+  position:fixed;
+  top:60px;
+  right:0;
+  left:0;
+  background:white;
+  padding:12px;
+  z-index:9999;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
+  border-radius:0 0 10px 10px;
+">
+
+  <!-- ▸ تصفية حسب المنتج -->
+  <div class="acc-header" id="accProdHeader"
+       style="padding:10px; background:#f5f5f5; border-radius:8px; cursor:pointer; font-weight:bold; color:#043B64;">
+    تصفية حسب المنتج ▸
+  </div>
+
+  <div id="accProdBody" style="display:none; padding:10px;">
+    
+    <!-- 🔍 بحث داخل المنتجات -->
+    <input id="prodSearch" type="text" placeholder="بحث عن منتج..."
+           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;">
+
+    <!-- ✔ تحديد الكل -->
+    <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:14px;">
+      <input type="checkbox" id="prodSelectAll"> تحديد الكل
+    </label>
+
+    <!-- قائمة المنتجات -->
+    <div id="prodList" style="max-height:180px; overflow-y:auto; border:1px solid #ddd; padding:8px; border-radius:8px;"></div>
+  </div>
+
+
+  <!-- ▸ تصفية حسب المعلن -->
+  <div class="acc-header" id="accAdvHeader"
+       style="padding:10px; background:#f5f5f5; border-radius:8px; cursor:pointer; font-weight:bold; color:#043B64; margin-top:10px;">
+    تصفية حسب المعلن ▸
+  </div>
+
+  <div id="accAdvBody" style="display:none; padding:10px;">
+    
+    <!-- 🔍 بحث داخل المعلنين -->
+    <input id="advSearch" type="text" placeholder="بحث عن معلن..."
+           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;">
+
+    <!-- ✔ تحديد الكل -->
+    <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:14px;">
+      <input type="checkbox" id="advSelectAll"> تحديد الكل
+    </label>
+
+    <!-- قائمة المعلنين -->
+    <div id="advList" style="max-height:180px; overflow-y:auto; border:1px solid #ddd; padding:8px; border-radius:8px;"></div>
+  </div>
+
+  <!-- زر تطبيق -->
+  <button id="applyFilter" style="
+    width:100%; padding:10px; margin-top:10px;
+    background:#043B64; color:white; border:none; border-radius:8px;
+    font-size:15px; cursor:pointer;">
+    تطبيق الفلترة
+  </button>
+
+</div>
+
+
+</div>
+
+<div id="searchBoxContainer" style="
+  display:none;
+  position:fixed;
+  top:60px;
+  right:0;
+  left:0;
+  background:white;
+  padding:10px;
+  z-index:9999;
+  box-shadow:0 2px 5px rgba(0,0,0,0.2);
+">
+
+  <!-- السطر الأول: خانة البحث -->
+  <input id="searchInput" type="text" placeholder="اكتب للبحث..."
+    style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc;
+           border-radius:8px; font-size:15px; margin-bottom:10px;">
+
+  <!-- السطر الثاني: الأزرار -->
+  <div style="display:flex; gap:10px; justify-content:flex-start;">
+    <button id="doSearch" style="
+      flex:1;
+      padding:10px; background:#043B64; color:white; border:none;
+      border-radius:8px; font-size:14px; cursor:pointer;">
+      بحث
+    </button>
+
+    <button id="cancelSearch" style="
+      flex:1;
+      padding:10px; background:#999; color:white; border:none;
+      border-radius:8px; font-size:14px; cursor:pointer;">
+      إلغاء
+    </button>
+  </div>
+
+</div>
+
+
+</h2>
+
+<div id="ordersList"></div>
+
+<script type="module">
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getDatabase, ref, onValue }
+    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+    authDomain: "almurad-system.firebaseapp.com",
+    databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+    projectId: "almurad-system",
+    storageBucket: "almurad-system.appspot.com",
+    messagingSenderId: "911755824405",
+    appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const ordersRef = ref(db, "orders");
+
+  const ordersList = document.getElementById("ordersList");
+
+  function formatPrice(num) {
+    return Number(num).toLocaleString("en-US");
+  }
+
+  function formatDateOnly(full) {
+    if (!full) return "";
+    return full.split("T")[0];
+  }
+
+  onValue(ordersRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      ordersList.innerHTML = "<p style='text-align:center'>لا توجد طلبات</p>";
+      return;
+    }
+allOrdersList = [];
+originalOrders = [];
+masterOrders = [];
+
+    const data = snapshot.val();
+    allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+
+const orders = Object.entries(data)
+  .map(([id, o]) => ({ id, ...o }))
+.filter(o => {
+  const st = (o.status || "").trim();
+
+// 🟦 الحالات المعروفة
+const knownStatuses = [
+  "مثبت",
+  "قيد المعالجة",
+  "قيد التجهيز",
+  "قيد التوصيل",
+  "تم التسليم",
+  "راجع",
+  "تم استلام الراجع",
+  "رفض",
+  "بانتظار البضاعة"
+];
+
+// 🟣 عرض الحالات الأخرى
+if (filterStatus === "حالات أخرى") {
+  return st !== "" && !knownStatuses.includes(st);
+}
+
+
+  // 🟢 الفلترة العادية
+ if (!filterStatus || filterStatus === "undefined") {
+  return st === "" || st === " ";
+}
+
+return st === filterStatus;
+
+})
+  .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+masterOrders = [...orders];     // الأصلية ثابتة دائماً
+// ⭐ تعبئة قائمة المنتجات
+const prodList = document.getElementById("prodList");
+prodList.innerHTML = "";
+
+const uniqueProducts = [...new Set(masterOrders.map(o => o.productName).filter(Boolean))];
+
+uniqueProducts.forEach(p => {
+  const lbl = document.createElement("label");
+  lbl.style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;";
+  lbl.innerHTML = `
+    <input type="checkbox" class="prodCheck" value="${p}">
+    <span>${p}</span>
+  `;
+  prodList.appendChild(lbl);
+});
+
+// ⭐ تعبئة قائمة المعلنين
+const advList = document.getElementById("advList");
+advList.innerHTML = "";
+
+const uniqueAdvertisers = [...new Set(masterOrders.map(o => o.advertiser).filter(Boolean))];
+
+uniqueAdvertisers.forEach(a => {
+  const lbl = document.createElement("label");
+  lbl.style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;";
+  lbl.innerHTML = `
+    <input type="checkbox" class="advCheck" value="${a}">
+    <span>${a}</span>
+  `;
+  advList.appendChild(lbl);
+});
+
+const savedFilterActive = localStorage.getItem("filterActive") === "1";
+const savedProducts = JSON.parse(localStorage.getItem("filterProducts") || "[]");
+const savedAdvertisers = JSON.parse(localStorage.getItem("filterAdvertisers") || "[]");
+
+let finalOrders = [...orders];
+
+if (savedFilterActive) {
+
+  // فلترة منتجات
+  if (savedProducts.length > 0) {
+    finalOrders = finalOrders.filter(o => savedProducts.includes(o.productName));
+  }
+
+  // فلترة معلنين
+  if (savedAdvertisers.length > 0) {
+    finalOrders = finalOrders.filter(o => savedAdvertisers.includes(o.advertiser));
+  }
+
+  // لون الزر
+  document.getElementById("filterIcon").style.stroke = "#FF6B2D";
+
+} else {
+  // إذا الفلترة مطفية → لازم نرجع اللون الطبيعي
+  document.getElementById("filterIcon").style.stroke = "#FF6B2D80";
+}
+
+// بعد تحديد القائمة النهائية:
+renderOrders(finalOrders);
+allOrdersList = [...finalOrders];
+originalOrders = [...finalOrders];
+
+
+
+    // ⭐ استعادة بحث محفوظ
+const activeSearch = localStorage.getItem("activeSearch");
+const savedQuery = localStorage.getItem("searchQuery");
+
+if (activeSearch === "1" && savedQuery) {
+  document.getElementById("searchInput").value = savedQuery;
+  document.getElementById("searchIcon").style.stroke = "#FF6B2D";
+  document.getElementById("searchIcon").dataset.activeSearch = "1";
+
+  const q = savedQuery.toLowerCase();
+  const filtered = allOrdersList.filter(o => {
+    const id = String(o.id || "").toLowerCase();
+    const receipt = String(o.receiptNum || "").toLowerCase();
+    const p1 = String(o.phone1 || "").toLowerCase();
+    const p2 = String(o.phone2 || "").toLowerCase();
+    return id.includes(q) || receipt.includes(q) || p1.includes(q) || p2.includes(q);
+  });
+
+originalOrders = [...filtered];
+allOrdersList = [...filtered];
+
+renderOrders(filtered);
+
+// حتى ما ترجع القائمة الأصلية بعد onValue جديد
+document.getElementById("ordersList").style.marginTop = "150px";
+
+}
+
+  });
+  
+</script>
+<script type="module">
+import {
+  sendOrdersToWaseet,
+  loginToWaseet
+} from "../deliveryService.js";
+
+
+document.getElementById("sendToWaseet").onclick = () => {
+  window.location.href = "send-shipping.html";
+};
+
+
+
+document.getElementById("shippingLogs").onclick = () => {
+  localStorage.setItem("logsSource", "orders");
+  window.location.href = "shipping-logs.html";
+};
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // ⭐ استعادة التمرير من صفحة التفاصيل
+  const savedScroll = parseInt(localStorage.getItem("restoreAfterFirebase")) || 0;
+  if (savedScroll > 0) {
+    setTimeout(() => window.scrollTo(0, savedScroll), 300);
+  }
+
+  // ⭐ قراءة الحالة من الرابط أو من localStorage
+  const params = new URLSearchParams(window.location.search);
+  let status = params.get("status");
+    // ⭐ استعادة حالة البحث السابقة
+  const active = localStorage.getItem("activeSearch");
+  const savedQuery = localStorage.getItem("searchQuery");
+
+
+  const savedStatus = localStorage.getItem("currentFilterStatus");
+
+  // إذا ماكو status بالرابط استرجعه من التخزين
+  if ((!status || status === "undefined") && savedStatus) {
+    status = savedStatus;
+    params.set("status", status);
+    window.history.replaceState({}, "", `${location.pathname}?${params.toString()}`);
+  }
+
+  // ⭐ تغيير عنوان الصفحة حسب الحالة
+  const titleEl = document.getElementById("titleText");
+  titleEl.textContent = !status ? "الطلبات – جديدة" : "الطلبات – " + status;
+
+  // ⭐ زر الرجوع
+  document.getElementById("backBtn").addEventListener("click", () => {
+    window.location.href = "dashboard.html";
+  });
+
+  // ⭐ استقبال التمرير من صفحة التفاصيل
+  window.addEventListener("message", (event) => {
+    if (event.data === "closeDetails") {
+      localStorage.setItem("restoreAfterFirebase", window.scrollY);
+    }
+  });
+
+});
+</script>
+
+<script>
+// ⭐ متغيرات عامة
+let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
+let originalOrders = [];  // تتغير عند الفلترة والبحث
+let allOrdersList = [];   // قائمة العمل حالياً
+
+const params = new URLSearchParams(window.location.search);
+let filterStatus = params.get("status") || "";
+localStorage.setItem("currentFilterStatus", filterStatus);
+let filterActive = localStorage.getItem("filterActive") === "1";
+
+
+// ⭐ دالة عرض الطلبات
+function renderOrders(list) {
+  allOrdersList = list;
+  originalOrders = list;
+
+  const ordersList = document.getElementById("ordersList");
+  ordersList.innerHTML = "";
+
+  list.forEach((o) => {
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.setAttribute("data-id", o.id);
+
+    card.innerHTML = `
+      <div class="right-side">
+        <div class="date">${(o.orderDate || "").split("T")[0]}</div>
+        <div class="order-id">#${o.id}</div>
+<div class="product-name">${o.totalProducts || o.productName || "-"}</div>
+      </div>
+      <div class="left-side">
+<div class="qty">${o.totalQty || o.quantity || 1}</div>
+<div class="price">${Number(o.totalPrice || o.price || 0).toLocaleString("en-US")} د.ع</div>
+        <div class="advertiser">${o.advertiser || ""}</div>
+      </div>
+    `;
+
+    card.onclick = () => {
+      localStorage.setItem("selectedOrder", o.id);
+      localStorage.setItem("previousScrollPosition", window.scrollY);
+      localStorage.setItem("currentFilterStatus", filterStatus);
+      window.location.href = "order-details.html";
+    };
+
+    ordersList.appendChild(card);
+
+    const line = document.createElement("div");
+    line.className = "line";
+    ordersList.appendChild(line);
+  });
+}
+// ⭐ فتح وإغلاق قائمة الوسيط (⋮)
+document.getElementById("menuIcon").onclick = () => {
+  const box = document.getElementById("menuDropdown");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+};
+
+// إغلاق القائمة عند الضغط خارجها
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#menuIcon") && !e.target.closest("#menuDropdown")) {
+    document.getElementById("menuDropdown").style.display = "none";
+  }
+});
+
+// ⭐ فتح البحث
+document.getElementById("searchIcon").onclick = () => {
+
+  const icon = document.getElementById("searchIcon");
+
+  // ⭐ إذا البحث مفعل → إلغاء البحث
+  if (icon.dataset.activeSearch === "1") {
+
+    // مسح حالة البحث
+    icon.dataset.activeSearch = "0";
+
+    // إرجاع اللون الطبيعي
+    icon.style.stroke = "#FF6B2D80"; // لون خفيف
+    document.getElementById("searchInput").value = "";
+
+    // إعادة القائمة الأصلية
+renderOrders(masterOrders);
+originalOrders = [...masterOrders];
+allOrdersList = [...masterOrders];
+
+    return;
+  }
+
+  // ⭐ فتح صندوق البحث إذا ماكو بحث فعال
+  document.getElementById("searchBoxContainer").style.display = "block";
+document.getElementById("ordersList").style.marginTop = "150px";
+
+  document.getElementById("searchInput").focus();
+};
+
+
+// ⭐ إلغاء البحث
+document.getElementById("cancelSearch").onclick = () => {
+  localStorage.removeItem("activeSearch");
+localStorage.removeItem("searchQuery");
+
+  document.getElementById("searchInput").value = "";
+  document.getElementById("searchBoxContainer").style.display = "none";
+renderOrders(masterOrders);
+originalOrders = [...masterOrders];
+allOrdersList = [...masterOrders];
+document.getElementById("ordersList").style.marginTop = "0";
+
+};
+
+
+// ⭐ تنفيذ البحث
+document.getElementById("doSearch").onclick = () => {
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+localStorage.setItem("activeSearch", "1");
+localStorage.setItem("searchQuery", q);
+
+  // إذا الحقل فارغ → لا تصفر القائمة ولا تسوي فلترة
+  if (q === "") {
+    document.getElementById("searchBoxContainer").style.display = "none";
+    return;  // 👍 يبقى العرض كما هو
+  }
+
+  // فلترة الطلبات
+  const filtered = allOrdersList.filter(o => {
+    const id = String(o.id || "").toLowerCase();
+    const receipt = String(o.receiptNum || "").toLowerCase();
+    const p1 = String(o.phone1 || "").toLowerCase();
+    const p2 = String(o.phone2 || "").toLowerCase();
+
+    return id.includes(q) || receipt.includes(q) || p1.includes(q) || p2.includes(q);
+  });
+
+  renderOrders(filtered);
+  // ⭐ تفعيل حالة البحث (تلون العدسة)
+document.getElementById("searchIcon").style.stroke = "#FF6B2D";
+document.getElementById("searchIcon").dataset.activeSearch = "1";
+document.getElementById("ordersList").style.marginTop = "150px";
+
+};
+// ⭐ نظام فتح/غلق الأكوردين
+document.getElementById("accProdHeader").onclick = () => {
+  const body = document.getElementById("accProdBody");
+  body.style.display = body.style.display === "none" ? "block" : "none";
+};
+
+document.getElementById("accAdvHeader").onclick = () => {
+  const body = document.getElementById("accAdvBody");
+  body.style.display = body.style.display === "none" ? "block" : "none";
+};
+
+// ⭐ فتح/إلغاء الفلترة من الأيقونة
+document.getElementById("filterIcon").onclick = () => {
+  const box = document.getElementById("filterBoxContainer");
+
+ if (filterActive) {
+    filterActive = false;
+
+    // مسح التخزين ← هذا أهم سطر
+    localStorage.removeItem("filterActive");
+    localStorage.removeItem("filterProducts");
+    localStorage.removeItem("filterAdvertisers");
+
+    // إرجاع اللون الأصلي
+    document.getElementById("filterIcon").style.stroke = "#FF6B2D80";
+
+    renderOrders(masterOrders);
+    allOrdersList = [...masterOrders];
+    originalOrders = [...masterOrders];
+    return;
+}
+
+
+  box.style.display = "block";
+  document.getElementById("ordersList").style.marginTop = "150px";
+};
+
+
+document.getElementById("applyFilter").onclick = () => {
+
+  // المنتجات المختارة
+  const selectedProducts = Array.from(
+    document.querySelectorAll(".prodCheck:checked")
+  ).map(el => el.value);
+
+  // المعلنين المختارين
+  const selectedAdvertisers = Array.from(
+    document.querySelectorAll(".advCheck:checked")
+  ).map(el => el.value);
+
+  let filtered = masterOrders;
+// ⭐ حفظ الفلاتر
+localStorage.setItem("filterProducts", JSON.stringify(selectedProducts));
+localStorage.setItem("filterAdvertisers", JSON.stringify(selectedAdvertisers));
+localStorage.setItem("filterActive", "1");
+
+  // فلترة المنتجات
+  if (selectedProducts.length > 0) {
+    filtered = filtered.filter(o => selectedProducts.includes(o.productName));
+  }
+
+  // فلترة المعلنين
+  if (selectedAdvertisers.length > 0) {
+    filtered = filtered.filter(o => selectedAdvertisers.includes(o.advertiser));
+  }
+
+  // تفعيل الفلترة وتغيير لون الأيقونة
+  filterActive = true;
+  document.getElementById("filterIcon").style.stroke = "#FF6B2D";
+
+  renderOrders(filtered);
+  originalOrders = [...filtered];
+  allOrdersList = [...filtered];
+
+  // إخفاء نافذة الفلترة
+  document.getElementById("filterBoxContainer").style.display = "none";
+  document.getElementById("ordersList").style.marginTop = "150px";
+};
+
+
+
+
+// ⭐ تحديد كل المنتجات
+document.getElementById("prodSelectAll").onchange = (e) => {
+  const checked = e.target.checked;
+  document.querySelectorAll(".prodCheck").forEach(ch => ch.checked = checked);
+};
+// ⭐ تحديد كل المعلنين
+document.getElementById("advSelectAll").onchange = (e) => {
+  const checked = e.target.checked;
+  document.querySelectorAll(".advCheck").forEach(ch => ch.checked = checked);
+};
+// ⭐ بحث داخل المنتجات
+document.getElementById("prodSearch").oninput = () => {
+  const q = document.getElementById("prodSearch").value.toLowerCase();
+  document.querySelectorAll("#prodList label").forEach(lbl => {
+    const txt = lbl.textContent.toLowerCase();
+    lbl.style.display = txt.includes(q) ? "flex" : "none";
+  });
+};
+
+// ⭐ بحث داخل المعلنين
+document.getElementById("advSearch").oninput = () => {
+  const q = document.getElementById("advSearch").value.toLowerCase();
+  document.querySelectorAll("#advList label").forEach(lbl => {
+    const txt = lbl.textContent.toLowerCase();
+    lbl.style.display = txt.includes(q) ? "flex" : "none";
+  });
+};
+
+
+</script>
+
+</body>
+</html> 

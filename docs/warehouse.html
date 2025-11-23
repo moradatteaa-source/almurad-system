@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏬 إدارة المخزون - نظام المراد</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #f4f6fa;
+      margin: 0;
+      padding: 0;
+      color: #043B64;
+    }
+/* ✅ جعل جميع الأرقام إنكليزية في الصفحة */
+* {
+  font-variant-numeric: lining-nums;
+}
+
+.num-en {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+  font-family: 'Tajawal', sans-serif;
+}
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px;
+      background: #043B64;
+      color: white;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    header button {
+      background: #FF6B2D;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    header button:hover {
+      opacity: 0.9;
+    }
+
+    table {
+      width: 95%;
+      margin: 25px auto;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #043B64;
+      color: white;
+    }
+
+    tr:hover td {
+      background: #f9f9f9;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+   .popup {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(15px);
+  border-radius: 15px;
+  padding: 25px;
+  color: white;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh; /* ✅ يحدد ارتفاع أقصى 90% من الشاشة */
+  overflow-y: auto; /* ✅ يخليها قابلة للتمرير */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  animation: fadeIn 0.5s ease;
+}
+
+
+    .popup input, .popup button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Tajawal';
+    }
+
+    .popup input {
+      background: rgba(255,255,255,0.9);
+      color: #043B64;
+    }
+
+    .popup button {
+      background: #FF6B2D;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .popup table {
+      width: 100%;
+      margin-top: 15px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 8px;
+      border-collapse: collapse;
+    }
+
+    .popup th, .popup td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .delete-btn {
+      background: crimson;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+
+    .success {
+      background: #28a745;
+      color: white;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+
+    <h2>🏬 إدارة المخزون</h2>
+    <button onclick="togglePopup(true)">➕ إضافة منتج جديد</button>
+  </header>
+  <!-- 📤 زر رفع ملف Excel -->
+<div style="text-align:center;margin-top:15px;">
+  <input type="file" id="excelFile" accept=".xlsx,.xls" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
+  <button onclick="uploadExcel()" style="background:#FF6B2D;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer;">
+    📤 رفع حزمة منتجات Excel
+  </button>
+</div>
+
+<!-- 📊 الإحصائيات العامة -->
+<div id="statsContainer" style="
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap:15px;
+  margin:25px;
+">
+  <div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:15px;text-align:center;">
+    <h4 style="margin:0;color:#043B64;">📦 عدد المنتجات</h4>
+    <p id="totalProducts" class="num-en" style="font-size:20px;font-weight:bold;color:#FF6B2D;">0</p>
+  </div>
+
+  <div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:15px;text-align:center;">
+    <h4 style="margin:0;color:#043B64;">🧮 الكمية الكلية</h4>
+    <p id="totalQtyAll" class="num-en" style="font-size:20px;font-weight:bold;color:#FF6B2D;">0</p>
+  </div>
+
+  <div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:15px;text-align:center;">
+    <h4 style="margin:0;color:#043B64;">💰 رأس المال (الشراء)</h4>
+    <p id="totalBuyValue" class="num-en" style="font-size:20px;font-weight:bold;color:#FF6B2D;">0</p>
+  </div>
+
+  <div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:15px;text-align:center;">
+    <h4 style="margin:0;color:#043B64;">💸 الموجودات (البيع)</h4>
+    <p id="totalSellValue" class="num-en" style="font-size:20px;font-weight:bold;color:#FF6B2D;">0</p>
+  </div>
+</div>
+
+  <table id="warehouseTable">
+    <thead>
+      <tr>
+        <th>اسم المنتج</th>
+        <th>سعر الشراء</th>
+        <th>سعر البيع</th>
+        <th>المتغيرات والكميات</th>
+        <th>الكمية الإجمالية</th>
+<th>💸 الفاتورة الإجمالية</th>
+<th>آخر تحديث</th>
+
+        <th>الخيارات</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+<!-- 🔹 نافذة إضافة / تعديل منتج -->
+<div class="overlay" id="popupOverlay">
+  <div class="popup">
+    <h3 id="popupTitle">➕ إضافة منتج جديد</h3>
+
+    <input id="productName" placeholder="اسم المنتج">
+    <input id="buyPrice" type="number" placeholder="سعر الشراء">
+    <input id="sellPrice" type="number" placeholder="سعر البيع">
+
+    <!-- 🔸 خانة الكمية إذا المنتج بدون متغيرات -->
+    <div id="quantitySection">
+      <input id="productQty" type="number" placeholder="الكمية الإجمالية (إن لم توجد متغيرات)">
+    </div>
+
+    <!-- زر المتغيرات -->
+    <button id="toggleVariantsBtn" onclick="toggleVariants()">➕ إضافة متغيرات</button>
+
+   <!-- قسم المتغيرات -->
+<div id="variantsSection" style="display:none;">
+  <h4 style="margin-top:15px;">🧩 المتغيرات (يمكنك إدخال أكثر من بعد، مثل اللون والقياس)</h4>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <input id="variantType1" placeholder="البُعد الأول (مثل اللون)">
+    <input id="variantValue1" placeholder="القيمة 1 (مثل أحمر)">
+    <input id="variantType2" placeholder="البُعد الثاني (اختياري مثل القياس)">
+    <input id="variantValue2" placeholder="القيمة 2 (مثل M)">
+    <input id="variantQty" type="number" placeholder="الكمية">
+    <button onclick="addVariant()">➕ إضافة</button>
+  </div>
+
+  <table id="variantTable">
+    <thead>
+      <tr><th>البُعد 1</th><th>القيمة 1</th><th>البُعد 2</th><th>القيمة 2</th><th>الكمية</th><th>حذف</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+
+    <button onclick="saveProduct()">💾 حفظ المنتج</button>
+    <div id="successMsg" class="success">✅ تم الحفظ بنجاح!</div>
+    <button style="background:#777;margin-top:10px;" onclick="togglePopup(false)">❌ إغلاق</button>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import * as XLSX from "https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs";
+
+import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+    authDomain: "almurad-system.firebaseapp.com",
+    databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+    projectId: "almurad-system",
+    storageBucket: "almurad-system.appspot.com",
+    messagingSenderId: "911755824405",
+    appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const overlay = document.getElementById("popupOverlay");
+  const tableBody = document.querySelector("#warehouseTable tbody");
+  const popupTitle = document.getElementById("popupTitle");
+
+  let variants = [];
+  let editingProduct = null; // لتحديد إذا كنا نعدل أو نضيف
+
+window.togglePopup = (show) => {
+  overlay.style.display = show ? "flex" : "none";
+  
+  // إذا أغلق النافذة
+  if (!show) {
+    if (!editingProduct) { 
+      // فقط إذا ماكو تعديل، نظّف الحقول
+      popupTitle.textContent = "➕ إضافة منتج جديد";
+      clearFields();
+    }
+  }
+};
+
+
+  // 🔸 إضافة متغير
+ window.addVariant = function() {
+  const type1 = document.getElementById("variantType1").value.trim();
+  const value1 = document.getElementById("variantValue1").value.trim();
+  const type2 = document.getElementById("variantType2").value.trim();
+  const value2 = document.getElementById("variantValue2").value.trim();
+  const qty = parseInt(document.getElementById("variantQty").value.trim());
+
+  if (!type1 || !value1 || isNaN(qty)) return alert("🟠 أكمل بيانات المتغير (اللون أو البُعد الأول إجباري).");
+
+  variants.push({ type1, value1, type2, value2, qty });
+  renderVariantTable();
+
+  document.getElementById("variantType1").value = "";
+  document.getElementById("variantValue1").value = "";
+  document.getElementById("variantType2").value = "";
+  document.getElementById("variantValue2").value = "";
+  document.getElementById("variantQty").value = "";
+};
+
+
+  function renderVariantTable() {
+  const tbody = document.querySelector("#variantTable tbody");
+  tbody.innerHTML = "";
+  variants.forEach((v, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${v.type1 || "-"}</td>
+        <td>${v.value1 || "-"}</td>
+        <td>${v.type2 || "-"}</td>
+        <td>${v.value2 || "-"}</td>
+        <td>${v.qty}</td>
+        <td><button class="delete-btn" onclick="deleteVariant(${i})">🗑</button></td>
+      </tr>
+    `;
+  });
+}
+
+
+  window.deleteVariant = function(i) {
+    variants.splice(i, 1);
+    renderVariantTable();
+  };
+
+  // 🔸 عرض وإخفاء المتغيرات
+  window.toggleVariants = function() {
+    const section = document.getElementById("variantsSection");
+    const qtySection = document.getElementById("quantitySection");
+    const btn = document.getElementById("toggleVariantsBtn");
+    if (section.style.display === "none") {
+      section.style.display = "block";
+      qtySection.style.display = "none";
+      btn.textContent = "🔽 إخفاء المتغيرات";
+    } else {
+      section.style.display = "none";
+      qtySection.style.display = "block";
+      btn.textContent = "➕ إضافة متغيرات";
+    }
+  };
+
+// 🧾 حفظ أو تعديل المنتج
+window.saveProduct = async function() {
+  const name = document.getElementById("productName").value.trim();
+  const buyPrice = parseFloat(document.getElementById("buyPrice").value);
+  const sellPrice = parseFloat(document.getElementById("sellPrice").value);
+  const qty = parseInt(document.getElementById("productQty").value.trim()) || 0;
+
+  if (!name || isNaN(buyPrice) || isNaN(sellPrice))
+    return alert("⚠️ أكمل جميع بيانات المنتج.");
+
+ // 🟢 إنشاء كائن جديد للمخزون
+let stock = {};
+
+// 🟢 بناء المتغيرات والكميات (تتعامل مع أي نوع مثل اللون أو الحجم)
+if (variants.length > 0) {
+  variants.forEach(v => {
+    let key = "";
+    if (v.type1 && v.value1 && v.type2 && v.value2) {
+      // مثال: "اللون | أحمر | القياس | M"
+      key = `${v.type1} | ${v.value1} | ${v.type2} | ${v.value2}`;
+    } else if (v.type1 && v.value1) {
+      // مثال: "اللون | أحمر"
+      key = `${v.type1} | ${v.value1}`;
+    } else {
+      key = "إجمالي الكمية";
+    }
+
+    stock[key] = v.qty;
+  });
+} else {
+  // إذا المنتج بدون متغيرات
+  stock["إجمالي الكمية"] = qty;
+}
+
+// ✅ إذا عدّلنا اسم المنتج، نحذف القديم
+if (editingProduct && editingProduct !== name) {
+  await remove(ref(db, "warehouse/" + editingProduct));
+}
+
+// 🟢 بناء هيكل المتغيرات لعرضها لاحقاً في صفحة الطلبات
+let variantsStructured = {};
+variants.forEach(v => {
+  if (v.type1 && v.value1) {
+    if (!variantsStructured[v.type1]) variantsStructured[v.type1] = [];
+    if (!variantsStructured[v.type1].includes(v.value1)) {
+      variantsStructured[v.type1].push(v.value1);
+    }
+  }
+  if (v.type2 && v.value2) {
+    if (!variantsStructured[v.type2]) variantsStructured[v.type2] = [];
+    if (!variantsStructured[v.type2].includes(v.value2)) {
+      variantsStructured[v.type2].push(v.value2);
+    }
+  }
+});
+
+
+  // 🧾 حفظ المنتج في Firebase
+  const productRef = ref(db, "warehouse/" + name);
+  await set(productRef, {
+    buyPrice,
+    sellPrice,
+    totalQty: Object.values(stock).reduce((a, b) => a + b, 0),
+    lastUpdate: new Date().toISOString(),
+    stock,
+    variants: variantsStructured // ✅ هذا هو المفتاح حتى تظهر المتغيرات في تفاصيل الطلب
+  });
+
+  // ✅ إشعار النجاح
+  document.getElementById("successMsg").style.display = "block";
+  setTimeout(() => document.getElementById("successMsg").style.display = "none", 2000);
+
+  // تحديث الجدول وإعادة التهيئة
+  loadWarehouse();
+  clearFields();
+  togglePopup(false);
+  editingProduct = null;
+};
+
+
+
+  function clearFields() {
+    document.getElementById("productName").value = "";
+    document.getElementById("buyPrice").value = "";
+    document.getElementById("sellPrice").value = "";
+    document.getElementById("productQty").value = "";
+    variants = [];
+    renderVariantTable();
+  }
+
+  function loadWarehouse() {
+  const warehouseRef = ref(db, "warehouse");
+
+  onValue(warehouseRef, (snapshot) => {
+    tableBody.innerHTML = "";
+
+    if (!snapshot.exists()) {
+      tableBody.innerHTML = `<tr><td colspan="7">🚫 لا توجد بيانات حالياً</td></tr>`;
+      return;
+    }
+
+    const data = snapshot.val();
+
+    for (const [productName, p] of Object.entries(data)) {
+      const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+      // ✅ حساب الفاتورة الإجمالية
+const invoiceValue = (p.sellPrice || 0) * total;
+const buyValue = (p.buyPrice || 0) * total;
+
+
+      let variantsList = "";
+      if (p.stock && Object.keys(p.stock).length > 0) {
+       variantsList = Object.entries(p.stock)
+  .map(([key, value]) => {
+    const parts = key.split("|").map(s => s.trim());
+    const qtyColor = value <= 5 ? "red" : "#FF6B2D";
+
+    // 🧠 بناء النص الكامل حسب عدد الأبعاد (حتى 4 مستويات)
+    const text = parts
+      .filter(p => p) // يحذف الفراغات
+      .join(" | ");
+
+    return `
+      <div style="margin:4px 0; text-align:center; line-height:1.8; direction:rtl;">
+        <span style="color:#043B64; font-weight:600;">${text}</span>
+        <span style="color:${qtyColor}; font-weight:600;"> → ${value} قطعة</span>
+      </div>
+    `;
+  })
+  .join("");
+
+      } else {
+        variantsList = "—";
+      }
+
+     const tr = document.createElement("tr");
+tr.innerHTML = `
+  <td><strong>${productName}</strong></td>
+  <td>${p.buyPrice || "-"}</td>
+  <td>${p.sellPrice || "-"}</td>
+  <td style="text-align:center; vertical-align:top;">
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      ${variantsList}
+    </div>
+  </td>
+  <td>${total}</td>
+<td class="num-en" style="color:#043B64;font-weight:bold;">${invoiceValue.toLocaleString('en-US')} د.ع</td>
+  <td>${p.lastUpdate ? p.lastUpdate.split("T")[0] : "-"}</td>
+  <td>
+    <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
+    <button style="background:#FF6B2D;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="editProduct('${productName}')">✏️</button>
+  </td>
+`;
+tableBody.appendChild(tr);
+
+    }
+    // ✅ حساب الإحصائيات العامة
+    const products = Object.entries(data);
+    let totalQtyAll = 0;
+    let totalBuyValue = 0;
+    let totalSellValue = 0;
+
+    products.forEach(([name, p]) => {
+      const totalQty = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+      totalQtyAll += totalQty;
+      totalBuyValue += totalQty * (p.buyPrice || 0);
+      totalSellValue += totalQty * (p.sellPrice || 0);
+    });
+
+    // ✅ عرض القيم في الصفحة
+    document.getElementById("totalProducts").textContent = products.length.toLocaleString('en-US');
+    document.getElementById("totalQtyAll").textContent = totalQtyAll.toLocaleString('en-US');
+    document.getElementById("totalBuyValue").textContent = totalBuyValue.toLocaleString('en-US') + " د.ع";
+    document.getElementById("totalSellValue").textContent = totalSellValue.toLocaleString('en-US') + " د.ع";
+
+    // 🧾 حفظ الإحصائيات في Firebase لاستخدامها في الأرشيف الشهري
+    const statsRef = ref(db, "stats/warehouse");
+    set(statsRef, {
+      totalProducts: products.length,
+      totalQtyAll,
+      totalBuyValue,
+      totalSellValue,
+      lastUpdate: new Date().toISOString()
+    }).catch(err => console.error("خطأ في حفظ الإحصائيات:", err));
+  });
+}
+
+
+// 🗑️ حذف منتج من المخزون
+window.deleteProduct = async function(productName) {
+  if (!confirm(`هل تريد بالتأكيد حذف المنتج "${productName}"؟`)) return;
+
+  try {
+    await remove(ref(db, "warehouse/" + productName));
+    alert(`✅ تم حذف المنتج "${productName}" بنجاح.`);
+    loadWarehouse(); // تحديث الجدول بعد الحذف
+  } catch (err) {
+    console.error("❌ خطأ أثناء الحذف:", err);
+    alert("⚠️ حدث خطأ أثناء حذف المنتج. تأكد من الاتصال بالإنترنت.");
+  }
+};
+
+
+  // ✏️ تعديل منتج
+  window.editProduct = async function(productName) {
+    const snapshot = await get(ref(db, "warehouse/" + productName));
+    if (!snapshot.exists()) return alert("⚠️ المنتج غير موجود.");
+
+    const data = snapshot.val();
+    editingProduct = productName; // ✅ يخزّن اسم المنتج الجاري تعديله
+
+    togglePopup(true);
+    popupTitle.textContent = `✏️ تعديل المنتج: ${productName}`;
+    document.getElementById("productName").value = productName;
+    document.getElementById("buyPrice").value = data.buyPrice || "";
+    document.getElementById("sellPrice").value = data.sellPrice || "";
+    document.getElementById("productQty").value = data.totalQty || "";
+    variants = [];
+
+    if (data.stock) {
+  for (const [key, qty] of Object.entries(data.stock)) {
+    const parts = key.split("|").map(s => s.trim());
+    variants.push({
+      type1: parts[0] || "",
+      value1: parts[1] || "",
+      type2: parts[2] || "",
+      value2: parts[3] || "",
+      qty
+    });
+  }
+  renderVariantTable();
+
+  // إظهار أو إخفاء أقسام الكمية والمتغيرات حسب الحالة
+  document.getElementById("quantitySection").style.display = variants.length ? "none" : "block";
+  document.getElementById("variantsSection").style.display = variants.length ? "block" : "none";
+}
+
+  };
+
+  loadWarehouse();
+  // ✅ رفع المنتجات من ملف Excel
+window.uploadExcel = async function () {
+  const fileInput = document.getElementById("excelFile");
+  const file = fileInput.files[0];
+  if (!file) return alert("🟠 يرجى اختيار ملف Excel أولاً.");
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet);
+
+  if (rows.length === 0) return alert("⚠️ الملف فارغ أو غير صحيح.");
+
+  const grouped = {};
+
+  // 🧩 تجميع المتغيرات حسب اسم المنتج
+  rows.forEach(r => {
+    const name = r["اسم المنتج"];
+    if (!name) return;
+    const buy = parseFloat(r["سعر الشراء"]) || 0;
+    const sell = parseFloat(r["سعر البيع"]) || 0;
+    const qty = parseInt(r["الكمية"]) || 0;
+    const type1 = r["نوع المتغير 1"] || "";
+    const val1 = r["قيمة المتغير 1"] || "";
+    const type2 = r["نوع المتغير 2"] || "";
+    const val2 = r["قيمة المتغير 2"] || "";
+
+    const key = [type1, val1, type2, val2].filter(Boolean).join(" | ") || "إجمالي الكمية";
+
+    if (!grouped[name]) grouped[name] = { buy, sell, stock: {} };
+    grouped[name].stock[key] = qty;
+  });
+
+  let count = 0;
+
+  for (const [name, data] of Object.entries(grouped)) {
+    await set(ref(db, "warehouse/" + name), {
+      buyPrice: data.buy,
+      sellPrice: data.sell,
+      totalQty: Object.values(data.stock).reduce((a, b) => a + b, 0),
+      lastUpdate: new Date().toISOString(),
+      stock: data.stock
+    });
+    count++;
+  }
+
+  alert(`✅ تم رفع ${count} منتج من الملف بنجاح!`);
+  loadWarehouse();
+};
+
+</script>
+</body>
+</html>

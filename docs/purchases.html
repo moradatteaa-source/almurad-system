@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧾 نظام المشتريات - شركة المراد</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #043B64;
+      --orange: #FF6B2D;
+      --bg: #f4f6fa;
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--blue);
+      margin: 0;
+    }
+
+    header {
+      background: var(--blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 25px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+
+    header h2 {
+      font-size: 20px;
+      margin: 0;
+    }
+
+    header button {
+      background: var(--orange);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    header button:hover { opacity: 0.9; }
+
+    .container {
+      max-width: 1250px;
+      margin: 25px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    h3 {
+      color: var(--blue);
+      border-bottom: 2px solid var(--orange);
+      padding-bottom: 5px;
+      margin-top: 0;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 15px;
+      background: #f9fafc;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .filter-bar input, .filter-bar select {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 8px;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .filter-bar button {
+      background: var(--orange);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+
+    th {
+      background: var(--blue);
+      color: white;
+    }
+
+    tr:hover td { background: #fff9f5; }
+
+    .stat-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 160px;
+      background: var(--blue);
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-card span {
+      display: block;
+      color: var(--orange);
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    /* ✅ Popup Overlay */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .popup-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      width: 95%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .popup-box h3 {
+      text-align: center;
+      color: var(--blue);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: 'Tajawal';
+    }
+
+    button.action {
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 8px;
+    }
+
+    button.action:hover { background: #ff864d; }
+
+    /* ✅ Scroll inside variant section */
+    .variants-container {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      background: #fafafa;
+    }
+
+    .variant-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .variant-item input {
+      flex: 1;
+    }
+
+    .variant-item button {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .variant-item button:hover {
+      background: #e74c3c;
+    }
+
+    .report-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .report-bar button {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    @media (max-width:700px) {
+      header { flex-direction: column; text-align: center; gap: 10px; }
+      .form-grid { grid-template-columns: 1fr; }
+      table { font-size: 13px; }
+      .variant-item { flex-direction: column; align-items: stretch; }
+    }
+    /* تأثير عند الكتابة في مربع البحث عن المنتج */
+#productSearchInput:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 6px rgba(255, 107, 45, 0.4);
+}
+
+  </style>
+</head>
+<!-- ✅ نافذة تجار الجملة (منبثقة وسط الشاشة) -->
+<div class="popup-overlay" id="wholesalersPopup">
+  <div class="popup-box" style="max-width: 750px; width: 95%;">
+    <h3 style="text-align:center;color:#043B64;">🏬 قائمة تجّار الجملة</h3>
+    <button onclick="closeWholesalersPopup()" style="
+      position:absolute;top:12px;left:12px;
+      background:#c0392b;color:white;border:none;
+      padding:6px 12px;border-radius:6px;cursor:pointer;">✖</button>
+
+    <!-- 🔍 شريط البحث -->
+    <input id="whSearch" placeholder="ابحث بالاسم أو الرقم..." 
+      style="width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:8px;" 
+      oninput="filterWholesalers()">
+
+    <!-- 📋 جدول التجار -->
+    <div style="overflow-x:auto;max-height:60vh;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#043B64;color:white;">
+            <th>الاسم</th>
+            <th>📞 الهاتف</th>
+            <th>📍 العنوان</th>
+            <th>🗒️ ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody id="wholesalersTable">
+          <tr><td colspan="4">جارِ التحميل...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<style>
+  /* ✅ جعل خلفية جدول الفواتير بيضاء بالكامل */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff; /* اللون الأبيض */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  background-color: #fff; /* تأكيد اللون داخل الصفوف */
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background-color: #f7f9fc; /* تمييز صف العناوين بلون فاتح */
+  color: #043B64;
+  font-weight: bold;
+}
+
+tr:hover {
+  background-color: #f9f9f9; /* تأثير خفيف عند المرور على الصف */
+}
+
+/* ✅ نفس تصميم النوافذ المنبثقة الأخرى */
+#wholesalersPopup {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+#wholesalersPopup .popup-box {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {opacity:0; transform: scale(0.95);}
+  to {opacity:1; transform: scale(1);}
+}
+
+@media (max-width:600px){
+  #wholesalersPopup .popup-box{
+    width: 95%;
+    padding: 15px;
+  }
+  #wholesalersPopup table th, #wholesalersPopup table td{
+    font-size: 13px;
+    padding: 6px;
+  }
+}
+</style>
+
+
+<body>
+  <header>
+    <h2>🧾 نظام المشتريات - شركة المراد</h2>
+    <button onclick="openPurchasePopup()">➕ إضافة عملية شراء</button>
+    <button onclick="openWholesalersPopup()">🏬 تجار الجملة</button>
+
+  </header>
+
+  <div class="container">
+    <div class="filter-bar">
+      <input type="date" id="fromDate">
+      <input type="date" id="toDate">
+      <select id="timeFilter">
+        <option value="">تصفية سريعة</option>
+        <option value="today">اليوم</option>
+        <option value="week">هذا الأسبوع</option>
+        <option value="month">هذا الشهر</option>
+        <option value="lastMonth">الشهر الماضي</option>
+      </select>
+      <button onclick="filterPurchases()">🔍 تطبيق الفلترة</button>
+    </div>
+
+    <div class="report-bar">
+      <button onclick="downloadFullPDF()">📄 تقرير PDF شامل</button>
+      <button onclick="downloadFullExcel()">📊 تقرير Excel شامل</button>
+    </div>
+
+    <h3>📊 الإحصائيات</h3>
+    <div class="stat-cards">
+      <div class="stat-card">عدد الفواتير<span id="totalInvoices">0</span></div>
+      <div class="stat-card">إجمالي الكميات<span id="totalQty">0</span></div>
+      <div class="stat-card">إجمالي المبالغ<span id="totalAmount">0</span></div>
+      <div class="stat-card">آخر عملية<span id="lastPurchase">-</span></div>
+    </div>
+  </div>
+
+    <h3>📋 فواتير المشتريات</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>التاريخ</th>
+          <th>المنتج</th>
+          <th>المتغير</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+          <th>المورد</th>
+          <th>المشتري</th>
+          <th>خيارات</th>
+        </tr>
+      </thead>
+      <tbody id="purchaseTable">
+        <tr><td colspan="10">لا توجد عمليات بعد</td></tr>
+      </tbody>
+    </table>
+
+
+  <!-- ✅ نافذة إضافة عملية شراء -->
+  <div class="popup-overlay" id="purchasePopup">
+    <div class="popup-box">
+      <h3>➕ إضافة عملية شراء جديدة</h3>
+      <div class="form-grid">
+        <div>
+          <label>اسم المورد:</label>
+          <select id="supplierSelect"></select>
+          <button class="action" onclick="openSupplierPopup()">➕ إضافة مورد</button>
+        </div>
+
+        <div>
+          <label>نوع المنتج:</label>
+          <select id="productType" onchange="handleProductTypeChange()">
+            <option value="">اختر...</option>
+            <option value="existing">منتج موجود</option>
+            <option value="new">منتج جديد</option>
+          </select>
+        </div>
+
+        <div>
+          <label>اسم المشتري:</label>
+          <input type="text" id="buyerName" placeholder="مراد / مقداد / رمضان">
+        </div>
+      </div>
+      <!-- ✅ منتج موجود -->
+      <div id="existingProductDiv" style="display:none;margin-top:10px;">
+  <label>اسم المنتج:</label>
+
+  <!-- 🔍 خانة البحث -->
+  <input 
+    type="text" 
+    id="productSearchInput" 
+    placeholder="اكتب للبحث عن المنتج..." 
+    style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;"
+    oninput="filterProductOptions()"
+  >
+
+  <!-- 🔽 قائمة المنتجات -->
+  <select id="existingProductSelect" size="6" style="width:100%;padding:8px;border-radius:6px;"></select>
+
+  <div id="variantContainer" class="variants-container" style="margin-top:10px;"></div>
+</div>
+<button class="action" id="addOldVariantBtn" style="display:none;margin-top:8px;">➕ إضافة متغير جديد</button>
+
+
+      <!-- ✅ منتج جديد -->
+      <div id="newProductDiv" style="display:none;margin-top:10px;">
+        <!-- 🟢 الحقول الأساسية (اسم المنتج + الأسعار + الكمية) -->
+        <div id="simpleFields">
+          <label>اسم المنتج:</label>
+          <input type="text" id="simpleProductName" placeholder="اسم المنتج">
+
+          <label>سعر الشراء:</label>
+          <input type="number" id="simpleBuyPrice" placeholder="سعر الشراء">
+
+          <label>سعر البيع:</label>
+          <input type="number" id="simpleSellPrice" placeholder="سعر البيع">
+
+          <label>الكمية:</label>
+          <input type="number" id="simpleQty" placeholder="الكمية">
+        </div>
+
+        <!-- 🟠 هنا تظهر المتغيرات فقط إذا أضاف المستخدم -->
+        <div class="variants-container" id="newVariantContainer"></div>
+        <button class="action" onclick="addNewVariant()">➕ إضافة متغير</button>
+      </div>
+
+      <!-- ✅ باقي النموذج -->
+      <label>ملاحظات:</label>
+      <textarea id="notes" rows="2"></textarea>
+      <button class="action" onclick="savePurchase()">💾 حفظ</button>
+      <button class="action" style="background:#777;" onclick="closePurchasePopup()">❌ إغلاق</button>
+
+  <!-- ✅ نافذة إضافة مورد -->
+  <div class="popup-overlay" id="supplierPopup">
+    <div class="popup-box">
+      <h3>➕ إضافة مورد جديد</h3>
+      <input id="supplierName" placeholder="اسم المورد">
+      <input id="supplierPhone" placeholder="رقم الهاتف">
+      <input id="supplierAddress" placeholder="العنوان">
+      <textarea id="supplierNotes" placeholder="ملاحظات..."></textarea>
+      <button class="action" onclick="saveSupplier()">💾 حفظ</button>
+      <button class="action" style="background:#777;" onclick="closeSupplierPopup()">❌ إغلاق</button>
+    </div>
+  </div>
+ 
+
+  <script type="module">
+/* =========================
+   🔧 إعداد Firebase
+========================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* =========================
+   🧩 المتغيرات والعناصر
+========================= */
+const supplierSelect = document.getElementById("supplierSelect");
+const supplierPopup = document.getElementById("supplierPopup");
+const purchasePopup = document.getElementById("purchasePopup");
+const purchaseTable = document.getElementById("purchaseTable");
+const existingProductDiv = document.getElementById("existingProductDiv");
+const newProductDiv = document.getElementById("newProductDiv");
+const existingProductSelect = document.getElementById("existingProductSelect");
+const variantContainer = document.getElementById("variantContainer");
+const newVariantContainer = document.getElementById("newVariantContainer");
+
+let suppliers = {};
+let warehouseProducts = {};
+let purchases = [];
+
+/* =========================
+   🪟 النوافذ المنبثقة
+========================= */
+window.openPurchasePopup = () => {
+  purchasePopup.style.display = "flex";
+
+  // 🧹 مسح الحقول القديمة عند كل فتح
+  document.getElementById("productType").value = "";
+  document.getElementById("supplierSelect").value = "";
+  document.getElementById("buyerName").value = "";
+  document.getElementById("notes").value = "";
+
+  // 🧹 مسح الحقول الخاصة بالمنتج
+  const inputFields = [
+    "productSearchInput",
+    "simpleProductName",
+    "simpleBuyPrice",
+    "simpleSellPrice",
+    "simpleQty",
+  ];
+  inputFields.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // 🧹 تفريغ الحاويات
+  document.getElementById("variantContainer").innerHTML = "";
+  document.getElementById("newVariantContainer").innerHTML = "";
+
+  // 🧹 إخفاء أقسام المنتج
+  document.getElementById("existingProductDiv").style.display = "none";
+  document.getElementById("newProductDiv").style.display = "none";
+
+  // ✅ تحديث الموردين والمنتجات
+  loadSuppliers();
+  loadProducts();
+};
+
+window.closePurchasePopup = () => (purchasePopup.style.display = "none");
+window.openSupplierPopup = () => (supplierPopup.style.display = "flex");
+// ✅ فتح نافذة تجار الجملة (Popup)
+window.openWholesalersPopup = () => {
+  document.getElementById("wholesalersPopup").style.display = "flex";
+  loadWholesalers();
+};
+
+// ✅ إغلاق النافذة
+window.closeWholesalersPopup = () => {
+  document.getElementById("wholesalersPopup").style.display = "none";
+};
+
+// ✅ تحميل التجار من Realtime Database
+window.loadWholesalers = () => {
+  const table = document.getElementById("wholesalersTable");
+  onValue(ref(db, "suppliers"), (snap) => {
+    table.innerHTML = "";
+    if (!snap.exists()) {
+      table.innerHTML = `<tr><td colspan="4">🚫 لا يوجد تجار بعد</td></tr>`;
+      return;
+    }
+    const data = snap.val();
+    Object.values(data).forEach(s => {
+      table.innerHTML += `
+        <tr>
+          <td>${s.name || "-"}</td>
+          <td>${s.phone || "-"}</td>
+          <td>${s.address || "-"}</td>
+          <td>${s.notes || "-"}</td>
+        </tr>`;
+    });
+  });
+};
+
+// 🔎 فلترة داخل جدول التجار
+window.filterWholesalers = () => {
+  const input = document.getElementById("whSearch").value.toLowerCase();
+  const rows = document.querySelectorAll("#wholesalersTable tr");
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(input) ? "" : "none";
+  });
+};
+
+/* =========================
+   📦 تحميل الموردين
+========================= */
+function loadSuppliers() {
+  const refSup = ref(db, "suppliers");
+  onValue(refSup, (snap) => {
+    supplierSelect.innerHTML = `<option value="">اختر المورد...</option>`;
+    if (!snap.exists()) return;
+    suppliers = snap.val();
+    Object.keys(suppliers).forEach((id) => {
+      const s = suppliers[id];
+      supplierSelect.innerHTML += `<option value="${id}">${s.name}</option>`;
+    });
+  });
+}
+
+/* =========================
+   💾 حفظ مورد جديد
+========================= */
+window.saveSupplier = async function () {
+  const name = supplierName.value.trim();
+  const phone = supplierPhone.value.trim();
+  const address = supplierAddress.value.trim();
+  const notes = supplierNotes.value.trim();
+  if (!name || !phone) return alert("⚠️ أدخل اسم المورد ورقم الهاتف.");
+
+  const id = "SUP-" + Date.now().toString().slice(-6);
+  await set(ref(db, "suppliers/" + id), {
+    id,
+    name,
+    phone,
+    address,
+    notes,
+    createdAt: new Date().toISOString(),
+  });
+
+  alert("✅ تم حفظ المورد بنجاح");
+  closeSupplierPopup();
+  loadSuppliers();
+};
+
+/* =========================
+   📦 تحميل المنتجات
+========================= */
+async function loadProducts() {
+  const snap = await get(ref(db, "warehouse"));
+  warehouseProducts = snap.exists() ? snap.val() : {};
+}
+// 🧠 تخزين جميع أسماء المنتجات الأصلية للبحث
+let allProductNames = [];
+
+// تحميل أسماء المنتجات من Firebase إلى القائمة
+async function loadExistingProducts() {
+  const snapshot = await get(ref(db, "warehouse"));
+  const select = document.getElementById("existingProductSelect");
+  allProductNames = [];
+  select.innerHTML = "";
+
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    for (const [name] of Object.entries(data)) {
+      allProductNames.push(name);
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.appendChild(option);
+    }
+  }
+}
+
+// 🔎 فلترة المنتجات أثناء الكتابة + اختيار المنتج
+window.filterProductOptions = function () {
+  const inputEl = document.getElementById("productSearchInput");
+  const select = document.getElementById("existingProductSelect");
+  const input = inputEl.value.toLowerCase().trim();
+
+  select.innerHTML = "";
+
+  // ✅ إذا ماكو كتابة، نعرض كل المنتجات الأصلية
+  const filtered = input
+    ? allProductNames.filter(name => name.toLowerCase().includes(input))
+    : allProductNames;
+
+  if (filtered.length === 0) {
+    const opt = document.createElement("option");
+    opt.textContent = "🚫 لا توجد نتائج مطابقة";
+    opt.disabled = true;
+    select.appendChild(opt);
+  } else {
+    filtered.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+
+  // ✅ نظهر المنسدلة إذا فيها نتائج
+  select.style.display = filtered.length > 0 ? "block" : "none";
+
+  // ✅ عند اختيار المنتج من المنسدلة
+  select.onchange = async function () {
+    const selectedName = select.value;
+    inputEl.value = selectedName; // يظهر الاسم داخل خانة البحث
+    select.style.display = "none"; // نخفي المنسدلة بعد الاختيار
+
+    // 🟢 نعرض المتغيرات الخاصة بالمنتج المختار
+    const variantContainer = document.getElementById("variantContainer");
+    variantContainer.innerHTML = "";
+    const prod = warehouseProducts[selectedName];
+    if (prod && prod.stock) {
+      Object.keys(prod.stock).forEach((v) => {
+        variantContainer.innerHTML += `
+          <div class="variant-item">
+            <input type="text" value="${v}" disabled>
+            <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
+            <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
+          </div>`;
+      });
+    }
+  };
+};
+
+
+/* =========================
+   🔄 تغيير نوع المنتج
+========================= */
+window.handleProductTypeChange = async function () {
+  existingProductDiv.style.display = "none";
+  newProductDiv.style.display = "none";
+  variantContainer.innerHTML = "";
+  newVariantContainer.innerHTML = "";
+
+  const type = document.getElementById("productType").value;
+
+if (type === "existing") {
+  existingProductDiv.style.display = "block";
+  
+  // ✅ استدعاء الدالة الصحيحة التي تبني allProductNames
+  await loadExistingProducts();
+  
+  // ✅ عرض أولي لكل المنتجات قبل أي كتابة
+  filterProductOptions();
+}
+
+  else if (type === "new") {
+    newProductDiv.style.display = "block";
+
+   // ✅ إنشاء الحقول البسيطة (اسم، سعر شراء، سعر بيع، كمية)
+if (!document.getElementById("simpleFields")) {
+  const simpleFields = document.createElement("div");
+  simpleFields.id = "simpleFields";
+  simpleFields.innerHTML = `
+    <label>اسم المنتج:</label>
+    <input type="text" id="simpleProductName" placeholder="اسم المنتج">
+
+    <label>سعر الشراء:</label>
+    <input type="number" id="simpleBuyPrice" placeholder="سعر الشراء">
+
+    <label>سعر البيع:</label>
+    <input type="number" id="simpleSellPrice" placeholder="سعر البيع">
+
+    <label>الكمية:</label>
+    <input type="number" id="simpleQty" placeholder="الكمية">
+  `;
+  newProductDiv.insertBefore(simpleFields, newVariantContainer);
+}
+
+
+    // ✅ تعديل وظيفة "إضافة متغير" لتخفي الحقول البسيطة
+    window.addNewVariant = function () {
+      const div = document.createElement("div");
+      div.className = "variant-item";
+      div.innerHTML = `
+        <input type="text" placeholder="البُعد 1 (مثلاً اللون)">
+        <input type="text" placeholder="القيمة 1 (مثلاً أحمر)">
+        <input type="text" placeholder="البُعد 2 (اختياري)">
+        <input type="text" placeholder="القيمة 2 (مثلاً 5)">
+        <input type="number" placeholder="الكمية">
+        <input type="number" placeholder="السعر">
+        <button onclick="this.parentElement.remove(); checkVariantsState();">🗑</button>
+      `;
+      newVariantContainer.appendChild(div);
+
+      // ✅ إخفاء الحقول البسيطة
+      const simpleFields = document.getElementById("simpleFields");
+      if (simpleFields) simpleFields.style.display = "none";
+    };
+
+    // ✅ دالة تتحقق بعد حذف آخر متغير
+    window.checkVariantsState = function () {
+      const newVariants = newVariantContainer.querySelectorAll(".variant-item");
+      const simpleFields = document.getElementById("simpleFields");
+      if (newVariants.length === 0 && simpleFields) {
+        simpleFields.style.display = "block";
+      }
+    };
+  }
+};
+
+
+/* =========================
+   🧾 عرض المنتجات الموجودة
+========================= */
+function renderExistingProducts(names) {
+  existingProductSelect.innerHTML = `<option value="">اختر المنتج...</option>`;
+  names.forEach(
+    (n) => (existingProductSelect.innerHTML += `<option value="${n}">${n}</option>`)
+  );
+}
+
+/* =========================
+   📊 عند اختيار منتج موجود
+========================= */
+existingProductSelect.addEventListener("change", () => {
+  const name = existingProductSelect.value;
+  variantContainer.innerHTML = "";
+  if (!name) return;
+  const prod = warehouseProducts[name];
+  if (!prod?.stock) return;
+
+  Object.keys(prod.stock).forEach((v) => {
+    variantContainer.innerHTML += `
+      <div class="variant-item">
+        <input type="text" value="${v}" disabled>
+        <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
+        <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
+      </div>`;
+  });
+});
+
+/* =========================
+   ➕ إضافة متغير جديد
+========================= */
+// ✅ إضافة متغير جديد بنفس طريقة المخزون
+// ✅ إضافة متغير جديد (بُعدين + قيمتين + كمية + سعر)
+window.addNewVariant = function () {
+  const div = document.createElement("div");
+  div.className = "variant-item";
+  div.innerHTML = `
+    <input type="text" placeholder="البُعد 1 (مثلاً اللون)">
+    <input type="text" placeholder="القيمة 1 (مثلاً أحمر)">
+    <input type="text" placeholder="البُعد 2 (اختياري مثل القياس)">
+    <input type="text" placeholder="القيمة 2 (مثلاً 5)">
+    <input type="number" placeholder="الكمية">
+    <input type="number" placeholder="السعر">
+    <button onclick="this.parentElement.remove()">🗑</button>
+  `;
+  newVariantContainer.appendChild(div);
+
+  // ✅ إخفاء الحقول البسيطة للمنتج العادي (بدون متغيرات)
+  const simpleFields = document.getElementById("simpleFields");
+  if (simpleFields) simpleFields.style.display = "none";
+};
+
+
+
+/* =========================
+   💾 حفظ عملية شراء
+========================= */
+window.savePurchase = async function () {
+  const supplierId = supplierSelect.value;
+  const supplierNameText = suppliers[supplierId]?.name || "";
+  const buyer = buyerName.value.trim();
+  if (!supplierId || !buyer) return alert("⚠️ أكمل الحقول الأساسية.");
+
+  let items = [];
+  let totalQty = 0;
+  let totalAmount = 0;
+  const type = document.getElementById("productType").value;
+
+  if (type === "existing") {
+    const name = existingProductSelect.value;
+    if (!name) return alert("⚠️ اختر المنتج.");
+
+    const qtyInputs = document.querySelectorAll(".variantQty");
+    const priceInputs = document.querySelectorAll(".variantPrice");
+    for (let i = 0; i < qtyInputs.length; i++) {
+      const variant = qtyInputs[i].dataset.variant;
+      const q = parseFloat(qtyInputs[i].value) || 0;
+      const price = parseFloat(priceInputs[i].value) || 0;
+      if (q > 0 && price > 0) {
+        const subtotal = q * price;
+        totalQty += q;
+        totalAmount += subtotal;
+        items.push({ product: name, variant, quantity: q, price, subtotal });
+
+        const stockRef = ref(db, `warehouse/${name}/stock/${variant}`);
+        const snap = await get(stockRef);
+        const current = snap.exists() ? snap.val() : 0;
+        await set(stockRef, current + q);
+      }
+    }
+  } else if (type === "new") {
+  const name = document.getElementById("simpleProductName")?.value.trim() || "";
+  const buyPrice = parseFloat(document.getElementById("simpleBuyPrice")?.value) || 0;
+  const sellPrice = parseFloat(document.getElementById("simpleSellPrice")?.value) || 0;
+  const qty = parseFloat(document.getElementById("simpleQty")?.value) || 0;
+
+  let stock = {};
+  let itemsAdded = false;
+
+  // 🟢 المنتج بدون متغيرات
+  if (newVariantContainer.querySelectorAll(".variant-item").length === 0) {
+    if (name && qty > 0 && buyPrice > 0) {
+      stock["default"] = qty;
+      const subtotal = qty * buyPrice;
+      items.push({ product: name, variant: "-", quantity: qty, price: buyPrice, subtotal });
+      totalQty += qty;
+      totalAmount += subtotal;
+      itemsAdded = true;
+
+      await set(ref(db, "warehouse/" + name), {
+        buyPrice,
+        sellPrice,
+        totalQty: qty,
+        stock,
+        lastUpdate: new Date().toISOString(),
+      });
+    }
+  } 
+  // 🟢 المنتج فيه متغيرات
+  else {
+    const newVariants = newVariantContainer.querySelectorAll(".variant-item");
+    for (let div of newVariants) {
+      const type1 = div.children[0].value.trim();
+      const value1 = div.children[1].value.trim();
+      const type2 = div.children[2].value.trim();
+      const value2 = div.children[3].value.trim();
+      const q = parseFloat(div.children[4].value) || 0;
+      const price = parseFloat(div.children[5].value) || 0;
+
+      if (!type1 || !value1 || q <= 0 || price <= 0) continue;
+
+      const variantKey = [type1, value1, type2, value2].filter(Boolean).join(" | ");
+      const subtotal = q * price;
+
+      stock[variantKey] = q;
+      totalQty += q;
+      totalAmount += subtotal;
+      items.push({ product: name, variant: variantKey, quantity: q, price, subtotal });
+      itemsAdded = true;
+    }
+
+    if (itemsAdded) {
+      await set(ref(db, "warehouse/" + name), {
+        buyPrice,
+        sellPrice,
+        totalQty,
+        stock,
+        lastUpdate: new Date().toISOString(),
+      });
+    }
+  }
+}
+
+
+  if (items.length === 0) return alert("⚠️ لم تدخل أي كميات.");
+
+  const idRef = push(ref(db, "purchases"));
+  await set(idRef, {
+    supplierId,
+    supplierName: supplierNameText,
+    buyer,
+    items,
+    totalQty,
+    totalAmount,
+    notes: notes.value,
+    date: new Date().toISOString(),
+  });
+
+  alert("✅ تم حفظ العملية بنجاح!");
+  closePurchasePopup();
+  loadPurchases();
+
+// ✅ توليد الفاتورة الجديدة بنفس تصميم printInvoice
+setTimeout(() => {
+  if (window.purchases && window.purchases.length > 0) {
+    const last = window.purchases.at(-1);
+    printInvoice(last.id);
+  }
+}, 1000);
+
+
+}; // ← ← هذا القوس المهم مفقود عندك لإغلاق الدالة savePurchase
+
+/* =========================
+   ⏳ الفلترة الزمنية
+========================= */
+/* =========================
+   ⏰ فلترة بالتقويم (من وإلى)
+========================= */
+window.filterPurchases = function () {
+  const fromInput = document.getElementById("fromDate").value;
+  const toInput = document.getElementById("toDate").value;
+  const quick = document.getElementById("timeFilter").value;
+
+  let startDate = fromInput ? new Date(fromInput) : null;
+  let endDate = toInput ? new Date(toInput) : null;
+
+  const now = new Date();
+
+  // ✅ إذا المستخدم اختار فلترة سريعة (اليوم/الأسبوع...)
+  if (quick) {
+    const today = new Date();
+    if (quick === "today") {
+      startDate = new Date(today.setHours(0, 0, 0, 0));
+      endDate = new Date();
+    } else if (quick === "week") {
+      const first = new Date();
+      first.setDate(today.getDate() - 7);
+      startDate = first;
+      endDate = new Date();
+    } else if (quick === "month") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    } else if (quick === "lastMonth") {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1, 0, 0, 0);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59);
+    }
+  }
+
+  // ✅ إذا المستخدم اختار فقط من/إلى من التقويم (حتى بدون فلترة سريعة)
+  if (!quick && (fromInput || toInput)) {
+    if (!startDate) startDate = new Date("2000-01-01"); // بداية افتراضية
+    if (!endDate) endDate = new Date(); // نهاية افتراضية اليوم
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  // إذا ماكو مشتريات بعد، نوقف
+  if (!window.purchases || window.purchases.length === 0) return;
+
+  // ✅ فلترة حسب النطاق الزمني المختار
+  const filtered = window.purchases.filter(p => {
+    const d = new Date(p.date);
+    if (startDate && d < startDate) return false;
+    if (endDate && d > endDate) return false;
+    return true;
+  });
+
+  renderFilteredPurchases(filtered);
+};
+
+// ✅ عرض النتائج بعد الفلترة
+function renderFilteredPurchases(list) {
+  const table = document.getElementById("purchaseTable");
+  table.innerHTML = "";
+
+  if (!list.length) {
+    table.innerHTML = `<tr><td colspan="10">🚫 لا توجد نتائج مطابقة</td></tr>`;
+    return;
+  }
+
+  list.forEach((p, i) => {
+    const first = p.items?.[0] || {};
+    const dateStr = new Date(p.date).toLocaleString("en-GB"); // يعرض تاريخ ووقت معًا
+    table.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${dateStr}</td>
+        <td>${first.product || "-"}</td>
+        <td>${first.variant || "-"}</td>
+        <td>${p.totalQty}</td>
+        <td>${first.price || "-"}</td>
+        <td>${p.totalAmount.toLocaleString("en-US")}</td>
+        <td>${p.supplierName}</td>
+        <td>${p.buyer}</td>
+        <td><button onclick="printInvoice('${p.id}')">🖨️ طباعة</button></td>
+      </tr>`;
+  });
+
+  updateStats(list);
+}
+
+
+
+/* =========================
+   🧾 تحميل المشتريات
+========================= */
+function loadPurchases() {
+  const refP = ref(db, "purchases");
+  onValue(refP, (snap) => {
+    purchaseTable.innerHTML = "";
+    purchases = [];
+    if (!snap.exists()) return;
+    const data = snap.val();
+
+    Object.keys(data).forEach((id, i) => {
+      const p = data[id];
+      purchases.push({ id, ...p });
+      const dateStr = new Date(p.date).toLocaleDateString("en-GB");
+      const first = p.items?.[0] || {};
+      purchaseTable.innerHTML += `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${dateStr}</td>
+          <td>${first.product || "-"}</td>
+          <td>${first.variant || "-"}</td>
+          <td>${p.totalQty}</td>
+          <td>${first.price || "-"}</td>
+          <td>${p.totalAmount.toLocaleString("en-US")}</td>
+          <td>${p.supplierName}</td>
+          <td>${p.buyer}</td>
+          <td><button onclick="printInvoice('${id}')">🖨️ طباعة</button></td>
+        </tr>`;
+    });
+
+
+    updateStats(purchases);
+    window.purchases = purchases; // ✅ أضف هذا السطر هنا فقط
+  });
+}
+
+/* =========================
+   📊 الإحصائيات
+========================= */
+function updateStats(list) {
+  document.getElementById("totalInvoices").textContent = list.length;
+  document.getElementById("totalQty").textContent = list.reduce((a, b) => a + b.totalQty, 0);
+  document.getElementById("totalAmount").textContent = list
+    .reduce((a, b) => a + b.totalAmount, 0)
+    .toLocaleString("en-US");
+  document.getElementById("lastPurchase").textContent = list.length
+    ? new Date(list.at(-1).date).toLocaleDateString("en-GB")
+    : "-";
+}
+
+// ✅ دالة تصحيح النص العربي بدون فراغات زايدة
+function fixArabicText(text) {
+  if (!text) return "";
+  // نحافظ على ترتيب الكلمات الطبيعي ونمنع تكرار المسافات
+  return text
+    .replace(/\s+/g, " ") // يمنع الفراغات المكررة
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        // نقلب ترتيب الكلمات فقط (بدون قلب الحروف)
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ")
+    .replace(/\s+/g, " "); // يضمن ترتيب متساوي بين الكلمات
+}
+
+
+
+
+window.printInvoice = async function (id) {
+  const p = purchases.find((x) => x.id === id);
+  if (!p) return alert("⚠️ الفاتورة غير موجودة");
+// 🔹 تحميل معلومات المورد من Realtime Database
+const supplierRef = ref(db, `suppliers/${p.supplierId}`);
+const supplierSnap = await get(supplierRef);
+let supplierData = supplierSnap.exists() ? supplierSnap.val() : {};
+
+p.supplierName = supplierData.name || p.supplierName || "-";
+p.supplierPhone = supplierData.phone || "-";
+p.supplierAddress = supplierData.address || "-";
+
+  // ✅ تحميل خط Tajawal محليًا
+  const res = await fetch("Tajawal-Regular.ttf");
+  const buffer = await res.arrayBuffer();
+  const binary = Array.from(new Uint8Array(buffer))
+    .map(b => String.fromCharCode(b))
+    .join("");
+  const base64 = btoa(binary);
+  pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
+  pdfMake.fonts = {
+    Tajawal: {
+      normal: "Tajawal-Regular.ttf",
+      bold: "Tajawal-Regular.ttf",
+      italics: "Tajawal-Regular.ttf",
+      bolditalics: "Tajawal-Regular.ttf"
+    }
+  };
+
+  // ✅ تحميل شعار المراد
+  const logoBase64 = await fetch("almurad-logo.png")
+    .then(r => r.blob())
+    .then(blob => new Promise(res => {
+      const reader = new FileReader();
+      reader.onloadend = () => res(reader.result);
+      reader.readAsDataURL(blob);
+    }));
+// ✅ محتوى الفاتورة النهائي
+// ✅ محتوى الفاتورة الاحترافية المعدلة النهائية
+const content = [
+  // 🔹 الشعار والعنوان الرئيسي في سطر واحد بخلفية زرقاء
+  {
+    columns: [
+{ image: logoBase64, width: 80, alignment: "left", margin: [0, -10, 0, 0] },
+      { 
+        text: fixArabicText("شركة المراد التجارية"),
+        fontSize: 22,
+        bold: true,
+        color: "#FF6B2D",
+        alignment: "right",
+        margin: [0, 15, 0, 0],
+      },
+    ],
+    margin: [0, 0, 0, 10],
+  },
+
+  // 🔸 عنوان الفاتورة
+  {
+    text: fixArabicText("فاتورة المشتريات"),
+    alignment: "center",
+    fontSize: 16,
+    color: "#FF6B2D",
+    bold: true,
+    margin: [0, 5, 0, 20],
+  },
+
+  // 🔹 معلومات المشتري والبائع
+// 🔹 معلومات المشتري والبائع (تصميم احترافي مثل الصورة)
+// 🔹 معلومات المشتري والبائع — بدون خلفية، مع محاذاة قصوى يمين ويسار
+// 🔹 معلومات المشتري والبائع (تصميم متوازن يمين ويسار)
+{
+  columns: [
+    // 🧾 معلومات المشتري (يمين)
+    {
+      width: '45%',
+      stack: [
+        { text: fixArabicText('معلومات المشتري'), fontSize: 12, bold: true, color: '#FF6B2D', alignment: 'right', margin: [0, 0, 0, 4] },
+        { text: fixArabicText(`الاسم: ${p.buyer || '-'}`), fontSize: 11, color: '#043B64', alignment: 'right', margin: [0, 3, 0, 0] },
+        {
+          text: fixArabicText('تاريخ الفاتورة:'),
+          fontSize: 11,
+          color: '#043B64',
+          alignment: 'right',
+          margin: [0, 3, 0, 0],
+        },
+        {
+          text: `${new Date(p.date).toLocaleDateString('en-GB')}   ${new Date(p.date)
+            .toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
+          fontSize: 11,
+          color: '#FF6B2D',
+          alignment: 'right',
+          margin: [0, 2, 0, 0],
+        },
+      ],
+      alignment: 'right',
+margin: [0, 0, 128, 0],
+    },
+
+// 🏢 معلومات البائع (يمين بدلاً من اليسار)
+ {
+      width: '45%',
+      stack: [
+        { text: fixArabicText('معلومات البائع'), fontSize: 12, bold: true, color: '#FF6B2D', alignment: 'right', margin: [0, 0, 0, 4] },
+        { text: fixArabicText(`الاسم: ${p.supplierName || '-'}`), fontSize: 11, color: '#043B64', alignment: 'right' },
+        { text: fixArabicText('رقم الهاتف:'), fontSize: 11, color: '#043B64', alignment: 'right' },
+        { text: `${p.supplierPhone || '-'}`, fontSize: 11, color: '#FF6B2D', alignment: 'right' },
+        { text: fixArabicText(`العنوان: ${p.supplierAddress || '-'}`), fontSize: 11, color: '#043B64', alignment: 'right' },
+      ],
+      alignment: 'right',
+      margin: [0, 0, -40, 0], // ✅ سحب النص أكثر نحو اليمين (سالب يعني يتجاوز قليلاً الهامش)
+    },
+
+
+  ],
+  margin: [0, 0, 0, 15],
+},
+// ✅ أغلق القوس هنا حتى لا يحصل خطأ نحوي
+
+
+
+
+
+  // 🔹 فاصل أنيق رمادي
+  { canvas: [{ type: "line", x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1, lineColor: "#ccc" }], margin: [0, 10, 0, 10] },
+
+  // 🔹 الجدول بخط منسق ومحاذاة وسطية كاملة
+ {
+  table: {
+    headerRows: 1,
+    widths: ["auto", "auto", "auto", "*", "*", "auto"],
+    body: [
+      [
+        { text: fixArabicText("الإجمالي"), style: "tableHeader", alignment: "center" },
+        { text: fixArabicText("السعر"), style: "tableHeader", alignment: "center" },
+        { text: fixArabicText("الكمية"), style: "tableHeader", alignment: "center" },
+        { text: fixArabicText("المتغير"), style: "tableHeader", alignment: "center" },
+        { text: fixArabicText("المنتج"), style: "tableHeader", alignment: "center" },
+        { text: "#", style: "tableHeader", alignment: "center" },
+      ],
+      ...p.items.map((it, j) => [
+        { text: it.subtotal.toLocaleString("en-US"), alignment: "center", direction: "ltr" },
+        { text: it.price.toLocaleString("en-US"), alignment: "center", direction: "ltr" },
+        { text: it.quantity.toLocaleString("en-US"), alignment: "center", direction: "ltr" },
+        { text: fixArabicText(it.variant), alignment: "center" }, // ✅ نستخدم fixArabicText هنا
+        { text: fixArabicText(it.product), alignment: "center" }, // ✅ وهنا أيضًا
+        { text: j + 1, alignment: "center", direction: "ltr" },
+      ]),
+    ],
+  },
+  layout: {
+  fillColor: (rowIndex) => (rowIndex === 0 ? "#043B64" : null),
+  hLineColor: "#ddd",
+  vLineColor: "#ddd",
+  paddingTop: () => 6,
+  paddingBottom: () => 6,
+  textColor: (rowIndex) => (rowIndex === 0 ? "#FF6B2D" : "#000"),
+},
+
+},
+
+
+  // 🔹 فاصل قبل الإجمالي
+  { canvas: [{ type: "line", x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1, lineColor: "#ccc" }], margin: [0, 15, 0, 5] },
+
+  // 🔹 الإجمالي باللون البرتقالي يسار الصفحة
+  {
+    text: fixArabicText(`الإجمالي الكلي: ${p.totalAmount.toLocaleString("en-US")} د.ع`),
+    alignment: "left",
+    color: "#FF6B2D",
+    bold: true,
+    fontSize: 13,
+    margin: [0, 5, 0, 15],
+  },
+
+  // 🔹 تذييل رسمي بسيط
+  {
+    text: fixArabicText("🔹 هذه الفاتورة رسمية صادرة من شركة المراد 🔹"),
+    alignment: "center",
+    italics: true,
+    color: "#777",
+    fontSize: 9,
+    margin: [0, 10, 0, 0],
+  },
+];
+
+
+
+ 
+
+  const docDefinition = {
+    pageSize: "A4",
+    pageMargins: [40, 50, 40, 50],
+    pageDirection: "rtl",
+    defaultStyle: {
+      font: "Tajawal",
+      alignment: "right",
+      direction: "rtl",
+    },
+    styles: {
+      sectionTitle: {
+        bold: true,
+        color: "#043B64",
+        fontSize: 13,
+        margin: [0, 0, 0, 4],
+      },
+      tableHeader: {
+        bold: true,
+        color: "white",
+        alignment: "center",
+        fillColor: "#043B64",
+      },
+    },
+    info: { title: "فاتورة المشتريات - شركة المراد" },
+
+    // ✅ هذا السطر يضمن أن كل النصوص والجداول تكون بالعربي (من اليمين لليسار)
+    content: content.map((item) => ({
+      ...item,
+      alignment: item.alignment || "right",
+      direction: "rtl",
+    })),
+  };
+
+  pdfMake.createPdf(docDefinition).open();
+};
+
+
+
+
+window.downloadFullExcel = async () => {
+  const XLSX = await import("https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs");
+  const rows = [];
+  purchases.forEach((p) => {
+    p.items.forEach((it) => {
+      rows.push({
+        Supplier: p.supplierName,
+        Buyer: p.buyer,
+        Product: it.product,
+        Variant: it.variant,
+        Quantity: it.quantity,
+        Price: it.price,
+        Subtotal: it.subtotal,
+        TotalInvoice: p.totalAmount,
+      });
+    });
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Purchases");
+  XLSX.writeFile(wb, "تقرير_المشتريات.xlsx");
+};
+loadSuppliers();
+loadProducts();
+loadPurchases();
+window.purchases = purchases;
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<script>
+// ✅ تحميل خط Tajawal محليًا بدون إنترنت
+fetch("Tajawal-Regular.ttf")
+  .then(res => res.arrayBuffer())
+  .then(buffer => {
+    const binary = Array.from(new Uint8Array(buffer))
+      .map(b => String.fromCharCode(b))
+      .join("");
+    const base64 = btoa(binary);
+
+    pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
+    pdfMake.fonts = {
+      Tajawal: {
+        normal: "Tajawal-Regular.ttf",
+        bold: "Tajawal-Regular.ttf",
+        italics: "Tajawal-Regular.ttf",
+        bolditalics: "Tajawal-Regular.ttf"
+      }
+    };
+  });
+  
+</script>
+

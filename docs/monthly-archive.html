@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🗂️ الأرشيف الشهري - نظام المراد</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --blue: #043B64;
+      --orange: #FF6B2D;
+      --bg: #f4f6fa;
+      --card-bg: #fff;
+      --shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--blue);
+    }
+
+    header {
+      background: var(--blue);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px;
+      box-shadow: var(--shadow);
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .reset-btn {
+      background: var(--orange);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .reset-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .container {
+      padding: 25px;
+    }
+
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .month-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .month-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .month-header {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+
+    .month-stats {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.8;
+    }
+
+    .month-stats strong {
+      color: var(--orange);
+    }
+
+    .details-btn {
+      display: inline-block;
+      margin-top: 10px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .details-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* نافذة التفاصيل */
+    .popup {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    .popup-content {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+
+    .popup h3 {
+      margin-top: 0;
+      color: var(--blue);
+      font-size: 18px;
+      border-bottom: 2px solid var(--orange);
+      padding-bottom: 6px;
+    }
+
+    .close-popup {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: var(--orange);
+      border: none;
+      color: white;
+      font-size: 16px;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      header h2 { font-size: 18px; }
+      .reset-btn { font-size: 13px; padding: 8px 16px; }
+      .month-card { padding: 15px; }
+      .month-header { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🗂️ الأرشيف الشهري - نظام المراد</h2>
+    <button class="reset-btn" id="resetMonthly">🧹 تصفير بيانات الشهر الحالي</button>
+  </header>
+
+  <div class="container">
+    <div class="month-grid" id="monthGrid">
+      <!-- الكروت تُنشأ هنا -->
+    </div>
+  </div>
+
+  <!-- نافذة التفاصيل -->
+  <div class="popup" id="detailsPopup">
+    <div class="popup-content">
+      <button class="close-popup" onclick="closePopup()">×</button>
+      <h3 id="popupTitle">تفاصيل الشهر</h3>
+      <div id="popupData"></div>
+    </div>
+  </div>
+
+  <!-- 🔹 سكربت الجافا سكربت -->
+  <script type="module">
+    // 🔢 دالة تحويل الأرقام إلى إنجليزية
+function toEnglish(num) {
+  if (num === undefined || num === null || isNaN(num)) return "0";
+  return Number(num).toLocaleString('en-US');
+}
+// 🔠 فرض عرض الأرقام بالإنكليزي في النصوص داخل الصفحة
+function fixEnglishNumbers(text) {
+  return text.toString().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+}
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, child, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// 🟠 تحميل الأشهر المؤرشفة
+async function loadArchivedMonths() {
+  const grid = document.getElementById("monthGrid");
+  grid.innerHTML = "<p style='text-align:center;color:#555;'>⏳ جاري تحميل بيانات الأرشيف...</p>";
+
+  const dbRef = ref(db);
+  const snap = await get(child(dbRef, "archive"));
+  if (!snap.exists()) {
+    grid.innerHTML = "<p style='text-align:center;color:#999;'>لا توجد بيانات مؤرشفة بعد.</p>";
+    return;
+  }
+
+  const data = snap.val();
+  const months = Object.keys(data).sort((a,b)=>b.localeCompare(a));
+  grid.innerHTML = "";
+
+  for (const month of months) {
+    const m = data[month];
+    const report = m.report || {};
+    report.totalOrders = report.totalOrders || (m.orders ? Object.keys(m.orders).length : 0);
+
+   const card = document.createElement("div");
+card.className = "month-card";
+card.onclick = () => openMonthDetails(month); // ✅ الكارت قابل للضغط
+card.innerHTML = `
+  <div class="month-header">📅 ${month}</div>
+  <div class="month-stats">
+    ✅ إجمالي الطلبات: <strong>${report.totalOrders}</strong><br>
+    🧾 إجمالي المشتريات: <strong>${(report.totalPurchaseAmount || 0).toLocaleString()} د.ع</strong><br>
+    🏬 رأس مال المخزن (شراء): <strong>${(report.totalBuyCapital || 0).toLocaleString()} د.ع</strong>
+  </div>
+`;
+
+
+    grid.appendChild(card);
+  }
+}
+
+// 🟢 نافذة التفاصيل
+window.openMonthDetails = async function(month) {
+  const popup = document.getElementById("detailsPopup");
+  const popupData = document.getElementById("popupData");
+  const title = document.getElementById("popupTitle");
+  popup.style.display = "flex";
+  title.textContent = `📊 تفاصيل شهر ${month}`;
+
+  const snap = await get(child(ref(db), `archive/${month}`));
+  if (!snap.exists()) {
+    popupData.innerHTML = "<p>❌ لا توجد بيانات لهذا الشهر.</p>";
+    return;
+  }
+
+  const d = snap.val();
+  const r = d.report || {};
+  const stats = d.stats || {}; // ✅ أخذ القيم من المسار الجديد
+  const purchases = d.purchases || {};
+  const orders = d.orders || {};
+
+  // 🧾 المشتريات
+  const purchasesCount = Object.keys(purchases).length;
+  const totalPurchaseAmount = Object.values(purchases).reduce((a, p) => a + (+p.totalAmount || 0), 0);
+
+  // 🏬 المخزن (من المسار stats فقط)
+  const warehouseCount = stats.totalProducts || 0;
+  const totalStockQty = stats.totalQtyAll || 0;
+  const totalBuy = stats.totalBuyValue || 0;
+  const totalSell = stats.totalSellValue || 0;
+
+  // 🚚 الطلبات
+  const totalOrders = r.totalOrders || 0;
+  const delivered = r.delivered || 0;
+  const returned = r.returned || 0;
+  const rejected = r.rejected || 0;
+
+  popupData.innerHTML = `
+  <h3>🚚 تفاصيل الطلبات</h3>
+  <p>إجمالي الطلبات: <strong>${totalOrders}</strong></p>
+  <p>تم التسليم: <strong>${delivered}</strong></p>
+  <p>راجع: <strong>${returned}</strong></p>
+  <p>رفض: <strong>${rejected}</strong></p>
+
+  <h3>🧾 إحصائيات المشتريات</h3>
+  <p>عدد الفواتير: <strong>${purchasesCount}</strong></p>
+  <p>إجمالي المشتريات: <strong>${fixEnglishNumbers(totalPurchaseAmount.toLocaleString('en-US'))} د.ع</strong></p>
+  <p>إجمالي الكميات: <strong>${Object.values(purchases).reduce((a,p)=>a+(+p.totalQty||+p.quantity||0),0)}</strong></p>
+
+  <h3>🏬 تفاصيل المخزن</h3>
+  <p>عدد المنتجات: <strong>${warehouseCount}</strong></p>
+  <p>إجمالي الكميات: <strong>${totalStockQty}</strong></p>
+  <p>رأس المال (سعر الشراء): <strong>${totalBuy.toLocaleString()} د.ع</strong></p>
+  <p>قيمة الجرد (سعر البيع): <strong>${totalSell.toLocaleString()} د.ع</strong></p>
+
+  <h3>📅 ملخص الشهر</h3>
+  <p>إجمالي الطلبات المنجزة: <strong>${r.delivered||0}</strong></p>
+  <p>الأرباح التقديرية: <strong>${(r.profitEstimate||0).toLocaleString()} د.ع</strong></p>
+  <p>تاريخ الأرشفة: ${new Date(r.createdAt || stats.lastUpdate || Date.now()).toLocaleString()}</p>
+  `;
+};
+
+
+window.closePopup = function(){ document.getElementById("detailsPopup").style.display="none"; };
+// 🔄 دالة تصفير الشهر الحالي
+async function monthlySmartReset() {
+  const dbRef = ref(db);
+  const monthKey = new Date().toISOString().slice(0,7); // مثل 2025-11
+  const confirmReset = confirm("⚠️ هل أنت متأكد من تصفير بيانات الشهر الحالي؟ سيتم أرشفة الطلبات والفواتير والحسابات.");
+
+  if (!confirmReset) return;
+
+  try {
+ // 🧾 الطلبات (أرشفة الحالات النهائية فقط)
+const ordersSnap = await get(child(dbRef, "orders"));
+let allOrders = {};
+if (ordersSnap.exists()) {
+  const data = ordersSnap.val();
+  for (const [id, o] of Object.entries(data)) {
+    if (["تم التسليم", "تم استلام الراجع", "رفض"].includes(o.status)) {
+      allOrders[id] = o;
+    }
+  }
+}
+
+// حفظ الطلبات المؤرشفة
+await set(ref(db, `archive/${monthKey}/orders`), allOrders);
+
+// 🔥 حذف الطلبات المؤرشفة من المسار الأصلي (orders)
+if (Object.keys(allOrders).length > 0) {
+  const remainingOrders = {};
+  for (const [id, o] of Object.entries(ordersSnap.val() || {})) {
+    if (!["تم التسليم", "تم استلام الراجع", "رفض"].includes(o.status)) {
+      remainingOrders[id] = o; // نحتفظ فقط بالطلبات غير النهائية
+    }
+  }
+  await set(ref(db, "orders"), remainingOrders);
+  console.log("🧹 تم حذف الطلبات المؤرشفة من orders بنجاح.");
+} else {
+  console.log("⚠️ لا توجد طلبات بحاجة إلى الأرشفة هذه المرة.");
+}
+
+
+
+    // 🧾 الفواتير
+    const invoicesSnap = await get(child(dbRef, "invoices"));
+    const invoices = invoicesSnap.exists() ? invoicesSnap.val() : {};
+    await set(ref(db, `archive/${monthKey}/invoices`), invoices);
+
+    // 💵 الحسابات
+    const accountsSnap = await get(child(dbRef, "accounts"));
+    const accounts = accountsSnap.exists() ? accountsSnap.val() : {};
+    await set(ref(db, `archive/${monthKey}/accounts`), accounts);
+// 🧾 المشتريات
+const purchasesSnap = await get(child(dbRef, "purchases"));
+const purchases = purchasesSnap.exists() ? purchasesSnap.val() : {};
+await set(ref(db, `archive/${monthKey}/purchases`), purchases);
+await set(ref(db, "purchases"), {});
+// 📦 المخزن (يُؤرشف ولا يُصفّر)
+const warehouseSnap = await get(child(dbRef, "warehouse"));
+const warehouseData = warehouseSnap.exists() ? warehouseSnap.val() : {};
+await set(ref(db, `archive/${monthKey}/warehouse`), warehouseData);
+
+// 🏬 قراءة الإحصائيات الجاهزة من المسار stats/warehouse
+let totalProducts = 0, totalStockQty = 0, totalBuyCapital = 0, totalSellCapital = 0, lastUpdate = "";
+
+try {
+  const statsSnap = await get(child(dbRef, "stats/warehouse"));
+  if (statsSnap.exists()) {
+    const stats = statsSnap.val();
+
+    totalProducts = stats.totalProducts || 0;
+    totalStockQty = stats.totalQtyAll || 0;
+    totalBuyCapital = stats.totalBuyValue || 0;
+    totalSellCapital = stats.totalSellValue || 0;
+    lastUpdate = stats.lastUpdate || "";
+
+    console.log("📦 تم جلب الإحصائيات من المسار stats/warehouse بنجاح:", stats);
+  } else {
+    console.warn("⚠️ لم يتم العثور على المسار stats/warehouse، سيتم استخدام القيم الصفرية.");
+  }
+} catch (err) {
+  console.error("❌ خطأ أثناء قراءة الإحصائيات من المسار stats/warehouse:", err);
+}
+
+
+
+
+// 🔹 إنشاء تقرير شامل للأرشيف
+const totalOrders = Object.keys(allOrders).length;
+let delivered = 0, returned = 0, rejected = 0;
+
+// 🔸 نحسب الحالات الفعلية من الطلبات المؤرشفة
+for (const o of Object.values(allOrders)) {
+  if (o.status === "تم التسليم") delivered++;
+  if (["راجع", "تم استلام الراجع"].includes(o.status)) returned++;
+  if (o.status === "رفض") rejected++;
+}
+
+const totalInvoices = Object.keys(invoices).length;
+const totalAccounts = Object.keys(accounts).length;
+const totalPurchases = Object.keys(purchases).length;
+const totalPurchaseAmount = Object.values(purchases).reduce((a,p)=>a+(+p.totalAmount||0),0);
+const totalPurchaseQty = Object.values(purchases).reduce((a,p)=>a+(+p.totalQty||+p.quantity||0),0);
+
+await set(ref(db, `archive/${monthKey}/report`), {
+  createdAt: new Date().toISOString(),
+  delivered,              // ✅ عدد الطلبات المسلّمة
+  returned,               // ✅ عدد الطلبات الراجعة
+  rejected,               // ✅ عدد الطلبات المرفوضة
+  totalOrders,
+  totalInvoices,
+  totalAccounts,
+  totalPurchases,
+  totalPurchaseAmount,
+  totalPurchaseQty,
+  totalProducts,       // ✅ عدد المنتجات في المخزن
+  totalStockQty,       // ✅ إجمالي الكميات
+  totalBuyCapital,     // ✅ رأس المال (شراء)
+  totalSellCapital,    // ✅ قيمة الجرد (بيع)
+  lastUpdate,          // ✅ وقت آخر تحديث للمخزن
+
+  summary: `📦 تمت أرشفة ${totalOrders} طلب (${delivered} تم التسليم، ${returned} راجع، ${rejected} رفض)، ${totalInvoices} فاتورة، ${totalAccounts} حساب، ${totalPurchases} مشتريات بنجاح.`
+});
+
+// 🧾 حفظ نسخة الإحصائيات في archive/{monthKey}/stats
+await set(ref(db, `archive/${monthKey}/stats`), {
+  totalProducts,
+  totalQtyAll: totalStockQty,
+  totalBuyValue: totalBuyCapital,
+  totalSellValue: totalSellCapital,
+  lastUpdate
+});
+
+
+
+
+    alert("✅ تم تصفير بيانات الشهر وأرشفتها بنجاح!");
+    loadArchivedMonths(); // إعادة تحميل الصفحة مباشرة
+  } catch (err) {
+    console.error("❌ خطأ أثناء التصفير:", err);
+    alert("حدث خطأ أثناء التصفير. تحقق من الاتصال بالإنترنت.");
+  }
+}
+// 🧹 ربط الزر بالدالة
+document.getElementById("resetMonthly").addEventListener("click", monthlySmartReset);
+
+// تحميل أولي
+loadArchivedMonths();
+
+// 🧹 ربط الزر بالدالة
+document.getElementById("resetMonthly").addEventListener("click", monthlySmartReset);
+// ✅ كود نهائي: يحول كل الأرقام داخل الصفحة إلى إنكليزي بشكل مستمر
+function convertArabicDigitsToEnglish(element) {
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  const englishDigits = "0123456789";
+  if (element.nodeType === Node.TEXT_NODE) {
+    element.textContent = element.textContent.replace(/[٠-٩]/g, d => englishDigits[arabicDigits.indexOf(d)]);
+  } else {
+    for (const child of element.childNodes) {
+      convertArabicDigitsToEnglish(child);
+    }
+  }
+}
+
+// 🔁 مراقبة الصفحة وتحويل أي أرقام جديدة تلقائيًا
+const observer = new MutationObserver(() => convertArabicDigitsToEnglish(document.body));
+observer.observe(document.body, { childList: true, subtree: true });
+
+// 🔹 تحويل الأرقام فور تحميل الصفحة أيضًا
+document.addEventListener("DOMContentLoaded", () => {
+  convertArabicDigitsToEnglish(document.body);
+});
+
+</script> 
+</body> 
+</html>

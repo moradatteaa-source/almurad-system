@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📅 الجرد اليومي - نظام المراد</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #f4f6fa;
+      color: #043B64;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #043B64;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    main {
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #043B64;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    button {
+      background: #FF6B2D;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #043B64;
+      color: white;
+    }
+
+    .loading {
+      color: #FF6B2D;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    @media (max-width: 768px) {
+      main { padding: 10px; }
+      table { font-size: 13px; }
+      button { width: 100%; margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>📅 الجرد اليومي - نظام المراد</header>
+
+  <main>
+    <!-- 🟠 قسم قيد التوصيل -->
+    <div class="section">
+      <h2>🚚 طلبات قيد التوصيل 
+        <button id="loadDeliveryBtn">تحميل الطلبات</button>
+      </h2>
+      <table id="deliveryTable">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>عدد الطلبات</th>
+            <th>الكمية الكلية</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="deliveryLoading" class="loading"></p>
+    </div>
+
+    <!-- 🔵 قسم تم استلام الراجع -->
+    <div class="section">
+      <h2>🔁 طلبات تم استلام الراجع 
+        <button id="loadReturnsBtn">تحميل الطلبات</button>
+      </h2>
+      <table id="returnsTable">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>عدد الطلبات</th>
+            <th>الكمية الكلية</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="returnsLoading" class="loading"></p>
+    </div>
+  </main>
+
+  <!-- 🔹 سكربت -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+    // إعداد Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+      authDomain: "almurad-system.firebaseapp.com",
+      databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+      projectId: "almurad-system",
+      storageBucket: "almurad-system.appspot.com",
+      messagingSenderId: "911755824405",
+      appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // عناصر DOM
+    const deliveryBtn = document.getElementById("loadDeliveryBtn");
+    const returnsBtn = document.getElementById("loadReturnsBtn");
+    const deliveryTable = document.querySelector("#deliveryTable tbody");
+    const returnsTable = document.querySelector("#returnsTable tbody");
+    const deliveryLoading = document.getElementById("deliveryLoading");
+    const returnsLoading = document.getElementById("returnsLoading");
+
+    // 🔸 تحميل الطلبات حسب الحالة
+    async function loadOrdersByStatus(status) {
+      const snap = await get(child(ref(db), "orders"));
+      if (!snap.exists()) return [];
+      const data = snap.val();
+      const map = new Map();
+
+      for (const [id, order] of Object.entries(data)) {
+        if (order.status !== status) continue;
+
+        const baseName = order.productName || "منتج غير محدد";
+        const products = order.productsDetailed || [];
+        if (products.length > 0) {
+          for (const p of products) {
+            let variantText = "";
+            if (p.variants && typeof p.variants === "object") {
+              const parts = Object.entries(p.variants)
+                .filter(([k, v]) => v && v !== "بدون متغير")
+                .map(([k, v]) => `${v}`);
+              if (parts.length > 0) variantText = " - " + parts.join(" / ");
+            }
+            const name = (p.name || baseName) + variantText;
+            const qty = Number(p.qty || p.quantity || 0);
+            if (!name || qty <= 0) continue;
+            if (!map.has(name)) map.set(name, { count: 0, qty: 0 });
+            const obj = map.get(name);
+            obj.count++;
+            obj.qty += qty;
+          }
+        } else {
+          const qty = Number(order.quantity || 0);
+          if (!baseName || qty <= 0) continue;
+          if (!map.has(baseName)) map.set(baseName, { count: 0, qty: 0 });
+          const obj = map.get(baseName);
+          obj.count++;
+          obj.qty += qty;
+        }
+      }
+
+      return Array.from(map.entries()).map(([name, d]) => ({ name, ...d }));
+    }
+
+    // 🧾 عرض البيانات في الجدول
+    function fillTable(tableEl, data) {
+      tableEl.innerHTML = "";
+      if (!data.length) {
+        tableEl.innerHTML = `<tr><td colspan="3">لا توجد طلبات حالياً</td></tr>`;
+        return;
+      }
+      data.forEach(row => {
+        tableEl.innerHTML += `
+          <tr>
+            <td>${row.name}</td>
+            <td>${row.count.toLocaleString("en-US")}</td>
+            <td>${row.qty.toLocaleString("en-US")}</td>
+          </tr>
+        `;
+      });
+    }
+
+    // 🚚 تحميل طلبات قيد التوصيل
+    deliveryBtn.addEventListener("click", async () => {
+      deliveryLoading.textContent = "⏳ جاري تحميل الطلبات...";
+      const data = await loadOrdersByStatus("قيد التوصيل");
+      fillTable(deliveryTable, data);
+      const totalOrders = data.reduce((a,b)=>a+b.count,0);
+      const totalQty = data.reduce((a,b)=>a+b.qty,0);
+      deliveryLoading.innerHTML = `📦 عدد الطلبات: <b>${totalOrders.toLocaleString("en-US")}</b> | إجمالي الكمية: <b>${totalQty.toLocaleString("en-US")}</b>`;
+    });
+
+    // 🔁 تحميل طلبات الراجع
+    returnsBtn.addEventListener("click", async () => {
+      returnsLoading.textContent = "⏳ جاري تحميل الطلبات...";
+      const data = await loadOrdersByStatus("تم استلام الراجع");
+      fillTable(returnsTable, data);
+      const totalOrders = data.reduce((a,b)=>a+b.count,0);
+      const totalQty = data.reduce((a,b)=>a+b.qty,0);
+      returnsLoading.innerHTML = `🔁 عدد الطلبات: <b>${totalOrders.toLocaleString("en-US")}</b> | إجمالي الكمية: <b>${totalQty.toLocaleString("en-US")}</b>`;
+    });
+  </script>
+</body>
+</html>
