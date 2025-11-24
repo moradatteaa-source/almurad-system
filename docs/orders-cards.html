@@ -460,20 +460,29 @@ originalOrders = [...finalOrders];
     // ⭐ استعادة بحث محفوظ
 const activeSearch = localStorage.getItem("activeSearch");
 const savedQuery = localStorage.getItem("searchQuery");
+if (!localStorage.getItem("activeSearch")) return;
 
 if (activeSearch === "1" && savedQuery) {
   document.getElementById("searchInput").value = savedQuery;
   document.getElementById("searchIcon").style.stroke = "#FF6B2D";
   document.getElementById("searchIcon").dataset.activeSearch = "1";
 
-  const q = savedQuery.toLowerCase();
-  const filtered = allOrdersList.filter(o => {
-    const id = String(o.id || "").toLowerCase();
-    const receipt = String(o.receiptNum || "").toLowerCase();
-    const p1 = String(o.phone1 || "").toLowerCase();
-    const p2 = String(o.phone2 || "").toLowerCase();
-    return id.includes(q) || receipt.includes(q) || p1.includes(q) || p2.includes(q);
-  });
+ const q = normalizeNumber(savedQuery.toLowerCase());
+
+const filtered = allOrdersList.filter(o => {
+  const id = normalizeNumber(String(o.id || "").toLowerCase());
+  const receipt = normalizeNumber(String(o.receiptNum || "").toLowerCase());
+  const p1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
+  const p2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
+
+  return (
+    id.includes(q) ||
+    receipt.includes(q) ||
+    p1.includes(q) ||
+    p2.includes(q)
+  );
+});
+
 
 originalOrders = [...filtered];
 allOrdersList = [...filtered];
@@ -622,7 +631,9 @@ document.getElementById("searchIcon").onclick = () => {
   const icon = document.getElementById("searchIcon");
 
   // ⭐ إذا البحث مفعل → إلغاء البحث
-  if (icon.dataset.activeSearch === "1") {
+if (icon.dataset.activeSearch === "1") {
+  localStorage.removeItem("activeSearch");
+  localStorage.removeItem("searchQuery");
 
     // مسح حالة البحث
     icon.dataset.activeSearch = "0";
@@ -661,36 +672,52 @@ document.getElementById("ordersList").style.marginTop = "0";
 
 };
 
+function normalizeNumber(str) {
+  if (!str) return "";
+  const arabic = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+  const english = ["0","1","2","3","4","5","6","7","8","9"];
+
+  let out = str;
+  arabic.forEach((a, i) => {
+    out = out.replaceAll(a, english[i]);
+  });
+  return out;
+}
 
 // ⭐ تنفيذ البحث
 document.getElementById("doSearch").onclick = () => {
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
-localStorage.setItem("activeSearch", "1");
-localStorage.setItem("searchQuery", q);
+  const qNorm = normalizeNumber(q);
 
-  // إذا الحقل فارغ → لا تصفر القائمة ولا تسوي فلترة
+  localStorage.setItem("activeSearch", "1");
+  localStorage.setItem("searchQuery", q);
+
   if (q === "") {
     document.getElementById("searchBoxContainer").style.display = "none";
-    return;  // 👍 يبقى العرض كما هو
+    return;
   }
 
-  // فلترة الطلبات
-  const filtered = allOrdersList.filter(o => {
-    const id = String(o.id || "").toLowerCase();
-    const receipt = String(o.receiptNum || "").toLowerCase();
-    const p1 = String(o.phone1 || "").toLowerCase();
-    const p2 = String(o.phone2 || "").toLowerCase();
+  const filtered = masterOrders.filter(o => {
+    const id = normalizeNumber(String(o.id || "").toLowerCase());
+    const receipt = normalizeNumber(String(o.receiptNum || "").toLowerCase());
+    const p1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
+    const p2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
 
-    return id.includes(q) || receipt.includes(q) || p1.includes(q) || p2.includes(q);
+    return (
+      id.includes(qNorm) ||
+      receipt.includes(qNorm) ||
+      p1.includes(qNorm) ||
+      p2.includes(qNorm)
+    );
   });
 
   renderOrders(filtered);
-  // ⭐ تفعيل حالة البحث (تلون العدسة)
-document.getElementById("searchIcon").style.stroke = "#FF6B2D";
-document.getElementById("searchIcon").dataset.activeSearch = "1";
-document.getElementById("ordersList").style.marginTop = "150px";
 
+  document.getElementById("searchIcon").style.stroke = "#FF6B2D";
+  document.getElementById("searchIcon").dataset.activeSearch = "1";
+  document.getElementById("ordersList").style.marginTop = "150px";
 };
+
 // ⭐ نظام فتح/غلق الأكوردين
 document.getElementById("accProdHeader").onclick = () => {
   const body = document.getElementById("accProdBody");

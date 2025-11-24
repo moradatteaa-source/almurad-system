@@ -291,10 +291,10 @@ if (!waseetStatusMap[item.status]) {
 
 let mappedStatus = waseetStatusMap[item.status];
 
-// ⭐ إذا ماعرف الحالة نحولها تلقائيًا → قيد التوصيل
 if (!mappedStatus) {
-  mappedStatus = "قيد التوصيل";
+  mappedStatus = targetOrder.status; // حافظ على الحالة الأصلية
 }
+
 
     // إيجاد الطلب داخل Firebase حسب receiptNum
     const targetOrder = orders.find(o =>

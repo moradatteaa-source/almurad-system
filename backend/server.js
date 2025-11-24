@@ -186,7 +186,7 @@ async function autoUpdateStatuses() {
 let updateCount = 0;
 
 for (const item of data.data) {
-  const mapped = waseetStatusMap[item.status] || "قيد التوصيل";
+const mapped = waseetStatusMap[item.status] || order.status;
 
   const order = sent.find(
     o => String(o.receiptNum).trim() === String(item.id).trim()
