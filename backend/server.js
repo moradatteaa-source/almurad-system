@@ -186,22 +186,30 @@ async function autoUpdateStatuses() {
 let updateCount = 0;
 
 for (const item of data.data) {
-const mapped = waseetStatusMap[item.status] || order.status;
 
+  // 1️⃣ نبحث عن الطلب داخل Firebase
   const order = sent.find(
     o => String(o.receiptNum).trim() === String(item.id).trim()
   );
 
   if (!order) continue;
 
-  // الحالة جديدة؟ إذا نعم → حدث واحسب
+  // 2️⃣ نطبّق خريطة الحالات
+  const mapped = waseetStatusMap[item.status] || order.status;
+
+  // 3️⃣ إذا الحالة تغيرت → عدل المخزون وحدث الطلب
   if (order.status !== mapped) {
+
     await adjustStock(order.id, mapped);
 
-    await update(ref(db, `orders/${order.id}`), { status: mapped });
+    await update(ref(db, `orders/${order.id}`), {
+      status: mapped
+    });
+
     updateCount++;
   }
 }
+
 if (updateCount === 0) {
   console.log("ℹ️ لا توجد تحديثات جديدة.");
 } else {

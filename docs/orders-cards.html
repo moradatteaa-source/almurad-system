@@ -133,7 +133,57 @@ body {
 <body>
 
 <h2 id="pageTitle" class="header-fixed">
+  <span id="statusModeToggle"
+  style="
+    position:absolute;
+    right:30px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:18px;
+    cursor:pointer;
+    color:#fff;
+  ">⚙️</span>
+
   <span id="backBtn" class="back-arrow">❮</span>
+  <select id="statusQuickMenu"
+  
+  style="
+    position:absolute;
+    right:55px;
+    top:50%;
+    transform:translateY(-50%);
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid #043B64;
+    font-size:13px;
+    color:#043B64;
+    display:none;
+  ">
+</select>
+<script>
+const statusQuickMenu = document.getElementById("statusQuickMenu");
+
+const allStatuses = [
+  "مثبت",
+  "قيد المعالجة",
+  "قيد التجهيز",
+  "قيد التوصيل",
+  "تم التسليم",
+  "راجع",
+  "تم استلام الراجع",
+  "رفض",
+  "بانتظار البضاعة",
+  "حذف"
+];
+
+allStatuses.forEach(s => {
+  const opt = document.createElement("option");
+  opt.value = s;
+  opt.textContent = s;
+  statusQuickMenu.appendChild(opt);
+});
+</script>
+
   <span id="titleText">الطلبات</span>
 <!-- 1️⃣ ثلاث نقاط -->
 <span id="menuIcon" style="
@@ -565,6 +615,29 @@ document.addEventListener("DOMContentLoaded", () => {
 let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
 let originalOrders = [];  // تتغير عند الفلترة والبحث
 let allOrdersList = [];   // قائمة العمل حالياً
+// ⭐ وضع التعديل
+let editMode = false;
+let selectedOrders = new Set();
+
+// زر ⚙️ لتفعيل وضع التحديد
+document.getElementById("statusModeToggle").onclick = () => {
+  editMode = !editMode;
+  selectedOrders.clear();
+
+  const menu = document.getElementById("statusQuickMenu");
+
+  if (editMode) {
+    menu.style.display = "inline-block";
+    document.querySelectorAll(".order-card").forEach(card => {
+      card.style.border = "2px solid transparent";
+    });
+  } else {
+    menu.style.display = "none";
+    document.querySelectorAll(".order-card").forEach(card => {
+      card.style.border = "none";
+    });
+  }
+};
 
 const params = new URLSearchParams(window.location.search);
 let filterStatus = params.get("status") || "";
@@ -612,6 +685,70 @@ function renderOrders(list) {
     ordersList.appendChild(line);
   });
 }
+// ⭐ تفعيل اختيار الكروت
+function enableSelection() {
+  document.querySelectorAll(".order-card").forEach(card => {
+    card.onclick = (e) => {
+      if (!editMode) return;
+      e.stopPropagation();
+
+      const id = card.dataset.id;
+
+      if (selectedOrders.has(id)) {
+        selectedOrders.delete(id);
+        card.style.border = "none";
+      } else {
+        selectedOrders.add(id);
+        card.style.border = "2px solid #FF6B2D";
+      }
+    };
+  });
+}
+
+// ربط enableSelection بعد كل إعادة رسم
+const oldRender = renderOrders;
+renderOrders = function(list) {
+  oldRender(list);
+  enableSelection();
+};
+
+// ⭐ تغيير الحالة فعليًا داخل Firebase
+document.getElementById("statusQuickMenu").onchange = () => {
+  if (!editMode) return;
+
+  const newStatus = statusQuickMenu.value;
+
+  if (selectedOrders.size === 0) {
+    alert("اختر طلب واحد على الأقل");
+    return;
+  }
+
+  // حذف
+  if (newStatus === "حذف") {
+    if (!confirm("هل تريد حذف الطلبات نهائيًا؟")) return;
+
+    selectedOrders.forEach(id => {
+      firebase.database().ref("orders/" + id).remove();
+    });
+
+    alert("تم حذف الطلبات");
+    editMode = false;
+    statusQuickMenu.style.display = "none";
+    return;
+  }
+
+  // تغيير الحالة
+  selectedOrders.forEach(id => {
+    firebase.database().ref("orders/" + id).update({
+      status: newStatus
+    });
+  });
+
+  alert("تم تغيير حالة الطلبات");
+  editMode = false;
+  statusQuickMenu.style.display = "none";
+};
+
 // ⭐ فتح وإغلاق قائمة الوسيط (⋮)
 document.getElementById("menuIcon").onclick = () => {
   const box = document.getElementById("menuDropdown");
