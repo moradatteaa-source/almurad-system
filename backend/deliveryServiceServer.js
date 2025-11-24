@@ -68,6 +68,7 @@ export function normalizePhone(phone) {
 
   return cleaned;
 }
+const cleanStatus = item.status.replace(/\s+/g, " ").trim();
 
 // =============================================
 // 🗺 3️⃣ مابنغ حالات الوسيط → حالات نظامك
@@ -276,67 +277,68 @@ export async function updateOrdersStatusFromWaseet(orders) {
 
   const results = [];
 
-  for (const item of data.data) {
-    // ⭐ تجاهل الحالات غير المسموح بها فقط
-if (!waseetStatusMap[item.status]) {
-  results.push({
-    receiptNum: item.id,
-    waseetStatus: item.status,
-    systemStatus: "IGNORED",
-    success: false,
-    reason: "❌ حالة غير معروفة — تم تجاهلها"
-  });
-  continue;
-}
+for (const item of data.data) {
 
-let mappedStatus = waseetStatusMap[item.status];
+  // ⭐ تنظيف الحالة لضمان التطابق
+  const cleanStatus = item.status.replace(/\s+/g, " ").trim();
 
-if (!mappedStatus) {
-  mappedStatus = targetOrder.status; // حافظ على الحالة الأصلية
-}
-
-
-    // إيجاد الطلب داخل Firebase حسب receiptNum
-    const targetOrder = orders.find(o =>
-      String(o.receiptNum).trim() === String(item.id).trim()
-    );
-
-    if (!targetOrder) {
-      results.push({
-        receiptNum: item.id,
-        waseetStatus: item.status,
-        systemStatus: mappedStatus,
-        success: false,
-        reason: "❌ لم يتم العثور على الطلب داخل Firebase"
-      });
-      continue;
-    }
-
-    // تحديث Firebase
-    try {
-      await update(ref(db, `orders/${targetOrder.id}`), {
-        status: mappedStatus
-      });
-
-      results.push({
-        receiptNum: item.id,
-        waseetStatus: item.status,
-        systemStatus: mappedStatus,
-        success: true,
-        firebaseId: targetOrder.id
-      });
-
-    } catch (err) {
-      results.push({
-        receiptNum: item.id,
-        waseetStatus: item.status,
-        systemStatus: mappedStatus,
-        success: false,
-        firebaseId: targetOrder.id,
-        error: err.message
-      });
-    }
+  // ⭐ التأكد من وجود ماب للحالة
+  if (!waseetStatusMap[cleanStatus]) {
+    results.push({
+      receiptNum: item.id,
+      waseetStatus: item.status,
+      systemStatus: "IGNORED",
+      success: false,
+      reason: "❌ حالة غير معروفة — تم تجاهلها"
+    });
+    continue;
   }
+
+  // ⭐ تحويل حالة الوسيط إلى حالة نظامك
+  const mappedStatus = waseetStatusMap[cleanStatus];
+
+  // ⭐ إيجاد الطلب داخل Firebase
+  const targetOrder = orders.find(o =>
+    String(o.receiptNum).trim() === String(item.id).trim()
+  );
+
+  if (!targetOrder) {
+    results.push({
+      receiptNum: item.id,
+      waseetStatus: cleanStatus,
+      systemStatus: mappedStatus,
+      success: false,
+      reason: "❌ لم يتم العثور على الطلب داخل Firebase"
+    });
+    continue;
+  }
+
+  // ⭐ التحديث داخل Firebase
+  try {
+    await update(ref(db, `orders/${targetOrder.id}`), {
+      status: mappedStatus
+    });
+
+    results.push({
+      receiptNum: item.id,
+      waseetStatus: cleanStatus,
+      systemStatus: mappedStatus,
+      success: true,
+      firebaseId: targetOrder.id
+    });
+
+  } catch (err) {
+    results.push({
+      receiptNum: item.id,
+      waseetStatus: cleanStatus,
+      systemStatus: mappedStatus,
+      success: false,
+      firebaseId: targetOrder.id,
+      error: err.message
+    });
+  }
+}
+
 
   return results;
 }
