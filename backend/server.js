@@ -186,27 +186,47 @@ async function autoUpdateStatuses() {
 let updateCount = 0;
 
 for (const item of data.data) {
-const mapped = waseetStatusMap[item.status] || order.status;
 
+  // تنظيف الحالة
+  const cleanStatus = item.status.replace(/\s+/g, " ").trim();
+
+  // 1) التأكد أن الحالة موجودة داخل الـ map
+  if (!waseetStatusMap[cleanStatus]) {
+    console.log("⏩ Ignored unknown status:", cleanStatus);
+    continue;  // ❌ تجاهل كامل
+  }
+
+  // 2) جلب الحالة المحوّلة
+  const mapped = waseetStatusMap[cleanStatus];
+
+  // 3) إيجاد الطلب داخل Firebase
   const order = sent.find(
     o => String(o.receiptNum).trim() === String(item.id).trim()
   );
 
-  if (!order) continue;
-
-  // الحالة جديدة؟ إذا نعم → حدث واحسب
-  if (order.status !== mapped) {
-    await adjustStock(order.id, mapped);
-
-    await update(ref(db, `orders/${order.id}`), { status: mapped });
-    updateCount++;
+  if (!order) {
+    console.log("❌ Order not found in Firebase:", item.id);
+    continue;
   }
+
+  // 4) إذا الحالة نفسها لا نحدث
+  if (order.status === mapped) continue;
+
+  // 5) تحديث المخزون فقط للحالات المتأثرة
+  await adjustStock(order.id, mapped);
+
+  // 6) تحديث الحالة في Firebase
+  await update(ref(db, `orders/${order.id}`), { status: mapped });
+
+  updateCount++;
 }
+
 if (updateCount === 0) {
   console.log("ℹ️ لا توجد تحديثات جديدة.");
 } else {
   console.log(`✅ Auto Updated: ${updateCount} updated orders`);
 }
+
 
   } catch (err) {
     console.error("❌ Auto Update Error:", err);
