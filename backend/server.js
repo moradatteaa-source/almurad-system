@@ -208,6 +208,13 @@ for (const item of data.data) {
     console.log("❌ Order not found in Firebase:", item.id);
     continue;
   }
+  // 🔥 فلترة الحالات المسموح تحديثها فقط
+const allowed = ["قيد التجهيز", "قيد التوصيل", "راجع"];
+if (!allowed.includes(order.status)) {
+  console.log("⛔ Ignored — status locked:", order.status);
+  continue;
+}
+
 
   // 4) إذا الحالة نفسها لا نحدث
   if (order.status === mapped) continue;
