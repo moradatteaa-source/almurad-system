@@ -183,49 +183,53 @@ async function autoUpdateStatuses() {
     if (!data.status) return console.log("❌ Waseet status failed");
 
   // 4) تحديث كل حالة داخل Firebase (مع احتساب المتغير فقط)
+// 4) تحديث فقط الطلبات ذات الحالات المحددة
 let updateCount = 0;
+
+// الحالات التي نعمل عليها فقط
+const allowedStatuses = ["قيد التجهيز", "قيد التوصيل", "راجع"];
 
 for (const item of data.data) {
 
-  // تنظيف الحالة
+  // تنظيف الحالة القادمة من الوسيط
   const cleanStatus = item.status.replace(/\s+/g, " ").trim();
 
-  // 1) التأكد أن الحالة موجودة داخل الـ map
+  // التأكد أن الحالة موجودة داخل المابنغ
   if (!waseetStatusMap[cleanStatus]) {
-console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`);
-    continue;  // ❌ تجاهل كامل
+    console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`);
+    continue;
   }
 
-  // 2) جلب الحالة المحوّلة
+  // الحالة المحوّلة داخل النظام
   const mapped = waseetStatusMap[cleanStatus];
 
-  // 3) إيجاد الطلب داخل Firebase
-const order = sent.find(
-  o => Number(o.receiptNum) === Number(item.id)
-);
-
-
+  // جلب الطلب من الفايربيس
+  const order = sent.find(o => Number(o.receiptNum) === Number(item.id));
   if (!order) {
     console.log("❌ Order not found in Firebase:", item.id);
     continue;
   }
-  // 🔥 فلترة الحالات المسموح تحديثها فقط
-const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
 
-if (lockedStatuses.includes(order.status)) {
-  console.log("⛔ Ignored — locked status:", order.status);
-  continue;
-}
+  // العمل فقط على الحالات 3 (قيد التجهيز, قيد التوصيل, راجع)
+  if (!allowedStatuses.includes(order.status)) {
+    console.log(`⛔ Skipped — status not allowed: ${order.status}`);
+    continue;
+  }
 
+  // عدم التحديث للحالات النهائية
+  const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
+  if (lockedStatuses.includes(order.status)) {
+    console.log("⛔ Ignored — locked final status:", order.status);
+    continue;
+  }
 
-
-  // 4) إذا الحالة نفسها لا نحدث
+  // إذا الحالة نفسها لا نحدث
   if (order.status === mapped) continue;
 
-  // 5) تحديث المخزون فقط للحالات المتأثرة
+  // تحديث المخزون
   await adjustStock(order.id, mapped);
 
-  // 6) تحديث الحالة في Firebase
+  // تحديث Firebase
   await update(ref(db, `orders/${order.id}`), { status: mapped });
 
   updateCount++;
@@ -234,8 +238,9 @@ if (lockedStatuses.includes(order.status)) {
 if (updateCount === 0) {
   console.log("ℹ️ لا توجد تحديثات جديدة.");
 } else {
-  console.log(`✅ Auto Updated: ${updateCount} updated orders`);
+  console.log(`✅ Auto Updated: ${updateCount} orders`);
 }
+
 
 
   } catch (err) {
