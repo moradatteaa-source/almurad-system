@@ -204,33 +204,46 @@ for (const item of data.data) {
   const mapped = waseetStatusMap[cleanStatus];
 
   // جلب الطلب من الفايربيس
-  const order = sent.find(o => Number(o.receiptNum) === Number(item.id));
-  if (!order) {
-    console.log("❌ Order not found in Firebase:", item.id);
-    continue;
+// 🔍 البحث داخل شجرة Firebase حسب receiptNum
+let foundOrder = null;
+let foundKey = null;
+
+for (const o of allOrders) {
+  if (Number(o.receiptNum) === Number(item.id)) {
+    foundOrder = o;
+    foundKey = o.id; // هذا هو المفتاح الحقيقي داخل orders
+    break;
   }
+}
+
+if (!foundOrder) {
+  console.log("❌ Order NOT FOUND in Firebase (deep search):", item.id);
+  continue;
+}
+
 
   // العمل فقط على الحالات 3 (قيد التجهيز, قيد التوصيل, راجع)
-  if (!allowedStatuses.includes(order.status)) {
-    console.log(`⛔ Skipped — status not allowed: ${order.status}`);
-    continue;
-  }
+// العمل فقط على الحالات 3 (قيد التجهيز, قيد التوصيل, راجع)
+if (!allowedStatuses.includes(foundOrder.status)) {
+  console.log(`⛔ Skipped — status not allowed: ${foundOrder.status}`);
+  continue;
+}
 
-  // عدم التحديث للحالات النهائية
-  const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
-  if (lockedStatuses.includes(order.status)) {
-    console.log("⛔ Ignored — locked final status:", order.status);
-    continue;
-  }
+// عدم التحديث للحالات النهائية
+const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
+if (lockedStatuses.includes(foundOrder.status)) {
+  console.log("⛔ Ignored — locked final status:", foundOrder.status);
+  continue;
+}
 
-  // إذا الحالة نفسها لا نحدث
-  if (order.status === mapped) continue;
+// إذا الحالة نفسها لا نحدث
+if (foundOrder.status === mapped) continue;
 
-  // تحديث المخزون
-  await adjustStock(order.id, mapped);
+// تحديث المخزون
+await adjustStock(foundKey, mapped);
 
-  // تحديث Firebase
-  await update(ref(db, `orders/${order.id}`), { status: mapped });
+// تحديث Firebase
+await update(ref(db, `orders/${foundKey}`), { status: mapped });
 
   updateCount++;
 }
@@ -395,6 +408,12 @@ app.post("/api/update-stock-on-status", async (req, res) => {
   }
 });
 
+app.get("/debug/order/:id", async (req, res) => {
+  const id = req.params.id;
+  const snap = await get(ref(db, `orders/${id}`));
+  if (!snap.exists()) return res.json({ exists: false });
+  res.json(snap.val());
+});
 
 // =======================================================
 // 🚀 7) تشغيل السيرفر
