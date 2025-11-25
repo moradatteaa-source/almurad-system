@@ -210,11 +210,13 @@ const order = sent.find(
     continue;
   }
   // 🔥 فلترة الحالات المسموح تحديثها فقط
-const allowed = ["قيد التجهيز", "قيد التوصيل", "راجع"];
-if (!allowed.includes(order.status)) {
-  console.log("⛔ Ignored — status locked:", order.status);
+const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
+
+if (lockedStatuses.includes(order.status)) {
+  console.log("⛔ Ignored — locked status:", order.status);
   continue;
 }
+
 
 
   // 4) إذا الحالة نفسها لا نحدث
