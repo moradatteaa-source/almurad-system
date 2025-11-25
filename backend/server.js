@@ -170,7 +170,10 @@ async function autoUpdateStatuses() {
     if (!token) return console.log("❌ Login failed");
 
     // IDs
-    const ids = sent.map(o => o.receiptNum).join(",");
+const ids = sent
+  .map(o => String(o.receiptNum || "").trim().replace(/\s+/g, ""))
+  .filter(id => id !== "" && /^[0-9]+$/.test(id))
+  .join(",");
 
     // 3) جلب الحالات من الوسيط
     const response = await fetch("https://almurad.onrender.com/api/get-orders-status", {
