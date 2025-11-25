@@ -200,9 +200,10 @@ for (const item of data.data) {
   const mapped = waseetStatusMap[cleanStatus];
 
   // 3) إيجاد الطلب داخل Firebase
-  const order = sent.find(
-    o => String(o.receiptNum).trim() === String(item.id).trim()
-  );
+const order = sent.find(
+  o => Number(o.receiptNum) === Number(item.id)
+);
+
 
   if (!order) {
     console.log("❌ Order not found in Firebase:", item.id);
