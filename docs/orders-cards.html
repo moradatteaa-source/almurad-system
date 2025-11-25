@@ -360,11 +360,21 @@ masterOrders = [];
     const data = snapshot.val();
     allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
 
+const filterStatus = localStorage.getItem("currentFilterStatus") || "";
+
 const orders = Object.entries(data)
   .map(([id, o]) => ({ id, ...o }))
-  .filter(o => true)
+  .filter(o => {
+    // ⭐ الحالة الجديدة (بدون حالة)
+    if (!filterStatus || filterStatus === "new") {
+      return !o.status || o.status === "";
+    }
 
+    // ⭐ تطابق الحالة
+    return o.status === filterStatus;
+  })
   .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+
 masterOrders = [...orders];     // الأصلية ثابتة دائماً
 // ⭐ تعبئة قائمة المنتجات
 const prodList = document.getElementById("prodList");
