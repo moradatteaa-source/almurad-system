@@ -209,11 +209,15 @@ let foundOrder = null;
 let foundKey = null;
 
 for (const o of allOrders) {
-  if (Number(o.receiptNum) === Number(item.id)) {
+ const fb = String(o.receiptNum).trim();
+const ws = String(item.id).trim();
+
+if (fb === ws) {
     foundOrder = o;
-    foundKey = o.id; // هذا هو المفتاح الحقيقي داخل orders
+    foundKey = o.id;
     break;
-  }
+}
+
 }
 
 if (!foundOrder) {
@@ -413,6 +417,39 @@ app.get("/debug/order/:id", async (req, res) => {
   const snap = await get(ref(db, `orders/${id}`));
   if (!snap.exists()) return res.json({ exists: false });
   res.json(snap.val());
+});
+// 🟢 Debug: جلب حالة وصل واحد فقط من الوسيط
+app.get("/debug/waseet/:receipt", async (req, res) => {
+  try {
+    const receipt = req.params.receipt;
+    const token = await loginToWaseet();
+
+    if (!token) return res.json({ error: "Login failed" });
+
+    const response = await fetch(
+      `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `ids=${receipt}`,
+      }
+    );
+
+    const data = await response.json();
+    return res.json(data);
+
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
+});
+// 🟢 Debug: تشغيل التحديث اليدوي للحالات
+app.get("/debug/run", async (req, res) => {
+  try {
+    await autoUpdateStatuses();
+    res.send("🔄 Manual update executed: AutoUpdateStatuses Done");
+  } catch (err) {
+    res.send("❌ Error: " + err.message);
+  }
 });
 
 // =======================================================
