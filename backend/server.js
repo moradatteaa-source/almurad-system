@@ -192,7 +192,7 @@ for (const item of data.data) {
 
   // 1) التأكد أن الحالة موجودة داخل الـ map
   if (!waseetStatusMap[cleanStatus]) {
-    console.log("⏩ Ignored unknown status:", cleanStatus);
+console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`);
     continue;  // ❌ تجاهل كامل
   }
 
