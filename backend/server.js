@@ -229,12 +229,15 @@ if (!foundOrder) {
 }
 
 
-  // العمل فقط على الحالات 3 (قيد التجهيز, قيد التوصيل, راجع)
-// العمل فقط على الحالات 3 (قيد التجهيز, قيد التوصيل, راجع)
-if (!allowedStatuses.includes(foundOrder.status)) {
-  console.log(`⛔ Skipped — status not allowed: ${foundOrder.status}`);
+// نسمح بتحويل الطلبات فقط إذا كانت حالتها القديمة من ضمن الحالات المسموح العمل عليها
+const allowedStatuses = ["قيد التجهيز", "قيد التوصيل", "راجع"];
+
+if (!allowedStatuses.includes(order.status)) {
+  // الحالة القديمة مو من الحالات اللي نشتغل عليها
   continue;
 }
+
+
 
 // عدم التحديث للحالات النهائية
 const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
