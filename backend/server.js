@@ -232,10 +232,10 @@ if (!foundOrder) {
 // نسمح بتحويل الطلبات فقط إذا كانت حالتها القديمة من ضمن الحالات المسموح العمل عليها
 const allowedStatuses = ["قيد التجهيز", "قيد التوصيل", "راجع"];
 
-if (!allowedStatuses.includes(order.status)) {
-  // الحالة القديمة مو من الحالات اللي نشتغل عليها
+if (!allowedStatuses.includes(foundOrder.status)) {
   continue;
 }
+
 
 
 
