@@ -165,6 +165,7 @@
 
 <script type="module">
 
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
@@ -536,53 +537,6 @@ function generateReceiptHTML(order, pageNumber) {
 }
 
 
-// ========== 1) تحويل HTML إلى PDF بدون html2canvas ==========
-async function generatePDF(html, fileName) {
-  const { jsPDF } = window.jspdf;
-
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: [80, 120],
-  });
-
-  const temp = document.createElement("div");
-  temp.innerHTML = html;
-  temp.style.width = "80mm";
-  temp.style.position = "absolute";
-  temp.style.left = "-9999px";
-  document.body.appendChild(temp);
-
-  // تحويل الصفحة كلها إلى صورة بدقة عالية
-  const canvas = await html2canvas(temp, {
-    scale: 4,
-    useCORS: true,
-    backgroundColor: "#ffffff"
-  });
-
-  const img = canvas.toDataURL("image/png");
-
-  pdf.addImage(img, "PNG", 0, 0, 80, 120);
-
-  document.body.removeChild(temp);
-
-  const blob = pdf.output("blob");
-  const pdfFile = new File([blob], fileName, { type: "application/pdf" });
-
-  if (navigator.share) {
-    await navigator.share({
-      title: fileName,
-      files: [pdfFile]
-    });
-  } else {
-    const url = URL.createObjectURL(pdfFile);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-  }
-}
-
 
 
 // ========== 2) طباعة وصل واحد ==========
@@ -606,85 +560,6 @@ window.printSingleOrder = async function (orderId) {
   await generatePDF(html, `order_${orderId}.pdf`);
 };
 
-
-
-// ========== 3) طباعة كل الطلبات في سجل واحد ==========
-window.printInvoice = async function (logId) {
-  const snap = await get(ref(db, "shippingLogs/" + logId + "/orders"));
-  if (!snap.exists()) return alert("لا توجد طلبات للطباعة");
-
-  const orders = Object.values(snap.val()).filter(o => o.status === "success");
-  if (orders.length === 0) return alert("لا توجد طلبات ناجحة");
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: [80, 120],
-  });
-
-  let firstPage = true;
-  let pageNum = 1;
-
-  for (const o of orders) {
-
-    const orderSnap = await get(ref(db, "orders/" + o.orderId));
-    if (!orderSnap.exists()) continue;
-
-    const order = orderSnap.val();
-    order.id = o.orderId;
-    order.receiptNum = o.receiptNum || "";
-    order.totalPrice = order.totalPrice || 0;
-    order.totalQty = order.totalQty || 0;
-    order.totalProducts = order.totalProducts || "";
-    order.productsDetailed = order.productsDetailed || [];
-
-    const html = generateReceiptHTML(order, pageNum);
-
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    temp.style.width = "80mm";
-    temp.style.position = "absolute";
-    temp.style.left = "-9999px";
-    document.body.appendChild(temp);
-
-    const canvas = await html2canvas(temp, {
-      scale: 4,
-      useCORS: true,
-      backgroundColor: "#ffffff"
-    });
-
-    const img = canvas.toDataURL("image/png");
-
-    if (!firstPage) {
-      pdf.addPage();
-    }
-
-    pdf.addImage(img, "PNG", 0, 0, 80, 120);
-
-    firstPage = false;
-    pageNum++;
-
-    document.body.removeChild(temp);
-  }
-
-  // الإخراج النهائي
-  const blob = pdf.output("blob");
-  const file = new File([blob], `invoice_${logId}.pdf`, { type: "application/pdf" });
-
-  if (navigator.share) {
-    await navigator.share({
-      title: `invoice_${logId}`,
-      files: [file]
-    });
-  } else {
-    const url = URL.createObjectURL(file);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `invoice_${logId}.pdf`;
-    link.click();
-  }
-};
 
 
 

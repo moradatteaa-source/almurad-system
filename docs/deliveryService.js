@@ -72,10 +72,13 @@ export function getCityId(cityName, waseetCities) {
   return match ? match.id : "";
 }
 
-export function getRegionId(regionName, waseetRegions) {
-  const match = waseetRegions.find(r => r.region_name === regionName);
+export function getRegionId(regionName, cityId, waseetRegions) {
+  const match = waseetRegions.find(
+    r => r.region_name === regionName && r.city_id === cityId
+  );
   return match ? match.id : "";
 }
+
 
 // =============================================
 // 📦 5️⃣ تجهيز Payload للرفع
@@ -121,7 +124,7 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
   for (const order of orders) {
     try {
       const cityId = getCityId(order.city, waseetCities);
-      const regionId = getRegionId(order.area, waseetRegions);
+const regionId = getRegionId(order.area, cityId, waseetRegions);
 // ⭐ فحص المدينة
 if (!cityId) {
   failed++;
@@ -202,24 +205,64 @@ if (!order.totalProducts || !order.totalProducts.trim()) {
 
 
       const payload = buildOrderPayload(order, token, cityId, regionId);
+// ⭐⭐⭐ إضافة Delay + Retry لحماية Rate Limit ⭐⭐⭐
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-      const response = await fetch("https://almurad.onrender.com/api/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+// انتظر 300ms بين كل طلب
+await sleep(300);
 
-      const data = await response.json();
+// دالة retry إذا الوسيط رجّع Too many requests
+async function safeFetch(url, options, retries = 3) {
+  let response = await fetch(url, options);
+  let data = await response.json();
 
-      if (data.status === true && data.data?.qr_id) {
-        success++;
-        results.push({
-          orderId: order.id,
-          success: true,
-          receiptNum: data.data.qr_id,
-          qrLink: data.data.qr_link
-        });
-      } else {
+  // إذا الوسيط رجع Rate Limit
+  if (
+    (data.msg && data.msg.includes("limit")) ||
+    (data.error && data.error.includes("limit")) ||
+    (data.message && data.message.includes("limit"))
+  ) {
+    if (retries > 0) {
+      console.warn("⏳ Rate limit detected… retrying in 1500ms");
+      await sleep(1500);
+      return await safeFetch(url, options, retries - 1);
+    }
+  }
+
+  return { response, data };
+}
+
+      const { response, data } = await safeFetch(
+  "https://almurad.onrender.com/api/create-order",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }
+);
+if (data.status === true && data.data?.qr_id) {
+  // ⭐ تحديث الطلب في Firebase: رقم الوصل + تغيير الحالة إلى قيد التجهيز
+  try {
+    const db = getDatabase();
+    const orderRef = ref(db, `orders/${order.id}`);
+    await update(orderRef, {
+      receiptNum: data.data.qr_id,
+      status: "قيد التجهيز"
+    });
+  } catch (err) {
+    console.error("❌ فشل تحديث حالة الطلب في Firebase:", err);
+  }
+
+  success++;
+  results.push({
+    orderId: order.id,
+    success: true,
+    receiptNum: data.data.qr_id,
+    qrLink: data.data.qr_link
+  });
+} else {
         failed++;
         results.push({ orderId: order.id, success: false, response: data });
       }
