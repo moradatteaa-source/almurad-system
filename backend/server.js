@@ -145,6 +145,13 @@ app.get("/myip", async (req, res) => {
   }
 });
 
+function chunk(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
 
 // =======================================================
 // 🔄 5) الدالة الأساسية: التحديث التلقائي للحالات
@@ -170,35 +177,46 @@ async function autoUpdateStatuses() {
     if (!token) return console.log("❌ Login failed");
 
     // IDs
-const ids = sent
-  .map(o => String(o.receiptNum || "").trim().replace(/\s+/g, ""))
-  .filter(id => id !== "" && /^[0-9]+$/.test(id))
-  .join(",");
+const orderIds = sent
+  .map(o => String(o.receiptNum || "").trim())
+  .filter(id => id !== "" && /^[0-9]+$/.test(id));
+
+const batches = chunk(orderIds, 25);
+
+let allResults = [];
 
     // 3) جلب الحالات من الوسيط
-    const response = await fetch("https://almurad.onrender.com/api/get-orders-status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, ids })
-    });
+for (const batch of batches) {
+  const ids = batch.join(",");
 
-    const data = await response.json();
-    if (!data.status) return console.log("❌ Waseet status failed");
+ const response = await fetch(
+  `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `ids=${ids}`,
+  }
+);
 
-  // 4) تحديث كل حالة داخل Firebase (مع احتساب المتغير فقط)
-// 4) تحديث فقط الطلبات ذات الحالات المحددة
+
+  const data = await response.json();
+
+  if (data.status && Array.isArray(data.data)) {
+    allResults = allResults.concat(data.data);
+  }
+}
+
+
+// 4) تحديث كل حالة داخل Firebase (مع التحقق الصحيح)
 let updateCount = 0;
 
-// الحالات التي نعمل عليها فقط
-const allowedStatuses = ["قيد التجهيز", "قيد التوصيل", "راجع"];
-
-for (const item of data.data) {
+for (const item of allResults) {
 
   // تنظيف الحالة القادمة من الوسيط
-  const cleanStatus = item.status.replace(/\s+/g, " ").trim();
+  const cleanStatus = item.status?.toString().replace(/\s+/g, " ").trim();
 
-  // التأكد أن الحالة موجودة داخل المابنغ
-  if (!waseetStatusMap[cleanStatus]) {
+  // إذا حالة غير موجودة بالمابنغ → تجاهل
+  if (!cleanStatus || !waseetStatusMap[cleanStatus]) {
     console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`);
     continue;
   }
@@ -206,54 +224,54 @@ for (const item of data.data) {
   // الحالة المحوّلة داخل النظام
   const mapped = waseetStatusMap[cleanStatus];
 
-  // جلب الطلب من الفايربيس
-// 🔍 البحث داخل شجرة Firebase حسب receiptNum
-let foundOrder = null;
-let foundKey = null;
+  // 🔍 البحث داخل شجرة Firebase حسب receiptNum
+  let foundOrder = null;
+  let foundKey = null;
 
-for (const o of allOrders) {
- const fb = String(o.receiptNum).trim();
-const ws = String(item.id).trim();
+  for (const o of allOrders) {
+    const fb = String(o.receiptNum || "").trim();
+    const ws = String(item.id || "").trim();
 
-if (fb === ws) {
-    foundOrder = o;
-    foundKey = o.id;
-    break;
-}
+    if (fb === ws) {
+      foundOrder = o;
+      foundKey = o.id;
+      break;
+    }
+  }
 
-}
+  if (!foundOrder) {
+    console.log("❌ Order NOT FOUND in Firebase:", item.id);
+    continue;
+  }
 
-if (!foundOrder) {
-  console.log("❌ Order NOT FOUND in Firebase (deep search):", item.id);
-  continue;
-}
+  // الحالات اللي نسمح نتحرك منها
+  const allowedFromStatuses = ["", "مثبت", "قيد التجهيز", "قيد التوصيل", "راجع"];
 
+  // الحالات النهائية المقفلة
+  const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
 
-// نسمح بتحويل الطلبات فقط إذا كانت حالتها القديمة من ضمن الحالات المسموح العمل عليها
-const allowedStatuses = ["قيد التجهيز", "قيد التوصيل", "راجع"];
+  // ❌ إذا حالة نهائية → لا تحدث
+  if (lockedStatuses.includes(foundOrder.status)) {
+    console.log("⛔ Ignored — locked final status:", foundOrder.status);
+    continue;
+  }
 
-if (!allowedStatuses.includes(foundOrder.status)) {
-  continue;
-}
+  // ❌ إذا الحالة الحالية غير مسموح نتحرك منها → لا تحدث
+  if (!allowedFromStatuses.includes(foundOrder.status)) {
+    console.log("⚠️ Skip — not allowed from-status:", foundOrder.status);
+    continue;
+  }
 
+  // ❌ إذا الحالة نفسها → لا تحدث
+  if (foundOrder.status === mapped) {
+    continue;
+  }
 
+  // تحديث المخزون
+  await adjustStock(foundKey, mapped);
 
-
-// عدم التحديث للحالات النهائية
-const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
-if (lockedStatuses.includes(foundOrder.status)) {
-  console.log("⛔ Ignored — locked final status:", foundOrder.status);
-  continue;
-}
-
-// إذا الحالة نفسها لا نحدث
-if (foundOrder.status === mapped) continue;
-
-// تحديث المخزون
-await adjustStock(foundKey, mapped);
-
-// تحديث Firebase
-await update(ref(db, `orders/${foundKey}`), { status: mapped });
+  // تحديث Firebase
+  await update(ref(db, `orders/${foundKey}`), { status: mapped });
 
   updateCount++;
 }
@@ -263,6 +281,7 @@ if (updateCount === 0) {
 } else {
   console.log(`✅ Auto Updated: ${updateCount} orders`);
 }
+
 
 
 
