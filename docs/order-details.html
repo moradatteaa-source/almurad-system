@@ -6,6 +6,11 @@
   <title>تفاصيل الطلب - نظام المراد</title>
   
   <style>
+    .input-error {
+  border: 2px solid #ff3b30 !important;
+  background: #ffecec !important;
+}
+
     .add-small-btn {
   background: rgba(4, 59, 100, 0.08);
   color: #043B64;
@@ -1134,9 +1139,125 @@ if (data.extraProducts && Array.isArray(data.extraProducts)) {
     const el = document.getElementById(id);
     if (el) el.dataset.oldValue = el.value;
   });
+// ==========================
+//  🔥 فحص كل الحقول قبل الحفظ
+// ==========================
+async function validateBeforeSave() {
+  let valid = true;
+// إذا الحالة رفض — السماح بالحفظ بدون فحص
+// ⭐ السماح بالحفظ بدون فحص إذا لم تكن الحالة ضمن الحالات المطلوبة
+const statusVal = document.querySelector("#status input")?.value.trim();
+const requiredStatuses = ["مثبت", "قيد التوصيل", "تم التسليم", "تم استلام الراجع"];
+
+if (!requiredStatuses.includes(statusVal)) {
+  return true; // ⬅️ السماح بالحفظ بدون أي فحص
+}
+
+
+  // إزالة الأخطاء القديمة
+  document.querySelectorAll(".input-error")
+    .forEach(e => e.classList.remove("input-error"));
+
+  function errorField(selector, msg) {
+    const el = document.querySelector(selector);
+    if (el) el.classList.add("input-error");
+    showToast(msg);
+    valid = false;
+  }
+
+  // 1) الكود
+  if (!document.getElementById("code").value.trim()) {
+    errorField("#code", "⚠️ يرجى كتابة الكود");
+  }
+
+  // 2) رقم الهاتف
+  const phone = document.getElementById("phone1").value.trim().replace(/\D/g, "");
+  if (phone.length < 11) {
+    errorField("#phone1", "⚠️ رقم الهاتف يجب أن يكون 11 رقم على الأقل");
+  }
+
+  // 3) المحافظة
+  if (!document.querySelector("#city input")?.value.trim()) {
+    errorField("#city input", "⚠️ يرجى اختيار المحافظة");
+  }
+
+  // 4) المنطقة
+  if (!document.querySelector("#area input")?.value.trim()) {
+    errorField("#area input", "⚠️ يرجى اختيار المنطقة");
+  }
+
+  // 5) اسم المنتج
+  if (!document.querySelector("#product input")?.value.trim()) {
+    errorField("#product input", "⚠️ يرجى اختيار اسم المنتج");
+  }
+
+  // 6) السعر
+  const price = document.getElementById("price").value.replace(/,/g, "").trim();
+  if (!price || Number(price) <= 0) {
+    errorField("#price", "⚠️ يرجى كتابة السعر");
+  }
+
+  // 7) العدد
+  const qty = document.getElementById("quantity").value.replace(/,/g, "").trim();
+  if (!qty || Number(qty) <= 0) {
+    errorField("#quantity", "⚠️ يرجى كتابة عدد القطع");
+  }
+
+  // 8) المتغيرات
+  document.querySelectorAll("#variantsContainer .variant-group").forEach(group => {
+    const label = group.querySelector("label")?.textContent.replace(":", "").trim();
+    const input = group.querySelector("input");
+    if (!input.value.trim()) {
+      input.classList.add("input-error");
+      showToast(`⚠️ يرجى اختيار متغير: ${label}`);
+      valid = false;
+    }
+  });
+
+  // 9) المنتجات الإضافية
+  for (const p of extraProducts) {
+    const card = document.querySelector(`.extra-product[data-pid="${p.id}"]`);
+
+    if (!p.name || !p.name.trim()) {
+      const input = card.querySelector(".field.single input");
+input.classList.add("input-error");
+showToast("⚠️ يوجد منتج إضافي بدون اسم");
+valid = false;
+    }
+    if (p.qty <= 0) {
+      const input = card.querySelector(".qty-input");
+      input.classList.add("input-error");
+      showToast(`⚠️ العدد غير صحيح للمنتج: ${p.name}`);
+      valid = false;
+    }
+    if (p.price <= 0) {
+      const input = card.querySelector(".price-input");
+      input.classList.add("input-error");
+      showToast(`⚠️ السعر غير صحيح للمنتج: ${p.name}`);
+      valid = false;
+    }
+
+    // متغيرات المنتج الإضافي
+    const vGroups = card.querySelectorAll(".variant-group input");
+    vGroups.forEach(v => {
+      const title = v.parentElement.querySelector("label")?.textContent.replace(":", "");
+      if (!v.value.trim()) {
+        v.classList.add("input-error");
+        showToast(`⚠️ يرجى اختيار ${title} للمنتج: ${p.name}`);
+        valid = false;
+      }
+    });
+  }
+
+  return valid;
+}
+
 
     // 🔹 عند الحفظ
 document.getElementById("saveBtn").addEventListener("click", async () => {
+
+  const isValid = await validateBeforeSave();
+  if (!isValid) return; // 🛑 وقف الحفظ إذا أكو خطأ
 
   // المنتج الرئيسي
   const mainProduct = {
