@@ -2,7 +2,6 @@
 <html lang="ar" dir="rtl">
 <head>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -555,14 +554,76 @@ window.printSingleOrder = async function (orderId) {
   order.productsDetailed = order.productsDetailed || [];
   order.receiptNum = order.receiptNum || "";
 
-  const html = generateReceiptHTML(order, 1);
 
-  await generatePDF(html, `order_${orderId}.pdf`);
+await printRealPDF(order);
 };
 
+async function printRealPDF(order) {
+  const { jsPDF } = window.jspdf;
+
+  // حجم ورقة الطابعة الحرارية
+  const doc = new jsPDF({
+    unit: "mm",
+    format: [80, 120],
+    orientation: "portrait"
+  });
+
+  // إضافة الخط العربي (لو تريد أخليه جاهز أرفق لي ملف Tajawal)
+  doc.setFont("helvetica", "normal");
+
+  // عنوان
+  doc.setFontSize(14);
+  doc.text("AL-MURAD", 40, 6, { align: "center" });
+
+  doc.setFontSize(10);
+  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, 14);
+  doc.text(`رقم الطلب: ${order.id}`, 5, 20);
+  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, 26);
+
+  doc.line(5, 30, 75, 30);
+
+  // تفاصيل
+  doc.setFontSize(11);
+  doc.text("تفاصيل الطلب", 5, 38);
+
+  doc.setFontSize(9);
+  doc.text(`السعر: ${order.totalPrice}`, 5, 45);
+  doc.text(`القطع: ${order.totalQty}`, 5, 51);
+  doc.text(`البضاعة: ${order.totalProducts}`, 5, 57);
+
+  doc.text("عنوان الشحن", 5, 68);
+  doc.text(`المحافظة: ${order.city}`, 5, 74);
+  doc.text(`المنطقة: ${order.area}`, 5, 80);
+  doc.text(`العنوان: ${order.address}`, 5, 86);
+  doc.text(`الاسم: ${order.advertiser}`, 5, 92);
+
+  // ملاحظات
+  doc.setFontSize(10);
+  doc.text("ملاحظات:", 5, 102);
+  doc.setFontSize(9);
+  doc.text(`${order.notes || "لا توجد"}`, 5, 108);
+
+  // QR
+  if (order.receiptNum) {
+    const qr = await generateQRBase64(order.receiptNum);
+    doc.addImage(qr, "PNG", 55, 10, 18, 18);
+  }
+
+  // حفظ
+  doc.save(`order_${order.id}.pdf`);
+}
 
 
-
+// 🔥 دالة إنشاء QR Base64
+async function generateQRBase64(text) {
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${text}`;
+  const blob = await fetch(url).then(r => r.blob());
+  return await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
 
 </script>
 <!-- 🧾 منطقة الطباعة بالنسبة للوصل -->

@@ -343,60 +343,74 @@ const db = getDatabase(app);
 let mainProductObj = {}; // ✅ تعريف عام
 
 
-    // 🔹 دالة إنشاء منسدلة
-    function createDropdown(options, selected, onChange) {
-      const wrapper = document.createElement("div");
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = selected || "";
-      input.placeholder = "اختر...";
-      input.style.cursor = "pointer";
+function createDropdown(options, selected, onChange) {
+  const wrapper = document.createElement("div");
 
-      const dropdown = document.createElement("div");
-      Object.assign(dropdown.style, {
-        position: "absolute",
-        background: "#fff",
-        border: "1px solid #ccc",
-        borderRadius: "6px",
-        boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
-        maxHeight: "200px",
-        overflowY: "auto",
-        zIndex: "9999",
-        display: "none",
-        fontSize: "12px"
-      });
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = selected || "";
+  input.placeholder = "اختر...";
+  input.style.cursor = "pointer";
 
-      function renderList(filter = "") {
-        dropdown.innerHTML = "";
-        options.filter(o => o.includes(filter)).forEach(o => {
-          const opt = document.createElement("div");
-          opt.textContent = o;
-          opt.style.padding = "5px 8px";
-          opt.style.cursor = "pointer";
-          opt.addEventListener("click", () => {
-            input.value = o;
-            dropdown.style.display = "none";
-            onChange(o);
-          });
-          dropdown.appendChild(opt);
+  // ❌ لا نستخدم readonly — حتى يعمل البحث
+  // input.setAttribute("readonly", "true");
+
+  const dropdown = document.createElement("div");
+  Object.assign(dropdown.style, {
+    position: "absolute",
+    background: "#fff",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
+    maxHeight: "200px",
+    overflowY: "auto",
+    zIndex: "9999",
+    display: "none",
+    fontSize: "12px"
+  });
+
+  function renderList(filter = "") {
+    dropdown.innerHTML = "";
+    options
+      .filter(o => o.includes(filter))
+      .forEach(o => {
+        const opt = document.createElement("div");
+        opt.textContent = o;
+        opt.style.padding = "5px 8px";
+        opt.style.cursor = "pointer";
+        opt.addEventListener("click", () => {
+          input.value = o;
+          dropdown.style.display = "none";
+          onChange(o);
         });
-      }
-
-      input.addEventListener("focus", () => {
-        dropdown.style.display = "block";
-        renderList();
+        dropdown.appendChild(opt);
       });
+  }
 
-      input.addEventListener("input", e => renderList(e.target.value.trim()));
-      document.addEventListener("click", e => {
-        if (!wrapper.contains(e.target)) dropdown.style.display = "none";
-      });
+  // 🟦 عرض القائمة عند الضغط
+  input.addEventListener("focus", () => {
+    dropdown.style.display = "block";
+    renderList(input.value.trim());
+  });
 
-      wrapper.style.position = "relative";
-      wrapper.appendChild(input);
-      wrapper.appendChild(dropdown);
-      return wrapper;
-    }
+  // 🟧 فلترة مباشرة عند الكتابة (بحث مباشر)
+  input.addEventListener("input", () => {
+    dropdown.style.display = "block";
+    renderList(input.value.trim());
+  });
+
+  // إغلاق القائمة عند النقر خارجها
+  document.addEventListener("click", e => {
+    if (!wrapper.contains(e.target)) dropdown.style.display = "none";
+  });
+
+  wrapper.style.position = "relative";
+  wrapper.appendChild(input);
+  wrapper.appendChild(dropdown);
+  return wrapper;
+}
+
+
 
    // 🔹 تحميل قائمة المنتجات من المخزن "warehouse"
 let allProducts = [];
@@ -727,6 +741,112 @@ statusDiv.appendChild(statusDropdown);
 
     // 💾 حفظ الطلب
     document.getElementById("saveBtn").addEventListener("click", async () => {
+      // ⭐⭐⭐ التحقق قبل الحفظ ⭐⭐⭐
+function validateOrder() {
+  let errors = [];
+
+  const code = document.getElementById("code").value.trim();
+  const phone1 = document.getElementById("phone1").value.trim();
+  const product = document.querySelector("#product input")?.value.trim();
+  const price = document.getElementById("price").value.replace(/,/g, "").trim();
+  const qty = document.getElementById("quantity").value.trim();
+  const city = document.querySelector("#city input")?.value.trim();
+  const area = document.querySelector("#area input")?.value.trim();
+  const address = document.getElementById("address").value.trim();
+  const status = document.querySelector("#status input")?.value.trim();
+
+  // ⭐ الحالات التي تحتاج تحقق كامل
+  const strictStatuses = ["مثبت", "قيد التوصيل", "تم التسليم"];
+
+  // 🔹 إذا الحالة تحتاج تحقق كامل
+  if (strictStatuses.includes(status)) {
+
+    if (!code) errors.push("الكود مطلوب");
+ // 🔥 التحقق من رقم الهاتف وفق صيغة العراق
+if (!phone1) {
+  errors.push("رقم الهاتف مطلوب");
+} else {
+  let raw = phone1.replace(/\D/g, ""); // إزالة أي رموز أو مسافات
+
+  // إزالة كل أنواع المفاتيح
+  if (raw.startsWith("00964")) raw = raw.slice(5);
+  else if (raw.startsWith("964")) raw = raw.slice(3);
+  else if (raw.startsWith("0")) raw = raw.slice(1);
+
+  // يجب أن يبدأ بـ 7
+  if (!raw.startsWith("7")) {
+    errors.push("رقم الهاتف يجب أن يبدأ بالرقم 7 بعد المفتاح");
+  }
+
+  // يجب أن يكون 10 أرقام بعد 7
+  if (raw.length !== 10) {
+    errors.push("رقم الهاتف يجب أن يكون 10 أرقام بعد الرقم 7");
+  }
+}
+
+// 🔹 الرقم الثاني اختياري ولكن إذا موجود يجب تصحيحه
+const phone2 = document.getElementById("phone2").value.trim();
+if (phone2) {
+  let raw2 = phone2.replace(/\D/g, "");
+
+  if (raw2.startsWith("00964")) raw2 = raw2.slice(5);
+  else if (raw2.startsWith("964")) raw2 = raw2.slice(3);
+  else if (raw2.startsWith("0")) raw2 = raw2.slice(1);
+
+  if (!raw2.startsWith("7") || raw2.length !== 10) {
+    errors.push("الرقم الثاني غير صحيح — يجب أن يكون 10 أرقام بعد الرقم 7");
+  }
+}
+
+
+
+    if (!product) errors.push("اسم المنتج مطلوب");
+    if (!price || isNaN(price) || price <= 0) errors.push("السعر غير صالح");
+    if (!qty || isNaN(qty) || qty <= 0) errors.push("عدد القطع غير صالح");
+// المحافظة يجب أن تكون من القائمتين فقط
+if (!allCities.includes(city)) {
+  errors.push("يجب اختيار المحافظة من القائمة فقط");
+}
+
+// المنطقة يجب أن تكون من القائمة التابعة للمحافظة
+const allowedAreas = citiesData[city] || [];
+if (!area) errors.push("يجب اختيار المنطقة");
+
+if (!allowedAreas.includes(area)) {
+  errors.push("يجب اختيار المنطقة من القائمة فقط");
+}
+
+    if (!address) errors.push("العنوان مطلوب");
+
+    // 🟢 التحقق من المتغيرات للمنتج الرئيسي إذا عنده متغيرات
+    const mainVariantsCount = Object.keys(mainProductObj.selectedVariants || {}).length;
+    if (mainVariantsCount === 0 && Object.keys(mainProductObj).length > 0) {
+      errors.push("يجب اختيار المتغيرات للمنتج الرئيسي");
+    }
+
+    // 🟣 التحقق من كل منتج إضافي
+    extraProducts.forEach((p, i) => {
+      if (!p.name) errors.push(`اسم المنتج الإضافي رقم ${i + 1} مطلوب`);
+      if (!p.price || p.price <= 0) errors.push(`سعر المنتج الإضافي رقم ${i + 1} غير صالح`);
+      if (!p.qty || p.qty <= 0) errors.push(`كمية المنتج الإضافي رقم ${i + 1} غير صالحة`);
+
+      const vCount = Object.keys(p.selectedVariants || {}).length;
+      if (vCount === 0 && p.name) {
+        errors.push(`يجب اختيار المتغيرات للمنتج الإضافي رقم ${i + 1}`);
+      }
+    });
+  }
+
+  return errors;
+}
+
+// 🛑 إذا يوجد أخطاء → وقف الحفظ
+const errors = validateOrder();
+if (errors.length > 0) {
+  alert("⚠ لا يمكن حفظ الطلب:\n\n" + errors.map(e => "- " + e).join("\n"));
+  return; // 🛑 إيقاف الحفظ بالكامل
+}
+
       const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
 
       const mainName = document.querySelector("#product input")?.value || "";
@@ -810,7 +930,6 @@ extraProducts.forEach(p => {
 });
 
 
-// 🟢 إنشاء الطلب
 const order = {
   code: document.getElementById("code").value.trim(),
   phone1: document.getElementById("phone1").value.trim(),
@@ -819,14 +938,17 @@ const order = {
   city: document.querySelector("#city input")?.value || "",
   area: document.querySelector("#area input")?.value || "",
 
-  productName: mainName, // ✓ المنتج الأساسي فقط
+  productName: mainName,
 
-  // ✓ الثلاث نقاط الجديدة المطلوبة
-  totalQty: totalQty,           // ← مجموع الكمية
-  totalPrice: totalPrice,       // ← مجموع السعر
-  totalProducts: combinedNames, // ← أسماء كل المنتجات
+  // ⭐⭐ الحـــل ⭐⭐
+  price: mainPrice,       // ← السعر الرئيسي
+  quantity: mainQty,      // ← العدد الرئيسي
 
-  notes: finalNotes, // تبقى ثابتة وماتنمسح
+  totalQty: totalQty,
+  totalPrice: totalPrice,
+  totalProducts: combinedNames,
+
+  notes: finalNotes,
   status: document.querySelector("#status input")?.value || "",
   advertiser: document.getElementById("advertiser").value.trim(),
   orderDate: new Date().toISOString(),
@@ -835,6 +957,7 @@ const order = {
   extraProducts: extraProducts,
   productsDetailed: productsDetailed
 };
+
 
 // 🟢 إضافة fixedBy إذا الحالة أولها مثبت أو رفض
 const userName =
