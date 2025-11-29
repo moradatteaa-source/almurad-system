@@ -568,50 +568,73 @@ async function printRealPDF(order) {
     orientation: "portrait"
   });
 
-  // إضافة الخط العربي (لو تريد أخليه جاهز أرفق لي ملف Tajawal)
-  doc.setFont("helvetica", "normal");
+  /* ------------------ تحميل الشعارين كـ Base64 ------------------ */
 
-  // عنوان
-  doc.setFontSize(14);
-  doc.text("AL-MURAD", 40, 6, { align: "center" });
+  const muradLogo = await fetch("almurad-logo.png")
+      .then(r => r.blob())
+      .then(b => new Promise(res => {
+        let reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.readAsDataURL(b);
+      }));
 
-  doc.setFontSize(10);
-  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, 14);
-  doc.text(`رقم الطلب: ${order.id}`, 5, 20);
-  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, 26);
+  const waseetLogo = await fetch("alwaseet-logo.png")
+      .then(r => r.blob())
+      .then(b => new Promise(res => {
+        let reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.readAsDataURL(b);
+      }));
 
-  doc.line(5, 30, 75, 30);
+  /* ------------------------------------------------------------- */
 
-  // تفاصيل
-  doc.setFontSize(11);
-  doc.text("تفاصيل الطلب", 5, 38);
+  // شعار المراد يسار
+  doc.addImage(muradLogo, "PNG", 5, 4, 18, 18);
 
-  doc.setFontSize(9);
-  doc.text(`السعر: ${order.totalPrice}`, 5, 45);
-  doc.text(`القطع: ${order.totalQty}`, 5, 51);
-  doc.text(`البضاعة: ${order.totalProducts}`, 5, 57);
-
-  doc.text("عنوان الشحن", 5, 68);
-  doc.text(`المحافظة: ${order.city}`, 5, 74);
-  doc.text(`المنطقة: ${order.area}`, 5, 80);
-  doc.text(`العنوان: ${order.address}`, 5, 86);
-  doc.text(`الاسم: ${order.advertiser}`, 5, 92);
-
-  // ملاحظات
-  doc.setFontSize(10);
-  doc.text("ملاحظات:", 5, 102);
-  doc.setFontSize(9);
-  doc.text(`${order.notes || "لا توجد"}`, 5, 108);
+  // شعار الوسيط يمين
+  doc.addImage(waseetLogo, "PNG", 57, 4, 18, 18);
 
   // QR
   if (order.receiptNum) {
     const qr = await generateQRBase64(order.receiptNum);
-    doc.addImage(qr, "PNG", 55, 10, 18, 18);
+    doc.addImage(qr, "PNG", 28, 4, 24, 24);
   }
+
+  // النصوص
+  doc.setFont("helvetica", "normal");
+
+  doc.setFontSize(10);
+  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, 30);
+  doc.text(`رقم الطلب: ${order.id}`, 5, 36);
+  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, 42);
+
+  doc.line(5, 46, 75, 46);
+
+  doc.setFontSize(11);
+  doc.text("تفاصيل الطلب:", 5, 53);
+
+  doc.setFontSize(9);
+  doc.text(`السعر: ${order.totalPrice}`, 5, 60);
+  doc.text(`القطع: ${order.totalQty}`, 5, 66);
+  doc.text(`البضاعة: ${order.totalProducts}`, 5, 72);
+
+  doc.text("عنوان الشحن:", 5, 82);
+  doc.text(`المحافظة: ${order.city}`, 5, 88);
+  doc.text(`المنطقة: ${order.area}`, 5, 94);
+  doc.text(`العنوان: ${order.address}`, 5, 100);
+  doc.text(`الاسم: ${order.advertiser}`, 5, 106);
+
+  // ملاحظات
+  doc.setFontSize(10);
+  doc.text("ملاحظات:", 5, 114);
+  doc.setFontSize(9);
+  doc.text(`${order.notes || "لا توجد"}`, 5, 120);
 
   // حفظ
   doc.save(`order_${order.id}.pdf`);
 }
+
+
 
 
 // 🔥 دالة إنشاء QR Base64

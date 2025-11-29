@@ -108,12 +108,31 @@ export function buildOrderPayload(order, token, cityId, regionId) {
   };
 }
 
-
 // =============================================
 // 🚀 6️⃣ رفع الطلبات المثبتة للوسيط
 // - يستلم Array من الطلبات
 // - يرجع نتائج الرفع
 // =============================================
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function safeFetch(url, options, retries = 3) {
+  let response = await fetch(url, options);
+  let data = await response.json();
+
+  const isRateLimit =
+    (data.msg && data.msg.includes("limit")) ||
+    (data.error && data.error.includes("limit")) ||
+    (data.message && data.message.includes("limit"));
+
+  if (isRateLimit && retries > 0) {
+    console.warn("⏳ Rate limit… retrying in 1500ms");
+    await sleep(1500);
+    return await safeFetch(url, options, retries - 1);
+  }
+
+  return { response, data };
+}
 export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
   const token = await loginToWaseet();
   if (!token) return { success: 0, failed: orders.length };
@@ -123,118 +142,66 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
 
   for (const order of orders) {
     try {
+
+      // ⭐ فحص المدينة
       const cityId = getCityId(order.city, waseetCities);
-const regionId = getRegionId(order.area, cityId, waseetRegions);
-// ⭐ فحص المدينة
-if (!cityId) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: `❌ المدينة غير صحيحة: ${order.city}`
-  });
-  continue;
-}
+      const regionId = getRegionId(order.area, cityId, waseetRegions);
 
-// ⭐ فحص المنطقة
-if (!regionId) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: `❌ المنطقة غير صحيحة: ${order.area}`
-  });
-  continue;
-}
+      if (!cityId) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ المدينة غير صحيحة: ${order.city}` });
+        continue;
+      }
 
-// ⭐ فحص رقم الهاتف
-const rawPhone = order.phone1 || order.phone;
-if (!rawPhone) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: "❌ رقم الهاتف غير موجود"
-  });
-  continue;
-}
+      if (!regionId) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ المنطقة غير صحيحة: ${order.area}` });
+        continue;
+      }
 
-const normalized = normalizePhone(rawPhone);
-if (normalized.length < 14) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: `❌ رقم الهاتف غير صالح: ${rawPhone}`
-  });
-  continue;
-}
+      // ⭐ فحص الهاتف
+      const rawPhone = order.phone1 || order.phone;
+      if (!rawPhone) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ رقم الهاتف غير موجود" });
+        continue;
+      }
 
-// ⭐ السعر
-if (!order.totalPrice || order.totalPrice <= 0) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: "❌ السعر غير موجود أو غير صالح"
-  });
-  continue;
-}
+      const normalized = normalizePhone(rawPhone);
+      if (normalized.length < 14) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ رقم الهاتف غير صالح: ${rawPhone}` });
+        continue;
+      }
 
-// ⭐ الكمية
-if (!order.totalQty || order.totalQty <= 0) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: "❌ الكمية غير صالحة أو غير موجودة"
-  });
-  continue;
-}
+      // ⭐ السعر + الكمية + المنتج
+      if (!order.totalPrice || order.totalPrice <= 0) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ السعر غير صالح" });
+        continue;
+      }
 
-// ⭐ أسماء المنتجات
-if (!order.totalProducts || !order.totalProducts.trim()) {
-  failed++;
-  results.push({
-    orderId: order.id,
-    success: false,
-    reason: "❌ أسماء المنتجات غير موجودة"
-  });
-  continue;
-}
+      if (!order.totalQty || order.totalQty <= 0) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ الكمية غير صالحة" });
+        continue;
+      }
 
+      if (!order.totalProducts || !order.totalProducts.trim()) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ أسماء المنتجات غير موجودة" });
+        continue;
+      }
 
+      // ⭐ تجهيز البيانات
       const payload = buildOrderPayload(order, token, cityId, regionId);
-// ⭐⭐⭐ إضافة Delay + Retry لحماية Rate Limit ⭐⭐⭐
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
-// انتظر 300ms بين كل طلب
-await sleep(300);
+   // ⭐ قبل الإرسال لازم نثبت الإيقاع
+await sleep(3000);
 
-// دالة retry إذا الوسيط رجّع Too many requests
-async function safeFetch(url, options, retries = 3) {
-  let response = await fetch(url, options);
-  let data = await response.json();
 
-  // إذا الوسيط رجع Rate Limit
-  if (
-    (data.msg && data.msg.includes("limit")) ||
-    (data.error && data.error.includes("limit")) ||
-    (data.message && data.message.includes("limit"))
-  ) {
-    if (retries > 0) {
-      console.warn("⏳ Rate limit detected… retrying in 1500ms");
-      await sleep(1500);
-      return await safeFetch(url, options, retries - 1);
-    }
-  }
-
-  return { response, data };
-}
-
-      const { response, data } = await safeFetch(
+// ⭐ إرسال الطلب (safeFetch يعيد المحاولة إذا صار Rate Limit)
+const fetchResult = await safeFetch(
   "https://almurad.onrender.com/api/create-order",
   {
     method: "POST",
@@ -242,38 +209,59 @@ async function safeFetch(url, options, retries = 3) {
     body: JSON.stringify(payload)
   }
 );
-if (data.status === true && data.data?.qr_id) {
-  // ⭐ تحديث الطلب في Firebase: رقم الوصل + تغيير الحالة إلى قيد التجهيز
-  try {
-    const db = getDatabase();
-    const orderRef = ref(db, `orders/${order.id}`);
-    await update(orderRef, {
-      receiptNum: data.data.qr_id,
-      status: "قيد التجهيز"
-    });
-  } catch (err) {
-    console.error("❌ فشل تحديث حالة الطلب في Firebase:", err);
-  }
 
-  success++;
-  results.push({
-    orderId: order.id,
-    success: true,
-    receiptNum: data.data.qr_id,
-    qrLink: data.data.qr_link
-  });
-} else {
-        failed++;
-        results.push({ orderId: order.id, success: false, response: data });
+const { data } = fetchResult;
+
+// تهدئة الإيقاع حتى لا نتجاوز Rate Limit
+await sleep(1500);
+
+
+ 
+
+  
+
+      // ⭐ نجاح الرفع
+      if (data.status === true && data.data?.qr_id) {
+        try {
+          const db = getDatabase();
+          await update(ref(db, `orders/${order.id}`), {
+            receiptNum: data.data.qr_id,
+            status: "قيد التجهيز"
+          });
+        } catch (err) {
+          console.error("❌ فشل تحديث Firebase:", err);
+        }
+
+        success++;
+        results.push({
+          orderId: order.id,
+          success: true,
+          receiptNum: data.data.qr_id,
+          qrLink: data.data.qr_link
+        });
       }
-    } catch (err) {
-      failed++;
-      results.push({ orderId: order.id, success: false, error: err });
-    }
+
+      // ⭐ فشل الرفع
+      else {
+        failed++;
+        results.push({
+          orderId: order.id,
+          success: false,
+          response: data
+        });
+      }
+
+  } catch (err) {
+  await sleep(1500); // ⭐ حتى لا يكسر ال Rate Limit
+  failed++;
+  results.push({ orderId: order.id, success: false, error: err });
+}
+
   }
 
   return { success, failed, results };
 }
+
 
 // =============================================
 // 🔄 7️⃣ تحديث الحالات من الوسيط
