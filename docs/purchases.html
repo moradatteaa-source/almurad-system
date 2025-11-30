@@ -6,6 +6,18 @@
   <title>🧾 نظام المشتريات - شركة المراد</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+
+/* 📱 جعل الجداول قابلة للتمرير في الموبايل */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  min-width: 800px;
+}
+
     :root {
       --blue: #043B64;
       --orange: #FF6B2D;
@@ -267,41 +279,66 @@
 
   </style>
 </head>
-<!-- ✅ نافذة تجار الجملة (منبثقة وسط الشاشة) -->
-<div class="popup-overlay" id="wholesalersPopup">
-  <div class="popup-box" style="max-width: 750px; width: 95%;">
-    <h3 style="text-align:center;color:#043B64;">🏬 قائمة تجّار الجملة</h3>
-    <button onclick="closeWholesalersPopup()" style="
-      position:absolute;top:12px;left:12px;
-      background:#c0392b;color:white;border:none;
-      padding:6px 12px;border-radius:6px;cursor:pointer;">✖</button>
-
-    <!-- 🔍 شريط البحث -->
-    <input id="whSearch" placeholder="ابحث بالاسم أو الرقم..." 
-      style="width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:8px;" 
-      oninput="filterWholesalers()">
-
-    <!-- 📋 جدول التجار -->
-    <div style="overflow-x:auto;max-height:60vh;">
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:#043B64;color:white;">
-            <th>الاسم</th>
-            <th>📞 الهاتف</th>
-            <th>📍 العنوان</th>
-            <th>🗒️ ملاحظات</th>
-          </tr>
-        </thead>
-        <tbody id="wholesalersTable">
-          <tr><td colspan="4">جارِ التحميل...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 
 <style>
+  /* 📱 تحسين العرض للشاشات الصغيرة */
+@media (max-width: 600px) {
+
+  header {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  header button {
+    width: 100%;
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .container {
+    margin: 10px;
+    padding: 12px;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-bar input,
+  .filter-bar select,
+  .filter-bar button {
+    width: 100%;
+  }
+
+  .stat-cards {
+    flex-direction: column;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  .popup-box {
+    width: 95% !important;
+    padding: 15px !important;
+  }
+
+  input, select, textarea {
+    font-size: 15px;
+  }
+
+  /* خانة البحث عن المنتج */
+  #productSearchInput {
+    font-size: 15px;
+  }
+}
+
   /* ✅ جعل خلفية جدول الفواتير بيضاء بالكامل */
 table {
   width: 100%;
@@ -370,6 +407,37 @@ tr:hover {
 
 
 <body>
+  <!-- ✅ نافذة تجار الجملة (منبثقة وسط الشاشة) -->
+<div class="popup-overlay" id="wholesalersPopup">
+  <div class="popup-box" style="max-width: 750px; width: 95%;">
+    <h3 style="text-align:center;color:#043B64;">🏬 قائمة تجّار الجملة</h3>
+    <button onclick="closeWholesalersPopup()" style="
+      position:absolute;top:12px;left:12px;
+      background:#c0392b;color:white;border:none;
+      padding:6px 12px;border-radius:6px;cursor:pointer;">✖</button>
+
+    <input id="whSearch" placeholder="ابحث بالاسم أو الرقم..." 
+      style="width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:8px;" 
+      oninput="filterWholesalers()">
+
+    <div style="overflow-x:auto;max-height:60vh;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#043B64;color:white;">
+            <th>الاسم</th>
+            <th>📞 الهاتف</th>
+            <th>📍 العنوان</th>
+            <th>🗒️ ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody id="wholesalersTable">
+          <tr><td colspan="4">جارِ التحميل...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
   <header>
     <h2>🧾 نظام المشتريات - شركة المراد</h2>
     <button onclick="openPurchasePopup()">➕ إضافة عملية شراء</button>
@@ -593,9 +661,15 @@ window.openPurchasePopup = () => {
 window.closePurchasePopup = () => (purchasePopup.style.display = "none");
 window.openSupplierPopup = () => (supplierPopup.style.display = "flex");
 // ✅ فتح نافذة تجار الجملة (Popup)
+
+/* =========================
+   🏬 تجار الجملة (Popup)
+========================= */
+
+// ✅ فتح النافذة
 window.openWholesalersPopup = () => {
   document.getElementById("wholesalersPopup").style.display = "flex";
-  loadWholesalers();
+  loadWholesalers(); // مهم
 };
 
 // ✅ إغلاق النافذة
@@ -603,37 +677,43 @@ window.closeWholesalersPopup = () => {
   document.getElementById("wholesalersPopup").style.display = "none";
 };
 
-// ✅ تحميل التجار من Realtime Database
-window.loadWholesalers = () => {
+// ✅ تحميل التجار من Firebase
+async function loadWholesalers() {
   const table = document.getElementById("wholesalersTable");
-  onValue(ref(db, "suppliers"), (snap) => {
-    table.innerHTML = "";
-    if (!snap.exists()) {
-      table.innerHTML = `<tr><td colspan="4">🚫 لا يوجد تجار بعد</td></tr>`;
-      return;
-    }
-    const data = snap.val();
-    Object.values(data).forEach(s => {
-      table.innerHTML += `
-        <tr>
-          <td>${s.name || "-"}</td>
-          <td>${s.phone || "-"}</td>
-          <td>${s.address || "-"}</td>
-          <td>${s.notes || "-"}</td>
-        </tr>`;
-    });
-  });
-};
+  table.innerHTML = `<tr><td colspan="4">جارِ التحميل...</td></tr>`;
 
-// 🔎 فلترة داخل جدول التجار
+  const snap = await get(ref(db, "suppliers"));
+
+  table.innerHTML = "";
+
+  if (!snap.exists()) {
+    table.innerHTML = `<tr><td colspan="4">🚫 لا يوجد تجار بعد</td></tr>`;
+    return;
+  }
+
+  const data = snap.val();
+  Object.values(data).forEach((s) => {
+    table.innerHTML += `
+      <tr>
+        <td>${s.name || "-"}</td>
+        <td>${s.phone || "-"}</td>
+        <td>${s.address || "-"}</td>
+        <td>${s.notes || "-"}</td>
+      </tr>`;
+  });
+}
+
+// 🔍 فلترة التجار داخل الجدول
 window.filterWholesalers = () => {
   const input = document.getElementById("whSearch").value.toLowerCase();
   const rows = document.querySelectorAll("#wholesalersTable tr");
-  rows.forEach(row => {
+
+  rows.forEach((row) => {
     const text = row.textContent.toLowerCase();
     row.style.display = text.includes(input) ? "" : "none";
   });
 };
+
 
 /* =========================
    📦 تحميل الموردين
