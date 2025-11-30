@@ -7,25 +7,6 @@
 // =============================================
 // 🔐 1️⃣ تسجيل الدخول للوسيط والحصول على Token
 // =============================================
-// =============================================
-// 🔥 Firebase Initialization
-// =============================================
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, update } from "firebase/database";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-  authDomain: "almurad-system.firebaseapp.com",
-  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-  projectId: "almurad-system",
-  storageBucket: "almurad-system.appspot.com",
-  messagingSenderId: "911755824405",
-  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
 export async function loginToWaseet() {
   try {
     const response = await fetch("https://almurad.onrender.com/api/login", {
@@ -158,112 +139,125 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
 
   let success = 0, failed = 0;
   const results = [];
-  // ⭐⭐ الخوارزمية الجديدة — Queue — التزام صارم 1 طلب / ثانية ⭐⭐
-const RATE_DELAY = 1000; // 1 ثانية بين كل طلب
 
-for (const order of orders) {
-  try {
-    // ⭐ فحص المدينة
-    const cityId = getCityId(order.city, waseetCities);
-    const regionId = getRegionId(order.area, cityId, waseetRegions);
+  for (const order of orders) {
+    try {
 
-    if (!cityId) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: `❌ المدينة غير صحيحة: ${order.city}` });
-      continue;
-    }
+      // ⭐ فحص المدينة
+      const cityId = getCityId(order.city, waseetCities);
+      const regionId = getRegionId(order.area, cityId, waseetRegions);
 
-    if (!regionId) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: `❌ المنطقة غير صحيحة: ${order.area}` });
-      continue;
-    }
-
-    // ⭐ فحص الهاتف
-    const rawPhone = order.phone1 || order.phone;
-    if (!rawPhone) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: "❌ رقم الهاتف غير موجود" });
-      continue;
-    }
-
-    const normalized = normalizePhone(rawPhone);
-    if (normalized.length < 14) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: `❌ رقم الهاتف غير صالح: ${rawPhone}` });
-      continue;
-    }
-
-    // ⭐ فحص السعر + الكمية + اسم المنتج
-    if (!order.totalPrice || order.totalPrice <= 0) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: "❌ السعر غير صالح" });
-      continue;
-    }
-
-    if (!order.totalQty || order.totalQty <= 0) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: "❌ الكمية غير صالحة" });
-      continue;
-    }
-
-    if (!order.totalProducts || !order.totalProducts.trim()) {
-      failed++;
-      results.push({ orderId: order.id, success: false, reason: "❌ أسماء المنتجات غير موجودة" });
-      continue;
-    }
-
-    // ⭐ تجهيز البيانات
-    const payload = buildOrderPayload(order, token, cityId, regionId);
-
-    // ⭐ إرسال الطلب
-    const fetchResult = await safeFetch(
-      "https://almurad.onrender.com/api/create-order",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      if (!cityId) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ المدينة غير صحيحة: ${order.city}` });
+        continue;
       }
-    );
 
-    const { data } = fetchResult;
+      if (!regionId) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ المنطقة غير صحيحة: ${order.area}` });
+        continue;
+      }
 
-    // ⭐ نجاح الرفع
-if (data.status === true && data.data?.qr_id) {
-      await update(ref(db, `orders/${order.id}`), {
+      // ⭐ فحص الهاتف
+      const rawPhone = order.phone1 || order.phone;
+      if (!rawPhone) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ رقم الهاتف غير موجود" });
+        continue;
+      }
+
+      const normalized = normalizePhone(rawPhone);
+      if (normalized.length < 14) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: `❌ رقم الهاتف غير صالح: ${rawPhone}` });
+        continue;
+      }
+
+      // ⭐ السعر + الكمية + المنتج
+      if (!order.totalPrice || order.totalPrice <= 0) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ السعر غير صالح" });
+        continue;
+      }
+
+      if (!order.totalQty || order.totalQty <= 0) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ الكمية غير صالحة" });
+        continue;
+      }
+
+      if (!order.totalProducts || !order.totalProducts.trim()) {
+        failed++;
+        results.push({ orderId: order.id, success: false, reason: "❌ أسماء المنتجات غير موجودة" });
+        continue;
+      }
+
+      // ⭐ تجهيز البيانات
+      const payload = buildOrderPayload(order, token, cityId, regionId);
+
+   // ⭐ قبل الإرسال لازم نثبت الإيقاع
+await sleep(3000);
 
 
-        receiptNum: data.data.qr_id,
-        status: "قيد التجهيز"
-      });
+// ⭐ إرسال الطلب (safeFetch يعيد المحاولة إذا صار Rate Limit)
+const fetchResult = await safeFetch(
+  "https://almurad.onrender.com/api/create-order",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }
+);
 
-      success++;
-      results.push({
-        orderId: order.id,
-        success: true,
-        receiptNum: data.data.qr_id
-      });
-    }
+const { data } = fetchResult;
 
-    // ⭐ فشل الرفع
-    else {
-      failed++;
-      results.push({
-        orderId: order.id,
-        success: false,
-        response: data
-      });
-    }
+// تهدئة الإيقاع حتى لا نتجاوز Rate Limit
+await sleep(1500);
+
+
+ 
+
+  
+
+      // ⭐ نجاح الرفع
+      if (data.status === true && data.data?.qr_id) {
+        try {
+          const db = getDatabase();
+          await update(ref(db, `orders/${order.id}`), {
+            receiptNum: data.data.qr_id,
+            status: "قيد التجهيز"
+          });
+        } catch (err) {
+          console.error("❌ فشل تحديث Firebase:", err);
+        }
+
+        success++;
+        results.push({
+          orderId: order.id,
+          success: true,
+          receiptNum: data.data.qr_id,
+          qrLink: data.data.qr_link
+        });
+      }
+
+      // ⭐ فشل الرفع
+      else {
+        failed++;
+        results.push({
+          orderId: order.id,
+          success: false,
+          response: data
+        });
+      }
 
   } catch (err) {
-    failed++;
-    results.push({ orderId: order.id, success: false, error: err });
-  }
-
-  // ⭐⭐ أهم جزء — نضمن 1 طلب كل ثانية ⭐⭐
-  await sleep(RATE_DELAY);
+  await sleep(1500); // ⭐ حتى لا يكسر ال Rate Limit
+  failed++;
+  results.push({ orderId: order.id, success: false, error: err });
 }
 
+  }
 
   return { success, failed, results };
 }
