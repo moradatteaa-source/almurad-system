@@ -7,6 +7,25 @@
 // =============================================
 // 🔐 1️⃣ تسجيل الدخول للوسيط والحصول على Token
 // =============================================
+// =============================================
+// 🔥 Firebase Initialization
+// =============================================
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, update } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 export async function loginToWaseet() {
   try {
     const response = await fetch("https://almurad.onrender.com/api/login", {
@@ -210,9 +229,10 @@ for (const order of orders) {
     const { data } = fetchResult;
 
     // ⭐ نجاح الرفع
-    if (data.status === true && data.data?.qr_id) {
-      const db = getDatabase();
+if (data.status === true && data.data?.qr_id) {
       await update(ref(db, `orders/${order.id}`), {
+
+
         receiptNum: data.data.qr_id,
         status: "قيد التجهيز"
       });
