@@ -192,13 +192,8 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
         results.push({ orderId: order.id, success: false, reason: "❌ أسماء المنتجات غير موجودة" });
         continue;
       }
-
-      // ⭐ تجهيز البيانات
-      const payload = buildOrderPayload(order, token, cityId, regionId);
-
-   // ⭐ قبل الإرسال لازم نثبت الإيقاع
-await sleep(3000);
-
+// ⭐ تجهيز البيانات
+const payload = buildOrderPayload(order, token, cityId, regionId);
 
 // ⭐ إرسال الطلب (safeFetch يعيد المحاولة إذا صار Rate Limit)
 const fetchResult = await safeFetch(
@@ -212,44 +207,40 @@ const fetchResult = await safeFetch(
 
 const { data } = fetchResult;
 
-// تهدئة الإيقاع حتى لا نتجاوز Rate Limit
-await sleep(1500);
+// ⭐ تهدئة الإيقاع — طلب واحد كل ثانية (30 طلب / 30 ثانية)
+await sleep(1000);
 
+// ⭐ نجاح الرفع
+if (data.status === true && data.data?.qr_id) {
+  try {
+    const db = getDatabase();
+    await update(ref(db, `orders/${order.id}`), {
+      receiptNum: data.data.qr_id,
+      status: "قيد التجهيز"
+    });
+  } catch (err) {
+    console.error("❌ فشل تحديث Firebase:", err);
+  }
 
- 
+  success++;
+  results.push({
+    orderId: order.id,
+    success: true,
+    receiptNum: data.data.qr_id,
+    qrLink: data.data.qr_link
+  });
+}
 
-  
+// ⭐ فشل الرفع
+else {
+  failed++;
+  results.push({
+    orderId: order.id,
+    success: false,
+    response: data
+  });
+}
 
-      // ⭐ نجاح الرفع
-      if (data.status === true && data.data?.qr_id) {
-        try {
-          const db = getDatabase();
-          await update(ref(db, `orders/${order.id}`), {
-            receiptNum: data.data.qr_id,
-            status: "قيد التجهيز"
-          });
-        } catch (err) {
-          console.error("❌ فشل تحديث Firebase:", err);
-        }
-
-        success++;
-        results.push({
-          orderId: order.id,
-          success: true,
-          receiptNum: data.data.qr_id,
-          qrLink: data.data.qr_link
-        });
-      }
-
-      // ⭐ فشل الرفع
-      else {
-        failed++;
-        results.push({
-          orderId: order.id,
-          success: false,
-          response: data
-        });
-      }
 
   } catch (err) {
   await sleep(1500); // ⭐ حتى لا يكسر ال Rate Limit

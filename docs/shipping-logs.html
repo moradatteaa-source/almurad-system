@@ -163,6 +163,7 @@
 
 
 <script type="module">
+const amiriBase64 = "";
 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -535,6 +536,117 @@ function generateReceiptHTML(order, pageNumber) {
 `;
 }
 
+async function drawReceipt(doc, order, muradLogo, waseetLogo, qrBase64) {
+  let y = 6;
+
+  // شعار المراد
+const imgProps = doc.getImageProperties(muradLogo);
+const ratio = imgProps.width / imgProps.height;
+doc.addImage(muradLogo, "PNG", 5, y, 20, 20 / ratio);
+
+
+  // QR
+  doc.addImage(qrBase64, "PNG", 28, y - 1, 18, 18);
+
+  // شعار الوسيط
+  doc.addImage(waseetLogo, "PNG", 50, y + 2, 18, 10);
+
+  y += 26;
+
+  doc.setFont("Amiri", "bold");
+  doc.setFontSize(12);
+  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, y);
+  y += 6;
+
+  doc.setFont("Amiri", "normal");
+  doc.setFontSize(11);
+  doc.text(`رقم الطلب: ${order.id}`, 5, y); y += 5;
+  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, y); y += 7;
+
+  doc.line(5, y, 75, y);
+  y += 6;
+
+  // التفاصيل
+  doc.setFontSize(12);
+  doc.text("تفاصيل الطلب", 5, y);
+  y += 6;
+
+  doc.setFontSize(10);
+  doc.text(`إجمالي السعر: ${order.totalPrice}`, 5, y); y += 5;
+  doc.text(`عدد القطع: ${order.totalQty}`, 5, y); y += 5;
+  doc.text(`نوع البضاعة: ${order.totalProducts}`, 5, y); y += 8;
+
+  // عنوان الشحن
+  doc.setFontSize(12);
+  doc.text("عنوان الشحن", 5, y);
+  y += 6;
+
+  doc.setFontSize(10);
+  doc.text(`المحافظة: ${order.city}`, 5, y); y += 5;
+  doc.text(`المنطقة: ${order.area}`, 5, y); y += 5;
+  doc.text(`العنوان: ${order.address}`, 5, y); y += 5;
+  doc.text(`الاسم: ${order.advertiser}`, 5, y); y += 8;
+
+  // ملاحظات
+  doc.setFontSize(12);
+  doc.text("الملاحظات", 5, y);
+  y += 5;
+
+  doc.setFontSize(9);
+  doc.text(order.notes || "لا توجد", 5, y);
+}
+
+
+// ========== 1) طباعة جميع الطلبات في السجل ==========
+window.printInvoice = async function (logId) {
+  const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
+  if (!snap.exists()) {
+    alert("لا توجد طلبات للطباعة");
+    return;
+  }
+
+  const orders = Object.values(snap.val());
+  const { jsPDF } = window.jspdf;
+
+  const doc = new jsPDF({
+    unit: "mm",
+    format: [80, 120],
+    orientation: "portrait"
+  });
+
+  // الخط
+  doc.addFileToVFS("Amiri-Regular.ttf", amiriBase64);
+  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+  doc.setFont("Amiri");
+
+  // تحميل الصور مرة واحدة فقط
+  const muradLogo = await convertToBase64("almuradcop.png");
+  const waseetLogo = await convertToBase64("alwaseet-logo.png");
+
+  let firstPage = true;
+
+  for (let order of orders) {
+    if (!firstPage) {
+      doc.addPage([80, 120]);
+    }
+    firstPage = false;
+
+    // تهيئة
+    order.id = order.orderId;
+    order.totalPrice = order.totalPrice || 0;
+    order.totalQty = order.totalQty || 0;
+    order.totalProducts = order.totalProducts || "";
+    order.productsDetailed = order.productsDetailed || [];
+    order.receiptNum = order.receiptNum || "";
+
+    // QR واحد لكل وصل
+    const qrBase64 = await generateQRBase64(order.receiptNum);
+
+    await drawReceipt(doc, order, muradLogo, waseetLogo, qrBase64);
+  }
+
+  doc.save(`All_Receipts_${logId}.pdf`);
+};
 
 
 
@@ -559,82 +671,98 @@ await printRealPDF(order);
 };
 
 async function printRealPDF(order) {
+  console.log("🔥 النسخة الجديدة من printRealPDF تعمل!");
+
   const { jsPDF } = window.jspdf;
 
-  // حجم ورقة الطابعة الحرارية
   const doc = new jsPDF({
     unit: "mm",
     format: [80, 120],
     orientation: "portrait"
   });
 
-  /* ------------------ تحميل الشعارين كـ Base64 ------------------ */
+  // تحميل خط عربي
+  doc.addFileToVFS("Amiri-Regular.ttf", amiriBase64);
+  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+  doc.setFont("Amiri"); // ← ضروري
 
-  const muradLogo = await fetch("almurad-logo.png")
-      .then(r => r.blob())
-      .then(b => new Promise(res => {
-        let reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.readAsDataURL(b);
-      }));
+  // ---------------- تحميل الشعارين ----------------
+const muradLogo = await convertToBase64("almuradcop.png");
+  const waseetLogo = await convertToBase64("alwaseet-logo.png");
 
-  const waseetLogo = await fetch("alwaseet-logo.png")
-      .then(r => r.blob())
-      .then(b => new Promise(res => {
-        let reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.readAsDataURL(b);
-      }));
 
-  /* ------------------------------------------------------------- */
+  // ---------------- QR ----------------
+  const qrBase64 = await generateQRBase64(order.receiptNum);
 
-  // شعار المراد يسار
-  doc.addImage(muradLogo, "PNG", 5, 4, 18, 18);
+  let y = 6;
 
-  // شعار الوسيط يمين
-  doc.addImage(waseetLogo, "PNG", 57, 4, 18, 18);
+// شعار المراد المضغوط
+const imgProps = doc.getImageProperties(muradLogo);
+const ratio = imgProps.width / imgProps.height;
+doc.addImage(muradLogo, "PNG", 5, y, 20, 20 / ratio);
+
+
+
 
   // QR
-  if (order.receiptNum) {
-    const qr = await generateQRBase64(order.receiptNum);
-    doc.addImage(qr, "PNG", 28, 4, 24, 24);
-  }
+doc.addImage(qrBase64, "PNG", 28, y-1, 18, 18);
 
-  // النصوص
-  doc.setFont("helvetica", "normal");
+  y += 26;
 
-  doc.setFontSize(10);
-  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, 30);
-  doc.text(`رقم الطلب: ${order.id}`, 5, 36);
-  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, 42);
+doc.setFont("Amiri", "bold");
+  doc.setFontSize(12);
+  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, y);
+  y += 6;
 
-  doc.line(5, 46, 75, 46);
-
+doc.setFont("Amiri", "normal");
   doc.setFontSize(11);
-  doc.text("تفاصيل الطلب:", 5, 53);
+  doc.text(`رقم الطلب: ${order.id}`, 5, y); y += 5;
+  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, y); y += 7;
 
-  doc.setFontSize(9);
-  doc.text(`السعر: ${order.totalPrice}`, 5, 60);
-  doc.text(`القطع: ${order.totalQty}`, 5, 66);
-  doc.text(`البضاعة: ${order.totalProducts}`, 5, 72);
+  doc.line(5, y, 75, y);
+  y += 6;
 
-  doc.text("عنوان الشحن:", 5, 82);
-  doc.text(`المحافظة: ${order.city}`, 5, 88);
-  doc.text(`المنطقة: ${order.area}`, 5, 94);
-  doc.text(`العنوان: ${order.address}`, 5, 100);
-  doc.text(`الاسم: ${order.advertiser}`, 5, 106);
+  doc.setFontSize(12);
+  doc.text("تفاصيل الطلب", 5, y); 
+  y += 6;
 
-  // ملاحظات
   doc.setFontSize(10);
-  doc.text("ملاحظات:", 5, 114);
-  doc.setFontSize(9);
-  doc.text(`${order.notes || "لا توجد"}`, 5, 120);
+  doc.text(`إجمالي السعر: ${order.totalPrice} د.ع`, 5, y); y += 5;
+  doc.text(`عدد القطع: ${order.totalQty}`, 5, y); y += 5;
+  doc.text(`نوع البضاعة: ${order.totalProducts}`, 5, y); y += 8;
 
-  // حفظ
+  doc.setFontSize(12);
+  doc.text("عنوان الشحن", 5, y); 
+  y += 6;
+
+  doc.setFontSize(10);
+  doc.text(`المحافظة: ${order.city}`, 5, y); y += 5;
+  doc.text(`المنطقة: ${order.area}`, 5, y); y += 5;
+  doc.text(`العنوان: ${order.address}`, 5, y); y += 5;
+  doc.text(`الاسم: ${order.advertiser}`, 5, y); y += 8;
+
+  doc.setFontSize(12);
+  doc.text("الملاحظات", 5, y); 
+  y += 5;
+
+  doc.setFontSize(9);
+  const notes = order.notes || "لا توجد";
+  doc.text(notes, 5, y);
+  y += 10;
+
   doc.save(`order_${order.id}.pdf`);
 }
 
 
+
+async function convertToBase64(url) {
+  const blob = await fetch(url).then(r => r.blob());
+  return await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
 
 
 // 🔥 دالة إنشاء QR Base64
