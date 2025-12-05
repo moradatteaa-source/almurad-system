@@ -1441,21 +1441,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ✅ تنسيق السعر والعدد بفاصلة أثناء الكتابة
-  ["price", "quantity"].forEach(id => {
-    const input = document.getElementById(id);
-    if (!input) return;
+ ["price", "quantity"].forEach(id => {
+  const input = document.getElementById(id);
+  if (!input) return;
 
-    input.addEventListener("input", e => {
-      let val = e.target.value.replace(/[^\d]/g, ""); // نزيل أي شيء غير رقم
-      if (val) {
-        e.target.value = new Intl.NumberFormat("en-US").format(val); // نضيف الفاصلة
-      }
-    });
-
-    input.addEventListener("change", e => {
-      e.target.value = e.target.value.replace(/,/g, ""); // نحذف الفواصل قبل الحفظ
-    });
+  // السماح فقط بالأرقام بدون أي تنسيق
+  input.addEventListener("input", e => {
+    e.target.value = e.target.value.replace(/[^\d]/g, "");
   });
+
+  input.addEventListener("change", e => {
+    e.target.value = e.target.value.replace(/[^\d]/g, "");
+  });
+});
+
 });
 
     // 🟦 عرض أسماء المنتجات كفقاعات داخل حقل "اسم المنتج"
