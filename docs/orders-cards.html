@@ -6,6 +6,62 @@
   <title>الطلبات</title>
 
 <style>
+  
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 4px;
+  color: white;
+}
+
+/* حالة جديد */
+.status-new {
+  background: #4FA3FF;   /* أزرق فاتح */
+  color: white;
+}
+
+
+/* جديد (قديمة – لا نستخدمها بعد الآن) */
+.status-blank { background: #7f8c8d; }
+
+
+/* جديد */
+.status-blank { background: #7f8c8d; }
+
+/* مثبت */
+.status-mothabet { background: #1abc9c; }
+
+/* قيد المعالجة */
+.status-processing { background: #e67e22; }
+
+/* قيد التجهيز */
+.status-preparing { background: #f39c12; }
+
+/* بانتظار البضاعة */
+.status-waiting-goods { background: #9b59b6; }
+
+/* قيد التوصيل */
+.status-delivery { background: #f1c40f; color:black; }
+
+/* تم التسليم */
+.status-delivered { background: #2ecc71; }
+
+/* راجع */
+.status-return { background: #e74c3c; }
+
+/* تم استلام الراجع */
+.status-return-received { background: #c0392b; }
+
+/* رفض */
+.status-rejected { background: #7f8c8d; }
+
+/* غير معروف */
+.status-unknown { background: #95a5a6; }
+
+
   #searchIcon {
   stroke: #FF6B2D80; /* برتقالي خفيف */
 }
@@ -81,17 +137,17 @@ body {
   }
 
   .order-id {
-    font-size: 12px;
-    color: #222;
-    font-weight: normal !important;
-  }
+  font-size: 16px;       /* أكبر */
+  color: #043B64;        /* لون طوخ */
+  font-weight: 700;      /* غامق */
+}
 
 .product-name {
-    color: #FF6B2D;
-    font-size: 12px;   /* 🔥 صغرنا الخط */
-    font-weight: bold;
-    margin-top: 3px;
+  color: #FF6B2D;
+  font-size: 13px;
+  font-weight: bold;
 }
+
 
 
   /* ▼ يسار الكارت — العدد + السعر + المعلن ▼ */
@@ -276,41 +332,96 @@ body {
 
 </div>
 
+<!-- 🔍 صندوق البحث الاحترافي -->
 <div id="searchBoxContainer" style="
   display:none;
   position:fixed;
-  top:60px;
-  right:0;
-  left:0;
+  top:70px;
+  left:10px;
+  right:10px;
   background:white;
-  padding:10px;
+  padding:12px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
   z-index:9999;
-  box-shadow:0 2px 5px rgba(0,0,0,0.2);
 ">
 
-  <!-- السطر الأول: خانة البحث -->
-  <input id="searchInput" type="text" placeholder="اكتب للبحث..."
-    style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc;
-           border-radius:8px; font-size:15px; margin-bottom:10px;">
+  <!-- سطر البحث -->
+  <div style="display:flex; align-items:center; gap:10px;">
+    
+    <input id="searchInput" type="text" placeholder="اكتب هنا..."
+      style="
+        flex:1;
+        padding:10px 14px;
+        font-size:16px;
+        border:1px solid #ccc;
+        border-radius:8px;
+        outline:none;
+      ">
+    
+    <!-- زر إغلاق -->
+    <button id="closeSearch" style="
+      background:#eee;
+      border:none;
+      width:36px;
+      height:36px;
+      border-radius:8px;
+      font-size:18px;
+      cursor:pointer;
+    ">✕</button>
+  </div>
 
-  <!-- السطر الثاني: الأزرار -->
-  <div style="display:flex; gap:10px; justify-content:flex-start;">
+  <!-- نوع البحث -->
+  <div style="
+    margin-top:14px;
+    display:flex;
+    gap:10px;
+    justify-content:space-between;
+  ">
+
+    <button class="searchTypeBtn" data-type="orderId"
+      style="flex:1; padding:10px; border-radius:8px; border:1px solid #043B64; background:#E6F3FF;">
+      رقم الطلب
+    </button>
+
+    <button class="searchTypeBtn" data-type="phone"
+      style="flex:1; padding:10px; border-radius:8px; border:1px solid #043B64; background:white;">
+      رقم الهاتف
+    </button>
+
+    <button class="searchTypeBtn" data-type="customerCode"
+      style="flex:1; padding:10px; border-radius:8px; border:1px solid #043B64; background:white;">
+      كود الزبون
+    </button>
+
+  </div>
+
+  <!-- أزرار تنفيذ البحث -->
+  <div style="margin-top:16px; display:flex; gap:10px;">
     <button id="doSearch" style="
       flex:1;
-      padding:10px; background:#043B64; color:white; border:none;
-      border-radius:8px; font-size:14px; cursor:pointer;">
-      بحث
-    </button>
+      padding:10px;
+      background:#043B64;
+      color:white;
+      border:none;
+      border-radius:8px;
+      font-size:16px;
+      font-weight:600;
+    ">بحث</button>
 
     <button id="cancelSearch" style="
       flex:1;
-      padding:10px; background:#999; color:white; border:none;
-      border-radius:8px; font-size:14px; cursor:pointer;">
-      إلغاء
-    </button>
+      padding:10px;
+      background:#FF6B2D;
+      color:white;
+      border:none;
+      border-radius:8px;
+      font-size:16px;
+      font-weight:600;
+    ">إلغاء</button>
   </div>
-
 </div>
+
 
 
 </h2>
@@ -357,8 +468,11 @@ allOrdersList = [];
 originalOrders = [];
 masterOrders = [];
 
-    const data = snapshot.val();
-    allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+const data = snapshot.val();
+
+// ⭐ النسخة الأصلية من كل الطلبات → snapshot الكامل
+snapshotAllOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+
 
 const filterStatus = localStorage.getItem("currentFilterStatus") || "";
 
@@ -436,47 +550,44 @@ if (savedFilterActive) {
 
 // بعد تحديد القائمة النهائية:
 renderOrders(finalOrders);
-allOrdersList = [...finalOrders];
+allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
 originalOrders = [...finalOrders];
 
 
 
     // ⭐ استعادة بحث محفوظ
+// ⭐ استعادة بحث محفوظ — النسخة الصحيحة
 const activeSearch = localStorage.getItem("activeSearch");
 const savedQuery = localStorage.getItem("searchQuery");
-if (!localStorage.getItem("activeSearch")) return;
+const savedType = localStorage.getItem("searchType") || "orderId";
 
 if (activeSearch === "1" && savedQuery) {
-  document.getElementById("searchInput").value = savedQuery;
+  const q = normalizeNumber(savedQuery.trim().toLowerCase());
+
+  // ⭐ البحث يجب أن يكون على كل الطلبات
+const filtered = snapshotAllOrders.filter(o => {
+    const id = normalizeNumber(String(o.id || "").toLowerCase());
+    const phone1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
+    const phone2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
+    const code = normalizeNumber(String(o.customerCode || "").toLowerCase());
+
+    if (savedType === "orderId") return id.includes(q);
+    if (savedType === "phone") return phone1.includes(q) || phone2.includes(q);
+    if (savedType === "customerCode") return code.includes(q);
+
+    return false;
+  });
+
+  renderOrders(filtered);
+
   document.getElementById("searchIcon").style.stroke = "#FF6B2D";
   document.getElementById("searchIcon").dataset.activeSearch = "1";
+  document.getElementById("searchInput").value = savedQuery;
 
- const q = normalizeNumber(savedQuery.toLowerCase());
-
-const filtered = allOrdersList.filter(o => {
-  const id = normalizeNumber(String(o.id || "").toLowerCase());
-  const receipt = normalizeNumber(String(o.receiptNum || "").toLowerCase());
-  const p1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
-  const p2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
-
-  return (
-    id.includes(q) ||
-    receipt.includes(q) ||
-    p1.includes(q) ||
-    p2.includes(q)
-  );
-});
-
-
-originalOrders = [...filtered];
-allOrdersList = [...filtered];
-
-renderOrders(filtered);
-
-// حتى ما ترجع القائمة الأصلية بعد onValue جديد
-document.getElementById("ordersList").style.marginTop = "150px";
-
+  return;   // 🔥 يمنع Firebase من حذف نتائج البحث
 }
+
+
 
   });
   
@@ -546,6 +657,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
 // ⭐ متغيرات عامة
+let snapshotAllOrders = [];
+
 let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
 let originalOrders = [];  // تتغير عند الفلترة والبحث
 let allOrdersList = [];   // قائمة العمل حالياً
@@ -554,6 +667,24 @@ const params = new URLSearchParams(window.location.search);
 let filterStatus = params.get("status") || "";
 localStorage.setItem("currentFilterStatus", filterStatus);
 let filterActive = localStorage.getItem("filterActive") === "1";
+function getStatusClass(status) {
+if (!status || status.trim() === "") return "status-new";
+
+  const map = {
+    "مثبت": "status-mothabet",
+    "قيد المعالجة": "status-processing",
+    "قيد التجهيز": "status-preparing",
+    "بانتظار البضاعة": "status-waiting-goods",
+    "قيد التوصيل": "status-delivery",
+    "تم التسليم": "status-delivered",
+    "راجع": "status-return",
+    "تم استلام الراجع": "status-return-received",
+    "رفض": "status-rejected"
+  };
+
+  return map[status] || "status-unknown";
+}
+
 
 
 // ⭐ دالة عرض الطلبات
@@ -570,15 +701,23 @@ function renderOrders(list) {
     card.setAttribute("data-id", o.id);
 
     card.innerHTML = `
-      <div class="right-side">
-        <div class="date">${(o.orderDate || "").split("T")[0]}</div>
-        <div class="order-id">#${o.id}</div>
-<div class="product-name">${o.totalProducts || o.productName || "-"}</div>
-      </div>
+   <div class="right-side" style="display:flex; flex-direction:column;">
+  <div class="date">${(o.orderDate || "").split("T")[0]}</div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+    <div class="order-id">#${o.id}</div>
+    <div class="product-name">${o.totalProducts || o.productName || "-"}</div>
+  </div>
+</div>
+
       <div class="left-side">
 <div class="qty">${o.totalQty || o.quantity || 1}</div>
 <div class="price">${Number(o.totalPrice || o.price || 0).toLocaleString("en-US")} د.ع</div>
         <div class="advertiser">${o.advertiser || ""}</div>
+        <div class="status-badge ${getStatusClass(o.status)}">
+  ${o.status && o.status.trim() !== "" ? o.status : "جديد"}
+</div>
+
       </div>
     `;
 
@@ -614,47 +753,47 @@ document.getElementById("searchIcon").onclick = () => {
 
   const icon = document.getElementById("searchIcon");
 
-  // ⭐ إذا البحث مفعل → إلغاء البحث
-if (icon.dataset.activeSearch === "1") {
-  localStorage.removeItem("activeSearch");
-  localStorage.removeItem("searchQuery");
-
-    // مسح حالة البحث
+  // إذا البحث مفعل → إلغاءه
+  if (icon.dataset.activeSearch === "1") {
+    localStorage.removeItem("activeSearch");
+    localStorage.removeItem("searchQuery");
     icon.dataset.activeSearch = "0";
-
-    // إرجاع اللون الطبيعي
-    icon.style.stroke = "#FF6B2D80"; // لون خفيف
+    icon.style.stroke = "#FF6B2D80";
     document.getElementById("searchInput").value = "";
-
-    // إعادة القائمة الأصلية
-renderOrders(masterOrders);
-originalOrders = [...masterOrders];
-allOrdersList = [...masterOrders];
-
+    renderOrders(masterOrders);
+    originalOrders = [...masterOrders];
+    allOrdersList = [...masterOrders];
     return;
   }
 
-  // ⭐ فتح صندوق البحث إذا ماكو بحث فعال
+  // فتح صندوق البحث + صندوق نوع البحث
   document.getElementById("searchBoxContainer").style.display = "block";
-document.getElementById("ordersList").style.marginTop = "150px";
+  document.getElementById("searchTypeBox").style.display = "block";
 
+  document.getElementById("ordersList").style.marginTop = "200px";
   document.getElementById("searchInput").focus();
 };
+
 
 
 // ⭐ إلغاء البحث
 document.getElementById("cancelSearch").onclick = () => {
   localStorage.removeItem("activeSearch");
-localStorage.removeItem("searchQuery");
+  localStorage.removeItem("searchQuery");
+
+  // 🔥 إعادة لون الأيقونة للوضع الخافت
+  document.getElementById("searchIcon").style.stroke = "#FF6B2D80";
+  document.getElementById("searchIcon").dataset.activeSearch = "0";
 
   document.getElementById("searchInput").value = "";
   document.getElementById("searchBoxContainer").style.display = "none";
-renderOrders(masterOrders);
-originalOrders = [...masterOrders];
-allOrdersList = [...masterOrders];
-document.getElementById("ordersList").style.marginTop = "0";
 
+  renderOrders(masterOrders);
+  originalOrders = [...masterOrders];
+  allOrdersList = [...masterOrders];
+  document.getElementById("ordersList").style.marginTop = "0";
 };
+
 
 function normalizeNumber(str) {
   if (!str) return "";
@@ -673,34 +812,36 @@ document.getElementById("doSearch").onclick = () => {
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   const qNorm = normalizeNumber(q);
 
+  const type = searchType;
+
   localStorage.setItem("activeSearch", "1");
   localStorage.setItem("searchQuery", q);
+  localStorage.setItem("searchType", type);
 
-  if (q === "") {
-    document.getElementById("searchBoxContainer").style.display = "none";
-    return;
-  }
+  if (q === "") return;
 
-  const filtered = masterOrders.filter(o => {
+  // ⭐ البحث على كل الطلبات وليس حسب الحالة فقط
+const filtered = snapshotAllOrders.filter(o => {
     const id = normalizeNumber(String(o.id || "").toLowerCase());
-    const receipt = normalizeNumber(String(o.receiptNum || "").toLowerCase());
-    const p1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
-    const p2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
+    const phone1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
+    const phone2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
+    const code = normalizeNumber(String(o.customerCode || "").toLowerCase());
 
-    return (
-      id.includes(qNorm) ||
-      receipt.includes(qNorm) ||
-      p1.includes(qNorm) ||
-      p2.includes(qNorm)
-    );
+    if (type === "orderId") return id.includes(qNorm);
+    if (type === "phone") return phone1.includes(qNorm) || phone2.includes(qNorm);
+    if (type === "customerCode") return code.includes(qNorm);
+
+    return false;
   });
 
   renderOrders(filtered);
 
   document.getElementById("searchIcon").style.stroke = "#FF6B2D";
   document.getElementById("searchIcon").dataset.activeSearch = "1";
-  document.getElementById("ordersList").style.marginTop = "150px";
+  document.getElementById("ordersList").style.marginTop = "200px";
 };
+
+
 
 // ⭐ نظام فتح/غلق الأكوردين
 document.getElementById("accProdHeader").onclick = () => {
@@ -811,6 +952,29 @@ document.getElementById("advSearch").oninput = () => {
     lbl.style.display = txt.includes(q) ? "flex" : "none";
   });
 };
+let searchType = "orderId";
+
+// اختيار نوع البحث
+document.querySelectorAll(".searchTypeBtn").forEach(btn => {
+  btn.onclick = () => {
+    searchType = btn.dataset.type;
+
+    // تغيير شكل الأزرار
+    document.querySelectorAll(".searchTypeBtn").forEach(x => {
+      x.style.background = "white";
+    });
+    btn.style.background = "#E6F3FF";
+  };
+});
+
+// زر إغلاق البحث
+document.getElementById("closeSearch").onclick = () => {
+  document.getElementById("searchBoxContainer").style.display = "none";
+  document.getElementById("ordersList").style.marginTop = "0px";
+};
+
+
+
 
 
 </script>

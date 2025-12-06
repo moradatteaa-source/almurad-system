@@ -726,6 +726,24 @@ window.openArchive = openArchive;
   </script>
 <!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
 <script>
+function enableSoundOnce() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = ctx.createBufferSource();
+    source.connect(ctx.destination);
+  } catch (e) {
+    console.warn("⚠️ لم يتم تفعيل الصوت:", e);
+  }
+
+  window.soundAllowed = true;
+  console.log("🔊 تم تفعيل الصوت بنجاح");
+  
+  // إزالة المستمعين بعد التفعيل
+  document.removeEventListener("touchstart", enableSoundOnce);
+  document.removeEventListener("click", enableSoundOnce);
+}
+document.addEventListener("touchstart", enableSoundOnce, { once: true });
+document.addEventListener("click", enableSoundOnce, { once: true });
 
   // ✅ دالة عرض الإشعار والصوت (نفس الموجود بصفحة الطلبات)
   function showNewOrderNotification(count = 1) {
@@ -815,23 +833,6 @@ const audio = new Audio("cash-register-kaching.mp3");
     });
   });
 
-<!-- ✅ تفعيل إذن الصوت بدون تشغيل أي ملف -->
-document.addEventListener("touchstart", function enableSoundOnce() {
-  try {
-    // إنشاء كائن صوت بدون تحميل ملف
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = ctx.createBufferSource();
-    source.connect(ctx.destination);
-    // فقط لتفعيل إذن الصوت – لا تشغيل فعلي
-  } catch (e) {
-    console.warn("⚠️ لم يتم تفعيل الصوت بعد:", e);
-  }
-  window.soundAllowed = true; // ✅ تم تفعيل الإذن
-  console.log("🔇 تم تفعيل إذن الصوت بدون أي صوت فعلي");
-  document.removeEventListener("touchstart", enableSoundOnce);
-}, { once: true });
-
-document.addEventListener("click", enableSoundOnce, { once: true });
 
 </script>
 </body>
