@@ -389,10 +389,11 @@ body {
       رقم الهاتف
     </button>
 
-    <button class="searchTypeBtn" data-type="customerCode"
-      style="flex:1; padding:10px; border-radius:8px; border:1px solid #043B64; background:white;">
-      كود الزبون
-    </button>
+   <button class="searchTypeBtn" data-type="receiptNum"
+  style="flex:1; padding:10px; border-radius:8px; border:1px solid #043B64; background:white;">
+  وصل الوسيط
+</button>
+
 
   </div>
 
@@ -573,7 +574,8 @@ const filtered = snapshotAllOrders.filter(o => {
 
     if (savedType === "orderId") return id.includes(q);
     if (savedType === "phone") return phone1.includes(q) || phone2.includes(q);
-    if (savedType === "customerCode") return code.includes(q);
+if (savedType === "receiptNum")
+    return normalizeNumber(String(o.receiptNum || "").toLowerCase()).includes(q);
 
     return false;
   });
@@ -829,7 +831,8 @@ const filtered = snapshotAllOrders.filter(o => {
 
     if (type === "orderId") return id.includes(qNorm);
     if (type === "phone") return phone1.includes(qNorm) || phone2.includes(qNorm);
-    if (type === "customerCode") return code.includes(qNorm);
+if (type === "receiptNum")
+    return normalizeNumber(String(o.receiptNum || "").toLowerCase()).includes(qNorm);
 
     return false;
   });
