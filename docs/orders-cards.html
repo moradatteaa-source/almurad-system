@@ -6,7 +6,11 @@
   <title>الطلبات</title>
 
 <style>
-  
+  .order-card.selected {
+  background: #d2f8d2 !important;
+  border: 2px solid #27ae60 !important;
+}
+
 .status-badge {
   display: inline-block;
   padding: 3px 8px;
@@ -426,6 +430,17 @@ body {
 
 
 </h2>
+<div style="text-align:center; margin:10px 0;">
+  <button id="selectModeBtn"
+    style="background:#043B64; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
+    تحديد الطلبات
+  </button>
+
+  <button id="deleteSelectedBtn"
+    style="display:none; margin-top:8px; background:#e74c3c; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
+    حذف المحدد
+  </button>
+</div>
 
 <div id="ordersList"></div>
 
@@ -723,12 +738,19 @@ function renderOrders(list) {
       </div>
     `;
 
-    card.onclick = () => {
-      localStorage.setItem("selectedOrder", o.id);
-      localStorage.setItem("previousScrollPosition", window.scrollY);
-      localStorage.setItem("currentFilterStatus", filterStatus);
-      window.location.href = "order-details.html";
-    };
+   card.onclick = () => {
+  if (window.selectionMode) {
+    card.classList.toggle("selected");
+    return;
+  }
+
+  // الدخول للتفاصيل
+  localStorage.setItem("selectedOrder", o.id);
+  localStorage.setItem("previousScrollPosition", window.scrollY);
+  localStorage.setItem("currentFilterStatus", filterStatus);
+  window.location.href = "order-details.html";
+};
+
 
     ordersList.appendChild(card);
 
@@ -980,6 +1002,49 @@ document.getElementById("closeSearch").onclick = () => {
 
 
 
+</script>
+<script type="module">
+import { getDatabase, ref, remove }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const db2 = getDatabase();
+
+// وضع التحديد
+window.selectionMode = false;
+
+document.getElementById("selectModeBtn").onclick = () => {
+  window.selectionMode = !window.selectionMode;
+
+  if (window.selectionMode) {
+    document.getElementById("selectModeBtn").innerText = "إيقاف التحديد";
+    document.getElementById("deleteSelectedBtn").style.display = "inline-block";
+  } else {
+    document.getElementById("selectModeBtn").innerText = "تحديد الطلبات";
+    document.getElementById("deleteSelectedBtn").style.display = "none";
+
+    // إلغاء التحديد
+    document.querySelectorAll(".order-card").forEach(c => c.classList.remove("selected"));
+  }
+};
+
+// حذف الطلبات المحددة
+document.getElementById("deleteSelectedBtn").onclick = async () => {
+  const selected = document.querySelectorAll(".order-card.selected");
+
+  if (selected.length === 0) {
+    alert("لم يتم اختيار أي طلب");
+    return;
+  }
+
+  if (!confirm("هل تريد حذف الطلبات المحددة؟")) return;
+
+  for (const card of selected) {
+    const id = card.dataset.id;
+    await remove(ref(db2, "orders/" + id));
+  }
+
+  alert("تم حذف الطلبات المحددة");
+};
 </script>
 
 </body>

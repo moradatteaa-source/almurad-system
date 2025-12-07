@@ -353,15 +353,18 @@ if (
   const unique = [...new Set(names)];
 
   unique.forEach(p => {
-  const qty = Number(order.quantity || 0) / unique.length;
-  const buy = warehouse[p]?.buyPrice || 0;
 
-  const unitSell = (Number(order.price) || 0) / (Number(order.quantity) || 1);
+  // تفاصيل المنتج من الطلب (productsDetailed)
+  const detail = order.productsDetailed?.find(d => d.name === p);
 
-  // 🔥 يحسب المبيعات حسب الحالات المختارة
-  const saleVal = statusFilter.includes(status) ? qty * unitSell : 0;
+  const qty = detail?.qty || detail?.quantity || 1; // كمية المنتج
+  const sell = detail?.price || 0; // سعر البيع الصحيح من الطلب
+  const buy = warehouse[p]?.buyPrice || 0; // سعر الشراء من الـ warehouse
 
-  const buyVal = qty * buy;
+  // حساب المبيعات فقط إذا الحالة ضمن الفلترة
+  const saleVal = statusFilter.includes(status) ? sell : 0;
+
+  const buyVal = buy * qty;
 
   totalSales += saleVal;
   totalBuy += buyVal;
@@ -371,12 +374,13 @@ if (
       <td>${order.advertiser || "-"}</td>
       <td>${p}</td>
       <td>${formatNumber(qty)}</td>
-      <td>${formatNumber(unitSell.toFixed(0))}</td>
+      <td>${formatNumber(sell)}</td>
       <td>${formatNumber(buy)}</td>
       <td>${status}</td>
       <td>${new Date(order.orderDate).toLocaleDateString('en-GB')}</td>
   </tr>`;
 });
+
 
 });
 
