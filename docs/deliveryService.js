@@ -133,22 +133,6 @@ async function safeFetch(url, options, retries = 3) {
 
   return { response, data };
 }
-let lastRequestTime = 0;
-
-async function throttle(min = 1000, max = 1250) {
-  const now = Date.now();
-  const elapsed = now - lastRequestTime;
-
-  // وقت الانتظار المطلوب (بين 1 ثانية و 1.25 ثانية)
-  const target = Math.floor(Math.random() * (max - min + 1)) + min;
-
-  if (elapsed < target) {
-    await sleep(target - elapsed);
-  }
-
-  lastRequestTime = Date.now();
-}
-
 export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
   const token = await loginToWaseet();
   if (!token) return { success: 0, failed: orders.length };
@@ -224,7 +208,7 @@ const fetchResult = await safeFetch(
 const { data } = fetchResult;
 
 // ⭐ تهدئة الإيقاع — طلب واحد كل ثانية (30 طلب / 30 ثانية)
-await throttle(1000, 1250);
+await sleep(1000);
 
 // ⭐ نجاح الرفع
 if (data.status === true && data.data?.qr_id) {
