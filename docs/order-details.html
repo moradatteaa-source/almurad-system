@@ -1045,6 +1045,9 @@ const productDropdown = createDropdown(
 
 
       productDiv.appendChild(productDropdown);
+if (data.productName) {
+  loadVariants(data.productName);  // ⬅️ عرض المتغيرات مباشرة عند تحميل الطلب
+}
 
 // الحالة (إظهار فقط الحالات المطلوبة)
 function setupStatusDropdown(currentValue) {
