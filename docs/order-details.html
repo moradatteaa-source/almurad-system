@@ -1064,23 +1064,24 @@ function setupStatusDropdown(currentValue) {
 
   // 🔹 إنشاء dropdown
   const dropdown = createDropdown(statusOptions, currentValue, async (val) => {
-    await saveStatus(val.trim());
+selectedStatus = val; // نخزن الحالة مؤقتاً بدون حفظ
   });
 
   statusDiv.appendChild(dropdown);
 
   // 🔥 إضافة دعم الكتابة اليدوية (مرة واحدة فقط)
   const statusInput = statusDiv.querySelector("input");
-  statusInput.addEventListener("change", async () => {
-    const val = statusInput.value.trim();
-    if (!val) return;
+ statusInput.addEventListener("change", () => {
+  const val = statusInput.value.trim();
+  if (!val) return;
 
-    if (!statusOptions.includes(val)) {
-      statusOptions.push(val);
-    }
+  if (!statusOptions.includes(val)) {
+    statusOptions.push(val);
+  }
 
-    await saveStatus(val);
-  });
+  selectedStatus = val;  // ❗ فقط نخزنها بدون حفظ
+});
+
 }
 
 
@@ -1746,4 +1747,4 @@ function showToast(msg) {
 </div>
 
 </body>
-</html> 
+</html>
