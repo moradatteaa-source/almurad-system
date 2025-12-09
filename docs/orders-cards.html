@@ -720,11 +720,23 @@ function renderOrders(list) {
     card.innerHTML = `
    <div class="right-side" style="display:flex; flex-direction:column;">
   <div class="date">${(o.orderDate || "").split("T")[0]}</div>
+<div style="display:flex; flex-direction:column;">
 
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+  <!-- السطر الأول: رقم الطلب + اسم المنتج -->
+<div style="display:flex; justify-content:flex-start; align-items:center; gap:10px;">
     <div class="order-id">#${o.id}</div>
     <div class="product-name">${o.totalProducts || o.productName || "-"}</div>
   </div>
+
+  <!-- السطر الثاني: تم التثبيت بواسطة (منزل للأسفل أكثر) -->
+ <div class="fixed-by" style="font-size:11px; color:#555; margin-top:24px;">
+  ${o.fixedBy ? `تم التثبيت بواسطة : <span style="color:#FF6B2D; font-weight:700;">${o.fixedBy}</span>` : ""}
+</div>
+
+
+</div>
+
+
 </div>
 
       <div class="left-side">
@@ -1048,4 +1060,4 @@ document.getElementById("deleteSelectedBtn").onclick = async () => {
 </script>
 
 </body>
-</html> 
+</html>  

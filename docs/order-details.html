@@ -6,6 +6,38 @@
   <title>تفاصيل الطلب - نظام المراد</title>
   
   <style>
+    .history-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 20px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.history-title {
+  font-weight: bold;
+  color: #043B64;
+  margin-bottom: 10px;
+}
+
+.history-item {
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #ccc;
+}
+
+.status-name {
+  color: #FF6B2D;
+  font-weight: bold;
+}
+
+.user-name {
+  color: #043B64;
+  font-weight: bold;
+}
+
     .input-error {
   border: 2px solid #ff3b30 !important;
   background: #ffecec !important;
@@ -506,6 +538,7 @@ input, select, textarea {
       <div class="field single">
         <label>تاريخ الطلب:</label>
         <input id="orderDate" readonly>
+    
       </div>
     </div>
 
@@ -521,6 +554,8 @@ input, select, textarea {
         </div>
       </div>
     </div>
+    <!-- ⭐ سجل الطلب (الهستوري) -->
+<div id="historyCard" class="history-card"></div>
 
     <button id="saveBtn">💾 حفظ التعديلات</button>
     <button id="backBtn">🔙 رجوع</button>
@@ -949,6 +984,11 @@ async function updateStatusFromWaseet(orderData) {
       updatedBy: userName,
       enterIndex: Date.now()
     });
+    await update(ref(db, `orders/${realOrderId}/statusHistory/${mapped}`), {
+  time: new Date().toISOString(),
+  by: "الوسيط"
+});
+
 
     console.log("🔥 تم تحديث الحالة داخل Firebase بنجاح:", mapped);
 
@@ -956,12 +996,34 @@ async function updateStatusFromWaseet(orderData) {
     console.error("❌ خطأ أثناء تحديث الحالة:", err);
   }
 }
+function formatIraqiDate(t) {
+  if (!t) return "";
+  const d = new Date(t);
+  let h = d.getHours();
+  let m = d.getMinutes().toString().padStart(2, "0");
+  const ampm = h >= 12 ? "مساءً" : "صباحاً";
+  h = h % 12;
+  if (h === 0) h = 12;
+
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}/${month}/${year} - ${h}:${m} ${ampm}`;
+}
 
     // 🔹 تحميل الطلب
     async function loadOrder() {
       const snapshot = await get(ref(db, `orders/${orderId}`));
       if (!snapshot.exists()) return;
       const data = snapshot.val();
+// ⭐ إذا الطلب مثبّت وما مخزون له تاريخ تثبيت → نسجّله الآن
+if (data.fixedBy && (!data.statusHistory || !data.statusHistory["مثبت"])) {
+  await update(ref(db, `orders/${orderId}/statusHistory/مثبت`), {
+    time: new Date().toISOString(),
+    by: data.fixedBy
+  });
+}
 
       document.getElementById("code").value = data.code || "";
       document.getElementById("phone1").value = data.phone1 || "";
@@ -970,6 +1032,30 @@ async function updateStatusFromWaseet(orderData) {
       document.getElementById("notes").value = data.notes || "";
       document.getElementById("advertiser").value = data.advertiser || "";
       document.getElementById("orderDate").value = data.orderDate || "-";
+      // ⭐ عرض سجل الطلب داخل البوكس
+const card = document.getElementById("historyCard");
+card.innerHTML = "";
+
+let html = `<div class="history-title">سجل الطلب</div>`;
+
+
+
+// --- كل الحالات الأخرى ---
+if (data.statusHistory) {
+Object.entries(data.statusHistory).forEach(([status, info]) => {
+  html += `
+    <div class="history-item">
+      <span class="status-name">${status}</span><br>
+      <span>حدّثه: <span class="user-name">${info.by || "غير معروف"}</span></span><br>
+      <span>الوقت: ${formatIraqiDate(info.time)}</span>
+    </div>
+  `;
+});
+
+}
+
+card.innerHTML = html;
+
       document.getElementById("price").value = data.price || "";
       document.getElementById("quantity").value = data.quantity || "";
 
@@ -1087,7 +1173,6 @@ selectedStatus = val; // نخزن الحالة مؤقتاً بدون حفظ
 }
 
 
-
 window.saveStatus = async function (val) {
 
   const userName =
@@ -1106,6 +1191,7 @@ window.saveStatus = async function (val) {
     newFixedBy = userName;
   }
 
+  // 🔥 التحديث الرئيسي
   await update(ref(db, `orders/${orderId}`), {
     status: val,
     updatedBy: userName,
@@ -1113,11 +1199,20 @@ window.saveStatus = async function (val) {
     enterIndex: Date.now()
   });
 
+  // ⭐ حفظ الهستوري هنا بالضبط
+  const now = new Date().toISOString();
+await update(ref(db, `orders/${orderId}/statusHistory/${val}`), {
+  time: now,
+  by: userName
+});
+
+
   window.parent.postMessage(
     { type: "statusChanged", orderId, newStatus: val },
     "*"
   );
 };
+
 
 
 
@@ -1141,6 +1236,21 @@ if (data.extraProducts && Array.isArray(data.extraProducts)) {
     const el = document.getElementById(id);
     if (el) el.dataset.oldValue = el.value;
   });
+  // ⭐ دالة تحويل الأرقام العربية إلى إنجليزية للعدد
+function normalizeNumber(str) {
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  const english = "0123456789";
+
+  return str
+    .split("")
+    .map(ch => {
+      const idx = arabic.indexOf(ch);
+      return idx >= 0 ? english[idx] : ch;
+    })
+    .join("")
+    .replace(/[^\d]/g, ""); // فقط أرقام
+}
+
 // ==========================
 //  🔥 فحص كل الحقول قبل الحفظ
 // ==========================
@@ -1172,11 +1282,26 @@ if (!requiredStatuses.includes(statusVal)) {
     errorField("#code", "⚠️ يرجى كتابة الكود");
   }
 
-  // 2) رقم الهاتف
-  const phone = document.getElementById("phone1").value.trim().replace(/\D/g, "");
-  if (phone.length < 11) {
-    errorField("#phone1", "⚠️ رقم الهاتف يجب أن يكون 11 رقم على الأقل");
-  }
+ // ⭐ التحقق الجديد (يدعم العربي + الإنجليزي)
+function normalizePhone(str) {
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  const english = "0123456789";
+
+  return str
+    .split("")
+    .map(ch => {
+      const idx = arabic.indexOf(ch);
+      return idx >= 0 ? english[idx] : ch;
+    })
+    .join("")
+    .replace(/[^\d]/g, ""); // يحذف غير الأرقام
+}
+
+let phone1 = normalizePhone(document.getElementById("phone1").value);
+if (phone1.length !== 11) {
+  errorField("#phone1", "⚠️ رقم الهاتف يجب أن يكون 11 رقم");
+}
+
 
   // 3) المحافظة
   if (!document.querySelector("#city input")?.value.trim()) {
@@ -1199,11 +1324,13 @@ if (!requiredStatuses.includes(statusVal)) {
     errorField("#price", "⚠️ يرجى كتابة السعر");
   }
 
-  // 7) العدد
-  const qty = document.getElementById("quantity").value.replace(/,/g, "").trim();
-  if (!qty || Number(qty) <= 0) {
-    errorField("#quantity", "⚠️ يرجى كتابة عدد القطع");
-  }
+  // ⭐ العدد (يدعم العربي والإنجليزي)
+let qtyRaw = document.getElementById("quantity").value;
+let qty = normalizeNumber(qtyRaw);
+
+if (!qty || Number(qty) <= 0) {
+  errorField("#quantity", "⚠️ يرجى كتابة عدد القطع");
+}
 
   // 8) المتغيرات
   document.querySelectorAll("#variantsContainer .variant-group").forEach(group => {
@@ -1449,20 +1576,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // ✅ تنسيق السعر والعدد بفاصلة أثناء الكتابة
- ["price", "quantity"].forEach(id => {
-  const input = document.getElementById(id);
-  if (!input) return;
 
-  // السماح فقط بالأرقام بدون أي تنسيق
-  input.addEventListener("input", e => {
-    e.target.value = e.target.value.replace(/[^\d]/g, "");
-  });
-
-  input.addEventListener("change", e => {
-    e.target.value = e.target.value.replace(/[^\d]/g, "");
-  });
-});
 
 });
 

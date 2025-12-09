@@ -300,11 +300,18 @@ result.results.forEach(async r => {
 
     addLog(`✔ الطلب #${r.orderId} — رقم الوصل: ${r.receiptNum}`, "ok");
 
-    await update(ref(db, `orders/${r.orderId}`), {
-      status: "قيد التجهيز",
-      receiptNum: r.receiptNum.toString(),
-      waseet_link: r.qrLink || ""
-    });
+   await update(ref(db, `orders/${r.orderId}`), {
+  status: "قيد التجهيز",
+  receiptNum: r.receiptNum.toString(),
+  waseet_link: r.qrLink || ""
+});
+
+// 🧾 تسجيل الهستوري عند التحويل إلى قيد التجهيز
+await update(ref(db, `orders/${r.orderId}/statusHistory/قيد التجهيز`), {
+  time: new Date().toISOString(),
+  by: "النظام (رفع الطلب)"
+});
+
 
   } else {
 

@@ -991,6 +991,17 @@ if (snap.exists()) {
 
 await set(ref(db, `orders/${nextId}`), order);
 
+// 🟧 تسجيل الهستوري لأول حالة عند إنشاء الطلب
+const initialStatus = order.status;
+
+if (initialStatus) {
+  await set(ref(db, `orders/${nextId}/statusHistory/${initialStatus}`), {
+    time: Date.now(),
+    by: userName
+  });
+}
+
+
 // 🟢 خصم المخزون فورًا
 await updateStockOnOrderCreate(productsDetailed);
 
