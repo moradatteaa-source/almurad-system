@@ -306,11 +306,20 @@ result.results.forEach(async r => {
   waseet_link: r.qrLink || ""
 });
 
-// 🧾 تسجيل الهستوري عند التحويل إلى قيد التجهيز
+// 🟦 تسجيل سجل حالة قيد التجهيز مع رقم الوصل واسم الرافع
 await update(ref(db, `orders/${r.orderId}/statusHistory/قيد التجهيز`), {
-  time: new Date().toISOString(),
-  by: "النظام (رفع الطلب)"
+  time: new Date().toLocaleString("en-US", {
+    hour12: true,
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }),
+  by: uploadedBy,   // اسم الذي رفع الطلبات
+  receiptNum: r.receiptNum ? r.receiptNum.toString() : ""
 });
+
 
 
   } else {

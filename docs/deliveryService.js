@@ -218,6 +218,19 @@ if (data.status === true && data.data?.qr_id) {
       receiptNum: data.data.qr_id,
       status: "قيد التجهيز"
     });
+    await update(ref(db, `orders/${order.id}/statusHistory/قيد التجهيز`), {
+  time: new Date().toLocaleString("en-US", {
+    hour12: true,
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }),
+  by: "النظام (رفع الطلب)",
+  receiptNum: data.data.qr_id.toString()
+});
+
   } catch (err) {
     console.error("❌ فشل تحديث Firebase:", err);
   }

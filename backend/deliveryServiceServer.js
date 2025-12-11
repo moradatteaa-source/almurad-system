@@ -68,7 +68,6 @@ export function normalizePhone(phone) {
 
   return cleaned;
 }
-const cleanStatus = item.status.replace(/\s+/g, " ").trim();
 
 // =============================================
 // 🗺 3️⃣ مابنغ حالات الوسيط → حالات نظامك
@@ -318,6 +317,18 @@ for (const item of data.data) {
     await update(ref(db, `orders/${targetOrder.id}`), {
       status: mappedStatus
     });
+// ⭐ سجل الهستوري عند كل تحديث من الوسيط
+await update(ref(db, `orders/${targetOrder.id}/statusHistory/${mappedStatus}`), {
+  time: new Date().toLocaleString("en-US", {
+    hour12: true,
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }),
+  by: "alwaseet-api"  // حتى تعرف أن التحديث جاء من الوسيط
+});
 
     results.push({
       receiptNum: item.id,
