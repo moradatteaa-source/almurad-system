@@ -280,15 +280,15 @@ const historyKey = Date.now();
 
 await update(ref(db, `orders/${foundKey}`), {
   status: mapped,
-  waseetStatus: waseetRawStatus, // ✅ جديد
+  waseetStatus: waseetRawStatus,
   lastStatusAt: now,
   lastUpdateBy: "system-waseet",
-  [`statusHistory/${historyKey}`]: {
-    status: mapped,
+  [`statusHistory/${mapped}`]: {
     time: now,
     by: "system-waseet"
   }
 });
+
 
 await adjustStock(foundKey, mapped);
 
