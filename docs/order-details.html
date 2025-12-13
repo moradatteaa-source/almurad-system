@@ -447,6 +447,12 @@ input, select, textarea {
   <button id="redoBtn">↪️</button>
 </div>
   <div class="container">
+<div class="card" id="receiptCard" style="display:none;">
+  <div class="field single">
+    <label>رقم الوصل (الوسيط):</label>
+    <input id="receiptNum" type="text" readonly>
+  </div>
+</div>
 
     <div class="card">
       <div class="field single">
@@ -1017,6 +1023,16 @@ function formatIraqiDate(t) {
       const snapshot = await get(ref(db, `orders/${orderId}`));
       if (!snapshot.exists()) return;
       const data = snapshot.val();
+      const receiptCard = document.getElementById("receiptCard");
+const receiptInput = document.getElementById("receiptNum");
+
+if (data.receiptNum && String(data.receiptNum).trim() !== "") {
+  receiptInput.value = data.receiptNum;
+  receiptCard.style.display = "block";   // ✅ يظهر فقط إذا الوسيط رجّع رقم
+} else {
+  receiptCard.style.display = "none";    // ❌ مخفي إذا الطلب جديد/مثبت
+}
+
 // ⭐ إذا الطلب مثبّت وما مخزون له تاريخ تثبيت → نسجّله الآن
 if (data.fixedBy && (!data.statusHistory || !data.statusHistory["مثبت"])) {
   await update(ref(db, `orders/${orderId}/statusHistory/مثبت`), {
@@ -1040,19 +1056,32 @@ let html = `<div class="history-title">سجل الطلب</div>`;
 
 
 
-// --- كل الحالات الأخرى ---
 if (data.statusHistory) {
-Object.entries(data.statusHistory).forEach(([status, info]) => {
-  html += `
-    <div class="history-item">
-      <span class="status-name">${status}</span><br>
-      <span>حدّثه: <span class="user-name">${info.by || "غير معروف"}</span></span><br>
-      <span>الوقت: ${formatIraqiDate(info.time)}</span>
-    </div>
-  `;
-});
 
+  // 1️⃣ نحول الهستوري إلى Array
+  const historyArr = Object.entries(data.statusHistory).map(
+    ([status, info]) => ({
+      status,
+      time: info.time,
+      by: info.by
+    })
+  );
+
+  // 2️⃣ نرتب حسب الوقت (الأقدم فوق → الأحدث جوه)
+  historyArr.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+  // 3️⃣ نعرض بعد الترتيب
+  historyArr.forEach(item => {
+    html += `
+      <div class="history-item">
+        <span class="status-name">${item.status}</span><br>
+        <span>حدّثه: <span class="user-name">${item.by || "غير معروف"}</span></span><br>
+        <span>الوقت: ${formatIraqiDate(item.time)}</span>
+      </div>
+    `;
+  });
 }
+
 
 card.innerHTML = html;
 

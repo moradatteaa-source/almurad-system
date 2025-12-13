@@ -222,7 +222,7 @@ for (const item of allResults) {
   }
 
   // الحالة المحوّلة داخل النظام
-  const mapped = waseetStatusMap[cleanStatus];
+const mapped = cleanStatus; // الحالة النصية فقط
 
   // 🔍 البحث داخل شجرة Firebase حسب receiptNum
   let foundOrder = null;
