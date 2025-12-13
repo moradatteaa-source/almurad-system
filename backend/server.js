@@ -243,6 +243,9 @@ for (const item of allResults) {
     console.log("❌ Order NOT FOUND in Firebase:", item.id);
     continue;
   }
+  const isSameStatus = foundOrder.status === mapped;
+const fromWaseet = true; // لأن هذا التحديث جاي من الوسيط
+
 
   // الحالات اللي نسمح نتحرك منها
   const allowedFromStatuses = ["", "مثبت", "قيد التجهيز", "قيد التوصيل", "راجع"];
@@ -263,17 +266,32 @@ for (const item of allResults) {
   }
 
   // ❌ إذا الحالة نفسها → لا تحدث
-  if (foundOrder.status === mapped) {
-    continue;
-  }
+if (isSameStatus) {
+  continue;
+}
+
+
 
   // تحديث المخزون
-  await adjustStock(foundKey, mapped);
+const now = new Date().toISOString();
 
-  // تحديث Firebase
-  await update(ref(db, `orders/${foundKey}`), { status: mapped });
+const historyKey = `${mapped}_${Date.now()}`;
 
-  updateCount++;
+await update(ref(db, `orders/${foundKey}`), {
+  status: mapped,
+  lastStatusAt: now,
+  lastUpdateBy: "system-waseet",
+  [`statusHistory/${historyKey}`]: {
+    status: mapped,
+    time: now,
+    by: "system-waseet"
+  }
+});
+
+
+updateCount++;
+
+
 }
 
 if (updateCount === 0) {

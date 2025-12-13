@@ -7,6 +7,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
+    .stats {
+  transition: opacity 0.4s ease;
+}
+
+
    body {
   margin: 0;
   font-family: 'Tajawal', sans-serif;
@@ -88,79 +93,72 @@
       color: #043B64;
       cursor: pointer;
     }
-/* 🟢 تصميم الكروت الاحترافي */
+/* 🟢 شبكة الإحصائيات – موبايل 3 عناصر */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 20px;
-  margin-top: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 15px;
 }
 
-.card {
-  position: relative;
-  background: linear-gradient(145deg, #ffffff, #f4f6fa);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
-  text-align: center;
+@media (min-width: 768px) {
+  .stats {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+/* 🔵 عنصر الحالة */
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  overflow: hidden;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+/* 🔘 الدائرة */
+.circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: conic-gradient(var(--color) var(--percent), #e6ecf2 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.7s ease;
+  will-change: background;
 }
 
-.card h3 {
-  color: #043B64;
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-}
 
-.card p {
-  margin: 12px 0 0;
-  font-size: 20px;
-  font-weight: bold;
-  color: #FF6B2D;
-  transition: color 0.3s;
-}
 
-/* 🎨 ألوان الحالات */
-.card[data-status=""] h3 { color: #3498db; }            /* جديد */
-.card[data-status="مثبت"] h3 { color: #1abc9c; }        /* مثبت */
-.card[data-status="قيد المعالجة"] h3 { color: #e67e22; }
-.card[data-status="قيد التجهيز"] h3 { color: #f39c12; }
-.card[data-status="قيد التوصيل"] h3 { color: #f1c40f; }
-.card[data-status="تم التسليم"] h3 { color: #2ecc71; }
-.card[data-status="راجع"] h3 { color: #e74c3c; }
-.card[data-status="تم استلام الراجع"] h3 { color: #c0392b; }
-.card[data-status="رفض"] h3 { color: #7f8c8d; }
-.card[data-status="بانتظار البضاعة"] h3 { color: #9b59b6; }
-
-/* 🔸 تأثير مميز عند المرور */
-.card::after {
+/* ⚪ داخل الدائرة */
+.circle::after {
   content: "";
+  width: 68px;
+  height: 68px;
+  background: #fff;
+  border-radius: 50%;
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: linear-gradient(135deg, rgba(255,107,45,0.15), rgba(4,59,100,0.15));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: 15px;
-  z-index: 0;
 }
 
-.card:hover::after {
-  opacity: 1;
-}
-
-.card > * {
+/* 🔢 الرقم */
+.circle span {
   position: relative;
   z-index: 1;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color);
 }
+
+/* 📝 العنوان */
+.status-item h3 {
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+  color: #043B64;
+}
+
 
 
     .logout {
@@ -286,38 +284,94 @@ p, div, span, button {
 <span id="userDisplay" style="font-size:16px; color:#555;"></span>
 
 
-    <div class="stats" id="statsContainer">
-      <div class="card" data-status=""><h3>الطلبات الجديدة</h3><p id="newCount">0</p></div>
-      <div class="card" data-status="مثبت"><h3>الطلبات المثبتة</h3><p id="fixedCount">0</p></div>
-      <div class="card" data-status="قيد المعالجة"><h3>قيد المعالجة</h3><p id="processingCount">0</p></div>
-      <div class="card" data-status="قيد التجهيز"><h3>قيد التجهيز</h3><p id="packingCount">0</p></div>
-      <div class="card" data-status="قيد التوصيل"><h3>قيد التوصيل</h3><p id="deliveringCount">0</p></div>
-      <div class="card" data-status="تم التسليم"><h3>تم التسليم</h3><p id="deliveredCount">0</p></div>
-      <div class="card" data-status="راجع"><h3>راجع</h3><p id="returnedCount">0</p></div>
-      <div class="card" data-status="تم استلام الراجع">
-  <h3>تم استلام الراجع</h3>
-  <p id="receivedReturnCount">0</p>
-</div>
+<div class="stats" id="statsContainer" style="opacity:0; display:none">
 
-      <div class="card" data-status="رفض"><h3>رفض</h3><p id="rejectedCount">0</p></div>
-    
-      <div class="card" data-status="بانتظار البضاعة">
-  <h3>بانتظار البضاعة</h3>
-  <p id="waitingCount">0</p>
-</div>
-<div class="card" data-status="حالات أخرى">
-  <h3>حالات أخرى</h3>
-  <p id="otherCount">0</p>
-</div>
-
-      <!-- 🟠 إضافة طلب جديد -->
-      <div class="card" id="card-add" style="background:#FF6B2D;color:white;">
-        <h3>➕ إضافة طلب جديد</h3>
-        <p>إنشاء طلب جديد</p>
-      </div>
+  <div class="status-item" onclick="openOrders('')">
+    <div class="circle" style="--color:#3498db;--percent:0%">
+      <span id="newCount">—</span>
     </div>
+    <h3>الطلبات الجديدة</h3>
   </div>
-  
+
+  <div class="status-item" onclick="openOrders('مثبت')">
+    <div class="circle" style="--color:#1abc9c;--percent:0%">
+      <span id="fixedCount">—</span>
+    </div>
+    <h3>مثبت</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('قيد المعالجة')">
+    <div class="circle" style="--color:#9b59b6;--percent:0%">
+      <span id="processingCount">—</span>
+    </div>
+    <h3>قيد المعالجة</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('قيد التجهيز')">
+    <div class="circle" style="--color:#f39c12;--percent:0%">
+      <span id="packingCount">—</span>
+    </div>
+    <h3>قيد التجهيز</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('بانتظار البضاعة')">
+    <div class="circle" style="--color:#e67e22;--percent:0%">
+      <span id="waitingCount">—</span>
+    </div>
+    <h3>بانتظار البضاعة</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('قيد التوصيل')">
+    <div class="circle" style="--color:#2980b9;--percent:0%">
+      <span id="deliveringCount">—</span>
+    </div>
+    <h3>قيد التوصيل</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('تم التسليم')">
+    <div class="circle" style="--color:#27ae60;--percent:0%">
+      <span id="deliveredCount">—</span>
+    </div>
+    <h3>تم التسليم</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('راجع')">
+    <div class="circle" style="--color:#c0392b;--percent:0%">
+      <span id="returnedCount">—</span>
+    </div>
+    <h3>راجع</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('تم استلام الراجع')">
+    <div class="circle" style="--color:#8e44ad;--percent:0%">
+      <span id="receivedReturnCount">—</span>
+    </div>
+    <h3>تم استلام الراجع</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('رفض')">
+    <div class="circle" style="--color:#e74c3c;--percent:0%">
+      <span id="rejectedCount">—</span>
+    </div>
+    <h3>رفض</h3>
+  </div>
+
+  <div class="status-item" onclick="openOrders('حالات أخرى')">
+    <div class="circle" style="--color:#7f8c8d;--percent:0%">
+      <span id="otherCount">—</span>
+    </div>
+    <h3>حالات أخرى</h3>
+  </div>
+
+  <div class="status-item" onclick="openNewOrder()">
+    <div class="circle" style="--color:#34495e;--percent:0%">
+      <span>＋</span>
+    </div>
+    <h3>إضافة طلب</h3>
+  </div>
+
+</div>
+
 
   <!-- 🔹 سكربت -->
   <script type="module">
@@ -384,6 +438,7 @@ const counts = {
   "رفض": 0,
   "حالات أخرى": 0
 };
+// ✅ إظهار الإحصائيات بعد اكتمال التحميل
 
 orders.forEach(o => {
   let st = (o.status || "").trim();
@@ -420,6 +475,38 @@ orders.forEach(o => {
       document.getElementById("rejectedCount").textContent = counts["رفض"];
       document.getElementById("waitingCount").textContent = counts["بانتظار البضاعة"];
 document.getElementById("otherCount").textContent = counts["حالات أخرى"];
+// 🟢 حساب المجموع الكلي
+const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+if (total === 0) return;
+
+// 🔵 دالة تحديث النسبة
+function updateCirclePercent(spanId, value) {
+  const span = document.getElementById(spanId);
+  if (!span) return;
+  const circle = span.closest(".circle");
+  if (!circle) return;
+
+const percent = value === 0 ? 0 : Math.max(5, Math.round((value / total) * 100));
+  circle.style.setProperty("--percent", percent + "%");
+}
+
+updateCirclePercent("newCount", counts[""]);
+updateCirclePercent("fixedCount", counts["مثبت"]);
+updateCirclePercent("processingCount", counts["قيد المعالجة"]);
+updateCirclePercent("packingCount", counts["قيد التجهيز"]);
+updateCirclePercent("waitingCount", counts["بانتظار البضاعة"]);
+updateCirclePercent("deliveringCount", counts["قيد التوصيل"]);
+updateCirclePercent("deliveredCount", counts["تم التسليم"]);
+updateCirclePercent("returnedCount", counts["راجع"]);
+updateCirclePercent("receivedReturnCount", counts["تم استلام الراجع"]);
+updateCirclePercent("rejectedCount", counts["رفض"]);
+updateCirclePercent("otherCount", counts["حالات أخرى"]);
+
+// ✅ هنا فقط تظهر
+const stats = document.getElementById("statsContainer");
+stats.style.display = "grid";
+stats.style.opacity = "1";
+
 
     }
 function openOrders(status) {
@@ -464,16 +551,6 @@ function openStatistics(tab) {
     document.addEventListener("DOMContentLoaded", () => {
       loadStats();
 
-      const cards = document.querySelectorAll(".card[data-status]");
-      cards.forEach(card => {
-        card.addEventListener("click", () => {
-          const status = card.getAttribute("data-status") || "";
-          openOrders(status);
-        });
-      });
-
-      const addBtn = document.getElementById("card-add");
-      if (addBtn) addBtn.addEventListener("click", openNewOrder);
     });
 // ✅ استرجاع المستخدم الحالي
 const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
