@@ -222,7 +222,8 @@ for (const item of allResults) {
   }
 
   // الحالة المحوّلة داخل النظام
-const mapped = cleanStatus; // الحالة النصية فقط
+const mapped = waseetStatusMap[cleanStatus];
+const waseetRawStatus = cleanStatus;
 
   // 🔍 البحث داخل شجرة Firebase حسب receiptNum
   let foundOrder = null;
@@ -275,10 +276,11 @@ if (isSameStatus) {
   // تحديث المخزون
 const now = new Date().toISOString();
 
-const historyKey = `${mapped}_${Date.now()}`;
+const historyKey = Date.now();
 
 await update(ref(db, `orders/${foundKey}`), {
   status: mapped,
+  waseetStatus: waseetRawStatus, // ✅ جديد
   lastStatusAt: now,
   lastUpdateBy: "system-waseet",
   [`statusHistory/${historyKey}`]: {
@@ -287,6 +289,8 @@ await update(ref(db, `orders/${foundKey}`), {
     by: "system-waseet"
   }
 });
+
+await adjustStock(foundKey, mapped);
 
 
 updateCount++;
