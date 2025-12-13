@@ -276,17 +276,33 @@ if (isSameStatus) {
   // تحديث المخزون
 const now = new Date().toISOString();
 
-const historyKey = Date.now();
 
-await update(ref(db, `orders/${foundKey}`), {
+const orderRef = ref(db, `orders/${foundKey}`);
+const orderSnap = await get(orderRef);
+
+// تنظيف history القديمة (إزالة الأرقام)
+let cleanedHistory = {};
+
+if (orderSnap.exists() && orderSnap.val().statusHistory) {
+  for (const key in orderSnap.val().statusHistory) {
+    if (isNaN(Number(key))) {
+      cleanedHistory[key] = orderSnap.val().statusHistory[key];
+    }
+  }
+}
+
+// إضافة الحالة الحالية باسمها
+cleanedHistory[mapped] = {
+  time: now,
+  by: "system-waseet"
+};
+
+await update(orderRef, {
   status: mapped,
   waseetStatus: waseetRawStatus,
   lastStatusAt: now,
   lastUpdateBy: "system-waseet",
-  [`statusHistory/${mapped}`]: {
-    time: now,
-    by: "system-waseet"
-  }
+  statusHistory: cleanedHistory
 });
 
 
