@@ -127,9 +127,7 @@
   justify-content: center;
   position: relative;
   transition: background 0.7s ease;
-  will-change: background;
 }
-
 
 
 /* ⚪ داخل الدائرة */
@@ -284,7 +282,7 @@ p, div, span, button {
 <span id="userDisplay" style="font-size:16px; color:#555;"></span>
 
 
-<div class="stats" id="statsContainer" style="opacity:0; display:none">
+<div class="stats" id="statsContainer" style="opacity:0">
 
   <div class="status-item" onclick="openOrders('')">
     <div class="circle" style="--color:#3498db;--percent:0%">
@@ -477,7 +475,6 @@ orders.forEach(o => {
 document.getElementById("otherCount").textContent = counts["حالات أخرى"];
 // 🟢 حساب المجموع الكلي
 const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-if (total === 0) return;
 
 // 🔵 دالة تحديث النسبة
 function updateCirclePercent(spanId, value) {
@@ -503,9 +500,7 @@ updateCirclePercent("rejectedCount", counts["رفض"]);
 updateCirclePercent("otherCount", counts["حالات أخرى"]);
 
 // ✅ هنا فقط تظهر
-const stats = document.getElementById("statsContainer");
-stats.style.display = "grid";
-stats.style.opacity = "1";
+document.getElementById("statsContainer").style.opacity = "1";
 
 
     }

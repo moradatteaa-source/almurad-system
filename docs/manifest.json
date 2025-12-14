@@ -1,0 +1,15 @@
+{
+  "name": "المراد",
+  "short_name": "المراد",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#043B64",
+  "icons": [
+    {
+      "src": "almurad-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
