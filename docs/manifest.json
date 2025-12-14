@@ -1,13 +1,13 @@
 {
   "name": "المراد",
   "short_name": "المراد",
-  "start_url": "/docs/index.html",
+  "start_url": "/moradatteaa-source/docs/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#043B64",
   "icons": [
     {
-      "src": "/docs/almurad-logo.png",
+      "src": "/moradatteaa-source/docs/almurad-logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
