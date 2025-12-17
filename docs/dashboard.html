@@ -596,21 +596,39 @@ if (roles.includes("accountant")) {
   if (statsMenu) statsMenu.style.display = "block";
 }
 
-// ✅ المثبّت: الطلبات + فقط إحصائيات الطلبات
+// ✅ المثبّت
 if (roles.includes("stabilizer") && !roles.includes("admin")) {
   if (ordersMenu) ordersMenu.style.display = "block";
 
-  // نعرض فقط قسم "إحصائيات الطلبات" داخل قائمة الإحصائيات
   const statsSubmenu = document.getElementById("statsMenu");
   if (statsSubmenu) {
-    statsSubmenu.style.display = "block"; // عرض القائمة
+    statsSubmenu.style.display = "block";
     const items = statsSubmenu.querySelectorAll("div");
-    items.forEach((el) => {
-      // نخلي فقط أول عنصر اللي اسمه "إحصائيات الطلبات" ظاهر
+    items.forEach(el => {
       if (el.textContent.includes("الطلبات")) el.style.display = "block";
       else el.style.display = "none";
     });
   }
+}
+
+// 🟣 المعلن: يشوف فقط إحصائيات المعلنين
+if (roles.includes("advertiser") && !roles.includes("admin")) {
+  if (statsMenu) statsMenu.style.display = "block";
+
+  const statsSubmenu = document.getElementById("statsMenu");
+  if (statsSubmenu) {
+    statsSubmenu.style.display = "block";
+    const items = statsSubmenu.querySelectorAll("div");
+    items.forEach(el => {
+      if (el.textContent.includes("المعلنين")) el.style.display = "block";
+      else el.style.display = "none";
+    });
+  }
+
+  // ❌ نخفي باقي الأقسام
+  if (ordersMenu) ordersMenu.style.display = "none";
+  if (financeMenu) financeMenu.style.display = "none";
+  if (storeMenu) storeMenu.style.display = "none";
 }
 
 // ✅ موظف المخزن
@@ -624,18 +642,25 @@ if (roles.includes("delivery")) {
 }
 
 // 🟣 صلاحيات المثبت (stabilizer) – عرض صفحة تفاصيل المنتجات فقط
-if (roles.includes("stabilizer") && !roles.includes("admin")) {
-  // إخفاء كل عناصر المخزن مؤقتًا
+// 🟣 صلاحيات المثبت (stabilizer) – فقط إذا ما عنده store
+if (
+  roles.includes("stabilizer") &&
+  !roles.includes("store") &&
+  !roles.includes("admin")
+) {
   const storeSubmenu = document.getElementById("storeMenu");
   if (storeSubmenu) {
     const items = storeSubmenu.querySelectorAll("div");
     items.forEach(el => el.style.display = "none");
 
-    // عرض فقط "تفاصيل المنتجات"
-    const detailsItem = Array.from(items).find(el => el.textContent.includes("تفاصيل المنتجات"));
+    const detailsItem = Array.from(items)
+      .find(el => el.textContent.includes("تفاصيل المنتجات"));
     if (detailsItem) detailsItem.style.display = "block";
   }
 }
+
+
+
 
 
     window.toggleMenu = toggleMenu;
