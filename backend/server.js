@@ -169,7 +169,12 @@ async function autoUpdateStatuses() {
     const allOrders = Object.entries(snap.val()).map(([id, o]) => ({ id, ...o }));
 
     // نأخذ فقط الطلبات اللي بيها receiptNum
-    const sent = allOrders.filter(o => o.receiptNum);
+const FINAL_STATUSES = ["تم التسليم", "تم استلام الراجع"];
+
+const sent = allOrders.filter(o =>
+  o.receiptNum &&
+  !FINAL_STATUSES.includes(o.status)
+);
     if (sent.length === 0) return console.log("❌ No sent orders");
 
     // 2) تسجيل الدخول
@@ -213,7 +218,15 @@ let updateCount = 0;
 for (const item of allResults) {
 
   // تنظيف الحالة القادمة من الوسيط
-  const cleanStatus = item.status?.toString().replace(/\s+/g, " ").trim();
+function normalizeArabicStatus(str = "") {
+  return str
+    .toString()
+    .replace(/[^\u0600-\u06FF\s]/g, "") // حذف أي رموز خفية
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const cleanStatus = normalizeArabicStatus(item.status);
 
   // إذا حالة غير موجودة بالمابنغ → تجاهل
   if (!cleanStatus || !waseetStatusMap[cleanStatus]) {
