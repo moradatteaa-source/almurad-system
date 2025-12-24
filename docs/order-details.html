@@ -450,7 +450,7 @@ input, select, textarea {
 <div class="card" id="receiptCard" style="display:none;">
   <div class="field single">
     <label>رقم الوصل (الوسيط):</label>
-    <input id="receiptNum" type="text" readonly>
+<input id="receiptNum" type="text" placeholder="اكتب رقم الوصل">
   </div>
 </div>
 
@@ -1527,6 +1527,7 @@ if (userNotes) {
 
 const updates = {
   code: document.getElementById("code").value.trim(),
+    receiptNum: document.getElementById("receiptNum").value.trim(), // ✅ جديد
   phone1: document.getElementById("phone1").value.trim(),
   phone2: document.getElementById("phone2").value.trim(),
   address: document.getElementById("address").value.trim(),
