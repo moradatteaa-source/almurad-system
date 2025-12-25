@@ -172,7 +172,7 @@
     <h2>➕ إضافة مستخدم جديد</h2>
     <form id="addUserForm">
       <input type="text" id="newUsername" placeholder="اسم المستخدم" required>
-      <input type="password" id="newPassword" placeholder="كلمة المرور" required>
+<input type="text" id="newPassword" placeholder="كلمة المرور" required>
 
       <!-- ✅ قائمة اختيار تفاعلية -->
       <div class="roles-dropdown" id="rolesDropdown">
@@ -297,6 +297,7 @@ try {
   const button = document.getElementById("rolesButton");
   const list = document.getElementById("rolesList");
   let selectedRoles = [];
+let editingUsername = null;
 
   button.addEventListener("click", () => {
     dropdown.classList.toggle("active");
@@ -346,38 +347,68 @@ function normalizeRoles(roles) {
     const username = document.getElementById("newUsername").value.trim();
     const password = document.getElementById("newPassword").value.trim();
 
-    if (!username || !password || selectedRoles.length === 0)
+if (!username || (!editingUsername && !password) || selectedRoles.length === 0)
       return alert("يرجى إدخال جميع البيانات واختيار المهام");
 
     // 🧩 تحويل المهام إلى الإنكليزي قبل الحفظ
 const normalizedRoles = normalizeRoles(selectedRoles);
 
-await set(ref(db, `users/${username}`), { password, roles: normalizedRoles });
+const finalUsername = editingUsername || username;
+
+const snapshot = await get(ref(db, `users/${finalUsername}`));
+const oldData = snapshot.exists() ? snapshot.val() : {};
+
+await set(ref(db, `users/${finalUsername}`), {
+  password: password || oldData.password, // إذا فارغة لا تتغير
+  roles: normalizedRoles,
+});
 
     alert("✅ تم إضافة المستخدم بنجاح");
+editingUsername = null;
+document.getElementById("newUsername").disabled = false;
+form.querySelector("button[type='submit']").textContent = "💾 حفظ المستخدم";
 
     form.reset();
     selectedRoles = [];
     updateSelectedRoles();
   });
 
-  // ✏️ تعديل مستخدم
-  window.editUser = async (username) => {
-    const newPassword = prompt(`🔑 كلمة مرور جديدة للمستخدم ${username} (اتركها فارغة إذا لا تريد التغيير):`);
-    const newRoles = prompt(`🧩 المهام الجديدة (افصل بينها بفاصلة ،)\nمثلاً: محاسب، مثبت طلبات، متابعة التوصيل، مسؤول مخزن`);
+// ✏️ تعديل مستخدم (باستخدام نفس الفورم والـ dropdown)
+window.editUser = async (username) => {
+  const snapshot = await get(ref(db, `users/${username}`));
+  if (!snapshot.exists()) return alert("المستخدم غير موجود!");
 
-    const snapshot = await get(ref(db, `users/${username}`));
-    if (!snapshot.exists()) return alert("المستخدم غير موجود!");
+  const userData = snapshot.val();
 
-    const userData = snapshot.val();
-    const updatedData = {
-      password: newPassword ? newPassword : userData.password,
-      roles: newRoles ? newRoles.split("،").map(r => r.trim()) : userData.roles
-    };
+  // 1️⃣ تعبئة اسم المستخدم
+  const usernameInput = document.getElementById("newUsername");
+  const passwordInput = document.getElementById("newPassword");
 
-    await set(ref(db, `users/${username}`), updatedData);
-    alert("✅ تم تحديث المستخدم بنجاح!");
-  };
+  usernameInput.value = username;
+  usernameInput.disabled = true; // لا نغير الاسم
+passwordInput.value = userData.password || "";
+
+  // 2️⃣ تحميل الصلاحيات القديمة (تحويل من EN إلى AR)
+  selectedRoles = (userData.roles || []).map(r => {
+    const found = Object.keys(rolesMap).find(k => rolesMap[k] === r);
+    return found || r;
+  });
+
+  updateSelectedRoles();
+
+  // 3️⃣ تفعيل وضع التعديل
+  editingUsername = username;
+
+  // 4️⃣ تغيير نص زر الحفظ
+  form.querySelector("button[type='submit']").textContent = "💾 حفظ التعديلات";
+
+  // 5️⃣ سكرول للفورم
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
+  });
+};
+
 
   // 🗑️ حذف مستخدم
   window.deleteUser = async (username) => {
