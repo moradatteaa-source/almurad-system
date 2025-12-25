@@ -175,6 +175,8 @@ table {
 
 
    .popup-box {
+     box-sizing: border-box;
+
      overscroll-behavior: contain;
 
   background: white;
@@ -1029,12 +1031,13 @@ await set(idRef, {
   loadPurchases();
 
 // ✅ توليد الفاتورة الجديدة بنفس تصميم printInvoice
-setTimeout(() => {
-  if (window.purchases && window.purchases.length > 0) {
+if (canShare()) {
+  setTimeout(() => {
     const last = window.purchases.at(-1);
     printInvoice(last.id);
-  }
-}, 1000);
+  }, 800);
+}
+
 
 
 }; // ← ← هذا القوس المهم مفقود عندك لإغلاق الدالة savePurchase
@@ -1120,12 +1123,24 @@ function renderFilteredPurchases(list) {
 <td>${(p.finalTotalAmount ?? p.totalAmount).toLocaleString("en-US")}</td>
         <td>${p.supplierName}</td>
         <td>${p.buyer}</td>
-        <td><button onclick="printInvoice('${p.id}')">🖨️ طباعة</button></td>
+<td>
+  ${
+    canShare()
+      ? `<button onclick="shareInvoice('${p.id}')">📤 مشاركة</button>`
+      : `<button onclick="printInvoice('${p.id}')">🖨️ طباعة</button>`
+  }
+</td>
+
       </tr>`;
   });
 
   updateStats(list);
 }
+
+function canShare() {
+  return !!navigator.share;
+}
+
 
 
 
@@ -1156,7 +1171,14 @@ function loadPurchases() {
 <td>${(p.finalTotalAmount ?? p.totalAmount).toLocaleString("en-US")}</td>
           <td>${p.supplierName}</td>
           <td>${p.buyer}</td>
-          <td><button onclick="printInvoice('${id}')">🖨️ طباعة</button></td>
+<td>
+  ${
+    canShare()
+      ? `<button onclick="shareInvoice('${id}')">📤 مشاركة</button>`
+      : `<button onclick="printInvoice('${id}')">🖨️ طباعة</button>`
+  }
+</td>
+
         </tr>`;
     });
 
@@ -1439,10 +1461,26 @@ margin: [0, 0, 128, 0],
     })),
   };
 
-pdfMake.createPdf(docDefinition).open();
+const pdfDoc = pdfMake.createPdf(docDefinition);
+
+if (canShare()) {
+  pdfDoc.getBlob((blob) => {
+    const file = new File([blob], "invoice.pdf", { type: "application/pdf" });
+    navigator.share({
+      files: [file],
+      title: "فاتورة المشتريات",
+      text: "فاتورة مشتريات - شركة المراد",
+    });
+  });
+} else {
+  pdfDoc.open();
+}
 };
 
 
+window.shareInvoice = async function (id) {
+  await printInvoice(id);
+};
 
 
 window.downloadFullExcel = async () => {
@@ -1476,25 +1514,6 @@ window.purchases = purchases;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
 <script>
-// ✅ تحميل خط Tajawal محليًا بدون إنترنت
-fetch("Tajawal-Regular.ttf")
-  .then(res => res.arrayBuffer())
-  .then(buffer => {
-    const binary = Array.from(new Uint8Array(buffer))
-      .map(b => String.fromCharCode(b))
-      .join("");
-    const base64 = btoa(binary);
 
-    pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
-    pdfMake.fonts = {
-      Tajawal: {
-        normal: "Tajawal-Regular.ttf",
-        bold: "Tajawal-Regular.ttf",
-        italics: "Tajawal-Regular.ttf",
-        bolditalics: "Tajawal-Regular.ttf"
-      }
-    };
-  });
-  
 </script>
 
