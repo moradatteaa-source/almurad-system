@@ -11,16 +11,16 @@
   transition: opacity 0.4s ease;
 }
 
-
-   body {
+body {
   margin: 0;
   font-family: 'Tajawal', sans-serif;
   display: flex;
   height: 100vh;
-  background: linear-gradient(180deg, #f8f9fb 0%, #eef2f7 100%);
+background: #c4162c; /* أحمر كريسماس مريح للعين */
   overflow: hidden;
-  color: #043B64;
+  color: #ffffff;
 }
+
 
 
     /* الشريط الجانبي */
@@ -154,7 +154,7 @@
   font-size: 13px;
   text-align: center;
   margin: 0;
-  color: #043B64;
+  color: #ffffff !important;
 }
 
 
@@ -202,6 +202,70 @@ p, div, span, button {
 
 </style>
 
+<style>
+  /* 🎄 صندوق الزينة الشتوية */
+.winter-box {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 30px;
+  opacity: 0;
+  transform: translateY(15px);
+  animation: winterFade 1.2s ease forwards;
+}
+
+.winter-box img {
+  width: 120px;
+  max-width: 35vw;
+}
+
+@keyframes winterFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 📱 موبايل */
+@media (max-width: 768px) {
+  .winter-box {
+    gap: 15px;
+  }
+  .winter-box img {
+    width: 90px;
+  }
+}
+
+/* ❄️ الثلج */
+#snowCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* مهم */
+  z-index: 99999;
+}
+
+/* 🎅 بابا نويل */
+#santa {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  width: 110px;
+  z-index: 99998;
+  pointer-events: none;
+  animation: santaFloat 4s ease-in-out infinite;
+}
+
+@keyframes santaFloat {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+</style>
+
 </head>
 <body>
 
@@ -226,6 +290,7 @@ p, div, span, button {
 
       <div style="background:#FF6B2D;color:white;font-weight:bold;text-align:center;cursor:pointer" onclick="openNewOrder()">➕ إضافة طلب جديد</div>
     </div>
+
 
     <!-- 💰 الحسابات -->
 <div class="menu-item" onclick="toggleMenu('financeMenu')">💰 الحسابات</div>
@@ -367,6 +432,11 @@ p, div, span, button {
     </div>
     <h3>إضافة طلب</h3>
   </div>
+  <!-- 🎄 زينة الشتاء أسفل الطلبات -->
+<div id="winterDecor" class="winter-box">
+  <img src="christmas-tree.png" alt="Christmas Tree">
+</div>
+
 
 </div>
 
@@ -932,5 +1002,84 @@ const audio = new Audio("cash-register-kaching.mp3");
 
 
 </script>
+<!-- ❄️ Snow -->
+<canvas id="snowCanvas"></canvas>
+
+<!-- 🎅 Santa -->
+<img id="santa" src="santa.png" alt="Santa">
+
+<script>
+/* 🔴 تحكم عام (تشغيل / إيقاف) */
+const today = new Date();
+const start = new Date("2025-12-20");
+const end   = new Date("2026-01-05");
+
+const WINTER_MODE = today >= start && today <= end;
+const winterBox = document.getElementById("winterDecor");
+if (!WINTER_MODE && winterBox) {
+  winterBox.remove();
+}
+
+
+if (WINTER_MODE) {
+  const canvas = document.getElementById("snowCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  const snowflakes = Array.from({ length: 120 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 3 + 1,
+    d: Math.random() + 0.5
+  }));
+
+  function drawSnow() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+
+    snowflakes.forEach(f => {
+      ctx.moveTo(f.x, f.y);
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    });
+
+    ctx.fill();
+    moveSnow();
+  }
+
+  let angle = 0;
+  function moveSnow() {
+    angle += 0.01;
+    snowflakes.forEach(f => {
+      f.y += Math.pow(f.d, 2) + 0.5;
+      f.x += Math.sin(angle) * 0.5;
+
+      if (f.y > canvas.height) {
+        f.y = -5;
+        f.x = Math.random() * canvas.width;
+      }
+    });
+  }
+
+  (function animate() {
+    drawSnow();
+    requestAnimationFrame(animate);
+  })();
+
+} else {
+  // إخفاء العناصر إذا مطفي
+  const s = document.getElementById("santa");
+  const c = document.getElementById("snowCanvas");
+  if (s) s.remove();
+  if (c) c.remove();
+}
+</script>
+
 </body>
 </html>
