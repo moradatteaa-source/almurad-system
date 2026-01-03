@@ -441,6 +441,36 @@ body {
     حذف المحدد
   </button>
 </div>
+<div id="bulkStatusBox" style="display:none; text-align:center; margin-top:10px;">
+  <select id="bulkStatusSelect"
+    style="padding:8px; border-radius:6px; min-width:220px;">
+    <option value="">اختر الحالة</option>
+    <option value="مثبت">مثبت</option>
+    <option value="قيد المعالجة">قيد المعالجة</option>
+    <option value="قيد التجهيز">قيد التجهيز</option>
+    <option value="بانتظار البضاعة">بانتظار البضاعة</option>
+    <option value="قيد التوصيل">قيد التوصيل</option>
+    <option value="تم التسليم">تم التسليم</option>
+    <option value="راجع">راجع</option>
+    <option value="تم استلام الراجع">تم استلام الراجع</option>
+    <option value="رفض">رفض</option>
+  </select>
+
+  <br><br>
+
+  <button id="bulkUpdateStatusBtn"
+    style="
+      background:#27ae60;
+      color:white;
+      padding:8px 20px;
+      border:none;
+      border-radius:6px;
+      font-size:14px;
+      cursor:pointer;
+    ">
+    تحديث الحالة
+  </button>
+</div>
 
 <div id="ordersList"></div>
 
@@ -1030,14 +1060,18 @@ document.getElementById("selectModeBtn").onclick = () => {
   if (window.selectionMode) {
     document.getElementById("selectModeBtn").innerText = "إيقاف التحديد";
     document.getElementById("deleteSelectedBtn").style.display = "inline-block";
+    document.getElementById("bulkStatusBox").style.display = "block";
   } else {
     document.getElementById("selectModeBtn").innerText = "تحديد الطلبات";
     document.getElementById("deleteSelectedBtn").style.display = "none";
+    document.getElementById("bulkStatusBox").style.display = "none";
 
-    // إلغاء التحديد
-    document.querySelectorAll(".order-card").forEach(c => c.classList.remove("selected"));
+    document
+      .querySelectorAll(".order-card")
+      .forEach(c => c.classList.remove("selected"));
   }
 };
+
 
 // حذف الطلبات المحددة
 document.getElementById("deleteSelectedBtn").onclick = async () => {
@@ -1057,6 +1091,36 @@ document.getElementById("deleteSelectedBtn").onclick = async () => {
 
   alert("تم حذف الطلبات المحددة");
 };
+import { update }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+document.getElementById("bulkUpdateStatusBtn").onclick = async () => {
+  const newStatus = document.getElementById("bulkStatusSelect").value;
+
+  if (!newStatus) {
+    alert("اختر حالة أولاً");
+    return;
+  }
+
+  const selected = document.querySelectorAll(".order-card.selected");
+
+  if (selected.length === 0) {
+    alert("ما محدد أي طلب");
+    return;
+  }
+
+  if (!confirm(`تأكيد تغيير حالة ${selected.length} طلب؟`)) return;
+
+  for (const card of selected) {
+    const id = card.dataset.id;
+    await update(ref(db2, "orders/" + id), {
+      status: newStatus
+    });
+  }
+
+  alert("تم تحديث الحالات بنجاح");
+};
+
 </script>
 
 </body>
