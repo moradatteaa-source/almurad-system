@@ -142,6 +142,10 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
 
   for (const order of orders) {
     try {
+if (order.receiptNum) {
+  alert("هذا الطلب مرفوع سابقًا");
+  return;
+}
 
       // ⭐ فحص المدينة
       const cityId = getCityId(order.city, waseetCities);
@@ -211,7 +215,7 @@ const { data } = fetchResult;
 await sleep(1000);
 
 // ⭐ نجاح الرفع
-if (data.status === true && data.data?.qr_id) {
+if (data.data?.qr_id) {
   try {
     const db = getDatabase();
     await update(ref(db, `orders/${order.id}`), {
