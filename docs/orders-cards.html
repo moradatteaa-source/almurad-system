@@ -706,6 +706,35 @@ document.addEventListener("DOMContentLoaded", () => {
 // ⭐ متغيرات عامة
 let snapshotAllOrders = [];
 
+
+// ✅ جلب وقت الحالة الحالية من statusHistory
+function getCurrentStatusTime(order) {
+  if (
+    order &&
+    order.status &&
+    order.statusHistory &&
+    order.statusHistory[order.status] &&
+    order.statusHistory[order.status].time
+  ) {
+    return order.statusHistory[order.status].time;
+  }
+  return "";
+}
+
+// ✅ جلب اسم الشخص الذي غيّر الحالة
+function getCurrentStatusBy(order) {
+  if (
+    order &&
+    order.status &&
+    order.statusHistory &&
+    order.statusHistory[order.status] &&
+    order.statusHistory[order.status].by
+  ) {
+    return order.statusHistory[order.status].by;
+  }
+  return "";
+}
+
 let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
 let originalOrders = [];  // تتغير عند الفلترة والبحث
 let allOrdersList = [];   // قائمة العمل حالياً
@@ -715,7 +744,7 @@ let filterStatus = params.get("status") || "";
 localStorage.setItem("currentFilterStatus", filterStatus);
 let filterActive = localStorage.getItem("filterActive") === "1";
 function getStatusClass(status) {
-if (!status || status.trim() === "") return "status-new";
+  if (!status || status.trim() === "") return "status-new";
 
   const map = {
     "مثبت": "status-mothabet",
@@ -734,6 +763,7 @@ if (!status || status.trim() === "") return "status-new";
 
 
 
+
 // ⭐ دالة عرض الطلبات
 function renderOrders(list) {
   allOrdersList = list;
@@ -749,8 +779,15 @@ function renderOrders(list) {
 
     card.innerHTML = `
    <div class="right-side" style="display:flex; flex-direction:column;">
-  <div class="date">${(o.orderDate || "").split("T")[0]}</div>
-<div style="display:flex; flex-direction:column;">
+
+<div class="date">
+  ${
+    getCurrentStatusTime(o)
+      ? new Date(getCurrentStatusTime(o)).toLocaleString("en-GB")
+      : ""
+  }
+</div>
+    <div style="display:flex; flex-direction:column;">
 
   <!-- السطر الأول: رقم الطلب + اسم المنتج -->
 <div style="display:flex; justify-content:flex-start; align-items:center; gap:10px;">
@@ -1113,9 +1150,16 @@ document.getElementById("bulkUpdateStatusBtn").onclick = async () => {
 
   for (const card of selected) {
     const id = card.dataset.id;
-    await update(ref(db2, "orders/" + id), {
-      status: newStatus
-    });
+   const now = new Date().toISOString();
+
+await update(ref(db2, "orders/" + id), {
+  status: newStatus,
+  [`statusHistory/${newStatus}`]: {
+    time: now,
+    by: "Admin" // غيرها لاحقًا لاسم الموظف
+  }
+});
+
   }
 
   alert("تم تحديث الحالات بنجاح");
