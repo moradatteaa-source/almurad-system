@@ -531,7 +531,7 @@ const orders = Object.entries(data)
     }
 
     // ⭐ تطابق الحالة
-    return o.status === filterStatus;
+return (o.status || "").trim() === (filterStatus || "").trim();
   })
   .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
 
