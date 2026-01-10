@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>الحسابات</title>
+
+<style>
+:root{
+  --blue:#043B64;
+  --orange:#FF6B2D;
+  --bg:#f4f6fa;
+}
+body{
+  margin:0;
+  font-family:Tahoma;
+  background:var(--bg);
+}
+header{
+  background:var(--blue);
+  color:white;
+  padding:12px;
+  text-align:center;
+  font-size:18px;
+}
+.container{padding:10px;}
+.box{
+  background:white;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+}
+h3{
+  margin:5px 0;
+  color:var(--blue);
+  font-size:15px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:6px;
+  text-align:center;
+}
+th{background:#eaf0f6;}
+.total{
+  font-weight:bold;
+  color:var(--orange);
+}
+button{
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:var(--orange);
+  color:white;
+  cursor:pointer;
+}
+button.gray{
+  background:#ccc;
+  color:#333;
+}
+/* منع التقريب التلقائي عند التركيز */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* تحسين سلوك اللمس */
+html, body {
+  touch-action: manipulation;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>📊 الحسابات</header>
+
+<div class="container">
+<h3>👤 اختيار الكاشير</h3>
+
+<select id="cashierSelect">
+  <option value="all">كل الكاشيرات</option>
+</select>
+
+  <div class="box">
+    <h3>📅 تصفية حسب التاريخ</h3>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      من:
+      <input type="date" id="fromDate">
+      إلى:
+      <input type="date" id="toDate">
+      <button onclick="filterByRange()">تطبيق</button>
+    </div>
+
+    <hr>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="quickFilter('today')">اليوم</button>
+      <button onclick="quickFilter('week')">هذا الأسبوع</button>
+      <button onclick="quickFilter('month')">هذا الشهر</button>
+      <button onclick="quickFilter('year')">هذه السنة</button>
+      <button class="gray" onclick="quickFilter('all')">الكل</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>🧾 كل الفواتير</h3>
+    <table id="table">
+      <tr>
+   <th>الكاشير</th>
+<th>رقم الفاتورة</th>
+<th>التاريخ</th>
+<th>مجموع الفاتورة</th>
+<th>المدفوع</th>
+<th>الدين</th>
+
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<script type="module">
+// ===== البيانات =====
+const table = document.getElementById("table");
+let invoices = []; // ← تعريف الفواتير (راح تجي من Firebase)
+let cashiersMap = {};
+
+
+// ===== تنسيق إنكليزي =====
+const fmt = n => Number(n || 0).toLocaleString("en-US");
+const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+// ===== تفاصيل الفاتورة =====
+function toggleDetails(row, inv){
+
+  // إذا التفاصيل مفتوحة → سكّرها
+  if (row.nextSibling && row.nextSibling.classList?.contains("details")) {
+    row.nextSibling.remove();
+    return;
+  }
+
+  // سكّر أي تفاصيل ثانية مفتوحة
+  document.querySelectorAll(".details").forEach(d => d.remove());
+
+  const detailsRow = table.insertRow(row.rowIndex + 1);
+  detailsRow.className = "details";
+
+  let html = `
+    <table style="width:100%;font-size:12px;margin-top:6px">
+      <tr style="background:#f7f7f7">
+        <th>المنتج</th>
+        <th>الكمية</th>
+        <th>السعر</th>
+        <th>المجموع</th>
+      </tr>
+  `;
+
+  (inv.items || []).forEach(it=>{
+    html += `
+      <tr>
+        <td>${it.product}</td>
+        <td>${it.qty}</td>
+        <td>${fmt(it.price)} د.ع</td>
+        <td>${fmt(it.total)} د.ع</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      <tr style="font-weight:bold;background:#eef3f7">
+        <td colspan="3">مجموع الفاتورة</td>
+        <td>${fmt(inv.grand)} د.ع</td>
+      </tr>
+    </table>
+  `;
+
+  detailsRow.innerHTML = `<td colspan="6">${html}</td>`;
+}
+
+// ===== عرض الجدول =====
+function render(data){
+  table.querySelectorAll("tr:not(:first-child)").forEach(r=>r.remove());
+
+  if(!data.length){
+    table.insertRow().innerHTML =
+      `<td colspan="5">لا توجد فواتير</td>`;
+    return;
+  }
+  
+
+  let total=0, paid=0, debt=0;
+
+  data.forEach(inv=>{
+    total += +inv.grand;
+    paid  += +inv.paid;
+    debt  += +inv.rest;
+
+const row = table.insertRow();
+row.style.cursor = "pointer";
+
+row.innerHTML = `
+<td>${cashiersMap[inv.cashierId] || "غير معروف"}</td>
+<td>${fmt(inv.invoiceNo)}</td>
+<td>${inv.date}</td>
+<td>${fmt(inv.grand)} د.ع</td>
+<td>${fmt(inv.paid)} د.ع</td>
+<td>${fmt(inv.rest)} د.ع</td>
+`;
+
+// عند الضغط → فتح التفاصيل
+row.onclick = () => toggleDetails(row, inv);
+
+
+  });
+
+  table.insertRow().innerHTML = `
+    <td colspan="2"><strong>المجموع</strong></td>
+    <td class="total">${fmt(total)} د.ع</td>
+    <td class="total">${fmt(paid)} د.ع</td>
+    <td class="total">${fmt(debt)} د.ع</td>
+  `;
+}
+
+// ===== فلترة من → إلى =====
+function filterByRange(){
+  if(!fromDate.value || !toDate.value){
+    alert("اختَر تاريخ من وإلى");
+    return;
+  }
+  render(invoices.filter(i =>
+    i.date >= fromDate.value && i.date <= toDate.value
+  ));
+}
+
+// ===== فلاتر سريعة =====
+function quickFilter(type){
+  const n = new Date();
+  let s,e;
+
+  if(type==="today"){
+    s = e = today();
+  }
+  if(type==="week"){
+    const d = new Date(n.setDate(n.getDate()-n.getDay()));
+    s = d.toLocaleDateString("en-CA");
+    e = today();
+  }
+  if(type==="month"){
+    s = new Date(n.getFullYear(), n.getMonth(), 1)
+          .toLocaleDateString("en-CA");
+    e = today();
+  }
+  if(type==="year"){
+    s = new Date(n.getFullYear(), 0, 1)
+          .toLocaleDateString("en-CA");
+    e = today();
+  }
+  if(type==="all"){
+    render(invoices);
+    return;
+  }
+
+  render(invoices.filter(i => i.date >= s && i.date <= e));
+}
+// ربط الدوال بالـ HTML
+window.quickFilter = quickFilter;
+window.filterByRange = filterByRange;
+
+// ===== Firebase =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  getDoc,      // ✅ أضف هذا
+  doc,         // ✅ وهذا
+  query,
+  where
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqudXSSUtolKjyN574DtiS592BKDxrrAo",
+  authDomain: "al-murad-cashier.firebaseapp.com",
+  projectId: "al-murad-cashier"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const cashierSelect = document.getElementById("cashierSelect");
+
+// تحميل الكاشيرات
+async function loadCashiers(){
+  const q = query(
+    collection(db,"users"),
+where("roles.cashier","==",true)
+  );
+
+  const snap = await getDocs(q);
+
+  snap.forEach(d=>{
+    const name = d.data().name; // ✅ هذا الموجود فعليًا
+
+    cashiersMap[d.id] = name;
+
+    cashierSelect.innerHTML +=
+      `<option value="${d.id}">${name}</option>`;
+  });
+}
+
+
+// تحميل الفواتير
+async function loadInvoices(){
+  let q = collection(db,"invoices");
+
+  if (cashierSelect.value !== "all") {
+    q = query(q, where("cashierId","==",cashierSelect.value));
+  }
+
+  const snap = await getDocs(q);
+  invoices = [];
+  snap.forEach(d => invoices.push(d.data()));
+invoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
+
+  render(invoices);
+}
+
+cashierSelect.addEventListener("change", loadInvoices);
+
+// تحميل أولي + تحقق تسجيل دخول
+onAuthStateChanged(auth, async user=>{
+  if(!user){
+    location.href = "index.html";
+    return;
+  }
+
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists()){
+    location.href = "dashboard.html";
+    return;
+  }
+
+  const data = snap.data();
+  const roles = data.roles || {};
+
+  // ✅ دعم الأدمن القديم
+  if (data.role === "admin") {
+    roles.admin = true;
+  }
+
+  // ✅ الأدمن يدخل بدون أي فحص
+  if (roles.admin) {
+    loadCashiers();
+    loadInvoices();
+    return;
+  }
+
+  // ❌ غير الأدمن: لازم يكون محاسب
+  if (!roles.accountant) {
+    alert("❌ لا تملك صلاحية المحاسب");
+    location.href = "dashboard.html";
+    return;
+  }
+
+  // ✅ محاسب عادي
+  loadCashiers();
+  loadInvoices();
+});
+
+
+
+
+</script>
+
+</body>
+</html>

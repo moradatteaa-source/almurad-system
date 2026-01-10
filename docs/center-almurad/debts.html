@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الديون</title>
+
+<style>
+:root{
+  --blue:#043B64;
+  --orange:#FF6B2D;
+  --bg:#f4f6fa;
+  --red:#c0392b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Tajawal, Tahoma, sans-serif;
+  background:var(--bg);
+}
+header{
+  background:var(--blue);
+  color:white;
+  padding:16px;
+  text-align:center;
+  font-size:18px;
+}
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:12px;
+}
+.customer{
+  background:white;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:16px;
+  border:1px solid #ddd;
+}
+.cHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.name{
+  font-size:17px;
+  font-weight:bold;
+  color:var(--blue);
+}
+.phone{
+  font-size:13px;
+  color:#555;
+}
+.totalDebt{
+  color:var(--red);
+  font-weight:bold;
+  font-size:16px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:13px;
+}
+th,td{
+  border:1px solid #eee;
+  padding:6px;
+  text-align:center;
+}
+th{
+  background:#f1f4f7;
+}
+.payBox{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+}
+.payBox input{
+  flex:1;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.payBox button{
+  padding:8px 16px;
+  border:none;
+  border-radius:8px;
+  background:var(--orange);
+  color:white;
+  font-size:14px;
+  cursor:pointer;
+}
+.empty{
+  text-align:center;
+  margin-top:40px;
+  color:#777;
+}
+</style>
+</head>
+
+<body>
+
+<header>📄 الديون (مجمّعة حسب الزبون)</header>
+<div class="container" id="list"></div>
+
+<script type="module">
+/* ========= Firebase ========= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqudXSSUtolKjyN574DtiS592BKDxrrAo",
+  authDomain: "al-murad-cashier.firebaseapp.com",
+  projectId: "al-murad-cashier"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+/* ========= أدوات ========= */
+const f = n => Number(n || 0).toLocaleString("en-US") + " د.ع";
+const list = document.getElementById("list");
+let invoices = [];
+
+/* ========= تحميل الديون ========= */
+async function loadDebts() {
+  invoices = [];
+  list.innerHTML = "";
+
+  const q = query(
+    collection(db, "invoices"),
+    where("payType", "==", "دين"),
+    where("rest", ">", 0)
+  );
+
+  const snap = await getDocs(q);
+  snap.forEach(d => invoices.push({ id: d.id, ...d.data() }));
+
+  renderDebts();
+}
+
+/* ========= عرض الديون ========= */
+function renderDebts() {
+  if (!invoices.length) {
+    list.innerHTML = `<div class="empty">ماكو ديون مسجلة</div>`;
+    return;
+  }
+
+  const customers = {};
+
+  invoices.forEach(inv => {
+    const phone = inv.debtor?.phone || "بدون";
+    if (!customers[phone]) {
+      customers[phone] = {
+        name: inv.debtor?.name || "زبون",
+        phone,
+        invoices: [],
+        total: 0
+      };
+    }
+    customers[phone].invoices.push(inv);
+    customers[phone].total += inv.rest;
+  });
+
+  Object.values(customers).forEach(cust => {
+    const div = document.createElement("div");
+    div.className = "customer";
+
+    let invoicesHTML = "";
+    cust.invoices.forEach(inv => {
+      let rows = "";
+      inv.items.forEach(it => {
+        rows += `
+          <tr>
+            <td>${it.product}</td>
+            <td>${it.qty}</td>
+            <td>${f(it.price)}</td>
+            <td>${f(it.total)}</td>
+          </tr>`;
+      });
+
+      invoicesHTML += `
+        <div style="margin-top:10px;border-top:1px dashed #ccc;padding-top:10px">
+<b>🧾 فاتورة #${inv.invoiceNo}</b>
+<div style="font-size:12px;color:#555;margin-top:4px">
+  👤 الكاشير: ${inv.cashierEmail || "غير معروف"}
+</div>
+          <table>
+            <tr>
+              <th>المنتج</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>المجموع</th>
+            </tr>
+            ${rows}
+          </table>
+          <div style="color:#c0392b;font-weight:bold">
+            المتبقي: ${f(inv.rest)}
+          </div>
+        </div>`;
+    });
+
+    div.innerHTML = `
+      <div class="cHeader">
+        <div>
+          <div class="name">${cust.name}</div>
+          <div class="phone">${cust.phone}</div>
+        </div>
+        <div class="totalDebt">${f(cust.total)}</div>
+      </div>
+
+      ${invoicesHTML}
+
+      <div class="payBox">
+        <input type="number" placeholder="مبلغ التسديد" id="pay-${cust.phone}">
+        <button onclick="pay('${cust.phone}')">تسديد</button>
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+/* ========= التسديد FIFO ========= */
+window.pay = async function(phone) {
+  const input = document.getElementById("pay-" + phone);
+  let amount = Number(input.value || 0);
+  if (amount <= 0) return alert("أدخل مبلغ صحيح");
+
+  const invs = invoices
+    .filter(i => i.debtor?.phone === phone && i.rest > 0)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  for (let inv of invs) {
+    if (amount <= 0) break;
+
+    const paidNow = Math.min(amount, inv.rest);
+    amount -= paidNow;
+
+    await updateDoc(doc(db, "invoices", inv.id), {
+      paid: (inv.paid || 0) + paidNow,
+      rest: inv.rest - paidNow
+    });
+  }
+
+  alert("تم التسديد ✅");
+  loadDebts();
+};
+
+/* ========= تشغيل ========= */
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
+  loadDebts();
+});
+</script>
+
+</body>
+</html>
