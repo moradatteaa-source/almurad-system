@@ -203,6 +203,22 @@
     <p id="totalSellValue" class="num-en" style="font-size:20px;font-weight:bold;color:#FF6B2D;">0</p>
   </div>
 </div>
+<!-- 🔍 بحث بالمخزن -->
+<div style="width:95%;margin:15px auto;">
+  <input
+    id="searchInput"
+    type="text"
+    placeholder="🔍 بحث باسم المنتج..."
+    style="
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      border:1px solid #ccc;
+      font-size:16px;
+    "
+    oninput="filterWarehouse()"
+  >
+</div>
 
   <table id="warehouseTable">
     <thead>
@@ -226,8 +242,20 @@
     <h3 id="popupTitle">➕ إضافة منتج جديد</h3>
 
     <input id="productName" placeholder="اسم المنتج">
+    <input
+  id="productBarcode"
+  class="num-en"
+  placeholder="باركود المنتج (اختياري – امسح بالماسح)"
+>
+<button type="button" onclick="startBarcodeScan()">
+  📷 مسح بالكاميرا
+</button>
+
+<video id="barcodeVideo" style="width:100%;display:none;margin-top:10px;"></video>
+
     <input id="buyPrice" type="number" placeholder="سعر الشراء">
-    <input id="sellPrice" type="number" placeholder="سعر البيع">
+<input id="sellPricePos" type="number" placeholder="سعر البيع الحضوري (كاشير)">
+<input id="sellPriceOnline" type="number" placeholder="سعر البيع أونلاين">
 
     <!-- 🔸 خانة الكمية إذا المنتج بدون متغيرات -->
     <div id="quantitySection">
@@ -266,10 +294,32 @@
 </div>
 
 <script type="module">
+  // 🔍 فلترة منتجات المخزن حسب الاسم
+window.filterWarehouse = function () {
+  const query = document.getElementById("searchInput").value.trim().toLowerCase();
+  const rows = document.querySelectorAll("#warehouseTable tbody tr");
+
+  rows.forEach(row => {
+    const productNameCell = row.querySelector("td");
+    if (!productNameCell) return;
+
+    const productName = productNameCell.textContent.toLowerCase();
+
+    // إظهار أو إخفاء الصف
+    row.style.display = productName.includes(query) ? "" : "none";
+  });
+};
+const query = document
+  .getElementById("searchInput")
+  .value.replace(/\s+/g, " ")
+  .trim()
+  .toLowerCase();
+
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import * as XLSX from "https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs";
 
-import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set, update, remove, onValue } from
+ "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -283,6 +333,20 @@ import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+// 🟦 توليد باركود رقمي تلقائي
+import { runTransaction } from
+  "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+async function generateBarcode() {
+  const counterRef = ref(db, "barcodeCounter/last");
+
+  const result = await runTransaction(counterRef, (current) => {
+    return (current || 100000) + 1;
+  });
+
+  return String(result.snapshot.val());
+}
+
 
   const overlay = document.getElementById("popupOverlay");
   const tableBody = document.querySelector("#warehouseTable tbody");
@@ -293,11 +357,18 @@ import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic
 
 window.togglePopup = (show) => {
   overlay.style.display = show ? "flex" : "none";
-  
-  // إذا أغلق النافذة
-  if (!show) {
-    if (!editingProduct) { 
-      // فقط إذا ماكو تعديل، نظّف الحقول
+
+  const qtySection = document.getElementById("quantitySection");
+  const variantsSection = document.getElementById("variantsSection");
+  const btn = document.getElementById("toggleVariantsBtn");
+
+  if (show) {
+    // ✅ حالة افتراضية عند فتح النافذة
+    qtySection.style.display = "block";     // ⬅️ إظهار الكمية
+    variantsSection.style.display = "none"; // ⬅️ إخفاء المتغيرات
+    btn.textContent = "➕ إضافة متغيرات";
+  } else {
+    if (!editingProduct) {
       popupTitle.textContent = "➕ إضافة منتج جديد";
       clearFields();
     }
@@ -369,14 +440,30 @@ window.togglePopup = (show) => {
 window.saveProduct = async function() {
   const name = document.getElementById("productName").value.trim();
   const buyPrice = parseFloat(document.getElementById("buyPrice").value);
-  const sellPrice = parseFloat(document.getElementById("sellPrice").value);
-  const qty = parseInt(document.getElementById("productQty").value.trim()) || 0;
+const sellPricePos = parseFloat(document.getElementById("sellPricePos").value);
+const sellPriceOnline = parseFloat(document.getElementById("sellPriceOnline").value);
 
-  if (!name || isNaN(buyPrice) || isNaN(sellPrice))
-    return alert("⚠️ أكمل جميع بيانات المنتج.");
+if (isNaN(sellPricePos) || isNaN(sellPriceOnline))
+  return alert("⚠️ أدخل أسعار البيع (حضوري وأونلاين).");
+  const qty = parseInt(document.getElementById("productQty").value.trim()) || 0;
+  const manualBarcode =
+  document.getElementById("productBarcode").value.trim();
+
+
+if (!name || isNaN(buyPrice) || isNaN(sellPricePos) || isNaN(sellPriceOnline))
+  return alert("⚠️ أكمل جميع بيانات المنتج.");
+
 
  // 🟢 إنشاء كائن جديد للمخزون
 let stock = {};
+let barcodes = {};
+
+if (editingProduct) {
+  const oldSnap = await get(ref(db, "warehouse/" + editingProduct + "/barcodes"));
+  if (oldSnap.exists()) {
+    barcodes = oldSnap.val();
+  }
+}
 
 // 🟢 بناء المتغيرات والكميات (تتعامل مع أي نوع مثل اللون أو الحجم)
 if (variants.length > 0) {
@@ -397,7 +484,19 @@ if (variants.length > 0) {
 } else {
   // إذا المنتج بدون متغيرات
   stock["إجمالي الكمية"] = qty;
+
+
 }
+for (const key in stock) {
+  if (barcodes[key]) continue;
+
+  if (manualBarcode) {
+    barcodes[key] = manualBarcode; // ✅ باركود الشركة
+  } else {
+    barcodes[key] = await generateBarcode(); // 🔁 توليد داخلي
+  }
+}
+
 
 // ✅ إذا عدّلنا اسم المنتج، نحذف القديم
 if (editingProduct && editingProduct !== name) {
@@ -424,20 +523,33 @@ variants.forEach(v => {
 
   // 🧾 حفظ المنتج في Firebase
   const productRef = ref(db, "warehouse/" + name);
-  await set(productRef, {
-    buyPrice,
-    sellPrice,
-    totalQty: Object.values(stock).reduce((a, b) => a + b, 0),
-    lastUpdate: new Date().toISOString(),
-    stock,
-    variants: variantsStructured // ✅ هذا هو المفتاح حتى تظهر المتغيرات في تفاصيل الطلب
-  });
+  const totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
+
+await set(ref(db, "warehouse/" + name), {
+  buyPrice,
+  prices: {
+    pos: sellPricePos,
+    online: sellPriceOnline
+  },
+  totalQty,
+  stock,
+  barcodes,          // ✅ هنا ينحفظ مباشرة
+  variants: variantsStructured,
+  lastUpdate: new Date().toISOString()
+});
+// ✅ هذا السطر الجديد
+await set(ref(db, "warehouse/" + name + "/barcodes"), barcodes);
+
+
+
 
   // ✅ إشعار النجاح
   document.getElementById("successMsg").style.display = "block";
   setTimeout(() => document.getElementById("successMsg").style.display = "none", 2000);
 
   // تحديث الجدول وإعادة التهيئة
+  let warehouseCache = {};
+
   loadWarehouse();
   clearFields();
   togglePopup(false);
@@ -448,8 +560,11 @@ variants.forEach(v => {
 
   function clearFields() {
     document.getElementById("productName").value = "";
+    document.getElementById("productBarcode").value = "";
+
     document.getElementById("buyPrice").value = "";
-    document.getElementById("sellPrice").value = "";
+document.getElementById("sellPricePos").value = "";
+document.getElementById("sellPriceOnline").value = "";
     document.getElementById("productQty").value = "";
     variants = [];
     renderVariantTable();
@@ -467,11 +582,12 @@ variants.forEach(v => {
     }
 
     const data = snapshot.val();
+    
 
     for (const [productName, p] of Object.entries(data)) {
       const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
       // ✅ حساب الفاتورة الإجمالية
-const invoiceValue = (p.sellPrice || 0) * total;
+const invoiceValue = (p.prices?.pos || 0) * total;
 const buyValue = (p.buyPrice || 0) * total;
 
 
@@ -504,7 +620,10 @@ const buyValue = (p.buyPrice || 0) * total;
 tr.innerHTML = `
   <td><strong>${productName}</strong></td>
   <td>${p.buyPrice || "-"}</td>
-  <td>${p.sellPrice || "-"}</td>
+<td>
+  حضوري: ${p.prices?.pos || "-"}<br>
+  أونلاين: ${p.prices?.online || "-"}
+</td>
   <td style="text-align:center; vertical-align:top;">
     <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
       ${variantsList}
@@ -512,7 +631,15 @@ tr.innerHTML = `
   </td>
   <td>${total}</td>
 <td class="num-en" style="color:#043B64;font-weight:bold;">${invoiceValue.toLocaleString('en-US')} د.ع</td>
-  <td>${p.lastUpdate ? p.lastUpdate.split("T")[0] : "-"}</td>
+<td>${
+  p.lastUpdate
+    ? new Date(
+        typeof p.lastUpdate === "string"
+          ? p.lastUpdate
+          : p.lastUpdate
+      ).toLocaleDateString("ar-EG")
+    : "-"
+}</td>
   <td>
     <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
     <button style="background:#FF6B2D;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="editProduct('${productName}')">✏️</button>
@@ -531,7 +658,7 @@ tableBody.appendChild(tr);
       const totalQty = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
       totalQtyAll += totalQty;
       totalBuyValue += totalQty * (p.buyPrice || 0);
-      totalSellValue += totalQty * (p.sellPrice || 0);
+totalSellValue += totalQty * (p.prices?.pos || 0);
     });
 
     // ✅ عرض القيم في الصفحة
@@ -580,7 +707,8 @@ window.deleteProduct = async function(productName) {
     popupTitle.textContent = `✏️ تعديل المنتج: ${productName}`;
     document.getElementById("productName").value = productName;
     document.getElementById("buyPrice").value = data.buyPrice || "";
-    document.getElementById("sellPrice").value = data.sellPrice || "";
+document.getElementById("sellPricePos").value = data.prices?.pos || "";
+document.getElementById("sellPriceOnline").value = data.prices?.online || "";
     document.getElementById("productQty").value = data.totalQty || "";
     variants = [];
 
@@ -620,41 +748,102 @@ window.uploadExcel = async function () {
 
   const grouped = {};
 
-  // 🧩 تجميع المتغيرات حسب اسم المنتج
-  rows.forEach(r => {
-    const name = r["اسم المنتج"];
-    if (!name) return;
-    const buy = parseFloat(r["سعر الشراء"]) || 0;
-    const sell = parseFloat(r["سعر البيع"]) || 0;
-    const qty = parseInt(r["الكمية"]) || 0;
-    const type1 = r["نوع المتغير 1"] || "";
-    const val1 = r["قيمة المتغير 1"] || "";
-    const type2 = r["نوع المتغير 2"] || "";
-    const val2 = r["قيمة المتغير 2"] || "";
+for (const r of rows) {
+  const name = r["اسم المنتج"];
+  if (!name) continue;
 
-    const key = [type1, val1, type2, val2].filter(Boolean).join(" | ") || "إجمالي الكمية";
+  const buy = parseFloat(r["سعر الشراء"]) || 0;
+  const sellPos = parseFloat(r["سعر البيع الحضوري"]) || 0;
+  const sellOnline = parseFloat(r["سعر البيع اونلاين"]) || 0;
+  const qty = parseInt(r["الكمية"]) || 0;
 
-    if (!grouped[name]) grouped[name] = { buy, sell, stock: {} };
-    grouped[name].stock[key] = qty;
-  });
+  const type1 = r["نوع المتغير 1"] || "";
+  const val1 = r["قيمة المتغير 1"] || "";
+  const type2 = r["نوع المتغير 2"] || "";
+  const val2 = r["قيمة المتغير 2"] || "";
+
+  const key =
+    [type1, val1, type2, val2].filter(Boolean).join(" | ") ||
+    "إجمالي الكمية";
+const existingSnap = await get(ref(db, "warehouse/" + name + "/barcodes"));
+const existingBarcodes = existingSnap.exists() ? existingSnap.val() : {};
+
+  if (!grouped[name]) {
+    grouped[name] = {
+      buy,
+      sellPos,
+      sellOnline,
+      stock: {},
+      barcodes: {}
+    };
+  }
+
+  grouped[name].stock[key] = qty;
+
+  // ✅ توليد باركود صحيح
+if (existingBarcodes[key]) {
+  grouped[name].barcodes[key] = existingBarcodes[key];
+} else {
+  grouped[name].barcodes[key] = await generateBarcode();
+}
+
+}
+
 
   let count = 0;
 
   for (const [name, data] of Object.entries(grouped)) {
-    await set(ref(db, "warehouse/" + name), {
-      buyPrice: data.buy,
-      sellPrice: data.sell,
-      totalQty: Object.values(data.stock).reduce((a, b) => a + b, 0),
-      lastUpdate: new Date().toISOString(),
-      stock: data.stock
-    });
+await update(ref(db, "warehouse/" + name), {
+  buyPrice: data.buy,
+  prices: {
+    pos: data.sellPos,
+    online: data.sellOnline
+  },
+  totalQty: Object.values(data.stock).reduce((a, b) => a + b, 0),
+  stock: data.stock,
+  lastUpdate: new Date().toISOString()
+});
+await set(ref(db, "warehouse/" + name + "/barcodes"), data.barcodes);
+
+
     count++;
   }
 
   alert(`✅ تم رفع ${count} منتج من الملف بنجاح!`);
   loadWarehouse();
 };
+window.startBarcodeScan = async function () {
+  const video = document.getElementById("barcodeVideo");
+  video.style.display = "block";
+
+  const codeReader = new ZXing.BrowserBarcodeReader();
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+
+    video.srcObject = stream;
+    video.setAttribute("playsinline", true);
+    await video.play();
+
+    const result = await codeReader.decodeOnceFromVideoDevice(null, video);
+
+    // ✨ كتابة الباركود تلقائياً
+    document.getElementById("productBarcode").value = result.text;
+
+    // ⛔ إيقاف الكاميرا
+    stream.getTracks().forEach(t => t.stop());
+    video.style.display = "none";
+
+  } catch (err) {
+    alert("❌ لم يتم التعرف على الباركود");
+    console.error(err);
+  }
+};
 
 </script>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
 </body>
 </html>

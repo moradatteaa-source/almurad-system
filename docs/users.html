@@ -178,6 +178,8 @@
       <div class="roles-dropdown" id="rolesDropdown">
         <div class="roles-button" id="rolesButton">اختر المهام ▾</div>
         <div class="roles-list" id="rolesList">
+          <div data-role="سنتر">سنتر</div>
+
           <div data-role="مثبت طلبات">مثبت طلبات</div>
           <div data-role="محاسب">محاسب</div>
           <div data-role="معلن">معلن</div>
@@ -216,8 +218,10 @@ const rolesMap = {
   "مثبت طلبات": "stabilizer",
   "متابعة التوصيل": "delivery",
   "مسؤول مخزن": "store",
-  "معلن": "advertiser"
+  "معلن": "advertiser",
+  "سنتر": "center" // ✅ جديد
 };
+
 
   // ✅ التحقق من المستخدم الحالي وصلاحياته
   // ✅ التحقق من المستخدم الحالي وصلاحياته
@@ -244,6 +248,8 @@ try {
 
     // 🔹 التحقق من صلاحية الأدمن
     const roles = loggedUser.roles || [];
+    // 🏢 سنتر المراد – يظهر فقط لمن عنده صلاحية سنتر أو أدمن
+
     const isAdmin = roles.includes("admin");
 
     if (!isAdmin) {

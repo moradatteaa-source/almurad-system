@@ -244,6 +244,62 @@ p, div, span, button {
   margin-top: 25px;
   color: #666;
 }
+/* 🏢 سنتر المراد */
+.center-box {
+  margin-top: 30px;
+  background: rgba(255,255,255,0.08);
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.center-box h2 {
+  text-align: center;
+  margin: 0 0 15px 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.center-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.center-card {
+  background: white;
+  color: #043B64;
+  border-radius: 14px;
+  padding: 22px 10px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.center-card span {
+  display: block;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.center-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+
+/* ألوان */
+.center-card.cashier { background:#eafaf1; }
+.center-card.finance { background:#eef5ff; }
+.center-card.credit  { background:#fff6e6; }
+.center-card.profit  { background:#eaf7ea; }
+
+/* موبايل */
+@media (max-width: 600px) {
+  .center-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 </style>
 
@@ -368,6 +424,33 @@ p, div, span, button {
   <div onclick="openStatistics('advertisers')">إحصائيات المعلنين</div>
   <div onclick="openStatistics('daily')">الإحصائيات اليومية</div>
 </div>
+<!-- 🏢 سنتر المراد -->
+<div class="center-box">
+  <h2>🏢 سنتر المراد</h2>
+
+  <div class="center-grid">
+    <div class="center-card cashier" onclick="openCashier()">
+      🧾
+      <span>الكاشير</span>
+    </div>
+
+    <div class="center-card finance" onclick="openFinance('sales')">
+      💰
+      <span>الحسابات</span>
+    </div>
+
+    <div class="center-card credit" onclick="openFinance('balances')">
+      📄
+      <span>الدين</span>
+    </div>
+
+    <div class="center-card profit" onclick="openFinance('profits')">
+      📈
+      <span>الأرباح</span>
+    </div>
+  </div>
+</div>
+
 
 <!-- 🗂️ الأرشيف الشهري -->
 <div class="menu-item" onclick="openArchive()">🗂️ الأرشيف الشهري</div>
@@ -784,6 +867,19 @@ if (
     window.openNewOrder = openNewOrder;
     window.openStatistics = openStatistics;
     window.logout = logout;
+    function openCashier() {
+function openCashier() {
+  window.location.href = "center-almurad/cashier.html";
+}
+window.openCashier = openCashier;
+
+
+window.openCashier = openCashier;
+  // إذا اسم الملف مختلف غيّره هنا فقط
+}
+
+window.openCashier = openCashier;
+
     function openUsers() {
   window.location.href = "users.html";
 }
@@ -1198,4 +1294,4 @@ function showGiftMessage() {
 </script>
 
 </body>
-</html> 
+</html>  
