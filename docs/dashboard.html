@@ -16,10 +16,11 @@ body {
   font-family: 'Tajawal', sans-serif;
   display: flex;
   height: 100vh;
-background: #c4162c; /* أحمر كريسماس مريح للعين */
+  background: #f4f6fa; /* خلفية هادئة */
   overflow: hidden;
-  color: #ffffff;
+  color: #043B64;
 }
+
 
 
 
@@ -148,14 +149,13 @@ background: #c4162c; /* أحمر كريسماس مريح للعين */
   font-weight: 700;
   color: var(--color);
 }
-
-/* 📝 العنوان */
 .status-item h3 {
   font-size: 13px;
   text-align: center;
   margin: 0;
-  color: #ffffff !important;
+  color: #043B64; /* أزرق غامق */
 }
+
 
 
 
@@ -303,68 +303,7 @@ p, div, span, button {
 
 </style>
 
-<style>
-  /* 🎄 صندوق الزينة الشتوية */
-.winter-box {
-  margin-top: 25px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 30px;
-  opacity: 0;
-  transform: translateY(15px);
-  animation: winterFade 1.2s ease forwards;
-}
 
-.winter-box img {
-  width: 120px;
-  max-width: 35vw;
-}
-
-@keyframes winterFade {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 📱 موبايل */
-@media (max-width: 768px) {
-  .winter-box {
-    gap: 15px;
-  }
-  .winter-box img {
-    width: 90px;
-  }
-}
-
-/* ❄️ الثلج */
-#snowCanvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none; /* مهم */
-  z-index: 99999;
-}
-
-/* 🎅 بابا نويل */
-#santa {
-  position: fixed;
-  bottom: 15px;
-  left: 15px;
-  width: 110px;
-  z-index: 99998;
-  pointer-events: none;
-  animation: santaFloat 4s ease-in-out infinite;
-}
-
-@keyframes santaFloat {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0); }
-}
 </style>
 
 </head>
@@ -425,30 +364,12 @@ p, div, span, button {
   <div onclick="openStatistics('daily')">الإحصائيات اليومية</div>
 </div>
 <!-- 🏢 سنتر المراد -->
-<div class="center-box">
-  <h2>🏢 سنتر المراد</h2>
-
-  <div class="center-grid">
-    <div class="center-card cashier" onclick="openCashier()">
-      🧾
-      <span>الكاشير</span>
-    </div>
-
-    <div class="center-card finance" onclick="openFinance('sales')">
-      💰
-      <span>الحسابات</span>
-    </div>
-
-    <div class="center-card credit" onclick="openFinance('balances')">
-      📄
-      <span>الدين</span>
-    </div>
-
-    <div class="center-card profit" onclick="openFinance('profits')">
-      📈
-      <span>الأرباح</span>
-    </div>
-  </div>
+<div class="menu-item" onclick="toggleMenu('centerMenu')">🏢 سنتر المراد</div>
+<div class="submenu" id="centerMenu">
+  <div onclick="openCashier()">🧾 الكاشير</div>
+  <div onclick="openFinance('sales')">💰 الحسابات</div>
+  <div onclick="openFinance('balances')">📄 الديون</div>
+  <div onclick="openFinance('profits')">📈 الأرباح</div>
 </div>
 
 
@@ -475,7 +396,7 @@ p, div, span, button {
 <span id="userDisplay" style="font-size:16px; color:#555;"></span>
 
 
-<div class="stats" id="statsContainer" style="opacity:0">
+<div class="stats" id="statsContainer">
 
   <div class="status-item" onclick="openOrders('')">
     <div class="circle" style="--color:#3498db;--percent:0%">
@@ -560,10 +481,7 @@ p, div, span, button {
     </div>
     <h3>إضافة طلب</h3>
   </div>
-  <!-- 🎄 زينة الشتاء أسفل الطلبات -->
-<div id="winterDecor" class="winter-box">
-  <img src="christmas-tree.png" alt="Christmas Tree">
-</div>
+
 
 
 </div>
@@ -589,11 +507,7 @@ import { getDatabase, ref, get, child, set, update } from "https://www.gstatic.c
     const db = getDatabase(app);
 
 const user = JSON.parse(localStorage.getItem("loggedInUser"));
-if (user && (user.username === "admin" || (user.roles && user.roles.includes("admin")))) {
-  document.getElementById("usersMenu").style.display = "block";
 
- 
-}
 
 
 
@@ -764,6 +678,7 @@ const statsMenu    = document.querySelector(".menu-item[onclick*='openStatistics
 const usersMenu    = document.getElementById("usersMenu");
 const storeMenu    = document.querySelector(".menu-item[onclick*='openStore']");
 const settingsMenu = document.querySelector(".menu-item[onclick*='openSettings']");
+const centerMenu = document.querySelector(".menu-item[onclick*='centerMenu']");
 
 // إخفاء الكل بالبداية
 if (ordersMenu) ordersMenu.style.display = "none";
@@ -772,6 +687,7 @@ if (statsMenu) statsMenu.style.display = "none";
 if (usersMenu) usersMenu.style.display = "none";
 if (storeMenu) storeMenu.style.display = "none";
 if (settingsMenu) settingsMenu.style.display = "none";
+if (centerMenu) centerMenu.style.display = "none";
 
 // 🟢 الأقسام المفتوحة للجميع
 if (storeMenu) storeMenu.style.display = "block";      // إدارة المخزن
@@ -786,6 +702,10 @@ if (roles.includes("admin")) {
   if (statsMenu) statsMenu.style.display = "block";
   if (usersMenu) usersMenu.style.display = "block";
   if (storeMenu) storeMenu.style.display = "block";
+}
+// 🏢 سنتر المراد – فقط للأدمن وموظف السنتر
+if (roles.includes("admin") || roles.includes("center")) {
+  if (centerMenu) centerMenu.style.display = "block";
 }
 
 // ✅ المحاسب: الحسابات + الإحصائيات
@@ -867,16 +787,11 @@ if (
     window.openNewOrder = openNewOrder;
     window.openStatistics = openStatistics;
     window.logout = logout;
-    function openCashier() {
 function openCashier() {
   window.location.href = "center-almurad/cashier.html";
 }
 window.openCashier = openCashier;
 
-
-window.openCashier = openCashier;
-  // إذا اسم الملف مختلف غيّره هنا فقط
-}
 
 window.openCashier = openCashier;
 
@@ -1143,155 +1058,8 @@ const audio = new Audio("cash-register-kaching.mp3");
 
 
 </script>
-<!-- ❄️ Snow -->
-<canvas id="snowCanvas"></canvas>
-
-<!-- 🎅 Santa -->
-<img id="santa" src="santa.png" alt="Santa">
-<!-- 🎁 مفاجأة السنة الجديدة -->
-<div id="giftOverlay">
-  <h1>🎉 سنة جديدة سعيدة 🎉</h1>
-  <p id="giftMessage"></p>
-  <div class="amount">🎁 هدية: 10,000 دينار عراقي</div>
-  <small>نظام المراد يتمنى لك سنة مليئة بالنجاح 🤍</small>
-</div>
-
-<script>
-/* 🔴 تحكم عام (تشغيل / إيقاف) */
-const today = new Date();
-const start = new Date("2025-12-20");
-const end = new Date("2026-02-01T23:59:59");
-
-const WINTER_MODE = today >= start && today <= end;
-const winterBox = document.getElementById("winterDecor");
-if (!WINTER_MODE && winterBox) {
-  winterBox.remove();
-}
 
 
-if (WINTER_MODE) {
-  const canvas = document.getElementById("snowCanvas");
-  const ctx = canvas.getContext("2d");
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener("resize", resize);
-
-  const snowflakes = Array.from({ length: 120 }, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: Math.random() * 3 + 1,
-    d: Math.random() + 0.5
-  }));
-
-  function drawSnow() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
-    ctx.beginPath();
-
-    snowflakes.forEach(f => {
-      ctx.moveTo(f.x, f.y);
-      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    });
-
-    ctx.fill();
-    moveSnow();
-  }
-
-  let angle = 0;
-  function moveSnow() {
-    angle += 0.01;
-    snowflakes.forEach(f => {
-      f.y += Math.pow(f.d, 2) + 0.5;
-      f.x += Math.sin(angle) * 0.5;
-
-      if (f.y > canvas.height) {
-        f.y = -5;
-        f.x = Math.random() * canvas.width;
-      }
-    });
-  }
-
-  (function animate() {
-    drawSnow();
-    requestAnimationFrame(animate);
-  })();
-
-} else {
-  // إخفاء العناصر إذا مطفي
-  const s = document.getElementById("santa");
-  const c = document.getElementById("snowCanvas");
-  if (s) s.remove();
-  if (c) c.remove();
-}
-// 🎅🎁 مفاجأة بابا نويل
-const santaEl = document.getElementById("santa");
-const overlay = document.getElementById("giftOverlay");
-
-const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
-if (santaEl && overlay && currentUser) {
-
-  santaEl.style.pointerEvents = "auto"; // تفعيل الضغط
-
-  const giftKey = "newYearGift_" + (currentUser.username || currentUser.user || "user");
-
-  if (!localStorage.getItem(giftKey)) {
-    santaEl.style.cursor = "pointer";
-
-    santaEl.addEventListener("click", () => {
-      // 🔒 منع التكرار
-      localStorage.setItem(giftKey, "done");
-
-      // 🔊 صوت احتفالي
-      try {
-        const audio = new Audio("cash-register-kaching.mp3");
-        audio.volume = 1;
-        audio.play();
-      } catch (e) {}
-
-      // 💥 تأثير اختفاء بابا نويل
-      santaEl.style.transition = "transform 0.4s ease, opacity 0.4s ease";
-      santaEl.style.transform = "scale(2.5) rotate(15deg)";
-      santaEl.style.opacity = "0";
-
-      setTimeout(() => {
-        santaEl.remove();
-        showGiftMessage();
-      }, 400);
-    });
-  }
-}
-
-// 🎉 عرض الرسالة
-function showGiftMessage() {
-  const user =
-    currentUser.name ||
-    currentUser.username ||
-    currentUser.user ||
-    "عزيزنا";
-
-  const messages = [
-    `كل عام وأنت بخير ${user} 🌟 شكرًا لجهودك معنا.`,
-    `${user}، تعبك هذا العام كان واضح، وهذه هدية بسيطة تقديرًا لك 🎁`,
-    `نعتز بك ${user}، ونتمنى لك سنة مليئة بالنجاح.`,
-    `${user}، وجودك معنا قيمة حقيقية 🤍`
-  ];
-
-  document.getElementById("giftMessage").innerHTML =
-    messages[Math.floor(Math.random() * messages.length)];
-
-  overlay.classList.add("show");
-
-  // ⏳ إغلاق تلقائي
-  setTimeout(() => {
-    overlay.classList.remove("show");
-  }, 8000);
-}
-
-</script>
 
 </body>
 </html>  
