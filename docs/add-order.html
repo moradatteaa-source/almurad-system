@@ -414,18 +414,19 @@ function createDropdown(options, selected, onChange) {
 
    // 🔹 تحميل قائمة المنتجات من المخزن "warehouse"
 let allProducts = [];
-
+// 🟢 كاش المخزن لمعرفة هل المنتج عنده متغيرات
+let warehouseCache = {};
 onValue(ref(db, "warehouse"), (snap) => {
   if (snap.exists()) {
     const data = snap.val();
 
-    // أسماء المنتجات كمفاتيح مباشرة
+    warehouseCache = data; // ✅ خزّن المخزن
     allProducts = Object.keys(data);
 
-    // ✅ إعداد القوائم المنسدلة بعد تحميل البيانات
     setupDropdowns();
   } else {
     allProducts = [];
+    warehouseCache = {};
   }
 });
 
@@ -742,6 +743,13 @@ statusDiv.appendChild(statusDropdown);
     // 💾 حفظ الطلب
     document.getElementById("saveBtn").addEventListener("click", async () => {
       // ⭐⭐⭐ التحقق قبل الحفظ ⭐⭐⭐
+      function productHasVariants(productName) {
+  const product = warehouseCache[productName];
+  if (!product || !product.stock) return false;
+
+  return Object.keys(product.stock).some(k => k.includes("|"));
+}
+
 function validateOrder() {
   let errors = [];
 
@@ -818,11 +826,13 @@ if (!allowedAreas.includes(area)) {
 
     if (!address) errors.push("العنوان مطلوب");
 
-    // 🟢 التحقق من المتغيرات للمنتج الرئيسي إذا عنده متغيرات
-    const mainVariantsCount = Object.keys(mainProductObj.selectedVariants || {}).length;
-    if (mainVariantsCount === 0 && Object.keys(mainProductObj).length > 0) {
-      errors.push("يجب اختيار المتغيرات للمنتج الرئيسي");
-    }
+  if (product && productHasVariants(product)) {
+  const mainVariantsCount = Object.keys(mainProductObj.selectedVariants || {}).length;
+  if (mainVariantsCount === 0) {
+    errors.push("يجب اختيار المتغيرات للمنتج الرئيسي");
+  }
+}
+
 
     // 🟣 التحقق من كل منتج إضافي
     extraProducts.forEach((p, i) => {
@@ -830,10 +840,13 @@ if (!allowedAreas.includes(area)) {
       if (!p.price || p.price <= 0) errors.push(`سعر المنتج الإضافي رقم ${i + 1} غير صالح`);
       if (!p.qty || p.qty <= 0) errors.push(`كمية المنتج الإضافي رقم ${i + 1} غير صالحة`);
 
-      const vCount = Object.keys(p.selectedVariants || {}).length;
-      if (vCount === 0 && p.name) {
-        errors.push(`يجب اختيار المتغيرات للمنتج الإضافي رقم ${i + 1}`);
-      }
+   if (p.name && productHasVariants(p.name)) {
+  const vCount = Object.keys(p.selectedVariants || {}).length;
+  if (vCount === 0) {
+    errors.push(`يجب اختيار المتغيرات للمنتج الإضافي رقم ${i + 1}`);
+  }
+}
+
     });
   }
 
