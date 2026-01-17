@@ -108,10 +108,12 @@
       transition: all 0.2s;
     }
 
-    #saveBtn {
-      background: var(--accent-orange);
-      color: white;
-    }
+ #saveBtn {
+  background: var(--accent-orange);
+  color: white;
+  touch-action: manipulation;
+}
+
 
     #backBtn {
       background: var(--main-blue);
@@ -739,9 +741,19 @@ const statusDropdown = createDropdown(statusOptions, "", () => {});
 statusDiv.appendChild(statusDropdown);
 
     }
+// 🔒 منع الإرسال المكرر
+let isSaving = false;
 
     // 💾 حفظ الطلب
-    document.getElementById("saveBtn").addEventListener("click", async () => {
+document.getElementById("saveBtn").addEventListener("click", async () => {
+
+  // 🛑 منع الضغط المزدوج
+  if (isSaving) return;
+  isSaving = true;
+
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "⏳ جاري الحفظ...";
       // ⭐⭐⭐ التحقق قبل الحفظ ⭐⭐⭐
       function productHasVariants(productName) {
   const product = warehouseCache[productName];
@@ -865,6 +877,11 @@ if (errors.length > 0) {
       const mainName = document.querySelector("#product input")?.value || "";
       const mainQty = parseFloat(document.getElementById("quantity").value) || 0;
 const mainPrice = parseFloat(document.getElementById("price").value.replace(/,/g, "")) || 0;
+// 🔹 تنظيف السعر من الفواصل قبل الإرسال
+const priceInput = document.getElementById("price");
+if (priceInput) {
+  priceInput.value = priceInput.value.replace(/,/g, "");
+}
 
 // 🔹 حساب الإجماليات بدون أي ضرب بالسعر × الكمية
 const extraQty = extraProducts.reduce((sum, p) => sum + (p.qty || 0), 0);
@@ -986,32 +1003,20 @@ if (order.status === "مثبت" || order.status === "رفض") {
 order.updatedBy = userName; // يتحدث دائمًا
 
 
-// ✅ حفظ الطلب بتسلسل مرتب
-const ordersRef = ref(db, "orders");
-const snap = await get(ordersRef);
 
-let nextId = 1;
-
-if (snap.exists()) {
-  const allIds = Object.keys(snap.val())
-    .map(k => Number(k))
-    .filter(n => !isNaN(n));
-
-  if (allIds.length > 0) {
-    nextId = Math.max(...allIds) + 1;
-  }
-}
-
-await set(ref(db, `orders/${nextId}`), order);
+const newOrderRef = push(ref(db, "orders"));
+await set(newOrderRef, order);
+const orderId = newOrderRef.key;
 
 // 🟧 تسجيل الهستوري لأول حالة عند إنشاء الطلب
 const initialStatus = order.status;
 
 if (initialStatus) {
-  await set(ref(db, `orders/${nextId}/statusHistory/${initialStatus}`), {
-    time: Date.now(),
-    by: userName
-  });
+await set(ref(db, `orders/${orderId}/statusHistory/${initialStatus}`), {
+  time: Date.now(),
+  by: userName
+});
+
 }
 
 
@@ -1054,15 +1059,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // حذف الفواصل من السعر قبل الحفظ
-  const saveBtn = document.getElementById("saveBtn");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", () => {
-      if (priceInput) {
-        priceInput.value = priceInput.value.replace(/,/g, "");
-      }
-    });
-  }
+
 });
 
 async function updateStockOnOrderCreate(productsDetailed) {
