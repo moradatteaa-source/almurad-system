@@ -554,6 +554,7 @@ function generateReceiptHTML(order, pageNumber) {
   </div>
 
 </div>
+const notesText = order.notes ? order.notes.trim() : "لا توجد";
 
 <!-- 🔥🔥 مربع الملاحظات فوق الجدول -->
 <div style="
@@ -564,7 +565,8 @@ function generateReceiptHTML(order, pageNumber) {
   font-size:10px;
 ">
   <b>ملاحظات:</b><br>
-  ${order.notes || "لا توجد"}
+${notesText}
+
 </div>
 
 <!-- جدول المنتجات -->
@@ -581,15 +583,21 @@ function generateReceiptHTML(order, pageNumber) {
 
   <tbody>
     ${
-      order.productsDetailed?.map((p, i)=>`
+     cleanProducts.map((p, i)=>`
+
         <tr>
           <td style="border:1px solid #000; text-align:center;">${i+1}</td>
-          <td style="border:1px solid #000;">${p.name}</td>
+<td style="border:1px solid #000;">
+  ${p.name && p.name !== notesText ? p.name : "-"}
+</td>
           <td style="border:1px solid #000;">
             ${p.variants ? Object.entries(p.variants).map(([k,v])=>`${k}: ${v}`).join(" | ") : ""}
           </td>
           <td style="border:1px solid #000; text-align:center;">${p.qty}</td>
-          <td style="border:1px solid #000;">${p.price}</td>
+       <td style="border:1px solid #000;">
+  ${p.name && p.name.trim() !== notesText ? p.name : "-"}
+</td>
+
         </tr>
       `).join("")
     }

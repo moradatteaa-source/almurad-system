@@ -185,6 +185,35 @@ body {
     margin: 6px 0 0 0;
   }
 #ordersList { margin-top: 0; transition: 0.2s; }
+/* 🔶 Floating Action Button */
+#addOrderFab {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;              /* أسفل يسار */
+  width: 56px;
+  height: 56px;
+  background: #FF6B2D;     /* برتقالي */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+  z-index: 99999;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#addOrderFab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+#addOrderFab:active {
+  transform: scale(0.95);
+}
 
 </style>
 
@@ -221,6 +250,7 @@ body {
   
 ">
 <style>
+
   #menuDropdown .menu-item {
     color: #043B64 !important;
     font-weight: 600;
@@ -1165,6 +1195,13 @@ await update(ref(db2, "orders/" + id), {
   alert("تم تحديث الحالات بنجاح");
 };
 
+</script>
+<!-- ➕ زر إضافة طلب (FAB) -->
+<div id="addOrderFab" title="إضافة طلب جديد">+</div>
+<script>
+  document.getElementById("addOrderFab").onclick = () => {
+    window.location.href = "add-order.html";
+  };
 </script>
 
 </body>
