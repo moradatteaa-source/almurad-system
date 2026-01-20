@@ -159,6 +159,99 @@ textarea {
 html, body {
   touch-action: manipulation;
 }
+#bottomBar{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#043B64;
+  display:flex;
+  gap:6px;
+  padding:6px;
+  z-index:999;
+}
+#bottomBar button{
+  flex:1;
+  font-size:13px;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  color:white;
+  background:#2c3e50;
+}
+#bottomBar button:nth-child(2){
+  background:#c0392b;
+}
+.return-mode input,
+.return-mode select {
+  background: #ffe6e6 !important;
+  border-color: #c0392b !important;
+}
+
+.return-mode table {
+  border: 2px solid #c0392b;
+}
+/* 🧊 Action Boxes */
+.action-boxes{
+  position:fixed;
+  bottom:16px;
+  left:16px;                 /* ⬅️ أسفل يسار */
+  display:flex;              /* ✅ صف واحد */
+  gap:8px;
+  z-index:1000;
+}
+
+
+
+.action-box{
+  width:64px;          /* ✅ نفس القياس للجميع */
+  height:64px;         /* ✅ نفس القياس للجميع */
+  background:white;
+  border-radius:14px;
+  padding:6px;
+  text-align:center;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:bold;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+}
+
+
+.action-box:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(0,0,0,0.12);
+}
+
+.action-box span{
+  font-size:12px;
+}
+
+/* الألوان */
+.action-box.cash{
+  border:2px solid #27ae60;
+  color:#27ae60;
+}
+
+.action-box.return{
+  border:2px solid #c0392b;
+  color:#c0392b;
+}
+
+.action-box.freeze{
+  border:2px solid #f1c40f;
+  color:#b7950b;
+  background:#fff9db;
+}
+
+.action-box.resume{
+  border:2px solid #2980b9;
+  color:#2980b9;
+}
 
 </style>
 </head>
@@ -199,6 +292,8 @@ html, body {
   style="position:absolute;opacity:0;pointer-events:none;"
   autocomplete="off"
 />
+
+
 
 <div class="container">
   <video
@@ -242,6 +337,31 @@ html, body {
 
 
 <div class="info">
+  <!-- 🧊 بوكسات التحكم -->
+<div class="action-boxes">
+
+  <div class="action-box cash" onclick="switchToCash()">
+    💵
+    <span>كاش</span>
+  </div>
+
+  <div class="action-box return" onclick="switchToReturn()">
+    ↩
+    <span>مسترجع</span>
+  </div>
+
+  <div class="action-box freeze" onclick="parkInvoice()">
+    ⏸
+    <span>تجميد فاتورة</span>
+  </div>
+
+  <div class="action-box resume" onclick="resumeInvoice()">
+    ▶️
+    <span>استئناف فاتورة</span>
+  </div>
+
+</div>
+
   <div id="resumeBanner" style="
   display:none;
   margin-bottom:10px;
@@ -258,51 +378,35 @@ html, body {
   <div>📅 <span id="date"></span></div>
   <div>🧾 فاتورة #<span id="invoice"></span></div>
 </div>
-<button onclick="addRow()" style="
-  margin-bottom:10px;
-  background:#27ae60;
-  color:white;
-  border:none;
-  border-radius:10px;
-  padding:10px 14px;
-  font-size:15px;
-  cursor:pointer;
-">
-➕ إضافة منتج
-</button>
-<div style="display:flex; gap:8px; margin-bottom:10px;">
-  <button onclick="parkInvoice()" style="
-    flex:1;
-    background:#f39c12;
-    color:white;
-    border:none;
-    border-radius:10px;
-    padding:10px;
-    font-size:14px;
-    cursor:pointer;
-  ">⏸ تعليق الفاتورة</button>
-
-  <button onclick="resumeInvoice()" style="
-    flex:1;
-    background:#2980b9;
-    color:white;
-    border:none;
-    border-radius:10px;
-    padding:10px;
-    font-size:14px;
-    cursor:pointer;
-  ">▶️ استئناف فاتورة</button>
-</div>
 
 <!-- جدول -->
 <table id="table">
 <tr>
   <th>المنتج</th>
   <th>السعر</th>
-  <th>الكمية</th>
+  <th>المخزن</th>
+  <th>العدد</th>
   <th>المجموع</th>
 </tr>
+
 </table>
+<!-- ➕ زر إضافة صف صغير -->
+<div style="text-align:center; margin-top:6px;">
+  <button onclick="addRow()" style="
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:none;
+    background:#27ae60;
+    color:white;
+    font-size:22px;
+    line-height:0;
+    cursor:pointer;
+    box-shadow:0 3px 8px rgba(0,0,0,0.15);
+  ">
+    +
+  </button>
+</div>
 
 <!-- الإجماليات -->
 <div class="totalBox">
@@ -347,6 +451,43 @@ html, body {
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script type="module">
+  // ✅ USB BARCODE SCANNER (GLOBAL – بدون فوكس)
+let scanBuffer = "";
+let scanTimer = null;
+
+document.addEventListener("keydown", async (e) => {
+
+  // إذا المستخدم يكتب داخل input عادي (بحث، كمية)، تجاهل
+  if (
+    document.activeElement &&
+    ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) &&
+document.activeElement.id !== "barcodeInput"
+
+  ) return;
+
+  // Enter = نهاية الباركود
+  if (e.key === "Enter") {
+    const code = scanBuffer.trim();
+    scanBuffer = "";
+
+    if (code.length < 4) return; // حماية
+
+    console.log("🔫 USB BARCODE:", code);
+    await handleBarcode(code);
+    return;
+  }
+
+  // تجميع الأرقام
+  if (e.key.length === 1) {
+    scanBuffer += e.key;
+
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(() => {
+      scanBuffer = "";
+    }, 300);
+  }
+});
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   getDatabase,
@@ -372,24 +513,48 @@ const firebaseConfig = {
 // 🟦 Barcode Scanner Logic
 let barcodeBuffer = "";
 let lastKeyTime = Date.now(); // ✅ أضف هذا السطر
-
+// 🟦 GLOBAL POS KEYBOARD (FINAL)
+let qtyBuffer = "";
+let qtyMode = null;
 
 document.addEventListener("keydown", (e) => {
-  // ✅ نسمح فقط بالأرقام
-  if (!/^\d$/.test(e.key)) return;
+  // 🛑 إذا الماسح يكتب باركود، لا نتدخل
 
-  barcodeBuffer += e.key;
-  lastKeyTime = Date.now();
 
-  clearTimeout(window.__barcodeTimer);
-  window.__barcodeTimer = setTimeout(() => {
-    if (barcodeBuffer.length >= 4) {
-      console.log("📦 AUTO BARCODE:", barcodeBuffer);
-      handleBarcode(barcodeBuffer);
-    }
-    barcodeBuffer = "";
-  }, 300);
+console.log("KEY:", e.key, "SHIFT:", e.shiftKey);
+
+  // ➕ (Mac + Windows)
+  if (
+    (e.key === "=" && e.shiftKey) ||
+    e.key === "+" ||
+    e.key === "-"
+  ) {
+    qtyMode = (e.key === "-" ? "-" : "+");
+    qtyBuffer = "";
+    e.preventDefault();
+    return;
+  }
+
+  // 🔢 أرقام
+  if (qtyMode && /^\d$/.test(e.key)) {
+    qtyBuffer += e.key;
+    e.preventDefault();
+    return;
+  }
+
+  // ⏎ تنفيذ
+  if (e.key === "Enter" && qtyMode && qtyBuffer) {
+    applyQtyFromKeyboard(qtyMode, Number(qtyBuffer));
+    qtyMode = null;
+    qtyBuffer = "";
+    e.preventDefault();
+    return;
+  }
+
 });
+
+
+
 window.stopCameraScan = function () {
   const video = document.getElementById("cameraScanner");
 
@@ -428,7 +593,8 @@ async function handleBarcode(barcode) {
     for (const [variantKey, code] of Object.entries(p.barcodes)) {
       console.log("➡️ CHECK:", productName, variantKey, code);
 
-      if (Number(code) === Number(barcode)) {
+ if (String(code).trim() === String(barcode).trim()) {
+
         console.log("✅ FOUND BARCODE:", productName);
         await addProductByBarcode(
           productName,
@@ -467,7 +633,8 @@ async function addProductByBarcode(productName, variantKey, price) {
       nameInput.value === productName &&
       variantSelect.value === variantKey
     ) {
-      const qtyInput = r.cells[2].querySelector("input");
+    const qtyInput = r.cells[3].querySelector("input");
+
       qtyInput.value = Number(qtyInput.value) + 1;
       multiplyRow(qtyInput);
       return;
@@ -509,7 +676,8 @@ if (!row) {
   await loadVariants(row, productName);
   row.querySelector(".variantSelect").value = variantKey;
 
-  multiplyRow(row.cells[2].querySelector("input"));
+multiplyRow(row.cells[3].querySelector("input"));
+
 }
 
 
@@ -517,6 +685,7 @@ if (!row) {
 
 const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
+const table = document.getElementById("table");
 
 
 
@@ -544,6 +713,15 @@ function showAllProducts(input){
 row.dataset.unitPrice = p.price;
 
 loadVariants(row, p.name);
+setTimeout(() => {
+  const select = row.querySelector(".variantSelect");
+  const stockSpan = row.querySelector(".stockQty");
+
+
+  if (select.value && row._stock) {
+    stockSpan.textContent = row._stock[select.value] ?? 0;
+  }
+}, 0);
 
 row.cells[1].textContent = f(p.price);
 
@@ -616,17 +794,45 @@ async function loadVariants(row, productName){
   const snap = await get(ref(rtdb, "warehouse/" + productName));
   if(!snap.exists()) return;
 
-  const stock = snap.val().stock || {};
+const stock = snap.val().stock || {};
+const totalStock = Object.values(stock).reduce(
+  
+  (a, b) => a + Number(b || 0),
+  
+  0
+);
+row._totalStock = totalStock; // ⭐ هذا السطر كان ناقص
+
+row._stock = { ...stock }; // خزّن المخزن
+const stockSpan = row.querySelector(".stockQty");
+stockSpan.textContent = totalStock; // ✅ اكتب مجموع المخزن فور اختيار المنتج
+
+select.onchange = () => {
+  const k = select.value;
+
+  if (!k) {
+    stockSpan.textContent = row._totalStock;
+  } else {
+    stockSpan.textContent = stock[k] ?? 0;
+  }
+};
+
+
 
   // ⭐⭐⭐ هنا بالضبط ⭐⭐⭐
-  if (
-    Object.keys(stock).length === 1 &&
-    stock["إجمالي الكمية"] !== undefined
-  ) {
-    select.innerHTML =
-      `<option value="إجمالي الكمية">إجمالي الكمية</option>`;
-    return;
-  }
+if (
+  Object.keys(stock).length === 1 &&
+  stock["إجمالي الكمية"] !== undefined
+) {
+  select.innerHTML =
+    `<option value="إجمالي الكمية">إجمالي الكمية</option>`;
+
+  // ✅ اكتب المخزن فورًا
+  stockSpan.textContent = stock["إجمالي الكمية"] ?? 0;
+
+  return;
+}
+
 
   // المتغيرات العادية (لون / قياس / ...)
   for(const key in stock){
@@ -635,13 +841,15 @@ async function loadVariants(row, productName){
       opt.value = key;
       opt.textContent = `${key} (${stock[key]})`;
       select.appendChild(opt);
+      opt.dataset.qty = stock[key];
+
     }
   }
 }
 
 
 
-const table=document.getElementById("table");
+
 
 // ✅ شغّل الكاشير بعد ما الجدول صار موجود
 await loadProducts();
@@ -657,51 +865,66 @@ document.getElementById("invoice").textContent = invoice;
 
 
 let isCredit=false;
+let isReturnMode = false;
+function switchToReturn(){
+  isReturnMode = true;
+  document.body.classList.add("return-mode");
+  document.querySelector("header").style.background = "#c0392b";
+  calc();
+}
 
 function addRow(){
   const r = table.insertRow();
   r.dataset.unitPrice = 0;
 
-  r.innerHTML = `
-    <td class="product">
-      <input 
-        class="searchInput"
-        placeholder="اكتب اسم المنتج"
-        onfocus="showAllProducts(this)"
-        oninput="filterProducts(this)"
-      >
-      <div class="dropdown"></div>
+r.innerHTML = `
+<td class="product">
+  <input 
+    class="searchInput"
+    placeholder="اكتب اسم المنتج"
+    onfocus="showAllProducts(this)"
+    oninput="filterProducts(this)"
+  >
+  <div class="dropdown"></div>
 
-      <select class="variantSelect">
-        <option value="">— اختر المتغير —</option>
-      </select>
-    </td>
+  <select class="variantSelect">
+    <option value="">— اختر المتغير —</option>
+  </select>
+</td>
 
-    <td>0 د.ع</td>
+<td>0 د.ع</td>
 
-    <td class="qty">
-      <input 
-        type="number" 
-        min="1" 
-        value="1" 
-        oninput="multiplyRow(this)" 
-        onchange="multiplyRow(this)"
-      >
-    </td>
+<td class="stock">
+  <span class="stockQty">0</span>
+</td>
 
-    <td>0 د.ع</td>
+<td class="qty">
+<input 
+  type="text"
+  value="1"
+  class="qtyInput"
+  style="width:60px;font-size:14px;padding:4px;text-align:center"
+  onkeydown="handleQtyKey(event, this)"
+  onblur="normalizeQty(this)"
+>
 
-    <td>
-      <button onclick="removeRow(this)" style="
-        background:#c0392b;
-        color:white;
-        border:none;
-        border-radius:6px;
-        padding:6px 10px;
-        cursor:pointer;
-      ">✖</button>
-    </td>
-  `;
+</td>
+
+<td>0 د.ع</td>
+
+<td>
+  <button onclick="removeRow(this)" style="
+    background:#c0392b;
+    color:white;
+    border:none;
+    border-radius:6px;
+    padding:6px 10px;
+    cursor:pointer;
+  ">✖</button>
+</td>
+`;
+
+
 }
 
 function removeRow(btn){
@@ -719,11 +942,14 @@ function multiplyRow(qtyInput){
   const row = qtyInput.closest("tr");
 
   const price = Number(row.dataset.unitPrice || 0);
-  const qty = Number(qtyInput.value || 0);
+const qty = Number(qtyInput.value || 0);
+
 
   const sum = price * qty;
 
-  row.cells[3].textContent = f(sum);
+
+row.cells[4].textContent = f(sum);
+
 
   calc(); // تحديث المجموع الكلي
 }
@@ -735,10 +961,15 @@ function calc(){
     const r = table.rows[i];
 
     const unitPrice = Number(r.dataset.unitPrice || 0); // ⭐ السعر الحقيقي
-    const qty = Number(r.cells[2].children[0].value || 0);
 
-    const sum = unitPrice * qty; // ✅ الضرب الصحيح
-    r.cells[3].textContent = f(sum);
+
+const qty = Number(r.cells[3].children[0].value || 0);
+const sign = isReturnMode ? -1 : 1;
+const sum = sign * unitPrice * qty;
+
+r.cells[4].textContent = f(sum);
+
+
 
     total += sum;
   }
@@ -788,10 +1019,31 @@ function resetRows(){
   `<option value="">— اختر المتغير —</option>`;
 
     r.cells[1].textContent = "0 د.ع";
-    r.cells[2].querySelector("input").value = 1;
-    r.cells[3].textContent = "0 د.ع";
+  r.cells[3].querySelector("input").value = 1;
+r.cells[4].textContent = "0 د.ع";
+
   }
 }
+function switchToCash(){
+  isReturnMode = false;
+
+  // رجّع واجهة البيع
+  document.body.classList.remove("return-mode");
+  document.querySelector("header").style.background = "var(--blue)";
+
+  // رجّع الدفع كاش
+  isCredit = false;
+  paidEl.disabled = true;
+  document.getElementById("creditBox").style.display = "none";
+  restLine.style.display = "none";
+
+  // فعّل زر الكاش بصريًا
+  document.querySelectorAll(".payBtn").forEach(b=>b.classList.remove("active"));
+  document.querySelector(".payBtn").classList.add("active");
+
+  calc();
+}
+
 
 
 // حفظ
@@ -807,7 +1059,8 @@ for(let i=1;i<table.rows.length;i++){
   return;
 }
 
-      const qty=Number(r.cells[2].children[0].value);
+const qty = Number(r.cells[3].querySelector("input").value || 0);
+
       if(qty <= 0){
   alert("الكمية غير صحيحة");
   return;
@@ -823,10 +1076,11 @@ if(!snap.exists()){
 
 const data = snap.val();
 
-if(data.totalQty < qty){
+if(!isReturnMode && data.totalQty < qty){
   alert("الكمية غير كافية: " + name);
   return;
 }
+
 
 // 🔹 نسخ المخزون
 const stock = { ...(data.stock || {}) };
@@ -834,17 +1088,26 @@ const stock = { ...(data.stock || {}) };
 // 🔹 أنقص من أول متغير متوفر
 const variantKey = r.querySelector(".variantSelect").value;
 
-if(!variantKey){
+if(!variantKey && !isReturnMode){
   alert("اختر المتغير للمنتج: " + name);
   return;
 }
 
-if(stock[variantKey] < qty){
+
+if(!isReturnMode && stock[variantKey] < qty){
   alert("الكمية غير كافية لهذا المتغير");
   return;
 }
 
-stock[variantKey] -= qty;
+
+if(isReturnMode){
+  stock[variantKey] += qty;
+  prod.totalQty += qty;
+}else{
+  stock[variantKey] -= qty;
+  prod.totalQty -= qty;
+}
+
 
 
 // 🔹 إعادة حساب الكمية الكلية
@@ -858,15 +1121,15 @@ await update(productRef, {
 });
 
 
-// تحديث محلي
-prod.totalQty -= qty;
+
 
 items.push({
   product: name,
-  qty,
+  qty: isReturnMode ? -qty : qty,
   price: prod.price,
-  total: prod.price * qty
+  total: isReturnMode ? -prod.price * qty : prod.price * qty
 });
+
 
 
 
@@ -888,13 +1151,25 @@ await push(ref(rtdb, "posInvoices"), {
   items,
   total: p(grandEl.textContent),
   paid: Number(paidEl.value || 0),
-  type: isCredit ? "credit" : "cash",
+type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
+
 cashierId: "pos",
 createdAt: serverTimestamp()
 });
 
 
   console.log("✅ Invoice saved successfully");
+// 🔄 رجّع وضع البيع بعد المسترجع
+if(isReturnMode){
+  switchToCash();
+}
+// ✅ إظهار شعار تجميد الفاتورة بدون تدخل
+const toast = document.getElementById("freezeToast");
+toast.style.display = "block";
+
+setTimeout(() => {
+  toast.style.display = "none";
+}, 1500);
 
 } catch (err) {
   console.error("❌ FAILED TO SAVE INVOICE", err);
@@ -949,7 +1224,8 @@ function parkInvoice(){
     rows.push({
       name,
       variant: r.querySelector(".variantSelect").value,
-      qty: Number(r.cells[2].querySelector("input").value),
+qty: Number(r.cells[3].querySelector("input").value),
+
       price: Number(r.dataset.unitPrice)
     });
   }
@@ -972,10 +1248,28 @@ parked[key] = {
 
   localStorage.setItem("parkedInvoices", JSON.stringify(parked));
 
-  resetRows();
-  grandEl.textContent = f(0);
+  // 🧹 تصفير كامل الواجهة بعد التجميد (POS RESET)
 
-  alert("✅ تم تعليق الفاتورة\nالرمز: " + key);
+// 1️⃣ حذف كل الصفوف ما عدا الهيدر
+while (table.rows.length > 1) {
+  table.deleteRow(1);
+}
+
+// 2️⃣ إضافة صف واحد نظيف
+addRow();
+
+// 3️⃣ تصفير الإجماليات
+grandEl.textContent = f(0);
+paidEl.value = 0;
+restEl.textContent = f(0);
+
+// 4️⃣ إلغاء وضع المسترجع إذا كان مفعّل
+if (isReturnMode) {
+  switchToCash();
+}
+
+
+ 
 }
 function resumeInvoice(){
   const parked = JSON.parse(localStorage.getItem("parkedInvoices") || "{}");
@@ -1051,7 +1345,8 @@ function loadParkedInvoice(key){
     r.cells[0].querySelector("input").value = item.name;
     r.dataset.unitPrice = item.price;
     r.cells[1].textContent = f(item.price);
-    r.cells[2].querySelector("input").value = item.qty;
+r.cells[3].querySelector("input").value = item.qty;
+
 
     loadVariants(r, item.name).then(()=>{
       r.querySelector(".variantSelect").value = item.variant;
@@ -1074,6 +1369,12 @@ function closeParkedModal(){
 
 // 🔗 expose functions to HTML (required for type="module")
 window.addRow = addRow;
+window.switchToCash = switchToCash;
+window.switchToReturn = switchToReturn;
+window.handleQtyKey = handleQtyKey;
+window.normalizeQty = normalizeQty;
+
+
 window.removeRow = removeRow;
 window.showAllProducts = showAllProducts;
 window.filterProducts = filterProducts;
@@ -1088,6 +1389,7 @@ window.loadParkedInvoice = loadParkedInvoice;
 window.closeParkedModal = closeParkedModal;
 window.onload = () => {
   document.body.focus();
+  
 };
 
 document.addEventListener("click", () => {
@@ -1148,8 +1450,99 @@ window.startCameraScan = async function () {
     console.error(err);
   }
 };
+function handleQtyKey(e, input){
+  if (e.key !== "Enter") return;
 
+  e.preventDefault();
+
+  const row = input.closest("tr");
+
+  // 🔑 الكمية الحالية الحقيقية (قبل الكتابة)
+  let baseQty = Number(input.getAttribute("data-last") || 1);
+
+  const raw = input.value.trim();
+
+  let newQty = baseQty;
+
+  if (raw.startsWith("+")) {
+    const n = Number(raw.slice(1));
+    if (!isNaN(n)) newQty = baseQty + n;
+  }
+  else if (raw.startsWith("-")) {
+    const n = Number(raw.slice(1));
+    if (!isNaN(n)) newQty = baseQty - n;
+  }
+  else {
+    const n = Number(raw);
+    if (!isNaN(n)) newQty = n;
+  }
+
+  if (newQty < 1) newQty = 1;
+
+  // ✅ ثبّت القيمة
+  input.value = newQty;
+  input.setAttribute("data-last", newQty);
+
+  multiplyRow(input);
+}
+function normalizeQty(input){
+  let v = Number(input.value);
+
+  if (isNaN(v) || v < 1) v = 1;
+
+  input.value = v;
+  input.setAttribute("data-last", v);
+
+  multiplyRow(input);
+}
+
+
+function applyQtyFromKeyboard(mode, value) {
+  let lastRow = null;
+
+  for (let i = table.rows.length - 1; i >= 1; i--) {
+    const r = table.rows[i];
+    const name = r.cells[0].querySelector("input").value;
+    if (name) {
+      lastRow = r;
+      break;
+    }
+  }
+
+  if (!lastRow) return;
+
+  const qtyInput = lastRow.cells[3].querySelector("input");
+  let current = Number(qtyInput.value || 1);
+
+  if (mode === "+") current += value;
+  if (mode === "-") current -= value;
+  if (current < 1) current = 1;
+
+  qtyInput.value = current;
+  qtyInput.setAttribute("data-last", current);
+
+  multiplyRow(qtyInput);
+}
 
 </script>
+
+<!-- 🟢 Toast تجميد الفاتورة -->
+<div id="freezeToast" style="
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#27ae60;
+  color:white;
+  padding:12px 20px;
+  border-radius:12px;
+  font-size:15px;
+  box-shadow:0 6px 14px rgba(0,0,0,0.2);
+  display:none;
+  z-index:2000;
+">
+  ✅ تم تجميد الفاتورة
+</div>
+
 </body>
 </html>

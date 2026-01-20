@@ -292,8 +292,30 @@
     <button style="background:#777;margin-top:10px;" onclick="togglePopup(false)">❌ إغلاق</button>
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
 
 <script type="module">
+  async function loadPdfMakeArabicFont() {
+  const res = await fetch("Tajawal-Regular.ttf");
+  const buffer = await res.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  const base64 = btoa(binary);
+
+  pdfMake.vfs["Tajawal-Regular.ttf"] = base64;
+
+  pdfMake.fonts = {
+    Tajawal: {
+      normal: "Tajawal-Regular.ttf",
+      bold: "Tajawal-Regular.ttf"
+    }
+  };
+}
+
   // 🔍 فلترة منتجات المخزن حسب الاسم
 window.filterWarehouse = function () {
   const query = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -640,10 +662,12 @@ tr.innerHTML = `
       ).toLocaleDateString("ar-EG")
     : "-"
 }</td>
-  <td>
-    <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
-    <button style="background:#FF6B2D;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="editProduct('${productName}')">✏️</button>
-  </td>
+ <td>
+  <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
+  <button style="background:#FF6B2D;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="editProduct('${productName}')">✏️</button>
+  <button style="background:#222;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="printBarcodes('${productName}')">🖨️</button>
+</td>
+
 `;
 tableBody.appendChild(tr);
 
@@ -842,8 +866,121 @@ window.startBarcodeScan = async function () {
   }
 };
 
+
+window.printBarcodes = async function (productName) {
+  await loadPdfMakeArabicFont();
+
+  const snap = await get(ref(db, "warehouse/" + productName));
+  if (!snap.exists()) {
+    alert("لا توجد بيانات");
+    return;
+  }
+
+  const data = snap.val();
+  const barcodes = data.barcodes || {};
+  const price = data.prices?.pos || "";
+
+  const items = [];
+  const cols = 2;        // عدد الأعمدة
+  const repeatCount = 10; // عدد الملصقات لكل باركود
+
+  let row = [];
+
+  for (const [variant, code] of Object.entries(barcodes)) {
+    for (let i = 0; i < repeatCount; i++) {
+
+      // 🔹 توليد الباركود
+      const canvas = document.createElement("canvas");
+      JsBarcode(canvas, String(code), {
+        format: "CODE128",
+        width: 2.2,
+        height: 80,
+        margin: 0,
+        displayValue: false
+      });
+
+      const img = canvas.toDataURL("image/png");
+
+      // 🔹 ملصق واحد
+      row.push({
+        unbreakable: true,
+
+        table: {
+          widths: ["*"],
+          body: [[
+            {
+              stack: [
+                {
+                  text: variant === "إجمالي الكمية"
+                    ? productName
+                    : `${productName} – ${variant}`,
+                  fontSize: 9,
+                  alignment: "center",
+                  margin: [0, 2, 0, 2]
+                },
+                {
+                  image: img,
+                  width: 65,
+                  alignment: "center",
+                  margin: [0, 2, 0, 4]
+                },
+                {
+                  text: `السعر: ${price} د.ع`,
+                  fontSize: 8,
+                  alignment: "center",
+                  direction: "rtl"
+                }
+              ],
+              margin: [4, 4, 4, 4]
+            }
+          ]]
+        },
+
+        layout: {
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          hLineStyle: () => ({ dash: { length: 3, space: 3 } }),
+          vLineStyle: () => ({ dash: { length: 3, space: 3 } }),
+          hLineColor: () => "#ccc",
+          vLineColor: () => "#ccc"
+        },
+
+        margin: [4, 4, 4, 4]
+      });
+
+      if (row.length === cols) {
+        items.push(row);
+        row = [];
+      }
+    }
+  }
+
+  if (row.length) items.push(row);
+
+  const docDefinition = {
+    pageSize: { width: 226, height: 340 }, // 80x120 mm
+    pageMargins: [5, 5, 5, 5],
+    defaultStyle: {
+      font: "Tajawal",
+      fontSize: 8
+    },
+    content: items.map(r => ({
+      columns: r,
+      columnGap: 5
+    })),
+    pageDirection: "rtl"
+  };
+
+  pdfMake.createPdf(docDefinition).download(`${productName}-barcodes.pdf`);
+};
+
+
+
 </script>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
+
+
+
 
 </body>
 </html>
