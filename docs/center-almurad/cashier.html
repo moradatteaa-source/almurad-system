@@ -448,7 +448,9 @@ html, body {
 <button class="save" onclick="saveInvoice()">💾 حفظ الفاتورة</button>
 
 </div>
-<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="https://unpkg.com/@zxing/library@latest">
+  
+</script>
 
 <script type="module">
   // ✅ USB BARCODE SCANNER (GLOBAL – بدون فوكس)
@@ -1018,9 +1020,14 @@ function resetRows(){
     r.querySelector(".variantSelect").innerHTML =
   `<option value="">— اختر المتغير —</option>`;
 
-    r.cells[1].textContent = "0 د.ع";
-  r.cells[3].querySelector("input").value = 1;
+r.cells[1].textContent = "0 د.ع";
+r.cells[3].querySelector("input").value = 1;
 r.cells[4].textContent = "0 د.ع";
+
+// 🔥 تصفير المخزن والمتغيرات
+r.querySelector(".stockQty").textContent = "0";
+r._stock = {};
+r._totalStock = 0;
 
   }
 }
@@ -1164,11 +1171,11 @@ if(isReturnMode){
   switchToCash();
 }
 // ✅ إظهار شعار تجميد الفاتورة بدون تدخل
-const toast = document.getElementById("freezeToast");
-toast.style.display = "block";
+const saveToast = document.getElementById("saveToast");
+saveToast.style.display = "block";
 
 setTimeout(() => {
-  toast.style.display = "none";
+  saveToast.style.display = "none";
 }, 1500);
 
 } catch (err) {
@@ -1523,6 +1530,26 @@ function applyQtyFromKeyboard(mode, value) {
 
   multiplyRow(qtyInput);
 }
+let lastEnterTime = 0;
+// 🔥 GLOBAL DOUBLE ENTER SAVE (FORCED)
+
+
+window.addEventListener("keydown", (e) => {
+
+  if (e.key !== "Enter") return;
+
+  const now = Date.now();
+
+  if (now - lastEnterTime < 400) {
+    console.log("💾 DOUBLE ENTER → SAVE");
+    saveInvoice();
+    lastEnterTime = 0;
+  } else {
+    lastEnterTime = now;
+  }
+
+}, true); // ⬅️ capture + window
+
 
 </script>
 
@@ -1541,8 +1568,24 @@ function applyQtyFromKeyboard(mode, value) {
   display:none;
   z-index:2000;
 ">
+
   ✅ تم تجميد الفاتورة
 </div>
-
+<div id="saveToast" style="
+  position:fixed;
+  bottom:80px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#2980b9;
+  color:white;
+  padding:12px 20px;
+  border-radius:12px;
+  font-size:15px;
+  box-shadow:0 6px 14px rgba(0,0,0,0.2);
+  display:none;
+  z-index:2000;
+">
+  💾 تم حفظ الفاتورة بنجاح
+</div>
 </body>
 </html>
