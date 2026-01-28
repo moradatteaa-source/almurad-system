@@ -907,6 +907,15 @@ function fixArabicWithNumbers(text) {
     .reverse()
     .join(" ");
 }
+function fitTextStyle(text) {
+  if (text.length > 40) {
+    return { fontSize: 7, lineHeight: 1.1 };
+  } else if (text.length > 28) {
+    return { fontSize: 8, lineHeight: 1.15 };
+  } else {
+    return { fontSize: 9, lineHeight: 1.2 };
+  }
+}
 window.printBarcodes = async function (productName) {
   await loadPdfMakeArabicFont();
 
@@ -943,27 +952,32 @@ for (const [variant, code] of Object.entries(barcodes)) {
 
   content.push({
     stack: [
-      {
-        text: fixArabicText(labelText), // ✅ هنا
-        fontSize: 11,
-        bold: true,
-        alignment: "center",
-        margin: [0, 6, 0, 2]
-      },
+ (() => {
+  const style = fitTextStyle(labelText);
+  return {
+    text: fixArabicText(labelText),
+    fontSize: style.fontSize,
+    lineHeight: style.lineHeight,
+    bold: true,
+    alignment: "center",
+    margin: [0, 4, 0, 1],
+    maxHeight: 18 // ⛔ يمنع النزول
+  };
+})(),
       {
         image: img,
         width: 95,
         alignment: "center",
         margin: [0, 0, 0, 1]
       },
-      {
-        text: fixArabicText(`السعر ${price} د.ع`), // ✅ وهنا
-        fontSize: 10,
-        bold: true,
-        alignment: "center",
-        absolutePosition: { x: 0, y: 58 },
-        width: 108
-      }
+   {
+  text: fixArabicText(`السعر ${price} د.ع`),
+  fontSize: 8,
+  bold: true,
+  alignment: "center",
+  absolutePosition: { x: 0, y: 56 },
+  width: 108
+}
     ],
     pageBreak: "after"
   });
