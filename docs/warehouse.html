@@ -242,6 +242,7 @@
     <h3 id="popupTitle">➕ إضافة منتج جديد</h3>
 
     <input id="productName" placeholder="اسم المنتج">
+
     <input
   id="productBarcode"
   class="num-en"
@@ -355,6 +356,7 @@ import { getDatabase, ref, get, set, update, remove, onValue } from
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+
 // 🟦 توليد باركود رقمي تلقائي
 import { runTransaction } from
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -384,12 +386,12 @@ window.togglePopup = (show) => {
   const variantsSection = document.getElementById("variantsSection");
   const btn = document.getElementById("toggleVariantsBtn");
 
-  if (show) {
-    // ✅ حالة افتراضية عند فتح النافذة
-    qtySection.style.display = "block";     // ⬅️ إظهار الكمية
-    variantsSection.style.display = "none"; // ⬅️ إخفاء المتغيرات
-    btn.textContent = "➕ إضافة متغيرات";
-  } else {
+if (show) {
+  qtySection.style.display = "block";
+  variantsSection.style.display = "none";
+  btn.textContent = "➕ إضافة متغيرات";
+}
+   else {
     if (!editingProduct) {
       popupTitle.textContent = "➕ إضافة منتج جديد";
       clearFields();
@@ -546,17 +548,15 @@ variants.forEach(v => {
   // 🧾 حفظ المنتج في Firebase
   const productRef = ref(db, "warehouse/" + name);
   const totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
-
 await set(ref(db, "warehouse/" + name), {
-  buyPrice,
+  buyPrice: buyPrice,
   prices: {
     pos: sellPricePos,
     online: sellPriceOnline
   },
   totalQty,
   stock,
-  barcodes,          // ✅ هنا ينحفظ مباشرة
-  variants: variantsStructured,
+  barcodes,
   lastUpdate: new Date().toISOString()
 });
 // ✅ هذا السطر الجديد
@@ -817,14 +817,15 @@ if (existingBarcodes[key]) {
   let count = 0;
 
   for (const [name, data] of Object.entries(grouped)) {
-await update(ref(db, "warehouse/" + name), {
+await set(ref(db, "warehouse/" + name), {
   buyPrice: data.buy,
   prices: {
     pos: data.sellPos,
     online: data.sellOnline
   },
-  totalQty: Object.values(data.stock).reduce((a, b) => a + b, 0),
+  totalQty: Object.values(data.stock).reduce((a,b)=>a+b,0),
   stock: data.stock,
+  barcodes: data.barcodes,
   lastUpdate: new Date().toISOString()
 });
 await set(ref(db, "warehouse/" + name + "/barcodes"), data.barcodes);
@@ -865,8 +866,28 @@ window.startBarcodeScan = async function () {
     console.error(err);
   }
 };
+function fixArabicText(text) {
+  if (!text) return "";
 
+  return text
+    .split(" ")
+    .reverse()
+    .join(" ");
+}
+function fixArabicWithNumbers(text) {
+  if (!text) return "";
 
+  // نجبر الرقم مع + يكون LTR كوحدة وحدة
+  let fixed = text.replace(
+    /(\+?\s*\d+\s*\+?)/g,
+    "\u202A$1\u202C"
+  );
+
+  return fixed
+    .split(" ")
+    .reverse()
+    .join(" ");
+}
 window.printBarcodes = async function (productName) {
   await loadPdfMakeArabicFont();
 
@@ -880,94 +901,65 @@ window.printBarcodes = async function (productName) {
   const barcodes = data.barcodes || {};
   const price = data.prices?.pos || "";
 
-  const items = [];
-  const cols = 2;        // عدد الأعمدة
-  const repeatCount = 10; // عدد الملصقات لكل باركود
+  const content = [];
 
-  let row = [];
+for (const [variant, code] of Object.entries(barcodes)) {
 
-  for (const [variant, code] of Object.entries(barcodes)) {
-    for (let i = 0; i < repeatCount; i++) {
+  const labelText =
+    variant === "إجمالي الكمية"
+      ? productName
+      : `${productName} – ${variant}`;
 
-      // 🔹 توليد الباركود
-      const canvas = document.createElement("canvas");
-      JsBarcode(canvas, String(code), {
-        format: "CODE128",
-        width: 2.2,
-        height: 80,
-        margin: 0,
-        displayValue: false
-      });
+  // 🔹 توليد الباركود
+  const canvas = document.createElement("canvas");
+  JsBarcode(canvas, String(code), {
+    format: "CODE128",
+    width: 1.5,
+    height: 40,
+    margin: 0,
+    displayValue: false
+  });
 
-      const img = canvas.toDataURL("image/png");
+  const img = canvas.toDataURL("image/png");
 
-      // 🔹 ملصق واحد
-      row.push({
-        unbreakable: true,
-
-        table: {
-          widths: ["*"],
-          body: [[
-            {
-              stack: [
-                {
-                  text: variant === "إجمالي الكمية"
-                    ? productName
-                    : `${productName} – ${variant}`,
-                  fontSize: 9,
-                  alignment: "center",
-                  margin: [0, 2, 0, 2]
-                },
-                {
-                  image: img,
-                  width: 65,
-                  alignment: "center",
-                  margin: [0, 2, 0, 4]
-                },
-                {
-                  text: `السعر: ${price} د.ع`,
-                  fontSize: 8,
-                  alignment: "center",
-                  direction: "rtl"
-                }
-              ],
-              margin: [4, 4, 4, 4]
-            }
-          ]]
-        },
-
-        layout: {
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineStyle: () => ({ dash: { length: 3, space: 3 } }),
-          vLineStyle: () => ({ dash: { length: 3, space: 3 } }),
-          hLineColor: () => "#ccc",
-          vLineColor: () => "#ccc"
-        },
-
-        margin: [4, 4, 4, 4]
-      });
-
-      if (row.length === cols) {
-        items.push(row);
-        row = [];
+  content.push({
+    stack: [
+      {
+        text: fixArabicText(labelText), // ✅ هنا
+        fontSize: 11,
+        bold: true,
+        alignment: "center",
+        margin: [0, 6, 0, 2]
+      },
+      {
+        image: img,
+        width: 95,
+        alignment: "center",
+        margin: [0, 0, 0, 1]
+      },
+      {
+        text: fixArabicText(`السعر ${price} د.ع`), // ✅ وهنا
+        fontSize: 10,
+        bold: true,
+        alignment: "center",
+        absolutePosition: { x: 0, y: 58 },
+        width: 108
       }
-    }
+    ],
+    pageBreak: "after"
+  });
+}
+
+  // إزالة آخر pageBreak حتى لا يطلع صفحة فاضية
+  if (content.length > 0) {
+    delete content[content.length - 1].pageBreak;
   }
 
-  if (row.length) items.push(row);
-
   const docDefinition = {
-    pageSize: { width: 226, height: 340 }, // 80x120 mm
-    pageMargins: [5, 5, 5, 5],
-    defaultStyle: {
-      font: "Tajawal",
-      fontSize: 8
-    },
-    content: items.map(r => ({
-      columns: r,
-      columnGap: 5
-    })),
+    pageSize: { width: 108, height: 71 }, // 38×25 mm
+    pageMargins: [0, 0, 0, 0],
+    defaultStyle: { font: "Tajawal" },
+    content,
     pageDirection: "rtl"
   };
 
@@ -983,4 +975,4 @@ window.printBarcodes = async function (productName) {
 
 
 </body>
-</html>
+</html>  

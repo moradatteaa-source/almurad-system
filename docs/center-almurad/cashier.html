@@ -6,6 +6,10 @@
 <title>الكاشير</title>
 
 <style>
+  .sub-item{
+  border-style:dashed;
+  font-size:12px;
+}
     .product{position:relative}
 .searchInput{
   width:100%;
@@ -76,8 +80,8 @@ th,td{
 th{
   background:#eef3f7;
 }
-td.product{width:45%}
-td.qty{width:10%}
+td.product{width:38%}
+td.qty{width:8%}
 
 select,input{
   width:100%;
@@ -87,9 +91,10 @@ select,input{
 }
 
 .totalBox{
-  margin-top:12px;
+  margin-top:10px;
+
   background:white;
-  padding:14px;
+  padding:12px;
   border-radius:12px;
 }
 .grand{
@@ -138,13 +143,13 @@ select,input{
 
 button.save{
   width:100%;
-  margin-top:15px;
-  padding:14px;
-  font-size:17px;
+  margin-top:10px;
+  padding:12px;
+  font-size:16px;
   background:var(--orange);
   color:white;
   border:none;
-  border-radius:14px;
+  border-radius:12px;
 }
 @media(max-width:700px){
   .creditGrid{grid-template-columns:1fr}
@@ -252,7 +257,94 @@ html, body {
   border:2px solid #2980b9;
   color:#2980b9;
 }
+.quick-item{
+  border:2px solid #043B64;
+  border-radius:10px;
+  padding:10px 6px;
+  text-align:center;
+  cursor:pointer;
+  font-size:13px;
+  background:#f9fbfd;
+  transition:0.2s;
+}
+.quick-item:hover{
+  background:#043B64;
+  color:white;
+}
+.quick-item .price{
+  font-size:12px;
+  color:#FF6B2D;
+  font-weight:bold;
+}
+/* 🟦 شريط الأقسام */
+#categoriesBar{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
 
+.category-tab{
+  background:#eef3f7;
+  border:2px solid #043B64;
+  border-radius:20px;
+  padding:6px 12px;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.category-tab.active{
+  background:#043B64;
+  color:white;
+}
+
+/* ➕ زر إضافة */
+.category-add{
+  background:#27ae60;
+  color:white;
+  border:none;
+  border-radius:20px;
+  padding:6px 12px;
+  cursor:pointer;
+}
+.delete-cat{
+  margin-right:6px;
+  color:#c0392b;
+  cursor:pointer;
+  font-weight:bold;
+}
+.delete-prod{
+  font-size:14px;
+  color:#c0392b;
+  cursor:pointer;
+}
+/* 🔴 زر حذف المنتج فوق الكرت */
+.quick-item{
+position: relative; /* مهم */
+}
+
+
+.delete-prod{
+position: absolute;
+top: 4px;
+left: 4px; /* لأن RTL */
+width: 20px;
+height: 20px;
+border-radius: 50%;
+background: #c0392b;
+color: white;
+font-size: 12px;
+line-height: 20px;
+text-align: center;
+cursor: pointer;
+font-weight: bold;
+z-index: 5;
+}
+
+
+.delete-prod:hover{
+background: #a93226;
+}
 </style>
 </head>
 
@@ -296,7 +388,83 @@ html, body {
 
 
 <div class="container">
-  <video
+<div style="
+display:flex;
+gap:8px;
+align-items:flex-start;
+">
+
+<!-- 🟦 قائمة المنتجات السريعة -->
+<div
+ id="quickProducts"
+  style="
+width:45%;
+max-width:420px;
+background:white;
+border-radius:14px;
+padding:10px;
+max-height:75vh;
+overflow-y:visible;   /* ⭐⭐⭐ مهم */
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+position:relative;    /* ⭐ */
+z-index:1;
+">
+<div id="categoriesBar"></div>
+
+<div id="addProductBox" style="margin:8px 0;text-align:center;position:relative;">
+
+  <button id="addProductBtn" class="category-add">
+    ➕ إضافة منتج للقسم
+  </button>
+
+<div id="addProductDropdownBox" style="
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  margin-top:6px;
+  display:none;
+  z-index:5000;        /* 🔥 أعلى */
+  background:white;
+  border-radius:10px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.18);
+">
+    <input
+      id="addProductInput"
+      placeholder="🔍 ابحث عن منتج..."
+      style="width:100%;padding:8px;border-radius:8px;border:1px solid #ccc"
+    >
+    <div
+      id="addProductDropdown"
+      style="
+        margin-top:4px;
+        border:1px solid #ccc;
+        max-height:200px;
+        overflow-y:auto;
+        display:none;
+      "
+    ></div>
+  </div>
+
+</div>
+
+
+<h4 style="margin:0 0 10px;text-align:center;color:#043B64">
+🧺 منتجات سريعة
+</h4>
+<div id="quickGrid" style="
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:8px;
+"></div>
+</div>
+
+
+<!-- 🟨 هنا الجدول الحالي -->
+<div style="
+  flex:1;
+  margin-left:-10px;
+">  <video
   id="cameraScanner"
   style="
     display:none;
@@ -380,76 +548,63 @@ html, body {
 </div>
 
 <!-- جدول -->
-<table id="table">
-<tr>
-  <th>المنتج</th>
-  <th>السعر</th>
-  <th>المخزن</th>
-  <th>العدد</th>
-  <th>المجموع</th>
-</tr>
+<!-- 🟨 حاوية الجدول + الإجماليات -->
+<div class="invoice-area">
 
-</table>
-<!-- ➕ زر إضافة صف صغير -->
-<div style="text-align:center; margin-top:6px;">
-  <button onclick="addRow()" style="
-    width:36px;
-    height:36px;
-    border-radius:50%;
-    border:none;
-    background:#27ae60;
-    color:white;
-    font-size:22px;
-    line-height:0;
-    cursor:pointer;
-    box-shadow:0 3px 8px rgba(0,0,0,0.15);
-  ">
-    +
-  </button>
-</div>
+  <!-- جدول -->
+  <table id="table">
+    <tr>
+      <th>المنتج</th>
+      <th>السعر</th>
+      <th>المخزن</th>
+      <th>العدد</th>
+      <th>المجموع</th>
+    </tr>
+  </table>
 
-<!-- الإجماليات -->
-<div class="totalBox">
-  <div>المجموع الكلي: <span id="grand" class="grand">0 د.ع</span></div>
-
-  <div class="payButtons">
-    <button class="payBtn active" onclick="setCash(this)">💵 نقد</button>
-    <button class="payBtn" onclick="setCredit(this)">📄 دين</button>
+  <!-- زر إضافة صف -->
+  <div style="text-align:center; margin-top:6px;">
+    <button onclick="addRow()">+</button>
   </div>
 
-  <div>
-    المدفوع:
-    <input type="number" id="paid" disabled>
-  </div>
+  <!-- الإجماليات -->
+  <div class="totalBox">
+    <div>المجموع الكلي: <span id="grand" class="grand">0 د.ع</span></div>
 
-  <div id="restLine" style="margin-top:6px;">
-    الباقي (دين): <strong id="rest">0 د.ع</strong>
-  </div>
-
-  <!-- بيانات الدين -->
-  <div id="creditBox">
-    <div class="creditGrid">
-      <div>
-        <label>اسم المديون</label>
-        <input id="debtorName" placeholder="اسم الزبون">
-      </div>
-      <div>
-        <label>رقم الهاتف</label>
-        <input id="debtorPhone" placeholder="07xxxxxxxx">
-      </div>
-      <div style="grid-column:1/-1">
-        <label>ملاحظات</label>
-        <input id="debtorNote" placeholder="ملاحظات">
-      </div>
+    <div class="payButtons">
+      <button class="payBtn active" onclick="setCash(this)">💵 نقد</button>
+      <button class="payBtn" onclick="setCredit(this)">📄 دين</button>
     </div>
-  </div>
-</div>
 
-<button class="save" onclick="saveInvoice()">💾 حفظ الفاتورة</button>
+    <div>
+      المدفوع:
+      <input type="number" id="paid" disabled>
+    </div>
+
+    <div id="restLine">
+      الباقي (دين): <strong id="rest">0 د.ع</strong>
+    </div>
+
+    <div id="creditBox">...</div>
+  </div>
+
+  <button class="save" onclick="saveInvoice()">💾 حفظ الفاتورة</button>
+
+</div>
 
 </div>
 <script src="https://unpkg.com/@zxing/library@latest">
-  
+  // ✅ إغلاق منسدلة إضافة المنتج عند الكلك خارجها
+document.addEventListener("click", (e) => {
+  const box = document.getElementById("addProductDropdownBox");
+  const btn = document.getElementById("addProductBtn");
+
+  if (!box || box.style.display !== "block") return;
+
+  if (!box.contains(e.target) && !btn.contains(e.target)) {
+    box.style.display = "none";
+  }
+});
 </script>
 
 <script type="module">
@@ -617,6 +772,7 @@ function getReusableRow() {
 
     if (!nameInput.value.trim()) {
       return r; // صف فاضي نعيد استخدامه
+      
     }
   }
   return null;
@@ -624,24 +780,24 @@ function getReusableRow() {
 
 
 async function addProductByBarcode(productName, variantKey, price) {
+for (let i = 1; i < table.rows.length; i++) {
+  const r = table.rows[i];
+  const nameInput = r.cells[0].querySelector("input");
+  const variantSelect = r.querySelector(".variantSelect");
 
-  // 1️⃣ إذا المنتج موجود مسبقًا → زيد الكمية
-  for (let i = 1; i < table.rows.length; i++) {
-    const r = table.rows[i];
-    const nameInput = r.cells[0].querySelector("input");
-    const variantSelect = r.querySelector(".variantSelect");
-
-    if (
-      nameInput.value === productName &&
-      variantSelect.value === variantKey
-    ) {
-    const qtyInput = r.cells[3].querySelector("input");
-
-      qtyInput.value = Number(qtyInput.value) + 1;
-      multiplyRow(qtyInput);
-      return;
-    }
+  // ⛔ إذا المنتج عنده متغيرات (ألوان/أحجام) → لا تضاعف نهائيًا
+  if (variantSelect && variantSelect.options.length > 1) {
+    continue;
   }
+
+  // ✅ فقط المنتجات بدون متغيرات
+  if (nameInput.value === productName) {
+    const qtyInput = r.cells[3].querySelector("input");
+    qtyInput.value = Number(qtyInput.value) + 1;
+    multiplyRow(qtyInput);
+    return;
+  }
+}
 
  const stockSnap = await get(
   ref(rtdb, "warehouse/" + productName + "/stock")
@@ -693,14 +849,7 @@ const table = document.getElementById("table");
 
 
 
-  
-    document.addEventListener("click", e=>{
-  document.querySelectorAll(".dropdown").forEach(d=>{
-    if(!d.contains(e.target) && !d.previousElementSibling.contains(e.target)){
-      d.style.display="none";
-    }
-  });
-});
+
 function showAllProducts(input){
   const box = input.nextElementSibling;
   box.innerHTML = "";
@@ -770,26 +919,330 @@ const p=v=>Number(String(v).replace(/[^0-9]/g,""))||0;
 
 
 let products = [];
+let uiCategories = {};     // الأقسام
+let activeCategory = null;
+const addInput = document.getElementById("addProductInput");
+const addDropdown = document.getElementById("addProductDropdown");
 
+addInput.addEventListener("input", () => {
+  addInput.addEventListener("click", e => e.stopPropagation());
+  const val = addInput.value.trim().toLowerCase();
+  addDropdown.innerHTML = "";
+
+  if (!val) {
+    addDropdown.style.display = "none";
+    return;
+  }
+
+  products
+    .filter(p => p.name.toLowerCase().includes(val))
+    .forEach(p => {
+      const d = document.createElement("div");
+      d.textContent = p.name;
+      d.style.padding = "8px";
+      d.style.cursor = "pointer";
+
+        d.onclick = (e) => {
+  e.stopPropagation();
+        const exists = uiCategories[activeCategory]
+          .some(x => x.name === p.name);
+
+        if (exists) {
+          alert("المنتج مضاف مسبقاً");
+          return;
+        }
+
+        uiCategories[activeCategory].push({ name: p.name });
+        localStorage.setItem(
+          "uiCategories",
+          JSON.stringify(uiCategories)
+        );
+
+        addInput.value = "";
+        addDropdown.style.display = "none";
+        document.getElementById("addProductDropdownBox").style.display = "none";
+        renderCategoryProducts();
+      };
+
+      addDropdown.appendChild(d);
+    });
+
+// ⛔ إذا صندوق الإضافة مغلق، لا تفتح المنسدلة
+const box = document.getElementById("addProductDropdownBox");
+if (box.style.display !== "block") return;
+
+addDropdown.style.display = "block";});
+// 🧺 منتجات سريعة (مباشر + مجموعات)
+const quickMenu = [
+  {
+    type: "item",
+    name: "سكر"
+  },
+  {
+    type: "item",
+    name: "زيت"
+  },
+  {
+    type: "group",
+    name: "سلات",
+    children: [
+      "سلة صغيرة",
+      "سلة وسط",
+      "سلة كبيرة"
+    ]
+  },
+  {
+    type: "group",
+    name: "كابسات",
+    children: [
+      "كابسة A",
+      "كابسة B"
+    ]
+  }
+];
+
+// 🧺 منتجات سريعة (تعديلها سهل)
+const quickList = [
+  "سكر",
+  "رز",
+  "زيت",
+  "شاي",
+  "طحين",
+  "مناديل"
+]
+;
+function renderQuickProducts(){
+  const box = document.getElementById("quickGrid");
+  box.innerHTML = "";
+
+  quickMenu.forEach(entry => {
+
+    // 🟢 منتج مباشر
+    if(entry.type === "item"){
+      const prod = products.find(p=>p.name === entry.name);
+      if(!prod) return;
+
+      const d = document.createElement("div");
+      d.className = "quick-item";
+      d.innerHTML = `
+        <div>${entry.name}</div>
+        <div class="price">${f(prod.price)}</div>
+      `;
+      d.onclick = ()=>addQuickProduct(entry.name, prod.price);
+      box.appendChild(d);
+    }
+
+    // 🔵 مجموعة منتجات
+    if(entry.type === "group"){
+      const g = document.createElement("div");
+      g.className = "quick-item";
+      g.style.background = "#eef3f7";
+      g.innerHTML = `📦 ${entry.name}`;
+      g.onclick = ()=>toggleGroup(entry, g);
+      box.appendChild(g);
+    }
+
+  });
+}
+function renderCategories(){
+  const bar = document.getElementById("categoriesBar");
+  bar.innerHTML = "";
+
+  // زر إضافة قسم
+  const addBtn = document.createElement("button");
+  addBtn.className = "category-add";
+  addBtn.textContent = "➕ قسم";
+  addBtn.onclick = addCategory;
+  bar.appendChild(addBtn);
+
+  Object.keys(uiCategories).forEach(cat=>{
+    const t = document.createElement("div");
+    t.className = "category-tab" + (cat === activeCategory ? " active" : "");
+t.innerHTML = `
+  <span>${cat}</span>
+  <span class="delete-cat" data-cat="${cat}">✖</span>
+`;
+    t.onclick = ()=>{
+      t.ondblclick = ()=>{
+  const newName = prompt("تعديل اسم القسم:", cat);
+  if(!newName || newName === cat) return;
+
+  uiCategories[newName] = uiCategories[cat];
+  delete uiCategories[cat];
+
+  localStorage.setItem("uiCategories", JSON.stringify(uiCategories));
+  activeCategory = newName;
+
+  renderCategories();
+  renderCategoryProducts();
+};
+      activeCategory = cat;
+      renderCategories();
+      renderCategoryProducts();
+    };
+    bar.appendChild(t);
+    t.querySelector(".delete-cat").onclick = (e)=>{
+  e.stopPropagation();
+  if(!confirm(`حذف قسم "${cat}"؟`)) return;
+
+  delete uiCategories[cat];
+  localStorage.setItem("uiCategories", JSON.stringify(uiCategories));
+
+  activeCategory = Object.keys(uiCategories)[0] || null;
+  renderCategories();
+  renderCategoryProducts();
+};
+  });
+}
+function renderCategoryProducts(){
+  const box = document.getElementById("quickGrid");
+  box.innerHTML = "";
+
+  if(!activeCategory) return;
+
+  uiCategories[activeCategory].forEach(item=>{
+    const prod = products.find(p=>p.name === item.name);
+    if(!prod) return;
+
+    const d = document.createElement("div");
+    d.className = "quick-item";d.innerHTML = `
+  <div>${item.name}</div>
+  <div class="price">${f(prod.price)}</div>
+  <div class="delete-prod" data-name="${item.name}">✖</div>
+`;
+    d.onclick = ()=>addQuickProduct(item.name, prod.price);
+    box.appendChild(d);
+d.querySelector(".delete-prod").onclick = (e)=>{
+  e.stopPropagation();
+
+  const ok = confirm(`⚠️ هل أنت متأكد من حذف المنتج:\n"${item.name}" ؟`);
+  if(!ok) return;
+
+  uiCategories[activeCategory] =
+    uiCategories[activeCategory].filter(p=>p.name !== item.name);
+
+  localStorage.setItem(
+    "uiCategories",
+    JSON.stringify(uiCategories)
+  );
+
+  renderCategoryProducts();
+};
+  });
+}
+function addCategory(){
+  const name = prompt("اسم القسم");
+  if(!name) return;
+
+  if(uiCategories[name]){
+    alert("القسم موجود");
+    return;
+  }
+
+  uiCategories[name] = [];
+  localStorage.setItem("uiCategories", JSON.stringify(uiCategories));
+  activeCategory = name;
+  renderCategories();
+  renderCategoryProducts();
+}
+function addProductToCategory(){
+  if(!activeCategory){
+    alert("اختر قسم أولاً");
+    return;
+  }
+
+  const name = prompt("اسم المنتج (لازم موجود بالمخزن)");
+  if(!name) return;
+
+  const exists = products.find(p=>p.name === name);
+  if(!exists){
+    alert("المنتج غير موجود بالمخزن");
+    return;
+  }
+
+  uiCategories[activeCategory].push({name});
+  localStorage.setItem("uiCategories", JSON.stringify(uiCategories));
+  renderCategoryProducts();
+}
+document.getElementById("addProductBtn").onclick = (e) => {
+  e.stopPropagation(); // مهم
+
+  if (!activeCategory) {
+    alert("اختر قسم أولاً");
+    return;
+  }
+
+  const box = document.getElementById("addProductDropdownBox");
+  box.style.display = "block";
+
+  document.getElementById("addProductInput").focus();
+};
 async function loadProducts(){
   products = [];
 
   const snap = await get(ref(rtdb, "warehouse"));
-  if(!snap.exists()) return;
+  if(!snap.exists()) {
+    console.warn("⚠️ المخزن فارغ");
+    return;
+  }
 
   const data = snap.val();
 
   for(const [name, p] of Object.entries(data)){
     products.push({
       name,
-price: p.prices?.pos || 0,
+      price: p.prices?.pos || 0,
       totalQty: p.totalQty || 0
     });
   }
 
   console.log("✅ products loaded:", products);
+
+  renderQuickProducts(); // ✅ تناديها مرة وحدة فقط
 }
+function toggleGroup(group, box){
+
+  // إذا مفتوحة → أغلقها
+  if(box._open){
+    document.querySelectorAll(".sub-item").forEach(e=>{
+      if(e.dataset.parent === group.name) e.remove();
+    });
+    box._open = false;
+    return;
+  }
+
+  // أغلق أي مجموعة ثانية
+  document.querySelectorAll(".sub-item").forEach(e=>e.remove());
+  document.querySelectorAll(".quick-item").forEach(b=>b._open=false);
+
+  // افتح المجموعة
+  group.children.forEach(name=>{
+    const prod = products.find(p=>p.name === name);
+    if(!prod) return;
+
+    const s = document.createElement("div");
+    s.className = "quick-item sub-item";
+    s.dataset.parent = group.name;
+    s.style.marginRight = "10px";
+    s.style.background = "#fff";
+    s.innerHTML = `
+      <div>➜ ${name}</div>
+      <div class="price">${f(prod.price)}</div>
+    `;
+    s.onclick = ()=>addQuickProduct(name, prod.price);
+
+    box.after(s);
+  });
+
+  box._open = true;
+}
+
 async function loadVariants(row, productName){
+  if (row.dataset.loadedProduct === productName) return;
+  // ⛔ لا تعيد تحميل المتغيرات إذا نفس المنتج
+if (row.dataset.loadedProduct === productName) {
+  return;
+}
   const select = row.querySelector(".variantSelect");
   select.innerHTML = `<option value="">— اختر المتغير —</option>`;
 
@@ -851,10 +1304,21 @@ if (
 
 
 
-
+// 🔹 تحميل الأقسام المحفوظة إن وُجدت
+const savedCats = localStorage.getItem("uiCategories");
+if (savedCats) {
+  uiCategories = JSON.parse(savedCats);
+}
 
 // ✅ شغّل الكاشير بعد ما الجدول صار موجود
-await loadProducts();
+await loadProducts();// إذا ماكو أقسام محفوظة، أنشئ افتراضي
+// إذا ماكو أقسام، لا تضيف شي
+if (Object.keys(uiCategories).length === 0) {
+  activeCategory = null;
+}
+
+renderCategories();
+renderCategoryProducts();
 addRow();
 const grandEl=document.getElementById("grand");
 const paidEl=document.getElementById("paid");
@@ -931,29 +1395,32 @@ r.innerHTML = `
 
 function removeRow(btn){
   const row = btn.closest("tr");
-  if(table.rows.length <= 2){
-    alert("لا يمكن حذف آخر سطر");
+
+  // إذا هذا آخر صف → صفّره بدل ما تحذفه
+  if (table.rows.length <= 2) {
+    // تصفير الحقول
+    row.dataset.unitPrice = 0;
+
+    row.cells[0].querySelector("input").value = "";
+    row.querySelector(".variantSelect").innerHTML =
+      `<option value="">— اختر المتغير —</option>`;
+
+    row.cells[1].textContent = "0 د.ع";
+    row.cells[3].querySelector("input").value = 1;
+    row.cells[4].textContent = "0 د.ع";
+
+    // تصفير المخزن
+    row.querySelector(".stockQty").textContent = "0";
+    row._stock = {};
+    row._totalStock = 0;
+
+    calc();
     return;
   }
+
+  // إذا أكثر من صف → احذف عادي
   row.remove();
   calc();
-}
-
-
-function multiplyRow(qtyInput){
-  const row = qtyInput.closest("tr");
-
-  const price = Number(row.dataset.unitPrice || 0);
-const qty = Number(qtyInput.value || 0);
-
-
-  const sum = price * qty;
-
-
-row.cells[4].textContent = f(sum);
-
-
-  calc(); // تحديث المجموع الكلي
 }
 
 function calc(){
@@ -1383,6 +1850,9 @@ window.normalizeQty = normalizeQty;
 
 
 window.removeRow = removeRow;
+
+
+window.addCategory = addCategory; // ⬅️ أنصح تضيفه هم
 window.showAllProducts = showAllProducts;
 window.filterProducts = filterProducts;
 window.setCash = setCash;
@@ -1399,11 +1869,20 @@ window.onload = () => {
   
 };
 
-document.addEventListener("click", () => {
-  const active = document.activeElement;
+document.addEventListener("click", (e) => {
 
-  // إذا المستخدم يكتب بحث، لا تغيّر الفوكس
-  if (active && active.classList.contains("searchInput")) return;
+  // 🛑 إذا الكلك داخل إضافة المنتج → لا تغيّر الفوكس
+  if (e.target.closest("#addProductDropdownBox")) return;
+
+  // 🛑 إذا يكتب داخل بحث الجدول
+  const active = document.activeElement;
+  if (
+    active &&
+    (
+      active.classList.contains("searchInput") ||
+      active.id === "addProductInput"
+    )
+  ) return;
 
   document.getElementById("barcodeInput")?.focus();
 });
@@ -1550,7 +2029,49 @@ window.addEventListener("keydown", (e) => {
 
 }, true); // ⬅️ capture + window
 
+async function addQuickProduct(productName, price){
+for (let i = 1; i < table.rows.length; i++) {
+  const r = table.rows[i];
+  const nameInput = r.cells[0].querySelector("input");
+  const variantSelect = r.querySelector(".variantSelect");
 
+  // نفس المنتج؟
+  if (nameInput.value !== productName) continue;
+
+  // ❌ إذا عنده متغيرات → لا ندمج
+  if (variantSelect.options.length > 1) {
+    continue;
+  }
+
+  // ✅ بدون متغيرات → زيد العدد
+  const qtyInput = r.cells[3].querySelector("input");
+  qtyInput.value = Number(qtyInput.value) + 1;
+  multiplyRow(qtyInput);
+  return;
+}
+  // 🧩 استخدم صف فاضي أو أنشئ واحد
+  let row = getReusableRow();
+  if (!row) {
+    addRow();
+    row = table.rows[table.rows.length - 1];
+  }
+
+  // 🧾 املأ بيانات المنتج
+  row.cells[0].querySelector("input").value = productName;
+  row.dataset.unitPrice = price;
+  row.cells[1].textContent = f(price);
+
+  // 🧠 حمّل المتغيرات تلقائياً
+  await loadVariants(row, productName);
+
+  // إذا عنده متغير واحد فقط → اختاره تلقائياً
+  const select = row.querySelector(".variantSelect");
+  if (select.options.length === 1) {
+    select.selectedIndex = 0;
+  }
+
+  multiplyRow(row.cells[3].querySelector("input"));
+}
 </script>
 
 <!-- 🟢 Toast تجميد الفاتورة -->
