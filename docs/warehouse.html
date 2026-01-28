@@ -459,7 +459,13 @@ if (show) {
       btn.textContent = "➕ إضافة متغيرات";
     }
   };
-
+function safeKey(text) {
+return text
+.trim()
+.replace(/[.#$[\]]/g, "") // حذف الممنوع
+.replace(/\//g, "_") // /
+.replace(/\./g, "_") // .
+}
 // 🧾 حفظ أو تعديل المنتج
 window.saveProduct = async function() {
   const name = document.getElementById("productName").value.trim();
@@ -548,19 +554,22 @@ variants.forEach(v => {
   // 🧾 حفظ المنتج في Firebase
   const productRef = ref(db, "warehouse/" + name);
   const totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
-await set(ref(db, "warehouse/" + name), {
-  buyPrice: buyPrice,
-  prices: {
-    pos: sellPricePos,
-    online: sellPriceOnline
-  },
-  totalQty,
-  stock,
-  barcodes,
-  lastUpdate: new Date().toISOString()
+const safeName = safeKey(name);
+
+
+await set(ref(db, "warehouse/" + safeName), {
+name: name, // نخزن الاسم الحقيقي للعرض
+buyPrice: buyPrice,
+prices: {
+pos: sellPricePos,
+online: sellPriceOnline
+},
+totalQty,
+stock,
+barcodes,
+lastUpdate: new Date().toISOString()
 });
-// ✅ هذا السطر الجديد
-await set(ref(db, "warehouse/" + name + "/barcodes"), barcodes);
+
 
 
 
@@ -789,7 +798,8 @@ for (const r of rows) {
   const key =
     [type1, val1, type2, val2].filter(Boolean).join(" | ") ||
     "إجمالي الكمية";
-const existingSnap = await get(ref(db, "warehouse/" + name + "/barcodes"));
+const safeName = safeKey(name);
+const existingSnap = await get(ref(db, "warehouse/" + safeName + "/barcodes"));
 const existingBarcodes = existingSnap.exists() ? existingSnap.val() : {};
 
   if (!grouped[name]) {
@@ -814,28 +824,37 @@ if (existingBarcodes[key]) {
 }
 
 
-  let count = 0;
+let count = 0;
 
-  for (const [name, data] of Object.entries(grouped)) {
-await set(ref(db, "warehouse/" + name), {
-  buyPrice: data.buy,
-  prices: {
-    pos: data.sellPos,
-    online: data.sellOnline
-  },
-  totalQty: Object.values(data.stock).reduce((a,b)=>a+b,0),
-  stock: data.stock,
-  barcodes: data.barcodes,
-  lastUpdate: new Date().toISOString()
+
+for (const [name, data] of Object.entries(grouped)) {
+const safeName = safeKey(name);
+
+
+const totalQty = Object.values(data.stock)
+.reduce((a, b) => a + b, 0);
+
+
+await set(ref(db, "warehouse/" + safeName), {
+name: name, // الاسم الحقيقي للعرض
+buyPrice: data.buy,
+prices: {
+pos: data.sellPos,
+online: data.sellOnline
+},
+stock: data.stock,
+barcodes: data.barcodes,
+totalQty: totalQty,
+lastUpdate: new Date().toISOString()
 });
-await set(ref(db, "warehouse/" + name + "/barcodes"), data.barcodes);
 
 
-    count++;
-  }
+count++;
+}
 
-  alert(`✅ تم رفع ${count} منتج من الملف بنجاح!`);
-  loadWarehouse();
+
+alert(`✅ تم رفع ${count} منتج من الملف بنجاح!`);
+loadWarehouse();
 };
 window.startBarcodeScan = async function () {
   const video = document.getElementById("barcodeVideo");
