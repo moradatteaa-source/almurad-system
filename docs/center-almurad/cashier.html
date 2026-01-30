@@ -345,47 +345,42 @@ z-index: 5;
 .delete-prod:hover{
 background: #a93226;
 }
+/* الوضع الطبيعي */
 #printArea {
-  display: none;
+  display: block;
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
-@media print {
-  body {
-    margin: 0;
-    padding: 0;
-    width: 72mm;        /* ✅ هنا */
-    background: white;
-  }
 
+/* وقت الطباعة فقط */
+@media print {
   body > *:not(#printArea) {
     display: none !important;
   }
 
   #printArea {
     display: block !important;
-    width: 72mm;        /* ✅ هنا */
-    max-width: 72mm;    /* ✅ هنا */
-    margin: 0;
-    position: static;
-    overflow: visible;
+    width: 72mm;
+    max-width: 72mm;
+    padding: 2mm;
     font-family: Tajawal, Tahoma, sans-serif;
   }
 
-  #printArea * {
-    box-sizing: border-box;
-    max-width: 100%;
-    word-break: break-word;
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
   }
 }
-#printArea {
-  padding: 2mm;   /* ✅ يمنع القص من الجوانب */
-}
-
 
 @page {
-  size: 72mm auto;   /* ✅ هنا */
+  size: 72mm auto;
   margin: 0;
 }
+
 
 
 
@@ -1707,13 +1702,12 @@ window._printData = {
 
   console.log("✅ Invoice saved successfully");
   // 🖨️ اطبع بعد الحفظ فقط
-setTimeout(() => {
-  try {
-    buildAndPrintReceipt();
-  } catch (e) {
-    console.warn("🖨️ Printing skipped");
-  }
-}, 100);
+try {
+  buildAndPrintReceipt();
+} catch (e) {
+  console.warn("🖨️ Printing skipped");
+}
+
 
 // 🔄 رجّع وضع البيع بعد المسترجع
 if(isReturnMode){
@@ -1923,12 +1917,16 @@ function closeParkedModal(){
 }
 
 
-
 window.buildAndPrintReceipt = function () {
 
   const printArea = document.getElementById("printArea");
   const itemsBox = document.getElementById("printItems");
   const totalBox = document.getElementById("printTotal");
+
+  if (!window._printData || !window._printData.items.length) {
+    console.warn("🛑 No print data");
+    return;
+  }
 
   // 🔹 التاريخ + رقم الفاتورة
   document.getElementById("printDate").textContent =
@@ -1937,7 +1935,8 @@ window.buildAndPrintReceipt = function () {
   document.getElementById("printInvoice").textContent =
     "🧾 فاتورة رقم: " + invoice;
 
-  printArea.style.display = "block";
+  // 👀 خليها مرئية لكن بدون ما تبين
+  printArea.style.visibility = "visible";
 
   itemsBox.innerHTML = "";
 
@@ -1955,12 +1954,20 @@ window.buildAndPrintReceipt = function () {
 
   totalBox.textContent = f(window._printData.total);
 
-  window.print();
+  // ⏳ خلي المتصفح يلحق يرسم المحتوى
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      window.print();
 
-  setTimeout(() => {
-    printArea.style.display = "none";
-  }, 300);
+      // رجّع الإخفاء بعد انتهاء الطباعة
+      setTimeout(() => {
+        printArea.style.visibility = "hidden";
+      }, 500);
+
+    }, 100);
+  });
 };
+
 
 
 
@@ -2248,6 +2255,7 @@ document.addEventListener("keydown", (e) => {
   💾 تم حفظ الفاتورة بنجاح
 </div>
 <!-- 🧾 PRINT RECEIPT (HIDDEN) -->
+
 <div id="printArea">
   <div class="receipt">
 <div style="text-align:center;font-size:11px;margin-bottom:4px">
@@ -2277,16 +2285,7 @@ document.addEventListener("keydown", (e) => {
 
   </div>
 </div>
-<!-- باقي الصفحة -->
-
-<script>
-  // كوداتك الحالية (إن وجدت)
-
-  document.querySelectorAll(".variantSelect").forEach(sel => {
-    sel.addEventListener("click", e => e.stopPropagation());
-  });
-</script>
-
 </body>
+
 </html>
 
