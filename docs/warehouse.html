@@ -621,11 +621,10 @@ const productsArray = Object.entries(data).sort((a, b) => {
   return dateB - dateA; // الأحدث يطلع فوق
 });
 
-// ✅ نرسم الجدول بالترتيب الصحيح
 for (const [safeName, p] of productsArray) {
+
   const productName = p.name || safeName;
   const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
-
   const invoiceValue = (p.prices?.pos || 0) * total;
 
   let variantsList = "";
@@ -662,13 +661,24 @@ for (const [safeName, p] of productsArray) {
     <td>${p.lastUpdate ? new Date(p.lastUpdate).toLocaleDateString("ar-EG") : "-"}</td>
     <td>
       <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
-      <button style="background:#FF6B2D;color:white;border:none;border-radius:6px;padding:5px 8px"
-        onclick="editProduct('${productName}')">✏️</button>
+
+      <button
+        style="background:#FF6B2D;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+        onclick="editProduct('${productName}')">
+        ✏️
+      </button>
+
+      <button
+        style="background:#043B64;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+        onclick="printBarcodes('${productName}')">
+        🖨 باركود
+      </button>
     </td>
   `;
 
   tableBody.appendChild(tr);
 }
+
 
     // ✅ حساب الإحصائيات العامة
     const products = Object.entries(data);
