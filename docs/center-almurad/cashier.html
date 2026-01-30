@@ -1921,10 +1921,15 @@ function closeParkedModal(){
   document.getElementById("parkedModal").style.display = "none";
 }
 
-// 🧾 BUILD & PRINT RECEIPT (80mm AUTO HEIGHT)
+
+
 window.buildAndPrintReceipt = function () {
+  const printArea = document.getElementById("printArea");
   const itemsBox = document.getElementById("printItems");
   const totalBox = document.getElementById("printTotal");
+
+  // 🔥 1️⃣ أظهر الفاتورة
+  printArea.style.display = "block";
 
   itemsBox.innerHTML = "";
 
@@ -1947,8 +1952,15 @@ window.buildAndPrintReceipt = function () {
 
   totalBox.textContent = f(window._printData.total);
 
+  // 🔥 2️⃣ اطبع
   window.print();
+
+  // 🔥 3️⃣ أخفِ الفاتورة بعد الطباعة
+  setTimeout(() => {
+    printArea.style.display = "none";
+  }, 300);
 };
+
 
 // 🔗 expose functions to HTML (required for type="module")
 window.addRow = addRow;
