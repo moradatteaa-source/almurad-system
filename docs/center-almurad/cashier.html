@@ -350,11 +350,10 @@ background: #a93226;
 }
 
 @media print {
-
   body {
     margin: 0;
     padding: 0;
-    width: 80mm;
+    width: 72mm;        /* ✅ هنا */
     background: white;
   }
 
@@ -364,11 +363,11 @@ background: #a93226;
 
   #printArea {
     display: block !important;
-    width: 80mm;
-    max-width: 80mm;
-    margin: 0 auto;
-    position: static;      /* 🔥 مهم */
-    overflow: visible;     /* 🔥 مهم */
+    width: 72mm;        /* ✅ هنا */
+    max-width: 72mm;    /* ✅ هنا */
+    margin: 0;
+    position: static;
+    overflow: visible;
     font-family: Tajawal, Tahoma, sans-serif;
   }
 
@@ -378,10 +377,14 @@ background: #a93226;
     word-break: break-word;
   }
 }
+#printArea {
+  padding: 2mm;   /* ✅ يمنع القص من الجوانب */
+}
+
 
 @page {
-  size: 80mm auto;       /* ✅ عرض ثابت – طول تلقائي */
-  margin: 0;             /* ❌ بدون هوامش */
+  size: 72mm auto;   /* ✅ هنا */
+  margin: 0;
 }
 
 
@@ -1922,19 +1925,21 @@ function closeParkedModal(){
 
 
 window.buildAndPrintReceipt = function () {
+
   const printArea = document.getElementById("printArea");
   const itemsBox = document.getElementById("printItems");
   const totalBox = document.getElementById("printTotal");
 
-  // 🔥 1️⃣ أظهر الفاتورة
+  // 🔹 التاريخ + رقم الفاتورة
+  document.getElementById("printDate").textContent =
+    "📅 " + new Date().toLocaleString("ar-EG");
+
+  document.getElementById("printInvoice").textContent =
+    "🧾 فاتورة رقم: " + invoice;
+
   printArea.style.display = "block";
 
   itemsBox.innerHTML = "";
-
-  if (!window._printData || !window._printData.items.length) {
-    console.warn("🧾 No print data");
-    return;
-  }
 
   window._printData.items.forEach(item => {
     const row = document.createElement("div");
@@ -1950,14 +1955,13 @@ window.buildAndPrintReceipt = function () {
 
   totalBox.textContent = f(window._printData.total);
 
-  // 🔥 2️⃣ اطبع
   window.print();
 
-  // 🔥 3️⃣ أخفِ الفاتورة بعد الطباعة
   setTimeout(() => {
     printArea.style.display = "none";
   }, 300);
 };
+
 
 
 // 🔗 expose functions to HTML (required for type="module")
@@ -2246,10 +2250,14 @@ document.addEventListener("keydown", (e) => {
 <!-- 🧾 PRINT RECEIPT (HIDDEN) -->
 <div id="printArea">
   <div class="receipt">
+<div style="text-align:center;font-size:11px;margin-bottom:4px">
+  <div id="printDate"></div>
+  <div id="printInvoice"></div>
+</div>
 
     <div style="text-align:center;font-weight:bold">
       سنتر المراد<br>
-      📞 07xxxxxxxx
+     📞 07714609226
     </div>
 
     <hr>
