@@ -350,34 +350,32 @@ background: #a93226;
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+
+  body {
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+    background: white;
   }
 
-  #printArea, #printArea * {
-    visibility: visible;
+  body > *:not(#printArea) {
+    display: none !important;
   }
 
   #printArea {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 80mm;          /* ✅ عرض الرول */
+    display: block !important;
+    width: 80mm;
     max-width: 80mm;
+    margin: 0 auto;
+    position: static;      /* 🔥 مهم */
+    overflow: visible;     /* 🔥 مهم */
     font-family: Tajawal, Tahoma, sans-serif;
-  }
-}
-@media print {
-  #printArea {
-    box-sizing: border-box;
-    overflow: hidden;
   }
 
   #printArea * {
     box-sizing: border-box;
     max-width: 100%;
     word-break: break-word;
-    overflow-wrap: break-word;
   }
 }
 
