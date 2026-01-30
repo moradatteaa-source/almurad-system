@@ -612,75 +612,64 @@ document.getElementById("sellPriceOnline").value = "";
       return;
     }
 
-    const data = snapshot.val();
-    
+const data = snapshot.val();
 
-for (const [safeName, p] of Object.entries(data)) {
-const productName = p.name || safeName;      const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
-      // ✅ حساب الفاتورة الإجمالية
-const invoiceValue = (p.prices?.pos || 0) * total;
-const buyValue = (p.buyPrice || 0) * total;
+// ✅ نحول البيانات إلى Array ونرتبها حسب آخر تحديث (الأحدث أولاً)
+const productsArray = Object.entries(data).sort((a, b) => {
+  const dateA = new Date(a[1].lastUpdate || 0).getTime();
+  const dateB = new Date(b[1].lastUpdate || 0).getTime();
+  return dateB - dateA; // الأحدث يطلع فوق
+});
 
+// ✅ نرسم الجدول بالترتيب الصحيح
+for (const [safeName, p] of productsArray) {
+  const productName = p.name || safeName;
+  const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
 
-      let variantsList = "";
-      if (p.stock && Object.keys(p.stock).length > 0) {
-       variantsList = Object.entries(p.stock)
-  .map(([key, value]) => {
-    const parts = key.split("|").map(s => s.trim());
-    const qtyColor = value <= 5 ? "red" : "#FF6B2D";
+  const invoiceValue = (p.prices?.pos || 0) * total;
 
-    // 🧠 بناء النص الكامل حسب عدد الأبعاد (حتى 4 مستويات)
-    const text = parts
-      .filter(p => p) // يحذف الفراغات
-      .join(" | ");
+  let variantsList = "";
+  if (p.stock && Object.keys(p.stock).length > 0) {
+    variantsList = Object.entries(p.stock)
+      .map(([key, value]) => {
+        const parts = key.split("|").map(s => s.trim());
+        const qtyColor = value <= 5 ? "red" : "#FF6B2D";
+        const text = parts.filter(p => p).join(" | ");
 
-    return `
-      <div style="margin:4px 0; text-align:center; line-height:1.8; direction:rtl;">
-        <span style="color:#043B64; font-weight:600;">${text}</span>
-        <span style="color:${qtyColor}; font-weight:600;"> → ${value} قطعة</span>
-      </div>
-    `;
-  })
-  .join("");
+        return `
+          <div style="margin:4px 0;text-align:center;">
+            <span style="color:#043B64;font-weight:600;">${text}</span>
+            <span style="color:${qtyColor};font-weight:600;"> → ${value} قطعة</span>
+          </div>
+        `;
+      })
+      .join("");
+  } else {
+    variantsList = "—";
+  }
 
-      } else {
-        variantsList = "—";
-      }
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><strong>${productName}</strong></td>
+    <td>${p.buyPrice || "-"}</td>
+    <td>
+      حضوري: ${p.prices?.pos || "-"}<br>
+      أونلاين: ${p.prices?.online || "-"}
+    </td>
+    <td>${variantsList}</td>
+    <td>${total}</td>
+    <td class="num-en">${invoiceValue.toLocaleString("en-US")} د.ع</td>
+    <td>${p.lastUpdate ? new Date(p.lastUpdate).toLocaleDateString("ar-EG") : "-"}</td>
+    <td>
+      <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
+      <button style="background:#FF6B2D;color:white;border:none;border-radius:6px;padding:5px 8px"
+        onclick="editProduct('${productName}')">✏️</button>
+    </td>
+  `;
 
-     const tr = document.createElement("tr");
-tr.innerHTML = `
-  <td><strong>${productName}</strong></td>
-  <td>${p.buyPrice || "-"}</td>
-<td>
-  حضوري: ${p.prices?.pos || "-"}<br>
-  أونلاين: ${p.prices?.online || "-"}
-</td>
-  <td style="text-align:center; vertical-align:top;">
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
-      ${variantsList}
-    </div>
-  </td>
-  <td>${total}</td>
-<td class="num-en" style="color:#043B64;font-weight:bold;">${invoiceValue.toLocaleString('en-US')} د.ع</td>
-<td>${
-  p.lastUpdate
-    ? new Date(
-        typeof p.lastUpdate === "string"
-          ? p.lastUpdate
-          : p.lastUpdate
-      ).toLocaleDateString("ar-EG")
-    : "-"
-}</td>
- <td>
-  <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
-  <button style="background:#FF6B2D;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="editProduct('${productName}')">✏️</button>
-  <button style="background:#222;border:none;color:white;border-radius:6px;padding:5px 8px;cursor:pointer" onclick="printBarcodes('${productName}')">🖨️</button>
-</td>
+  tableBody.appendChild(tr);
+}
 
-`;
-tableBody.appendChild(tr);
-
-    }
     // ✅ حساب الإحصائيات العامة
     const products = Object.entries(data);
     let totalQtyAll = 0;

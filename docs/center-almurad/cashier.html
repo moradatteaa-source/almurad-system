@@ -345,6 +345,39 @@ z-index: 5;
 .delete-prod:hover{
 background: #a93226;
 }
+#printArea {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  html, body {
+    width: 80mm;
+  }
+
+  #printArea {
+    display: block;
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80mm;
+  }
+
+  #printArea * {
+    visibility: visible;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+
+
 </style>
 </head>
 
@@ -614,29 +647,28 @@ let scanTimer = null;
 
 document.addEventListener("keydown", async (e) => {
 
-  // إذا المستخدم يكتب داخل input عادي (بحث، كمية)، تجاهل
-  if (
-    document.activeElement &&
-    ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) &&
-document.activeElement.id !== "barcodeInput"
-
-  ) return;
-
   // Enter = نهاية الباركود
-  if (e.key === "Enter") {
+if (e.key === "Enter") {
+if (scanBuffer.length >= 4 && /^\d+$/.test(scanBuffer))
+ {
     const code = scanBuffer.trim();
     scanBuffer = "";
-
-    if (code.length < 4) return; // حماية
-
-    console.log("🔫 USB BARCODE:", code);
     await handleBarcode(code);
+    e.preventDefault();
+    e.stopPropagation();
     return;
+  } else {
+    // ⬅️ مو باركود، خلّي Enter يكمّل طريقه
+    scanBuffer = "";
   }
+}
+
+
+
 
   // تجميع الأرقام
-  if (e.key.length === 1) {
-    scanBuffer += e.key;
+if (/^\d$/.test(e.key)) {
+  scanBuffer += e.key;
 
     clearTimeout(scanTimer);
     scanTimer = setTimeout(() => {
@@ -700,13 +732,15 @@ console.log("KEY:", e.key, "SHIFT:", e.shiftKey);
   }
 
   // ⏎ تنفيذ
-  if (e.key === "Enter" && qtyMode && qtyBuffer) {
-    applyQtyFromKeyboard(qtyMode, Number(qtyBuffer));
-    qtyMode = null;
-    qtyBuffer = "";
-    e.preventDefault();
-    return;
-  }
+if (e.key === "Enter" && qtyMode && qtyBuffer) {
+  applyQtyFromKeyboard(qtyMode, Number(qtyBuffer));
+  qtyMode = null;
+  qtyBuffer = "";
+  e.preventDefault();
+  e.stopPropagation();
+  return;
+}
+
 
 });
 
@@ -1520,6 +1554,22 @@ function switchToCash(){
 
 
 
+function multiplyRow(input) {
+  const row = input.closest("tr");
+  if (!row) return;
+
+  const unitPrice = Number(row.dataset.unitPrice || 0);
+  const qty = Number(input.value || 0);
+
+  const sum = unitPrice * qty;
+
+  // اكتب مجموع الصف
+  row.cells[4].textContent = f(sum);
+
+  // أعد حساب الإجمالي
+  calc();
+}
+
 // حفظ
 async function saveInvoice(){
   const items=[];
@@ -1532,6 +1582,7 @@ for(let i=1;i<table.rows.length;i++){
   alert("المنتج غير معروف: " + name);
   return;
 }
+
 
 const qty = Number(r.cells[3].querySelector("input").value || 0);
 
@@ -1566,6 +1617,7 @@ if(!variantKey && !isReturnMode){
   alert("اختر المتغير للمنتج: " + name);
   return;
 }
+window.multiplyRow = multiplyRow;
 
 
 if(!isReturnMode && stock[variantKey] < qty){
@@ -1621,6 +1673,7 @@ items.push({
 
 try {
 await push(ref(rtdb, "posInvoices"), {
+  
   invoiceNo: invoice,
   items,
   total: p(grandEl.textContent),
@@ -1631,8 +1684,26 @@ cashierId: "pos",
 createdAt: serverTimestamp()
 });
 
+// 🧾 تخزين بيانات الطباعة (مصدر واحد)
+window._printData = {
+  items: items.map(i => ({
+    name: i.product,
+    qty: Math.abs(i.qty),
+    total: Math.abs(i.total)
+  })),
+  total: p(grandEl.textContent)
+};
 
   console.log("✅ Invoice saved successfully");
+  // 🖨️ اطبع بعد الحفظ فقط
+setTimeout(() => {
+  try {
+    buildAndPrintReceipt();
+  } catch (e) {
+    console.warn("🖨️ Printing skipped");
+  }
+}, 100);
+
 // 🔄 رجّع وضع البيع بعد المسترجع
 if(isReturnMode){
   switchToCash();
@@ -1840,6 +1911,34 @@ function closeParkedModal(){
   document.getElementById("parkedModal").style.display = "none";
 }
 
+// 🧾 BUILD & PRINT RECEIPT (80mm AUTO HEIGHT)
+window.buildAndPrintReceipt = function () {
+  const itemsBox = document.getElementById("printItems");
+  const totalBox = document.getElementById("printTotal");
+
+  itemsBox.innerHTML = "";
+
+  if (!window._printData || !window._printData.items.length) {
+    console.warn("🧾 No print data");
+    return;
+  }
+
+  window._printData.items.forEach(item => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.justifyContent = "space-between";
+    row.style.fontSize = "12px";
+    row.innerHTML = `
+      <span>${item.name} × ${item.qty}</span>
+      <span>${f(item.total)}</span>
+    `;
+    itemsBox.appendChild(row);
+  });
+
+  totalBox.textContent = f(window._printData.total);
+
+  window.print();
+};
 
 // 🔗 expose functions to HTML (required for type="module")
 window.addRow = addRow;
@@ -1864,6 +1963,7 @@ window.parkInvoice = parkInvoice;
 window.resumeInvoice = resumeInvoice;
 window.loadParkedInvoice = loadParkedInvoice;
 window.closeParkedModal = closeParkedModal;
+
 window.onload = () => {
   document.body.focus();
   
@@ -2009,25 +2109,8 @@ function applyQtyFromKeyboard(mode, value) {
 
   multiplyRow(qtyInput);
 }
-let lastEnterTime = 0;
-// 🔥 GLOBAL DOUBLE ENTER SAVE (FORCED)
 
 
-window.addEventListener("keydown", (e) => {
-
-  if (e.key !== "Enter") return;
-
-  const now = Date.now();
-
-  if (now - lastEnterTime < 400) {
-    console.log("💾 DOUBLE ENTER → SAVE");
-    saveInvoice();
-    lastEnterTime = 0;
-  } else {
-    lastEnterTime = now;
-  }
-
-}, true); // ⬅️ capture + window
 
 async function addQuickProduct(productName, price){
 for (let i = 1; i < table.rows.length; i++) {
@@ -2072,6 +2155,35 @@ for (let i = 1; i < table.rows.length; i++) {
 
   multiplyRow(row.cells[3].querySelector("input"));
 }
+let lastEnterTime = 0;
+
+document.addEventListener("keydown", (e) => {
+
+  // لا تتدخل إذا داخل input
+  const el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+
+  if (e.key !== "Enter") return;
+
+  const now = Date.now();
+
+  if (now - lastEnterTime < 350) {
+    console.log("💾 DOUBLE ENTER → SAVE");
+
+    e.preventDefault();
+    e.stopImmediatePropagation(); // 🔥 هذا يحسم كل التعارض
+
+    saveInvoice();
+    lastEnterTime = 0;
+  } else {
+    lastEnterTime = now;
+  }
+
+}, true); // 🔥 capture phase
+
+
+
+
 </script>
 
 <!-- 🟢 Toast تجميد الفاتورة -->
@@ -2108,5 +2220,32 @@ for (let i = 1; i < table.rows.length; i++) {
 ">
   💾 تم حفظ الفاتورة بنجاح
 </div>
+<!-- 🧾 PRINT RECEIPT (HIDDEN) -->
+<div id="printArea">
+  <div class="receipt">
+
+    <div style="text-align:center;font-weight:bold">
+      سنتر المراد<br>
+      📞 07xxxxxxxx
+    </div>
+
+    <hr>
+
+    <div id="printItems"></div>
+
+    <hr>
+
+    <div style="display:flex;justify-content:space-between;font-weight:bold">
+      <span>المجموع</span>
+      <span id="printTotal">0</span>
+    </div>
+
+    <div style="text-align:center;margin-top:6px">
+      شكراً لتسوقكم 🌸
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>
