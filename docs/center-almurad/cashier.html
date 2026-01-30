@@ -354,28 +354,38 @@ background: #a93226;
     visibility: hidden;
   }
 
-  html, body {
-    width: 80mm;
+  #printArea, #printArea * {
+    visibility: visible;
   }
 
   #printArea {
-    display: block;
-    visibility: visible;
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
-    width: 80mm;
+    width: 80mm;          /* ✅ عرض الرول */
+    max-width: 80mm;
+    font-family: Tajawal, Tahoma, sans-serif;
+  }
+}
+@media print {
+  #printArea {
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   #printArea * {
-    visibility: visible;
-  }
-
-  @page {
-    size: 80mm auto;
-    margin: 0;
+    box-sizing: border-box;
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 }
+
+@page {
+  size: 80mm auto;       /* ✅ عرض ثابت – طول تلقائي */
+  margin: 0;             /* ❌ بدون هوامش */
+}
+
 
 
 </style>
@@ -1976,13 +1986,16 @@ document.addEventListener("click", (e) => {
 
   // 🛑 إذا يكتب داخل بحث الجدول
   const active = document.activeElement;
-  if (
-    active &&
-    (
-      active.classList.contains("searchInput") ||
-      active.id === "addProductInput"
-    )
-  ) return;
+if (
+  e.target.tagName === "INPUT" ||
+  e.target.tagName === "SELECT" ||
+  e.target.closest(".dropdown") ||
+  e.target.closest(".variantSelect") ||
+  e.target.closest("#addProductDropdownBox")
+) {
+  return;
+}
+
 
   document.getElementById("barcodeInput")?.focus();
 });
@@ -2246,6 +2259,16 @@ document.addEventListener("keydown", (e) => {
 
   </div>
 </div>
+<!-- باقي الصفحة -->
+
+<script>
+  // كوداتك الحالية (إن وجدت)
+
+  document.querySelectorAll(".variantSelect").forEach(sel => {
+    sel.addEventListener("click", e => e.stopPropagation());
+  });
+</script>
 
 </body>
 </html>
+
