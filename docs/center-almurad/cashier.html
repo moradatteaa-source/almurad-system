@@ -1946,6 +1946,15 @@ window.buildAndPrintReceipt = function () {
   });
 
   totalBox.textContent = f(window._printData.total);
+// 🧾 معلومات إضافية للطباعة
+document.getElementById("printCashier").textContent =
+  localStorage.getItem("cashierUsername") || "—";
+
+document.getElementById("printDate").textContent =
+  new Date().toLocaleDateString("ar-EG");
+
+document.getElementById("printInvoiceNo").textContent =
+  document.getElementById("invoice").textContent;
 
   window.print();
 };
@@ -2234,10 +2243,17 @@ document.addEventListener("keydown", (e) => {
 <div id="printArea">
   <div class="receipt">
 
-    <div style="text-align:center;font-weight:bold">
-      سنتر المراد<br>
-      📞 07865393559
-    </div>
+ <div style="text-align:center;font-weight:bold">
+  سنتر المراد<br>
+  📞 07865393559
+</div>
+
+<div style="font-size:11px;margin-top:4px">
+  <div>👤 الكاشير: <span id="printCashier"></span></div>
+  <div>📅 التاريخ: <span id="printDate"></span></div>
+  <div>🧾 فاتورة رقم: <span id="printInvoiceNo"></span></div>
+</div>
+
 
     <hr>
 
