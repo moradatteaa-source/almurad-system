@@ -345,42 +345,36 @@ z-index: 5;
 .delete-prod:hover{
 background: #a93226;
 }
-/* الوضع الطبيعي */
 #printArea {
-  display: block;
-  visibility: hidden;
-  position: absolute;
-  top: 0;
-  left: 0;
+  display: none;
 }
 
-
-/* وقت الطباعة فقط */
 @media print {
-  body > *:not(#printArea) {
-    display: none !important;
+  body * {
+    visibility: hidden;
+  }
+
+  #printArea,
+  #printArea * {
+    visibility: visible;
   }
 
   #printArea {
-    display: block !important;
-    width: 72mm;
-    max-width: 72mm;
-    padding: 2mm;
+    display: block !important;   /* ✅ هذا هو الحل */
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 80mm;
+    max-width: 80mm;
     font-family: Tajawal, Tahoma, sans-serif;
   }
-
-  body {
-    margin: 0;
-    padding: 0;
-    background: white;
-  }
 }
+
 
 @page {
-  size: 72mm auto;
-  margin: 0;
+  size: 80mm auto;       /* ✅ عرض ثابت – طول تلقائي */
+  margin: 0;             /* ❌ بدون هوامش */
 }
-
 
 
 
@@ -391,6 +385,10 @@ background: #a93226;
 
 <header style="display:flex;justify-content:space-between;align-items:center;">
   <span>🧾 الكاشير</span>
+  <span style="font-size:13px">
+👤 <script>document.write(localStorage.getItem("cashierUsername") || "")</script>
+</span>
+
 <button onclick="stopCameraScan()" style="
   background:#c0392b;
   color:white;
@@ -687,11 +685,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import {
   getDatabase,
   ref,
+  onValue,
   get,
-  update,
   push,
+  update,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+
 
 
 
@@ -1686,7 +1687,8 @@ await push(ref(rtdb, "posInvoices"), {
   paid: Number(paidEl.value || 0),
 type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
 
-cashierId: "pos",
+cashierId: localStorage.getItem("cashierUsername") || "unknown",
+
 createdAt: serverTimestamp()
 });
 
@@ -1702,12 +1704,13 @@ window._printData = {
 
   console.log("✅ Invoice saved successfully");
   // 🖨️ اطبع بعد الحفظ فقط
-try {
-  buildAndPrintReceipt();
-} catch (e) {
-  console.warn("🖨️ Printing skipped");
-}
-
+setTimeout(() => {
+  try {
+    buildAndPrintReceipt();
+  } catch (e) {
+    console.warn("🖨️ Printing skipped");
+  }
+}, 100);
 
 // 🔄 رجّع وضع البيع بعد المسترجع
 if(isReturnMode){
@@ -1916,29 +1919,17 @@ function closeParkedModal(){
   document.getElementById("parkedModal").style.display = "none";
 }
 
-
+// 🧾 BUILD & PRINT RECEIPT (80mm AUTO HEIGHT)
 window.buildAndPrintReceipt = function () {
-
-  const printArea = document.getElementById("printArea");
   const itemsBox = document.getElementById("printItems");
   const totalBox = document.getElementById("printTotal");
 
+  itemsBox.innerHTML = "";
+
   if (!window._printData || !window._printData.items.length) {
-    console.warn("🛑 No print data");
+    console.warn("🧾 No print data");
     return;
   }
-
-  // 🔹 التاريخ + رقم الفاتورة
-  document.getElementById("printDate").textContent =
-    "📅 " + new Date().toLocaleString("ar-EG");
-
-  document.getElementById("printInvoice").textContent =
-    "🧾 فاتورة رقم: " + invoice;
-
-  // 👀 خليها مرئية لكن بدون ما تبين
-  printArea.style.visibility = "visible";
-
-  itemsBox.innerHTML = "";
 
   window._printData.items.forEach(item => {
     const row = document.createElement("div");
@@ -1954,22 +1945,8 @@ window.buildAndPrintReceipt = function () {
 
   totalBox.textContent = f(window._printData.total);
 
-  // ⏳ خلي المتصفح يلحق يرسم المحتوى
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      window.print();
-
-      // رجّع الإخفاء بعد انتهاء الطباعة
-      setTimeout(() => {
-        printArea.style.visibility = "hidden";
-      }, 500);
-
-    }, 100);
-  });
+  window.print();
 };
-
-
-
 
 // 🔗 expose functions to HTML (required for type="module")
 window.addRow = addRow;
@@ -2007,16 +1984,13 @@ document.addEventListener("click", (e) => {
 
   // 🛑 إذا يكتب داخل بحث الجدول
   const active = document.activeElement;
-if (
-  e.target.tagName === "INPUT" ||
-  e.target.tagName === "SELECT" ||
-  e.target.closest(".dropdown") ||
-  e.target.closest(".variantSelect") ||
-  e.target.closest("#addProductDropdownBox")
-) {
-  return;
-}
-
+  if (
+    active &&
+    (
+      active.classList.contains("searchInput") ||
+      active.id === "addProductInput"
+    )
+  ) return;
 
   document.getElementById("barcodeInput")?.focus();
 });
@@ -2255,17 +2229,12 @@ document.addEventListener("keydown", (e) => {
   💾 تم حفظ الفاتورة بنجاح
 </div>
 <!-- 🧾 PRINT RECEIPT (HIDDEN) -->
-
 <div id="printArea">
   <div class="receipt">
-<div style="text-align:center;font-size:11px;margin-bottom:4px">
-  <div id="printDate"></div>
-  <div id="printInvoice"></div>
-</div>
 
     <div style="text-align:center;font-weight:bold">
       سنتر المراد<br>
-     📞 07714609226
+      📞 07865393559
     </div>
 
     <hr>
@@ -2285,7 +2254,6 @@ document.addEventListener("keydown", (e) => {
 
   </div>
 </div>
+
 </body>
-
-</html>
-
+</html> 

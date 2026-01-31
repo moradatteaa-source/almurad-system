@@ -367,7 +367,8 @@ p, div, span, button {
 <div class="menu-item" onclick="toggleMenu('centerMenu')">🏢 سنتر المراد</div>
 <div class="submenu" id="centerMenu">
   <div onclick="openCashier()">🧾 الكاشير</div>
-  <div onclick="openFinance('sales')">💰 الحسابات</div>
+<div onclick="openCenterAccounts()">💰 الحسابات</div>
+
   <div onclick="openFinance('balances')">📄 الديون</div>
   <div onclick="openFinance('profits')">📈 الأرباح</div>
 </div>
@@ -949,6 +950,11 @@ window.openArchive = openArchive;
   </script>
 <!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
 <script>
+  function openCenterAccounts() {
+  window.location.href = "center-almurad/accounts.html";
+}
+window.openCenterAccounts = openCenterAccounts;
+
 function enableSoundOnce() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();

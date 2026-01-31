@@ -228,7 +228,9 @@
           sessionStorage.setItem("userName", displayName);
 
           // 🟡 حفظ كل بيانات المستخدم في localStorage
-          localStorage.setItem("loggedInUser", JSON.stringify(foundUser));
+localStorage.setItem("loggedInUser", JSON.stringify(foundUser));
+localStorage.setItem("cashierUsername", foundUser.username);
+
 
           // 💬 تأكيد بالكونسول
           console.log(`مرحباً ${displayName}! تم تسجيل الدخول بنجاح ✅`);

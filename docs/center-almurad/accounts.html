@@ -129,6 +129,32 @@ html, body {
 </div>
 
 <script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+
+/* ✅ Firebase INIT – أول شي */
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.firebasestorage.app",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:c5520c00c11e336148ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const rtdb = getDatabase(app);
+
+
+
+
 // ===== البيانات =====
 const table = document.getElementById("table");
 let invoices = []; // ← تعريف الفواتير (راح تجي من Firebase)
@@ -207,7 +233,8 @@ const row = table.insertRow();
 row.style.cursor = "pointer";
 
 row.innerHTML = `
-<td>${cashiersMap[inv.cashierId] || "غير معروف"}</td>
+<td>${inv.cashierId || "غير معروف"}</td>
+
 <td>${fmt(inv.invoiceNo)}</td>
 <td>${inv.date}</td>
 <td>${fmt(inv.grand)} د.ع</td>
@@ -270,118 +297,71 @@ function quickFilter(type){
 
   render(invoices.filter(i => i.date >= s && i.date <= e));
 }
+const cashierSelect = document.getElementById("cashierSelect");
+
+cashierSelect.addEventListener("change", () => {
+  if (cashierSelect.value === "all") {
+    render(invoices);
+    return;
+  }
+
+  render(
+    invoices.filter(inv => inv.cashierId === cashierSelect.value)
+  );
+});
+
+function loadInvoices() {
+  onValue(ref(rtdb, "posInvoices"), (snap) => {
+    invoices = [];
+
+    if (!snap.exists()) {
+      render([]);
+      return;
+    }
+
+    const data = snap.val();
+
+    Object.values(data).forEach(inv => {
+      let ts = inv.createdAt;
+      let dateStr;
+
+      if (typeof ts === "number") {
+        dateStr = new Date(ts).toLocaleDateString("en-CA");
+      } else {
+        dateStr = today();
+      }
+
+      invoices.push({
+        invoiceNo: inv.invoiceNo || 0,
+        date: dateStr,
+        grand: Number(inv.total || 0),
+        paid: Number(inv.paid || 0),
+        rest: Number(inv.total || 0) - Number(inv.paid || 0),
+        cashierId: inv.cashierId || "غير معروف",
+        items: inv.items || []
+      });
+    });
+
+    invoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
+    // 🧑‍💼 تعبئة قائمة الكاشيرات (Real-Time)
+cashierSelect.innerHTML = `<option value="all">كل الكاشيرات</option>`;
+
+[...new Set(invoices.map(i => i.cashierId))].forEach(id => {
+  cashierSelect.innerHTML += `<option value="${id}">${id}</option>`;
+});
+
+    render(invoices);
+  });
+}
+
 // ربط الدوال بالـ HTML
 window.quickFilter = quickFilter;
 window.filterByRange = filterByRange;
 
-// ===== Firebase =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  getDoc,      // ✅ أضف هذا
-  doc,         // ✅ وهذا
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDqudXSSUtolKjyN574DtiS592BKDxrrAo",
-  authDomain: "al-murad-cashier.firebaseapp.com",
-  projectId: "al-murad-cashier"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-const cashierSelect = document.getElementById("cashierSelect");
-
-// تحميل الكاشيرات
-async function loadCashiers(){
-  const q = query(
-    collection(db,"users"),
-where("roles.cashier","==",true)
-  );
-
-  const snap = await getDocs(q);
-
-  snap.forEach(d=>{
-    const name = d.data().name; // ✅ هذا الموجود فعليًا
-
-    cashiersMap[d.id] = name;
-
-    cashierSelect.innerHTML +=
-      `<option value="${d.id}">${name}</option>`;
-  });
-}
-
-
-// تحميل الفواتير
-async function loadInvoices(){
-  let q = collection(db,"invoices");
-
-  if (cashierSelect.value !== "all") {
-    q = query(q, where("cashierId","==",cashierSelect.value));
-  }
-
-  const snap = await getDocs(q);
-  invoices = [];
-  snap.forEach(d => invoices.push(d.data()));
-invoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
-
-  render(invoices);
-}
-
-cashierSelect.addEventListener("change", loadInvoices);
-
-// تحميل أولي + تحقق تسجيل دخول
-onAuthStateChanged(auth, async user=>{
-  if(!user){
-    location.href = "index.html";
-    return;
-  }
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-  if(!snap.exists()){
-    location.href = "dashboard.html";
-    return;
-  }
-
-  const data = snap.data();
-  const roles = data.roles || {};
-
-  // ✅ دعم الأدمن القديم
-  if (data.role === "admin") {
-    roles.admin = true;
-  }
-
-  // ✅ الأدمن يدخل بدون أي فحص
-  if (roles.admin) {
-    loadCashiers();
-    loadInvoices();
-    return;
-  }
-
-  // ❌ غير الأدمن: لازم يكون محاسب
-  if (!roles.accountant) {
-    alert("❌ لا تملك صلاحية المحاسب");
-    location.href = "dashboard.html";
-    return;
-  }
-
-  // ✅ محاسب عادي
-  loadCashiers();
-  loadInvoices();
-});
-
-
-
-
+loadInvoices();
 </script>
+
 
 </body>
 </html>
