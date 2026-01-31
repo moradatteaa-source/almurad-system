@@ -29,6 +29,15 @@
   display:none;
   z-index:50;
 }
+.dropdown {
+  pointer-events: none;
+}
+
+.dropdown[style*="display: block"] {
+  pointer-events: auto;
+}
+
+
 .dropdown div{
   padding:7px;
   cursor:pointer;
@@ -206,6 +215,12 @@ html, body {
   z-index:1000;
 }
 
+.variantSelect{
+  margin-top:4px;
+  width:100%;
+  padding:6px;
+  font-size:14px;
+}
 
 
 .action-box{
@@ -902,11 +917,16 @@ function showAllProducts(input){
     d.textContent = p.name;
     d.onclick = ()=>{
       input.value = p.name;
+
       box.style.display = "none";
       const row = input.closest("tr");
 row.dataset.unitPrice = p.price;
 
 loadVariants(row, p.name);
+setTimeout(() => {
+  row.querySelector(".variantSelect")?.focus();
+}, 0);
+
 setTimeout(() => {
   const select = row.querySelector(".variantSelect");
   const stockSpan = row.querySelector(".stockQty");
@@ -1281,7 +1301,6 @@ function toggleGroup(group, box){
 }
 
 async function loadVariants(row, productName){
-  if (row.dataset.loadedProduct === productName) return;
   // ⛔ لا تعيد تحميل المتغيرات إذا نفس المنتج
 if (row.dataset.loadedProduct === productName) {
   return;
