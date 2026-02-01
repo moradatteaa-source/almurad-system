@@ -647,21 +647,9 @@ gap:8px;
 </div>
 
 </div>
-<script src="https://unpkg.com/@zxing/library@latest">
-  // ✅ إغلاق منسدلة إضافة المنتج عند الكلك خارجها
-document.addEventListener("click", (e) => {
-  const box = document.getElementById("addProductDropdownBox");
-  const btn = document.getElementById("addProductBtn");
-
-  if (!box || box.style.display !== "block") return;
-
-  if (!box.contains(e.target) && !btn.contains(e.target)) {
-    box.style.display = "none";
-  }
-});
-</script>
 
 <script type="module">
+
   // ✅ USB BARCODE SCANNER (GLOBAL – بدون فوكس)
 let scanBuffer = "";
 let scanTimer = null;
@@ -910,43 +898,36 @@ const table = document.getElementById("table");
 
 function showAllProducts(input){
   const box = input.nextElementSibling;
+
+  // 🔁 إذا مفتوحة → أغلقها
+  if (box.style.display === "block") {
+    box.style.display = "none";
+    return;
+  }
+
   box.innerHTML = "";
 
   products.forEach(p=>{
     const d = document.createElement("div");
     d.textContent = p.name;
-    d.onclick = ()=>{
+    d.onclick = (e)=>{
+      e.stopPropagation(); // ⛔ لا تغلق قبل الاختيار
       input.value = p.name;
-
       box.style.display = "none";
+
       const row = input.closest("tr");
-row.dataset.unitPrice = p.price;
+      row.dataset.unitPrice = p.price;
+      row.cells[1].textContent = f(p.price);
 
-loadVariants(row, p.name);
-setTimeout(() => {
-  row.querySelector(".variantSelect")?.focus();
-}, 0);
-
-setTimeout(() => {
-  const select = row.querySelector(".variantSelect");
-  const stockSpan = row.querySelector(".stockQty");
-
-
-  if (select.value && row._stock) {
-    stockSpan.textContent = row._stock[select.value] ?? 0;
-  }
-}, 0);
-
-row.cells[1].textContent = f(p.price);
-
-calc();
-
+      loadVariants(row, p.name);
+      calc();
     };
     box.appendChild(d);
   });
 
   box.style.display = "block";
 }
+
 
     function filterProducts(input){
   const box=input.nextElementSibling;
@@ -1407,12 +1388,13 @@ function addRow(){
 
 r.innerHTML = `
 <td class="product">
-  <input 
-    class="searchInput"
-    placeholder="اكتب اسم المنتج"
-    onfocus="showAllProducts(this)"
-    oninput="filterProducts(this)"
-  >
+<input 
+  class="searchInput"
+  placeholder="اكتب اسم المنتج"
+  onclick="event.stopPropagation(); showAllProducts(this)"
+  oninput="filterProducts(this)"
+>
+
   <div class="dropdown"></div>
 
   <select class="variantSelect">
@@ -2004,8 +1986,58 @@ window.closeParkedModal = closeParkedModal;
 
 window.onload = () => {
   document.body.focus();
-  
 };
+
+// 🟢 إغلاق منسدلات البحث عند النقر خارجها
+document.addEventListener("click", (e) => {
+  document.querySelectorAll(".dropdown").forEach(box => {
+    const input = box.previousElementSibling;
+
+    if (!box.contains(e.target) && !input.contains(e.target)) {
+      box.style.display = "none";
+    }
+  });
+});
+
+
+// 🟢 كتابة مباشرة باسم المنتج (CAPTURE MODE)
+document.addEventListener("keydown", (e) => {
+
+  // ❌ تجاهل الباركود (أرقام فقط)
+  if (/^\d$/.test(e.key)) return;
+
+  // ❌ تجاهل Enter والكميات
+  if (["Enter", "+", "-", "="].includes(e.key)) return;
+
+  // ❌ تجاهل الاختصارات
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  // ❌ إذا داخل input أصلاً
+  const active = document.activeElement;
+  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+    return;
+  }
+
+  // 🟢 آخر صف
+  let targetInput = null;
+  for (let i = table.rows.length - 1; i >= 1; i--) {
+    const inp = table.rows[i].querySelector(".searchInput");
+    if (inp) {
+      targetInput = inp;
+      break;
+    }
+  }
+
+  if (!targetInput) return;
+
+  // 🟢 اكتب الحرف
+  targetInput.focus();
+  targetInput.value += e.key;
+  filterProducts(targetInput);
+
+  e.preventDefault();
+  e.stopPropagation(); // 🔥 مهم
+}, true); // 🔥 capture phase
 
 document.addEventListener("click", (e) => {
 
@@ -2224,6 +2256,7 @@ document.addEventListener("keydown", (e) => {
 
 </script>
 
+
 <!-- 🟢 Toast تجميد الفاتورة -->
 <div id="freezeToast" style="
   position:fixed;
@@ -2291,6 +2324,7 @@ document.addEventListener("keydown", (e) => {
 
   </div>
 </div>
+
 
 </body>
 </html> 
