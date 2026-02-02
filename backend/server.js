@@ -84,6 +84,8 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/create-order", async (req, res) => {
   try {
     const { token, ...payload } = req.body;
+    payload.promo_code = "الوسيط";   // أو ALWASEET حسب اسم البروموكود الرسمي
+
     console.log("📦 Create order request received:", payload);
 
     const formData = new FormData();
@@ -230,7 +232,7 @@ const cleanStatus = normalizeArabicStatus(item.status);
 
   // إذا حالة غير موجودة بالمابنغ → تجاهل
   if (!cleanStatus || !waseetStatusMap[cleanStatus]) {
-    console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`);
+    console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`); 
     continue;
   }
 
