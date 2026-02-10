@@ -110,53 +110,24 @@ html, body {
 
 </div>
 
-<script type="module">
-  import { 
-  getFirestore, 
-  collection, 
-  getDocs 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDqudXSSUtolKjyN574DtiS592BKDxrrAo",
-  authDomain: "al-murad-cashier.firebaseapp.com",
-  projectId: "al-murad-cashier"
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
 };
 
+
+
+
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app); 
-onAuthStateChanged(auth, async user => {
-  if (!user) {
-    location.href = "index.html";
-    return;
-  }
+const rtdb = getDatabase(app);
 
-  const snap = await getDocs(collection(db, "users"));
-  let currentUser = null;
-
-  snap.forEach(d => {
-    if (d.id === user.uid) currentUser = d.data();
-  });
-
-  const roles = currentUser.roles || {};
-
-// دعم الأدمن القديم والجديد
-const isAdmin =
-  currentUser.role === "admin" ||
-  roles.admin === true;
-
-// إذا مو أدمن ولا محاسب → ممنوع
-if (!isAdmin && !roles.accountant) {
-  alert("❌ لا تملك صلاحية عرض الأرباح");
-  location.href = "dashboard.html";
-}
-
-});
 
 
 // ================= 💰 حساب الأرباح =================
@@ -164,32 +135,36 @@ if (!isAdmin && !roles.accountant) {
 const table = document.getElementById("table");
 const netProfitEl = document.getElementById("netProfit");
 let invoices = [];
-let products = [];
+let warehouse = {};
 
 async function loadData(){
-  // تحميل الفواتير
-  const invSnap = await getDocs(collection(db, "invoices"));
+
+  // ✅ تحميل فواتير الكاشير من Realtime DB
+  const snap = await get(ref(rtdb, "posInvoices"));
   invoices = [];
-  invSnap.forEach(d => {
-    invoices.push(d.data());
-  });
 
-  // تحميل المنتجات
-  const prodSnap = await getDocs(collection(db, "products"));
-  products = [];
-  prodSnap.forEach(d => {
-    products.push(d.data());
-  });
+  if (snap.exists()) {
+    Object.values(snap.val()).forEach(inv => {
+      invoices.push(inv);
+    });
+  }
+
+// ✅ تحميل المخزن (سعر الشراء) من Realtime DB
+const whSnap = await get(ref(rtdb, "warehouse"));
+warehouse = whSnap.exists() ? whSnap.val() : {};
+
+}
+function getBuyPrice(productName){
+  const p = warehouse[productName];
+  return p && p.buyPrice ? Number(p.buyPrice) : 0;
 }
 
-function getBuyPrice(name){
-  const p = products.find(x => x.name.trim() === name.trim());
-  return p ? Number(p.buy) : 0;
-}
+
+
 
 async function calcProfit(){
     await loadData();
-alert("Invoices: " + invoices.length + " | Products: " + products.length);
+
 
   const from = document.getElementById("from").value;
   const to   = document.getElementById("to").value;
@@ -209,22 +184,51 @@ alert("Invoices: " + invoices.length + " | Products: " + products.length);
   let found = false;
 
   invoices.forEach(inv=>{
-    if(from && inv.date < from) return;
-    if(to && inv.date > to) return;
+if (!inv.createdAt) return;
+
+let invDate;
+
+// 🟢 إذا createdAt رقم
+if (typeof inv.createdAt === "number") {
+  invDate = new Date(inv.createdAt).toLocaleDateString("en-CA");
+}
+
+// 🟢 إذا createdAt جاي من serverTimestamp
+else if (inv.createdAt.seconds) {
+  invDate = new Date(inv.createdAt.seconds * 1000)
+    .toLocaleDateString("en-CA");
+}
+
+// 🛑 إذا نوع غير معروف
+else {
+  return;
+}
+
+if (from && invDate < from) return;
+if (to && invDate > to) return;
+
     if(!inv.items) return;
 
     inv.items.forEach(it=>{
-      const buyPrice = getBuyPrice(it.product);
+ const buyPrice = getBuyPrice(it.product);
+
       const sellTotal = Number(it.total);
-      const buyTotal  = buyPrice * Number(it.qty);
-      const profit    = sellTotal - buyTotal;
+const qty = Number(it.qty);
+
+// تجاهل المسترجع
+if (qty <= 0) return;
+
+const buyTotal  = buyPrice * qty;
+const profit    = sellTotal - buyTotal;
+
 
       netProfit += profit;
       found = true;
 
       const r = table.insertRow();
       r.innerHTML = `
-        <td>${inv.date}</td>
+     <td>${invDate}</td>
+
         <td>${it.product}</td>
         <td>${it.qty}</td>
         <td>${sellTotal.toLocaleString("en-US")} د.ع</td>

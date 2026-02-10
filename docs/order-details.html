@@ -598,6 +598,10 @@ from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 const db = getDatabase(app);
 const orderId = localStorage.getItem("selectedOrder");
 const loggedUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+const isAdmin =
+  loggedUser?.role === "admin" ||
+  loggedUser?.isAdmin === true ||
+  loggedUser?.username === "admin";
 
 if (!orderId) {
   // نرجع إلى صفحة الكروت بدون إضافة للهستوري
@@ -1166,12 +1170,29 @@ if (data.productName) {
   loadVariants(data.productName);  // ⬅️ عرض المتغيرات مباشرة عند تحميل الطلب
 }
 
-// الحالة (إظهار فقط الحالات المطلوبة)
-function setupStatusDropdown(currentValue) {
-  // ✔️ الحالات الأساسية
-  let statusOptions = ["مثبت", "قيد المعالجة", "بانتظار البضاعة", "رفض"];
+function setupStatusDropdown(currentValue, isAdminUser) {
 
-  // ✔️ إذا الحالة الحالية مثل "قيد التوصيل" وغير موجودة بالقائمة — نضيفها
+let statusOptions = isAdminUser
+  ? [
+      "مثبت",
+      "قيد المعالجة",
+      "قيد التجهيز",
+      "بانتظار البضاعة",
+      "قيد التوصيل",
+      "تم التسليم",
+      "راجع",
+      "تم استلام الراجع",
+      "رفض"
+    ]
+  : [
+      "مثبت",
+      "قيد المعالجة",
+      "بانتظار البضاعة",
+      "رفض"
+    ];
+
+
+  // حتى لو الحالة القديمة مو بالقائمة (طلب قديم)
   if (currentValue && !statusOptions.includes(currentValue)) {
     statusOptions.push(currentValue);
   }
@@ -1179,12 +1200,12 @@ function setupStatusDropdown(currentValue) {
   const statusDiv = document.getElementById("status");
   statusDiv.innerHTML = "";
 
-  // 🔹 إنشاء dropdown
-  const dropdown = createDropdown(statusOptions, currentValue, async (val) => {
-selectedStatus = val; // نخزن الحالة مؤقتاً بدون حفظ
+  const dropdown = createDropdown(statusOptions, currentValue, (val) => {
+    selectedStatus = val;
   });
 
   statusDiv.appendChild(dropdown);
+
 
   // 🔥 إضافة دعم الكتابة اليدوية (مرة واحدة فقط)
   const statusInput = statusDiv.querySelector("input");
@@ -1247,7 +1268,7 @@ await update(ref(db, `orders/${orderId}/statusHistory/${val}`), {
 
 
 
-setupStatusDropdown(data.status || "");
+setupStatusDropdown(data.status || "", isAdmin);
 
 
    // 🛑 منع التكرار — تنظيف المصفوفة قبل التحميل
