@@ -639,7 +639,29 @@ gap:8px;
       الباقي (دين): <strong id="rest">0 د.ع</strong>
     </div>
 
-    <div id="creditBox">...</div>
+    <div id="creditBox">
+
+  <div class="creditGrid">
+
+    <div>
+      <label>اسم الزبون</label>
+      <input type="text" id="debtorName">
+    </div>
+
+    <div>
+      <label>رقم الهاتف</label>
+      <input type="text" id="debtorPhone">
+    </div>
+
+    <div style="grid-column:1/-1">
+      <label>ملاحظات</label>
+      <input type="text" id="debtorNote">
+    </div>
+
+  </div>
+
+</div>
+
   </div>
 
   <button class="save" onclick="saveInvoice()">💾 حفظ الفاتورة</button>
@@ -956,6 +978,74 @@ calc();
 
   box.style.display="block";
 }
+function enableKeyboardNavigation(input) {
+  const dropdown = input.nextElementSibling;
+  let currentIndex = -1;
+
+input.addEventListener("keydown", (e) => {
+
+  const items = dropdown.querySelectorAll("div");
+
+  // 🔥 Enter يغلق المنسدلة دائماً
+  if (e.key === "Enter") {
+    dropdown.style.display = "none";
+  }
+
+  if (!items.length) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    currentIndex++;
+    if (currentIndex >= items.length) currentIndex = 0;
+    highlightItem(items, currentIndex);
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    currentIndex--;
+    if (currentIndex < 0) currentIndex = items.length - 1;
+    highlightItem(items, currentIndex);
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    if (currentIndex >= 0) {
+      items[currentIndex].click();
+      currentIndex = -1;
+    } else {
+      document.querySelectorAll(".dropdown").forEach(d=>{
+        d.style.display = "none";
+      });
+
+      addRow();
+
+      setTimeout(() => {
+        const lastRow = table.rows[table.rows.length - 1];
+        const newInput = lastRow.querySelector(".searchInput");
+        if (newInput) newInput.focus();
+      }, 0);
+    }
+  }
+
+});
+
+
+function highlightItem(items, index) {
+  items.forEach((item, i) => {
+    item.style.background = i === index ? "#043B64" : "";
+    item.style.color = i === index ? "white" : "";
+  });
+
+  // 🔥 هذا السطر المهم
+  items[index].scrollIntoView({
+    block: "nearest",
+    behavior: "smooth"
+  });
+}
+
+  }
+
 
 // أدوات الدينار
 const f=n=>Number(n||0).toLocaleString("en-US")+" د.ع";
@@ -1365,6 +1455,10 @@ renderCategoryProducts();
 addRow();
 const grandEl=document.getElementById("grand");
 const paidEl=document.getElementById("paid");
+const debtorName = document.getElementById("debtorName");
+const debtorPhone = document.getElementById("debtorPhone");
+const debtorNote = document.getElementById("debtorNote");
+
 const restEl=document.getElementById("rest");
 const restLine=document.getElementById("restLine");
 
@@ -1434,6 +1528,8 @@ r.innerHTML = `
 </td>
 `;
 
+const searchInput = r.querySelector(".searchInput");
+enableKeyboardNavigation(searchInput);
 
 }
 
@@ -1683,17 +1779,17 @@ items.push({
 
 try {
 await push(ref(rtdb, "posInvoices"), {
-  
   invoiceNo: invoice,
   items,
   total: p(grandEl.textContent),
   paid: Number(paidEl.value || 0),
-type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
-
-cashierId: localStorage.getItem("cashierUsername") || "unknown",
-
-createdAt: serverTimestamp()
+  rest: isCredit ? (p(grandEl.textContent) - Number(paidEl.value || 0)) : 0,
+  type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
+  debtor: isCredit ? debtor : null,
+  cashierId: localStorage.getItem("cashierUsername") || "unknown",
+  createdAt: serverTimestamp()
 });
+
 
 // 🧾 تخزين بيانات الطباعة (مصدر واحد)
 window._printData = {
@@ -2038,24 +2134,24 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   e.stopPropagation(); // 🔥 مهم
 }, true); // 🔥 capture phase
-
 document.addEventListener("click", (e) => {
 
-  // 🛑 إذا الكلك داخل إضافة المنتج → لا تغيّر الفوكس
+  // 🛑 إذا داخل صندوق إضافة منتج
   if (e.target.closest("#addProductDropdownBox")) return;
 
-  // 🛑 إذا يكتب داخل بحث الجدول
-  const active = document.activeElement;
+  // 🛑 إذا داخل creditBox (خانات الدين)
+  if (e.target.closest("#creditBox")) return;
+
+  // 🛑 إذا داخل أي input أو select
   if (
-    active &&
-    (
-      active.classList.contains("searchInput") ||
-      active.id === "addProductInput"
-    )
+    e.target.tagName === "INPUT" ||
+    e.target.tagName === "TEXTAREA" ||
+    e.target.tagName === "SELECT"
   ) return;
 
   document.getElementById("barcodeInput")?.focus();
 });
+
 function deleteParkedInvoice(key){
   if(!confirm("هل تريد حذف هذه الفاتورة المعلّقة؟")) return;
 
@@ -2230,8 +2326,17 @@ let lastEnterTime = 0;
 document.addEventListener("keydown", (e) => {
 
   // لا تتدخل إذا داخل input
-  const el = document.activeElement;
-  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+const el = document.activeElement;
+
+if (
+  el &&
+  (
+    el.classList.contains("searchInput") ||
+    el.classList.contains("qtyInput") ||
+    el.id === "addProductInput"
+  )
+) return;
+
 
   if (e.key !== "Enter") return;
 

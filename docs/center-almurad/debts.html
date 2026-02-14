@@ -107,47 +107,65 @@ th{
 /* ========= Firebase ========= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where,
-  updateDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  getDatabase,
+  ref,
+  onValue,
+  update
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+
+
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDqudXSSUtolKjyN574DtiS592BKDxrrAo",
-  authDomain: "al-murad-cashier.firebaseapp.com",
-  projectId: "al-murad-cashier"
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.firebasestorage.app",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:c5520c00c11e336148ad1c"
 };
 
+
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+const rtdb = getDatabase(app);
+
 
 /* ========= أدوات ========= */
 const f = n => Number(n || 0).toLocaleString("en-US") + " د.ع";
 const list = document.getElementById("list");
 let invoices = [];
 
-/* ========= تحميل الديون ========= */
-async function loadDebts() {
-  invoices = [];
-  list.innerHTML = "";
+function loadDebts() {
 
-  const q = query(
-    collection(db, "invoices"),
-    where("payType", "==", "دين"),
-    where("rest", ">", 0)
-  );
+  const invoicesRef = ref(rtdb, "posInvoices");
 
-  const snap = await getDocs(q);
-  snap.forEach(d => invoices.push({ id: d.id, ...d.data() }));
+  onValue(invoicesRef, (snapshot) => {
 
-  renderDebts();
+    invoices = [];
+    list.innerHTML = "";
+
+    if (!snapshot.exists()) {
+      renderDebts();
+      return;
+    }
+
+    const data = snapshot.val();
+
+    Object.entries(data).forEach(([id, inv]) => {
+
+      if (inv.type === "credit" && inv.rest > 0) {
+        invoices.push({ id, ...inv });
+      }
+
+    });
+
+    renderDebts();
+  });
+
 }
+
+
 
 /* ========= عرض الديون ========= */
 function renderDebts() {
@@ -247,24 +265,18 @@ window.pay = async function(phone) {
     const paidNow = Math.min(amount, inv.rest);
     amount -= paidNow;
 
-    await updateDoc(doc(db, "invoices", inv.id), {
+await update(ref(rtdb, "posInvoices/" + inv.id), {
+
       paid: (inv.paid || 0) + paidNow,
       rest: inv.rest - paidNow
     });
   }
 
   alert("تم التسديد ✅");
-  loadDebts();
 };
 
-/* ========= تشغيل ========= */
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    location.href = "index.html";
-    return;
-  }
-  loadDebts();
-});
+loadDebts();
+
 </script>
 
 </body>
