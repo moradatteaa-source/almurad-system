@@ -85,12 +85,27 @@ html, body {
 <div class="container">
 
 <div class="box">
+  <label>👤 الكاشير:</label>
+<select id="cashierFilter">
+  <option value="all">كل الكاشيرات</option>
+</select>
+<br>
+
   <label>من تاريخ:</label>
   <input type="date" id="from">
   <label>إلى تاريخ:</label>
   <input type="date" id="to">
   <br>
   <button onclick="calcProfit()">📊 عرض الأرباح</button>
+  <hr>
+
+<button onclick="quickFilter('today')">اليوم</button>
+<button onclick="quickFilter('yesterday')">أمس</button>
+<button onclick="quickFilter('week')">هذا الأسبوع</button>
+<button onclick="quickFilter('month')">هذا الشهر</button>
+<button onclick="quickFilter('year')">هذه السنة</button>
+<button onclick="quickFilter('all')" style="background:#ccc;color:#333">الكل</button>
+
 </div>
 
 <div class="box">
@@ -136,6 +151,8 @@ const table = document.getElementById("table");
 const netProfitEl = document.getElementById("netProfit");
 let invoices = [];
 let warehouse = {};
+const cashierFilter = document.getElementById("cashierFilter");
+loadData().then(() => calcProfit());
 
 async function loadData(){
 
@@ -148,6 +165,13 @@ async function loadData(){
       invoices.push(inv);
     });
   }
+// تعبئة قائمة الكاشير
+cashierFilter.innerHTML = `<option value="all">كل الكاشيرات</option>`;
+
+[...new Set(invoices.map(i => i.cashierId || "غير معروف"))]
+.forEach(id=>{
+  cashierFilter.innerHTML += `<option value="${id}">${id}</option>`;
+});
 
 // ✅ تحميل المخزن (سعر الشراء) من Realtime DB
 const whSnap = await get(ref(rtdb, "warehouse"));
@@ -163,7 +187,7 @@ function getBuyPrice(productName){
 
 
 async function calcProfit(){
-    await loadData();
+  
 
 
   const from = document.getElementById("from").value;
@@ -184,6 +208,11 @@ async function calcProfit(){
   let found = false;
 
   invoices.forEach(inv=>{
+    // فلترة حسب الكاشير
+if(cashierFilter.value !== "all"){
+  if(inv.cashierId !== cashierFilter.value) return;
+}
+
 if (!inv.createdAt) return;
 
 let invDate;
@@ -248,6 +277,60 @@ const profit    = sellTotal - buyTotal;
   netProfitEl.textContent =
     "صافي الربح: " + netProfit.toLocaleString("en-US") + " د.ع";
 }
+function quickFilter(type){
+
+  const fromInput = document.getElementById("from");
+  const toInput   = document.getElementById("to");
+fromInput.addEventListener("change", calcProfit);
+toInput.addEventListener("change", calcProfit);
+
+  const todayDate = new Date();
+  let start, end;
+
+  if(type === "today"){
+    start = end = todayDate;
+  }
+
+  if(type === "yesterday"){
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    start = end = y;
+  }
+
+  if(type === "week"){
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    start = d;
+    end   = todayDate;
+  }
+
+  if(type === "month"){
+    start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+    end   = todayDate;
+  }
+
+  if(type === "year"){
+    start = new Date(todayDate.getFullYear(), 0, 1);
+    end   = todayDate;
+  }
+
+  if(type === "all"){
+    fromInput.value = "";
+    toInput.value   = "";
+    calcProfit();
+    return;
+  }
+
+  const fmt = d => d.toLocaleDateString("en-CA");
+
+  fromInput.value = fmt(start);
+  toInput.value   = fmt(end);
+
+  calcProfit();
+}
+
+window.quickFilter = quickFilter;
+
 window.calcProfit = calcProfit;
 
 </script>

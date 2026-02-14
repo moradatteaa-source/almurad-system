@@ -159,6 +159,11 @@ const rtdb = getDatabase(app);
 const table = document.getElementById("table");
 let invoices = []; // ← تعريف الفواتير (راح تجي من Firebase)
 let cashiersMap = {};
+let currentCashier = "all";
+let currentFrom = null;
+let currentTo = null;
+const fromDate = document.getElementById("fromDate");
+const toDate   = document.getElementById("toDate");
 
 
 // ===== تنسيق إنكليزي =====
@@ -210,6 +215,25 @@ function toggleDetails(row, inv){
 
   detailsRow.innerHTML = `<td colspan="6">${html}</td>`;
 }
+function applyFilters(){
+
+  let filtered = invoices;
+
+  if(currentCashier !== "all"){
+    filtered = filtered.filter(inv => 
+      inv.cashierId === currentCashier
+    );
+  }
+
+  if(currentFrom && currentTo){
+    filtered = filtered.filter(inv =>
+      inv.date >= currentFrom &&
+      inv.date <= currentTo
+    );
+  }
+
+  render(filtered);
+}
 
 // ===== عرض الجدول =====
 function render(data){
@@ -217,7 +241,8 @@ function render(data){
 
   if(!data.length){
     table.insertRow().innerHTML =
-      `<td colspan="5">لا توجد فواتير</td>`;
+      `<td colspan="6">لا توجد فواتير</td>
+`;
     return;
   }
   
@@ -248,12 +273,15 @@ row.onclick = () => toggleDetails(row, inv);
 
   });
 
-  table.insertRow().innerHTML = `
-    <td colspan="2"><strong>المجموع</strong></td>
-    <td class="total">${fmt(total)} د.ع</td>
-    <td class="total">${fmt(paid)} د.ع</td>
-    <td class="total">${fmt(debt)} د.ع</td>
-  `;
+table.insertRow().innerHTML = `
+  <td></td>
+  <td></td>
+  <td><strong>المجموع</strong></td>
+  <td class="total">${fmt(total)} د.ع</td>
+  <td class="total">${fmt(paid)} د.ع</td>
+  <td class="total">${fmt(debt)} د.ع</td>
+`;
+
 }
 
 // ===== فلترة من → إلى =====
@@ -262,53 +290,55 @@ function filterByRange(){
     alert("اختَر تاريخ من وإلى");
     return;
   }
-  render(invoices.filter(i =>
-    i.date >= fromDate.value && i.date <= toDate.value
-  ));
+
+  currentFrom = fromDate.value;
+  currentTo   = toDate.value;
+
+  applyFilters();
 }
 
 // ===== فلاتر سريعة =====
 function quickFilter(type){
+
   const n = new Date();
   let s,e;
 
   if(type==="today"){
     s = e = today();
   }
+
   if(type==="week"){
-    const d = new Date(n.setDate(n.getDate()-n.getDay()));
+    const d = new Date();
+    d.setDate(d.getDate()-d.getDay());
     s = d.toLocaleDateString("en-CA");
     e = today();
   }
+
   if(type==="month"){
     s = new Date(n.getFullYear(), n.getMonth(), 1)
           .toLocaleDateString("en-CA");
     e = today();
   }
+
   if(type==="year"){
     s = new Date(n.getFullYear(), 0, 1)
           .toLocaleDateString("en-CA");
     e = today();
   }
+
   if(type==="all"){
-    render(invoices);
+    currentFrom = null;
+    currentTo = null;
+    applyFilters();
     return;
   }
 
-  render(invoices.filter(i => i.date >= s && i.date <= e));
+  currentFrom = s;
+  currentTo   = e;
+
+  applyFilters();
 }
-const cashierSelect = document.getElementById("cashierSelect");
 
-cashierSelect.addEventListener("change", () => {
-  if (cashierSelect.value === "all") {
-    render(invoices);
-    return;
-  }
-
-  render(
-    invoices.filter(inv => inv.cashierId === cashierSelect.value)
-  );
-});
 
 function loadInvoices() {
   onValue(ref(rtdb, "posInvoices"), (snap) => {
@@ -350,13 +380,20 @@ cashierSelect.innerHTML = `<option value="all">كل الكاشيرات</option>`
   cashierSelect.innerHTML += `<option value="${id}">${id}</option>`;
 });
 
-    render(invoices);
+  applyFilters();
+
   });
 }
 
 // ربط الدوال بالـ HTML
 window.quickFilter = quickFilter;
 window.filterByRange = filterByRange;
+const cashierSelect = document.getElementById("cashierSelect");
+
+cashierSelect.addEventListener("change", () => {
+  currentCashier = cashierSelect.value;
+  applyFilters();
+});
 
 
 loadInvoices();
