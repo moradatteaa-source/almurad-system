@@ -369,7 +369,7 @@ p, div, span, button {
   <div onclick="openCashier()">🧾 الكاشير</div>
 <div onclick="openCenterAccounts()">💰 الحسابات</div>
 
-  <div onclick="openFinance('balances')">📄 الديون</div>
+<div onclick="openCenterDebts()">📄 الديون</div>
 <div onclick="openCenterProfits()">📈 الأرباح</div>
 </div>
 
@@ -954,6 +954,11 @@ window.openArchive = openArchive;
   window.location.href = "center-almurad/accounts.html";
 }
 window.openCenterAccounts = openCenterAccounts;
+function openCenterDebts() {
+  window.location.href = "center-almurad/debts.html";
+}
+window.openCenterDebts = openCenterDebts;
+
 function openCenterProfits() {
   window.location.href = "center-almurad/profits.html";
 }
