@@ -213,6 +213,11 @@ function renderDebts() {
 <div style="font-size:12px;color:#555">
 👤 الكاشير: ${inv.cashierId || "غير معروف"}
 </div>
+<div style="font-size:12px;color:#777;margin-top:4px">
+📅 تاريخ الدين: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString("ar-EG") : "-"}
+</div>
+
+
 
 
           <table>
@@ -224,9 +229,36 @@ function renderDebts() {
             </tr>
             ${rows}
           </table>
-          <div style="color:#c0392b;font-weight:bold">
-            المتبقي: ${f(inv.rest)}
-          </div>
+        <div style="margin-top:6px">
+  <div style="color:#c0392b;font-weight:bold">
+    المتبقي: ${f(inv.rest)}
+  </div>
+${inv.payments && inv.payments.length ? `
+<div style="margin-top:8px;font-size:12px;background:#f8f8f8;padding:6px;border-radius:6px">
+  <strong>📜 سجل التسديد:</strong>
+  ${inv.payments.map(p => `
+    <div style="margin-top:4px;color:#555">
+      💵 ${f(p.amount)} —
+      🕒 ${new Date(p.date).toLocaleString("ar-EG")}
+    </div>
+  `).join("")}
+</div>
+` : ""}
+
+  ${inv.debtor?.note ? `
+  <div style="
+    margin-top:6px;
+    padding:6px;
+    background:#fff4f4;
+    border-right:4px solid #c0392b;
+    font-size:12px;
+    color:#333;
+  ">
+    📝 ${inv.debtor.note}
+  </div>
+  ` : ""}
+</div>
+
         </div>`;
     });
 
@@ -245,6 +277,8 @@ function renderDebts() {
         <input type="number" placeholder="مبلغ التسديد" id="pay-${cust.phone}">
         <button onclick="pay('${cust.phone}')">تسديد</button>
       </div>
+
+
     `;
 
     list.appendChild(div);
@@ -267,11 +301,19 @@ window.pay = async function(phone) {
     const paidNow = Math.min(amount, inv.rest);
     amount -= paidNow;
 
-await update(ref(rtdb, "posInvoices/" + inv.id), {
+const paymentHistory = inv.payments || [];
 
-      paid: (inv.paid || 0) + paidNow,
-      rest: inv.rest - paidNow
-    });
+paymentHistory.push({
+  amount: paidNow,
+  date: Date.now()
+});
+
+await update(ref(rtdb, "posInvoices/" + inv.id), {
+  paid: (inv.paid || 0) + paidNow,
+  rest: inv.rest - paidNow,
+  payments: paymentHistory
+});
+
   }
 
   alert("تم التسديد ✅");
