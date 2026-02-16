@@ -512,11 +512,10 @@ if (variants.length > 0) {
     stock[key] = v.qty;
   });
 } else {
-  // إذا المنتج بدون متغيرات
-  stock["إجمالي الكمية"] = qty;
-
-
+  // منتج بدون متغيرات
+  stock = qty; // رقم مباشر
 }
+
 for (const key in stock) {
   if (barcodes[key]) continue;
 
@@ -553,7 +552,13 @@ variants.forEach(v => {
 
   // 🧾 حفظ المنتج في Firebase
   const productRef = ref(db, "warehouse/" + name);
-  const totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
+let totalQty = 0;
+
+if (typeof stock === "number") {
+  totalQty = stock;
+} else if (typeof stock === "object") {
+  totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
+}
 const safeName = safeKey(name);
 
 
@@ -624,28 +629,45 @@ const productsArray = Object.entries(data).sort((a, b) => {
 for (const [safeName, p] of productsArray) {
 
   const productName = p.name || safeName;
-  const total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+let total = 0;
+
+if (typeof p.stock === "number") {
+  total = p.stock; // منتج بدون متغيرات
+} else if (typeof p.stock === "object") {
+  total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+}
   const invoiceValue = (p.prices?.pos || 0) * total;
 
-  let variantsList = "";
-  if (p.stock && Object.keys(p.stock).length > 0) {
-    variantsList = Object.entries(p.stock)
-      .map(([key, value]) => {
-        const parts = key.split("|").map(s => s.trim());
-        const qtyColor = value <= 5 ? "red" : "#FF6B2D";
-        const text = parts.filter(p => p).join(" | ");
+let variantsList = "";
 
-        return `
-          <div style="margin:4px 0;text-align:center;">
-            <span style="color:#043B64;font-weight:600;">${text}</span>
-            <span style="color:${qtyColor};font-weight:600;"> → ${value} قطعة</span>
-          </div>
-        `;
-      })
-      .join("");
-  } else {
-    variantsList = "—";
-  }
+if (typeof p.stock === "object") {
+
+  variantsList = Object.entries(p.stock)
+    .map(([key, value]) => {
+      const parts = key.split("|").map(s => s.trim());
+      const qtyColor = value <= 5 ? "red" : "#FF6B2D";
+      const text = parts.filter(x => x).join(" | ");
+
+      return `
+        <div style="margin:4px 0;text-align:center;">
+          <span style="color:#043B64;font-weight:600;">${text}</span>
+          <span style="color:${qtyColor};font-weight:600;"> → ${value} قطعة</span>
+        </div>
+      `;
+    })
+    .join("");
+
+} else if (typeof p.stock === "number") {
+
+  variantsList = `
+    <div style="margin:4px 0;text-align:center;">
+      <span style="color:#FF6B2D;font-weight:600;">
+        إجمالي الكمية → ${p.stock} قطعة
+      </span>
+    </div>
+  `;
+}
+
 
   const tr = document.createElement("tr");
   tr.innerHTML = `
@@ -687,7 +709,13 @@ for (const [safeName, p] of productsArray) {
     let totalSellValue = 0;
 
     products.forEach(([name, p]) => {
-      const totalQty = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+let totalQty = 0;
+
+if (typeof p.stock === "number") {
+  totalQty = p.stock;
+} else if (typeof p.stock === "object") {
+  totalQty = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+}
       totalQtyAll += totalQty;
       totalBuyValue += totalQty * (p.buyPrice || 0);
 totalSellValue += totalQty * (p.prices?.pos || 0);
@@ -744,7 +772,7 @@ document.getElementById("sellPriceOnline").value = data.prices?.online || "";
     document.getElementById("productQty").value = data.totalQty || "";
     variants = [];
 
-    if (data.stock) {
+if (typeof data.stock === "object") {
   for (const [key, qty] of Object.entries(data.stock)) {
     const parts = key.split("|").map(s => s.trim());
     variants.push({
@@ -755,12 +783,19 @@ document.getElementById("sellPriceOnline").value = data.prices?.online || "";
       qty
     });
   }
+
   renderVariantTable();
 
-  // إظهار أو إخفاء أقسام الكمية والمتغيرات حسب الحالة
-  document.getElementById("quantitySection").style.display = variants.length ? "none" : "block";
-  document.getElementById("variantsSection").style.display = variants.length ? "block" : "none";
+  document.getElementById("quantitySection").style.display = "none";
+  document.getElementById("variantsSection").style.display = "block";
+
+} else if (typeof data.stock === "number") {
+
+  document.getElementById("productQty").value = data.stock;
+  document.getElementById("quantitySection").style.display = "block";
+  document.getElementById("variantsSection").style.display = "none";
 }
+
 
   };
 

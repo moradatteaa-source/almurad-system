@@ -466,8 +466,12 @@ table {
           <label>سعر الشراء:</label>
           <input type="number" id="simpleBuyPrice" placeholder="سعر الشراء">
 
-          <label>سعر البيع:</label>
-          <input type="number" id="simpleSellPrice" placeholder="سعر البيع">
+ <label>سعر البيع حضوري:</label>
+<input type="number" id="simpleSellPricePos" placeholder="سعر البيع حضوري">
+
+<label>سعر البيع أونلاين:</label>
+<input type="number" id="simpleSellPriceOnline" placeholder="سعر البيع أونلاين">
+
 
           <label>الكمية:</label>
           <input type="number" id="simpleQty" placeholder="الكمية">
@@ -758,7 +762,8 @@ window.filterProductOptions = function () {
     const variantContainer = document.getElementById("variantContainer");
     variantContainer.innerHTML = "";
     const prod = warehouseProducts[selectedName];
-    if (prod && prod.stock) {
+ if (prod && prod.hasVariants && typeof prod.stock === "object")
+ {
       Object.keys(prod.stock).forEach((v) => {
         variantContainer.innerHTML += `
           <div class="variant-item">
@@ -947,7 +952,9 @@ window.savePurchase = async function () {
   } else if (type === "new") {
   const name = document.getElementById("simpleProductName")?.value.trim() || "";
   const buyPrice = parseFloat(document.getElementById("simpleBuyPrice")?.value) || 0;
-  const sellPrice = parseFloat(document.getElementById("simpleSellPrice")?.value) || 0;
+const sellPricePos = parseFloat(document.getElementById("simpleSellPricePos")?.value) || 0;
+const sellPriceOnline = parseFloat(document.getElementById("simpleSellPriceOnline")?.value) || 0;
+
   const qty = parseFloat(document.getElementById("simpleQty")?.value) || 0;
 
   let stock = {};
@@ -956,20 +963,27 @@ window.savePurchase = async function () {
   // 🟢 المنتج بدون متغيرات
   if (newVariantContainer.querySelectorAll(".variant-item").length === 0) {
     if (name && qty > 0 && buyPrice > 0) {
-      stock["default"] = qty;
       const subtotal = qty * buyPrice;
       items.push({ product: name, variant: "-", quantity: qty, price: buyPrice, subtotal });
       totalQty += qty;
       totalAmount += subtotal;
       itemsAdded = true;
+await set(ref(db, "warehouse/" + name), {
+  name: name,
+  buyPrice: buyPrice,
+  prices: {
+    pos: sellPricePos,
+    online: sellPriceOnline
+  },
+  totalQty: qty,
+  stock: qty,          // ✅ رقم مباشر
+  hasVariants: false,  // ✅ بدون متغيرات
+  lastUpdate: new Date().toISOString(),
+});
 
-      await set(ref(db, "warehouse/" + name), {
-        buyPrice,
-        sellPrice,
-        totalQty: qty,
-        stock,
-        lastUpdate: new Date().toISOString(),
-      });
+
+
+
     }
   } 
   // 🟢 المنتج فيه متغيرات
@@ -996,13 +1010,20 @@ window.savePurchase = async function () {
     }
 
     if (itemsAdded) {
-      await set(ref(db, "warehouse/" + name), {
-        buyPrice,
-        sellPrice,
-        totalQty,
-        stock,
-        lastUpdate: new Date().toISOString(),
-      });
+await set(ref(db, "warehouse/" + name), {
+  name: name,
+  buyPrice: buyPrice,
+  prices: {
+    pos: sellPricePos,
+    online: sellPriceOnline
+  },
+  totalQty,
+  stock,
+  hasVariants: true,
+  lastUpdate: new Date().toISOString(),
+});
+
+
     }
   }
 }
@@ -1195,7 +1216,8 @@ function updateStats(list) {
   document.getElementById("totalInvoices").textContent = list.length;
   document.getElementById("totalQty").textContent = list.reduce((a, b) => a + b.totalQty, 0);
   document.getElementById("totalAmount").textContent = list
-    .reduce((a, b) => a + b.totalAmount, 0)
+  .reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount), 0)
+
     .toLocaleString("en-US");
   document.getElementById("lastPurchase").textContent = list.length
     ? new Date(list.at(-1).date).toLocaleDateString("en-GB")

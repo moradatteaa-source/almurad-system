@@ -1382,18 +1382,52 @@ if (row.dataset.loadedProduct === productName) {
   const snap = await get(ref(rtdb, "warehouse/" + productName));
   if(!snap.exists()) return;
 
-const stock = snap.val().stock || {};
-const totalStock = Object.values(stock).reduce(
-  
-  (a, b) => a + Number(b || 0),
-  
-  0
-);
-row._totalStock = totalStock; // ⭐ هذا السطر كان ناقص
-
-row._stock = { ...stock }; // خزّن المخزن
+const data = snap.val();
 const stockSpan = row.querySelector(".stockQty");
-stockSpan.textContent = totalStock; // ✅ اكتب مجموع المخزن فور اختيار المنتج
+
+let stock = data.stock;
+
+// 🟢 إذا المنتج بدون متغيرات (رقم مباشر)
+if (typeof stock === "number") {
+
+  stockSpan.textContent = stock;
+
+  // نخلي المتغير اختيار افتراضي واحد
+  select.innerHTML = `
+    <option value="__single__">بدون متغير</option>
+  `;
+
+  row._stock = { "__single__": stock };
+  row._totalStock = stock;
+
+  return;
+}
+
+// 🔵 إذا المنتج بمتغيرات
+if (typeof stock === "object") {
+
+  const totalStock = Object.values(stock).reduce(
+    (a, b) => a + Number(b || 0),
+    0
+  );
+
+  row._stock = { ...stock };
+  row._totalStock = totalStock;
+
+  stockSpan.textContent = totalStock;
+
+  select.innerHTML = `<option value="">— اختر المتغير —</option>`;
+
+  for (const key in stock) {
+    if (stock[key] > 0) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = `${key} (${stock[key]})`;
+      select.appendChild(opt);
+    }
+  }
+}
+
 
 select.onchange = () => {
   const k = select.value;
@@ -1719,10 +1753,11 @@ const stock = { ...(data.stock || {}) };
 // 🔹 أنقص من أول متغير متوفر
 const variantKey = r.querySelector(".variantSelect").value;
 
-if(!variantKey && !isReturnMode){
+if (!variantKey && typeof data.stock === "object" && !isReturnMode) {
   alert("اختر المتغير للمنتج: " + name);
   return;
 }
+
 window.multiplyRow = multiplyRow;
 
 
