@@ -516,21 +516,19 @@ if (variants.length > 0) {
   stock = qty; // رقم مباشر
 }
 
-// 🟢 توليد الباركود حسب نوع المخزون
 if (typeof stock === "number") {
 
-  // منتج بدون متغيرات
-  const key = "__single__";
-
-  if (!barcodes[key]) {
+  if (!barcodes["main"]) {
     if (manualBarcode) {
-      barcodes[key] = manualBarcode;
+      barcodes["main"] = manualBarcode;
     } else {
-      barcodes[key] = await generateBarcode();
+      barcodes["main"] = await generateBarcode();
     }
   }
 
-} else if (typeof stock === "object") {
+}
+
+else if (typeof stock === "object") {
 
   for (const key in stock) {
     if (barcodes[key]) continue;
@@ -1001,9 +999,10 @@ const snap = await get(ref(db, "warehouse/" + safeName));  if (!snap.exists()) {
 for (const [variant, code] of Object.entries(barcodes)) {
 
 const labelText =
-  variant === "__single__"
+  (variant === "main" || Object.keys(barcodes).length === 1)
     ? productName
     : `${productName} – ${variant}`;
+
 
 
 const scale = getLabelScale(labelText);
