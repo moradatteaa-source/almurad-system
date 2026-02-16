@@ -516,16 +516,33 @@ if (variants.length > 0) {
   stock = qty; // رقم مباشر
 }
 
-for (const key in stock) {
-  if (barcodes[key]) continue;
+// 🟢 توليد الباركود حسب نوع المخزون
+if (typeof stock === "number") {
 
-  if (manualBarcode) {
-    barcodes[key] = manualBarcode; // ✅ باركود الشركة
-  } else {
-    barcodes[key] = await generateBarcode(); // 🔁 توليد داخلي
+  // منتج بدون متغيرات
+  const key = "__single__";
+
+  if (!barcodes[key]) {
+    if (manualBarcode) {
+      barcodes[key] = manualBarcode;
+    } else {
+      barcodes[key] = await generateBarcode();
+    }
   }
-}
 
+} else if (typeof stock === "object") {
+
+  for (const key in stock) {
+    if (barcodes[key]) continue;
+
+    if (manualBarcode) {
+      barcodes[key] = manualBarcode;
+    } else {
+      barcodes[key] = await generateBarcode();
+    }
+  }
+
+}
 
 // ✅ إذا عدّلنا اسم المنتج، نحذف القديم
 if (editingProduct && editingProduct !== name) {
@@ -984,9 +1001,10 @@ const snap = await get(ref(db, "warehouse/" + safeName));  if (!snap.exists()) {
 for (const [variant, code] of Object.entries(barcodes)) {
 
 const labelText =
-  variant === "إجمالي الكمية"
+  variant === "__single__"
     ? productName
     : `${productName} – ${variant}`;
+
 
 const scale = getLabelScale(labelText);
 
