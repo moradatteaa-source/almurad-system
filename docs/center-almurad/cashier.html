@@ -1747,38 +1747,63 @@ if(!isReturnMode && data.totalQty < qty){
 }
 
 
-// 🔹 نسخ المخزون
-const stock = { ...(data.stock || {}) };
+let stock;
+let newTotalQty;
 
-// 🔹 أنقص من أول متغير متوفر
-const variantKey = r.querySelector(".variantSelect").value;
+// 🟢 منتج بدون متغيرات
+if (typeof data.stock === "number") {
 
-if (!variantKey && typeof data.stock === "object" && !isReturnMode) {
-  alert("اختر المتغير للمنتج: " + name);
-  return;
+  let currentQty = Number(data.stock || 0);
+
+  if (!isReturnMode && currentQty < qty) {
+    alert("الكمية غير كافية: " + name);
+    return;
+  }
+
+  let newQty = isReturnMode
+    ? currentQty + qty
+    : currentQty - qty;
+
+  if (isNaN(newQty)) {
+    alert("خطأ في الكمية");
+    return;
+  }
+
+  stock = newQty;
+  newTotalQty = newQty;
 }
 
-window.multiplyRow = multiplyRow;
+// 🔵 منتج بمتغيرات
+else if (typeof data.stock === "object") {
 
+  stock = { ...data.stock };
 
-if(!isReturnMode && stock[variantKey] < qty){
-  alert("الكمية غير كافية لهذا المتغير");
-  return;
+  const variantKey = r.querySelector(".variantSelect").value;
+
+  if (!variantKey && !isReturnMode) {
+    alert("اختر المتغير للمنتج: " + name);
+    return;
+  }
+
+  let currentQty = Number(stock[variantKey] || 0);
+
+  if (!isReturnMode && currentQty < qty) {
+    alert("الكمية غير كافية لهذا المتغير");
+    return;
+  }
+
+  stock[variantKey] = isReturnMode
+    ? currentQty + qty
+    : currentQty - qty;
+
+  newTotalQty = Object.values(stock).reduce(
+    (a, b) => a + Number(b || 0),
+    0
+  );
 }
 
 
-if(isReturnMode){
-  stock[variantKey] += qty;
-  prod.totalQty += qty;
-}else{
-  stock[variantKey] -= qty;
-  prod.totalQty -= qty;
-}
 
-
-
-// 🔹 إعادة حساب الكمية الكلية
-const newTotalQty = Object.values(stock).reduce((a, b) => a + b, 0);
 
 // 🔹 تحديث Firebase
 await update(productRef, {
@@ -1864,10 +1889,6 @@ setTimeout(() => {
   return;
 }
 
-
-  
-// خزّن الرقم الجديد
-// خزّن الرقم الجديد
 localStorage.setItem("invoiceNo", invoice + 1);
 
 // حدّث الرقم بالذاكرة
