@@ -1838,12 +1838,17 @@ items.push({
   localStorage.setItem("products", JSON.stringify(products));
 
 try {
+const grandValue = Number(
+  grandEl.textContent.replace(/[^\d\-]/g, "")
+);
+
 await push(ref(rtdb, "posInvoices"), {
   invoiceNo: invoice,
   items,
-  total: p(grandEl.textContent),
+  total: grandValue,
   paid: Number(paidEl.value || 0),
-  rest: isCredit ? (p(grandEl.textContent) - Number(paidEl.value || 0)) : 0,
+  rest: isCredit ? (grandValue - Number(paidEl.value || 0)) : 0,
+
   type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
   debtor: isCredit ? debtor : null,
   cashierId: localStorage.getItem("cashierUsername") || "unknown",
