@@ -674,21 +674,29 @@ gap:8px;
 
   // ✅ USB BARCODE SCANNER (GLOBAL – بدون فوكس)
 let scanBuffer = "";
+let barcodeJustScanned = false; // ⭐ جديد
 let scanTimer = null;
 
 document.addEventListener("keydown", async (e) => {
 
   // Enter = نهاية الباركود
 if (e.key === "Enter") {
-if (scanBuffer.length >= 4 && /^\d+$/.test(scanBuffer))
- {
-    const code = scanBuffer.trim();
-    scanBuffer = "";
-    await handleBarcode(code);
-    e.preventDefault();
-    e.stopPropagation();
-    return;
-  } else {
+if (scanBuffer.length >= 4 && /^\d+$/.test(scanBuffer)) {
+
+  barcodeJustScanned = true; // ⭐ أضف هذا
+
+  const code = scanBuffer.trim();
+  scanBuffer = "";
+  await handleBarcode(code);
+
+  setTimeout(()=>{
+    barcodeJustScanned = false; // ⭐ يرجع طبيعي بعد لحظة
+  },300);
+
+  e.preventDefault();
+  e.stopPropagation();
+  return;
+}else {
     // ⬅️ مو باركود، خلّي Enter يكمّل طريقه
     scanBuffer = "";
   }
@@ -802,36 +810,19 @@ window.stopCameraScan = function () {
 
 
 async function handleBarcode(barcode) {
-  console.log("🔍 SEARCH BARCODE:", barcode);
 
-  const snap = await get(ref(rtdb, "warehouse"));
-  if (!snap.exists()) {
-    alert("❌ المخزن فارغ");
+  const item = barcodeIndex[String(barcode).trim()];
+
+  if(!item){
+    alert("❌ باركود غير موجود");
     return;
   }
 
-  const data = snap.val();
-
-  for (const [productName, p] of Object.entries(data)) {
-    if (!p.barcodes) continue;
-
-    for (const [variantKey, code] of Object.entries(p.barcodes)) {
-      console.log("➡️ CHECK:", productName, variantKey, code);
-
- if (String(code).trim() === String(barcode).trim()) {
-
-        console.log("✅ FOUND BARCODE:", productName);
-        await addProductByBarcode(
-          productName,
-          variantKey,
-          p.prices?.pos || 0
-        );
-        return;
-      }
-    }
-  }
-
-  alert("❌ باركود غير موجود");
+  await addProductByBarcode(
+    item.productName,
+    item.variantKey,
+    item.price
+  );
 }
 function getReusableRow() {
   for (let i = 1; i < table.rows.length; i++) {
@@ -877,11 +868,20 @@ if (!stockSnap.exists()) {
 }
 
 const stock = stockSnap.val();
-const realKey = Object.keys(stock).find(
-  k => k.trim() === variantKey.trim()
-);
+let qty = 0;
 
-const qty = realKey ? stock[realKey] : 0;
+// 🟢 إذا المنتج بدون متغيرات
+if (typeof stock === "number") {
+  qty = stock;
+}
+
+// 🔵 إذا المنتج بمتغيرات
+else if (typeof stock === "object") {
+  const realKey = Object.keys(stock).find(
+    k => k.trim() === variantKey.trim()
+  );
+  qty = realKey ? stock[realKey] : 0;
+}
 
 if (qty <= 0) {
   alert("❌ الكمية صفر");
@@ -1053,6 +1053,7 @@ const p=v=>Number(String(v).replace(/[^0-9]/g,""))||0;
 
 
 let products = [];
+let barcodeIndex = {}; // 🔥 فهرس سريع للباركود
 let uiCategories = {};     // الأقسام
 let activeCategory = null;
 const addInput = document.getElementById("addProductInput");
@@ -1322,13 +1323,25 @@ async function loadProducts(){
 
   const data = snap.val();
 
-  for(const [name, p] of Object.entries(data)){
-    products.push({
-      name,
-      price: p.prices?.pos || 0,
-      totalQty: p.totalQty || 0
-    });
+for(const [name, p] of Object.entries(data)){
+
+  products.push({
+    name,
+    price: p.prices?.pos || 0,
+    totalQty: p.totalQty || 0
+  });
+
+  // 🔥 بناء فهرس الباركود مرة واحدة فقط
+  if(p.barcodes){
+    for(const [variantKey, code] of Object.entries(p.barcodes)){
+      barcodeIndex[String(code).trim()] = {
+        productName: name,
+        variantKey: variantKey,
+        price: p.prices?.pos || 0
+      };
+    }
   }
+}
 
   console.log("✅ products loaded:", products);
 
@@ -2400,7 +2413,8 @@ if (
 
 
   if (e.key !== "Enter") return;
-
+// ⛔ إذا Enter جاي من باركود لا تحفظ
+if (barcodeJustScanned) return;
   const now = Date.now();
 
   if (now - lastEnterTime < 350) {
