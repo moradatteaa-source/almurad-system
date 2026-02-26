@@ -712,6 +712,7 @@ async function loadExistingProducts() {
 
   if (snapshot.exists()) {
     const data = snapshot.val();
+    warehouseProducts = data;   // 🔥 هذا أهم سطر
     for (const [name] of Object.entries(data)) {
       allProductNames.push(name);
       const option = document.createElement("option");
@@ -752,28 +753,39 @@ window.filterProductOptions = function () {
   // ✅ نظهر المنسدلة إذا فيها نتائج
   select.style.display = filtered.length > 0 ? "block" : "none";
 
-  // ✅ عند اختيار المنتج من المنسدلة
-  select.onchange = async function () {
-    const selectedName = select.value;
-    inputEl.value = selectedName; // يظهر الاسم داخل خانة البحث
-    select.style.display = "none"; // نخفي المنسدلة بعد الاختيار
+select.onchange = async function () {
+  const selectedName = select.value;
+  inputEl.value = selectedName;
+  select.style.display = "none";
 
-    // 🟢 نعرض المتغيرات الخاصة بالمنتج المختار
-    const variantContainer = document.getElementById("variantContainer");
-    variantContainer.innerHTML = "";
-    const prod = warehouseProducts[selectedName];
- if (prod && prod.hasVariants && typeof prod.stock === "object")
- {
-      Object.keys(prod.stock).forEach((v) => {
-        variantContainer.innerHTML += `
-          <div class="variant-item">
-            <input type="text" value="${v}" disabled>
-            <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
-            <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
-          </div>`;
-      });
-    }
-  };
+  const variantContainer = document.getElementById("variantContainer");
+  variantContainer.innerHTML = "";
+  const prod = warehouseProducts[selectedName];
+
+  if (!prod) return;
+
+  // 🟢 إذا المنتج يحتوي متغيرات
+  if (prod.hasVariants && typeof prod.stock === "object") {
+    Object.keys(prod.stock).forEach((v) => {
+      variantContainer.innerHTML += `
+        <div class="variant-item">
+          <input type="text" value="${v}" disabled>
+          <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
+          <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
+        </div>`;
+    });
+  } 
+  // 🟢 إذا المنتج بدون متغيرات
+// 🟢 إذا المنتج بدون متغيرات
+else {
+  variantContainer.innerHTML = `
+    <div class="variant-item">
+      <input type="text" value="-" disabled>
+      <input type="number" placeholder="الكمية" class="variantQty" data-variant="-">
+      <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="-">
+    </div>`;
+}
+};
 };
 
 
@@ -927,29 +939,56 @@ window.savePurchase = async function () {
   let totalAmount = 0;
   const type = document.getElementById("productType").value;
 
-  if (type === "existing") {
-    const name = existingProductSelect.value;
-    if (!name) return alert("⚠️ اختر المنتج.");
+if (type === "existing") {
+  const name = existingProductSelect.value;
+  if (!name) return alert("⚠️ اختر المنتج.");
 
-    const qtyInputs = document.querySelectorAll(".variantQty");
-    const priceInputs = document.querySelectorAll(".variantPrice");
-    for (let i = 0; i < qtyInputs.length; i++) {
-      const variant = qtyInputs[i].dataset.variant;
-      const q = parseFloat(qtyInputs[i].value) || 0;
-      const price = parseFloat(priceInputs[i].value) || 0;
-      if (q > 0 && price > 0) {
-        const subtotal = q * price;
-        totalQty += q;
-        totalAmount += subtotal;
-        items.push({ product: name, variant, quantity: q, price, subtotal });
+  const productRef = ref(db, `warehouse/${name}`);
+  const productSnap = await get(productRef);
+  const productData = productSnap.exists() ? productSnap.val() : null;
 
-        const stockRef = ref(db, `warehouse/${name}/stock/${variant}`);
-        const snap = await get(stockRef);
-        const current = snap.exists() ? snap.val() : 0;
-        await set(stockRef, current + q);
+  if (!productData) return alert("⚠️ المنتج غير موجود في المخزن.");
+
+  const qtyInputs = document.querySelectorAll(".variantQty");
+  const priceInputs = document.querySelectorAll(".variantPrice");
+
+  for (let i = 0; i < qtyInputs.length; i++) {
+    const variant = qtyInputs[i].dataset.variant;
+    const q = parseFloat(qtyInputs[i].value) || 0;
+    const price = parseFloat(priceInputs[i].value) || 0;
+
+    if (q > 0 && price > 0) {
+      const subtotal = q * price;
+
+      totalQty += q;
+      totalAmount += subtotal;
+
+      items.push({
+        product: name,
+        variant,
+        quantity: q,
+        price,
+        subtotal
+      });
+
+      // ✅ تحديث المخزون بطريقة آمنة
+      if (productData.hasVariants) {
+        productData.stock[variant] =
+          (productData.stock[variant] || 0) + q;
+      } else {
+        productData.stock =
+          (productData.stock || 0) + q;
       }
+
+      productData.totalQty =
+        (productData.totalQty || 0) + q;
     }
-  } else if (type === "new") {
+  }
+
+  // ✅ نحفظ المنتج بعد التعديل مرة وحدة فقط
+  await set(productRef, productData);
+}
+  else if (type === "new") {
   const name = document.getElementById("simpleProductName")?.value.trim() || "";
   const buyPrice = parseFloat(document.getElementById("simpleBuyPrice")?.value) || 0;
 const sellPricePos = parseFloat(document.getElementById("simpleSellPricePos")?.value) || 0;
