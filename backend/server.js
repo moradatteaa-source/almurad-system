@@ -1,3 +1,8 @@
+import * as primeService from "./services/shipping/primeService.js";
+import { db } from "./firebase.js";
+import { ref, get, update } from "firebase/database";
+// import * as primeService from "./services/shipping/primeService.js";
+import * as waseetService from "./services/shipping/waseetService.js";
 import express from "express";
 import fetch from "node-fetch";
 import FormData from "form-data";
@@ -7,8 +12,7 @@ import cron from "node-cron";
 // ------------------------------
 // 🟦 Firebase
 // ------------------------------
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get, update } from "firebase/database";
+
 
 // ------------------------------
 // 🟦 وارد من deliveryService.js (اللازم فقط)
@@ -19,27 +23,24 @@ import { waseetStatusMap, loginToWaseet } from "../docs/deliveryService.js";
 // =======================================================
 // 🔥 Firebase Initialization
 // =======================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-  authDomain: "almurad-system.firebaseapp.com",
-  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-  projectId: "almurad-system",
-  storageBucket: "almurad-system.appspot.com",
-  messagingSenderId: "911755824405",
-  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-};
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getDatabase(firebaseApp);
+
 
 
 // =======================================================
 // 🚀 Express App
 // =======================================================
-
+   
 const app = express();
 app.use(cors());
-app.use(express.urlencoded({ extended: true }));
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// يخدم مجلد docs الموجود بمستوى أعلى من backend
+app.use(express.static(path.join(__dirname, "../docs")));app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
@@ -78,32 +79,24 @@ app.post("/api/login", async (req, res) => {
 });
 
 
+
 // =======================================================
-// 🟢 2) رفع الطلب → الوسيط
+// 🟢 رفع الطلب → الوسيط (من خلال service)
 // =======================================================
 app.post("/api/create-order", async (req, res) => {
   try {
+
     const { token, ...payload } = req.body;
-    payload.promo_code = "الوسيط";   // أو ALWASEET حسب اسم البروموكود الرسمي
 
-    console.log("📦 Create order request received:", payload);
+    const result = await waseetService.createOrder(payload, token);
 
-    const formData = new FormData();
-    for (const key in payload) formData.append(key, payload[key] ?? "");
+    res.json(result);
 
-    const url = `https://api.alwaseet-iq.net/v1/merchant/create-order?token=${token}`;
-    const response = await fetch(url, { method: "POST", body: formData });
-
-    const data = await response.json();
-    console.log("📦 Order response:", data);
-
-    res.json(data);
   } catch (err) {
     console.error("❌ Error creating order:", err);
     res.status(500).json({ status: false, msg: "Server Error" });
   }
 });
-
 
 // =======================================================
 // 🟢 3) جلب الحالات → الوسيط
@@ -536,3 +529,72 @@ app.get("/debug/run", async (req, res) => {
 app.listen(process.env.PORT || 3000, () =>
   console.log(`✅ Server running on port ${process.env.PORT || 3000}`)
 );
+// =======================================================
+// 🟣 رفع الطلب → برايم
+// =======================================================
+
+app.post("/api/create-order-prime/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await primeService.createPrimeOrderFromFirebase(id);
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Prime Error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+
+
+app.get("/api/test-prime", async (req, res) => {
+  try {
+
+const token = await primeService.loginToPrime();    if (!token) {
+      return res.json({ success: false, msg: "Prime login failed" });
+    }
+
+    const shipmentData = [
+      {
+        custReceiptNoOri: 0,
+        district: 0,
+        haveReturnItems: "N",
+        locationDetails: "Baghdad Test Address",
+        merchantLoginId: "07808197448",
+        productInfo: "Test Product*1",
+        qty: 1,
+        receiptAmtIqd: 25000,
+       
+        receiverName: "Test Customer",
+        senderId: 43825,
+        senderSystemCaseIdWithCharacters: "MRDTEST" + Date.now(),
+        state: "BGD"
+      }
+    ];
+
+    console.log("🚀 TEST PAYLOAD:");
+    console.log(JSON.stringify(shipmentData, null, 2));
+
+    const response = await fetch(
+      "https://www.prime-iq.com/myp/webapi/external/create-shipments/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token
+        },
+        body: JSON.stringify(shipmentData)
+      }
+    );
+
+    const result = await response.json();
+
+    console.log("📦 PRIME RESPONSE:", result);
+
+    res.json(result);
+
+  } catch (err) {
+    console.log("❌ ERROR:", err);
+    res.json({ success: false, error: err.message });
+  }
+
+});

@@ -137,6 +137,13 @@ body {
   
   <div class="card">
     <div class="title">معالجة الطلبات</div>
+    <div style="margin-top:15px;">
+  <label style="font-weight:bold;">اختر شركة الشحن:</label>
+  <select id="shippingCompany" style="width:100%; padding:10px; margin-top:5px; border-radius:8px;">
+    <option value="waseet">الوسيط</option>
+    <option value="prime">برايم</option>
+  </select>
+</div>
     <div>عدد الطلبات المهيئة للرفع: <span id="ordersCount">0</span></div>
   </div>
 
@@ -215,8 +222,6 @@ function addLog(text, cls = "") {
   box.innerHTML += `<div class="log-item ${cls}">${text}</div>`;
   box.scrollTop = box.scrollHeight;
 }
-
-// 🔥 عند الضغط على إرسال الشحنة
 document.getElementById("startUpload").onclick = async () => {
 
   if (readyOrders.length === 0) {
@@ -224,115 +229,72 @@ document.getElementById("startUpload").onclick = async () => {
     return;
   }
 
-  addLog("🔄 تسجيل الدخول للوسيط...");
-  const token = await loginToWaseet();
+  const selectedCompany = document.getElementById("shippingCompany").value;
 
-  if (!token) {
-    addLog("❌ فشل تسجيل الدخول إلى الوسيط", "err");
+  addLog(`🚚 شركة الشحن المختارة: ${selectedCompany}`);
+
+  // ===============================
+  // 🟢 الوسيط
+  // ===============================
+  if (selectedCompany === "waseet") {
+
+    addLog("🔄 تسجيل الدخول للوسيط...");
+    const token = await loginToWaseet();
+
+    if (!token) {
+      addLog("❌ فشل تسجيل الدخول إلى الوسيط", "err");
+      return;
+    }
+
+    addLog("✔️ تم تسجيل الدخول — بدء رفع الطلبات");
+
+    const result = await sendOrdersToWaseet(
+      readyOrders,
+      window.waseetCities,
+      window.waseetRegions
+    );
+
+    addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.failed}`);
     return;
   }
 
-  addLog("✔️ تم تسجيل الدخول — بدء رفع الطلبات");
-  addLog("📦 جاري رفع الطلبات...");
+  // ===============================
+  // 🟣 برايم
+  // ===============================
+  if (selectedCompany === "prime") {
 
-  const result = await sendOrdersToWaseet(
-    readyOrders,
-    window.waseetCities,
-    window.waseetRegions
-  );
+    addLog("🔄 بدء رفع الطلبات إلى برايم...");
 
-  addLog(`🔍 النتائج:`);
-  addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.failed}`);
-// ⭐⭐⭐ إنشاء سجل الشحنة في الفايربيس ⭐⭐⭐
+    let successCount = 0;
+    let failCount = 0;
 
-// معرف فريد للسجل
-const logId = Date.now();
+for (const order of readyOrders) {      try {
 
-// استخراج معلومات المستخدم
-const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+const response = await fetch(
+  `/api/create-order-prime/${order.id}`,
+          { method: "POST" }
+        );
 
-const uploadedBy =
-  sessionStorage.getItem("userName") ||
-  user.name ||
-  user.displayName ||
-  user.username ||
-  "غير معروف";
+        const data = await response.json();
 
-// بيانات عامة عن عملية الرفع
-const logData = {
-  provider: "alwaseet_iq",
-  createdAt: new Date().toISOString(),
-  uploadedBy: uploadedBy,
-  total: result.success + result.failed,
-  successCount: result.success,
-  failCount: result.failed
-};
-
-
-// حفظ السجل الرئيسي
-await update(ref(db, `shippingLogs/${logId}`), logData);
-
-// حفظ تفاصيل كل طلب داخل السجل
-for (const entry of result.results) {
-
-const orderKey = entry.receiptNum 
-  ? entry.receiptNum.toString() 
-  : `${entry.orderId}_${Date.now()}`;
-
-await update(
-  ref(db, `shippingLogs/${logId}/orders/${orderKey}`),
-  {
-    orderId: entry.orderId,
-    status: entry.success ? "success" : "fail",
-    receiptNum: entry.receiptNum || "",
-    reason: entry.reason || extractReason(entry)
-  }
-);
-
+      if (data.success) {
+  addLog(`✔ الطلب #${order.id} — رقم الوصل: ${data.shipmentNo}`, "ok");
+  successCount++;
+} else {
+  const reason = data.msg || data.error || JSON.stringify(data);
+  addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+  failCount++;
 }
 
+      } catch (err) {
+        addLog(`❌ خطأ في الطلب #${order.id}`, "err");
+        failCount++;
+      }
 
-addLog("📝 تم حفظ سجل الشحنة داخل قاعدة البيانات بنجاح");
+    }
 
-result.results.forEach(async r => {
-
-  if (r.success) {
-
-    addLog(`✔ الطلب #${r.orderId} — رقم الوصل: ${r.receiptNum}`, "ok");
-
-   await update(ref(db, `orders/${r.orderId}`), {
-  status: "قيد التجهيز",
-  receiptNum: r.receiptNum.toString(),
-  waseet_link: r.qrLink || ""
-});
-
-// 🟦 تسجيل سجل حالة قيد التجهيز مع رقم الوصل واسم الرافع
-await update(ref(db, `orders/${r.orderId}/statusHistory/قيد التجهيز`), {
-  time: new Date().toLocaleString("en-US", {
-    hour12: true,
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }),
-  by: uploadedBy,   // اسم الذي رفع الطلبات
-  receiptNum: r.receiptNum ? r.receiptNum.toString() : ""
-});
-
-
-
-  } else {
-
-    addLog(`✖ الطلب #${r.orderId} — سبب الفشل: ${extractReason(r)}`, "err");
-
+    addLog(`🟢 الناجح: ${successCount} | 🔴 الفاشل: ${failCount}`);
   }
-
-});
-
-
-
-
 };
 
 

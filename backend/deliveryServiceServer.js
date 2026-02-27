@@ -228,15 +228,27 @@ if (!order.totalProducts || !order.totalProducts.trim()) {
 
       const data = await response.json();
 
-      if (data.status === true && data.data?.qr_id) {
-        success++;
-        results.push({
-          orderId: order.id,
-          success: true,
-          receiptNum: data.data.qr_id,
-          qrLink: data.data.qr_link
-        });
-      } else {
+   if (data.status === true && data.data?.qr_id) {
+
+  // 🔥 تحديث الحالة داخل Firebase
+  await update(ref(db, `orders/${order.id}`), {
+    status: "قيد التجهيز",
+    receiptNum: data.data.qr_id,
+    lastUpdateBy: "alwaseet-api",
+    lastStatusAt: new Date().toISOString()
+  });
+
+  success++;
+
+  results.push({
+    orderId: order.id,
+    success: true,
+    receiptNum: data.data.qr_id,
+    qrLink: data.data.qr_link
+  });
+
+}
+       else {
         failed++;
         results.push({ orderId: order.id, success: false, response: data });
       }
@@ -249,10 +261,6 @@ if (!order.totalProducts || !order.totalProducts.trim()) {
   return { success, failed, results };
 }
 
-// =============================================
-// 🔄 7️⃣ تحديث الحالات من الوسيط
-// - يستلم Array من الطلبات (كلها تحتوي receiptNum)
-// =============================================
 // =============================================
 // 🔄 7️⃣ تحديث الحالات من الوسيط + تحديث Firebase
 // =============================================
