@@ -178,7 +178,7 @@ const sent = allOrders.filter(o =>
     if (sent.length === 0) return console.log("❌ No sent orders");
 
     // 2) تسجيل الدخول
-    const token = await loginToWaseet();
+const token = await waseetService.loginToWaseet();
     if (!token) return console.log("❌ Login failed");
 
     // IDs
@@ -498,8 +498,7 @@ app.get("/debug/order/:id", async (req, res) => {
 app.get("/debug/waseet/:receipt", async (req, res) => {
   try {
     const receipt = req.params.receipt;
-    const token = await loginToWaseet();
-
+const token = await waseetService.loginToWaseet();
     if (!token) return res.json({ error: "Login failed" });
 
     const response = await fetch(
@@ -568,7 +567,7 @@ const token = await primeService.loginToPrime();    if (!token) {
         productInfo: "Test Product*1",
         qty: 1,
         receiptAmtIqd: 25000,
-       
+       receiverHp1: "07800000000",
         receiverName: "Test Customer",
         senderId: 43825,
         senderSystemCaseIdWithCharacters: "MRDTEST" + Date.now(),
