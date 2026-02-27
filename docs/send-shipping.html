@@ -254,7 +254,15 @@ document.getElementById("startUpload").onclick = async () => {
       window.waseetRegions
     );
 
-    addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.failed}`);
+   for (const r of result.results) {
+  if (r.success) {
+    addLog(`✔ الطلب #${r.orderId} — رقم الوصل: ${r.receiptNum}`, "ok");
+  } else {
+    addLog(`✖ الطلب #${r.orderId} — فشل: ${r.reason || JSON.stringify(r.response)}`, "err");
+  }
+}
+
+addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.failed}`);
     return;
   }
 
