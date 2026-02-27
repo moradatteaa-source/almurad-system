@@ -278,10 +278,12 @@ addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.faile
 
 for (const order of readyOrders) {      try {
 
+const baseUrl = window.location.origin;
+
 const response = await fetch(
-  `/api/create-order-prime/${order.id}`,
-          { method: "POST" }
-        );
+  `${baseUrl}/api/create-order-prime/${order.id}`,
+  { method: "POST" }
+);
 
         const data = await response.json();
 
