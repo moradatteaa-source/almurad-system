@@ -278,10 +278,9 @@ addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.faile
 
 for (const order of readyOrders) {      try {
 
-const baseUrl = window.location.origin;
 
 const response = await fetch(
-  `${baseUrl}/api/create-order-prime/${order.id}`,
+  `https://almurad.onrender.com/api/create-order-prime/${order.id}`,
   { method: "POST" }
 );
 
