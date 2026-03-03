@@ -157,7 +157,7 @@ productInfo: productInfoString,
 qty: totalQty,
     receiptAmtIqd: Number(order.totalPrice) || 0,
 receiverHp1: cleanedPhone,
-receiverName: order.receiverName || order.customerName || "زبون",
+receiverName: order.code || order.receiverName || order.customerName || "زبون",
     senderId: PRIME_SENDER_ID,
     senderSystemCaseIdWithCharacters: caseId,
     state: convertState(order.city)
