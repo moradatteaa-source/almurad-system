@@ -97,6 +97,34 @@
   <header>📅 الجرد اليومي - نظام المراد</header>
 
   <main>
+    <!-- 🟣 قسم الجرد بالباركود -->
+<div class="section">
+  <h2>📦 جرد بواسطة رقم الوصل</h2>
+
+  <input type="text" 
+         id="barcodeInput" 
+         placeholder="امسح رقم الوصل هنا..." 
+         style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;">
+
+
+  <table id="scanTable">
+    <thead>
+      <tr>
+        <th>المنتج</th>
+        <th>الكمية</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="deductBtn" 
+          style="margin-top:15px;background:#043B64;">
+    خصم من المخزن
+  </button>
+
+  <p id="scanMsg" class="loading"></p>
+</div>
+
     <!-- 🟠 قسم قيد التوصيل -->
     <div class="section">
       <h2>🚚 طلبات قيد التوصيل 
@@ -136,9 +164,9 @@
 
   <!-- 🔹 سكربت -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, child, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -160,7 +188,13 @@
     const returnsTable = document.querySelector("#returnsTable tbody");
     const deliveryLoading = document.getElementById("deliveryLoading");
     const returnsLoading = document.getElementById("returnsLoading");
+const barcodeInput = document.getElementById("barcodeInput");
+const scanTable = document.querySelector("#scanTable tbody");
+const deductBtn = document.getElementById("deductBtn");
+const scanMsg = document.getElementById("scanMsg");
 
+let pendingInventory = [];
+let scannedShipments = new Set();
     // 🔸 تحميل الطلبات حسب الحالة
     async function loadOrdersByStatus(status) {
       const snap = await get(child(ref(db), "orders"));
@@ -202,6 +236,76 @@
 
       return Array.from(map.entries()).map(([name, d]) => ({ name, ...d }));
     }
+    async function processBarcode(shipmentId) {
+
+  scanMsg.textContent = "⏳ جاري البحث...";
+
+  const snap = await get(child(ref(db), "orders"));
+  if (!snap.exists()) {
+    scanMsg.textContent = "لا توجد طلبات";
+    return;
+  }
+
+  const data = snap.val();
+  let foundOrder = null;
+
+  for (const [id, order] of Object.entries(data)) {
+    if (order.receiptNum === shipmentId) {
+      foundOrder = order;
+      break;
+    }
+  }
+
+  if (!foundOrder) {
+    scanMsg.textContent = "❌ رقم الوصل غير موجود";
+    return;
+  }
+
+  if (scannedShipments.has(shipmentId)) {
+    scanMsg.textContent = "⚠️ هذا الوصل مضاف سابقاً";
+    return;
+  }
+
+  scannedShipments.add(shipmentId);
+
+  for (const p of foundOrder.productsDetailed || []) {
+pendingInventory.push({
+  name: p.name,
+  qty: Number(p.qty),
+  variants: p.variants || {}
+});
+  }
+
+  renderPendingTable();
+  scanMsg.textContent = "✅ تمت إضافة الطلب للجدول";
+}
+function renderPendingTable() {
+
+  scanTable.innerHTML = "";
+
+  if (!pendingInventory.length) {
+    scanTable.innerHTML = `<tr><td colspan="2">لا توجد بيانات</td></tr>`;
+    return;
+  }
+
+  const map = new Map();
+
+  pendingInventory.forEach(item => {
+    if (!map.has(item.name)) {
+      map.set(item.name, 0);
+    }
+    map.set(item.name, map.get(item.name) + item.qty);
+  });
+
+  for (const [name, qty] of map.entries()) {
+    scanTable.innerHTML += `
+      <tr>
+        <td>${name}</td>
+        <td>${qty}</td>
+      </tr>
+    `;
+  }
+}
 
     // 🧾 عرض البيانات في الجدول
     function fillTable(tableEl, data) {
@@ -220,7 +324,128 @@
         `;
       });
     }
+barcodeInput.addEventListener("keydown", (e) => {
 
+  if (e.key === "Enter") {
+
+    const code = barcodeInput.value.trim();
+    if (!code) return;
+
+    processBarcode(code);
+
+    barcodeInput.value = "";
+  }
+
+});
+deductBtn.addEventListener("click", async () => {
+
+  if (!pendingInventory.length) {
+    alert("لا توجد طلبات للخصم");
+    return;
+  }
+
+  scanMsg.textContent = "⏳ جاري الخصم...";
+
+  const productTotals = new Map();
+
+  pendingInventory.forEach(item => {
+    if (!productTotals.has(item.name)) {
+      productTotals.set(item.name, 0);
+    }
+    productTotals.set(item.name, productTotals.get(item.name) + item.qty);
+  });
+
+// نجيب المخزن مرة وحدة فقط
+const warehouseSnap = await get(child(ref(db), "warehouse"));
+
+if (!warehouseSnap.exists()) {
+  scanMsg.textContent = "❌ لا يوجد مخزن";
+  return;
+}
+
+const warehouseData = warehouseSnap.val();
+
+for (const [name, qty] of productTotals.entries()) {
+
+  for (const [key, item] of Object.entries(warehouseData)) {
+
+if (key.toLowerCase().trim() === name.toLowerCase().trim()) {
+
+  const stock = item.stock || {};
+
+  const hasVariants = Object.keys(stock)
+    .some(k => k.includes("اللون") || k.includes("القياس"));
+
+  // 🟢 بدون متغيرات
+  if (!hasVariants) {
+
+    const currentQty = Number(stock["إجمالي الكمية"] || 0);
+
+    if (currentQty < qty) {
+      scanMsg.textContent = `❌ المخزون غير كافي للمنتج: ${name}`;
+      return;
+    }
+
+    const newQty = currentQty - qty;
+
+    await update(ref(db, "warehouse/" + key), {
+      "stock/إجمالي الكمية": newQty,
+      totalQty: newQty,
+      lastUpdate: new Date().toISOString()
+    });
+
+  } else {
+
+    // 🔵 بمتغيرات
+    const variantItem = pendingInventory.find(p => p.name === name);
+    const variants = variantItem?.variants || {};
+
+    const variantKey = Object.entries(variants)
+      .map(([k, v]) => `${k} | ${v}`)
+      .join(" | ");
+
+    const currentVariantQty = Number(stock[variantKey] || 0);
+
+    if (currentVariantQty < qty) {
+      scanMsg.textContent = `❌ المخزون غير كافي للمتغير: ${name}`;
+      return;
+    }
+
+    const newVariantQty = currentVariantQty - qty;
+
+    const updatedStock = {
+      ...stock,
+      [variantKey]: newVariantQty
+    };
+
+    let total = 0;
+    for (const [k, v] of Object.entries(updatedStock)) {
+      if (k !== "إجمالي الكمية") {
+        total += Number(v) || 0;
+      }
+    }
+
+    updatedStock["إجمالي الكمية"] = total;
+
+    await update(ref(db, "warehouse/" + key), {
+      stock: updatedStock,
+      totalQty: total,
+      lastUpdate: new Date().toISOString()
+    });
+
+  }
+
+  break;
+}
+  }
+}
+
+  pendingInventory = [];
+  scannedShipments.clear();
+  renderPendingTable();
+
+  scanMsg.textContent = "✅ تم الخصم بنجاح";
+});
     // 🚚 تحميل طلبات قيد التوصيل
     deliveryBtn.addEventListener("click", async () => {
       deliveryLoading.textContent = "⏳ جاري تحميل الطلبات...";

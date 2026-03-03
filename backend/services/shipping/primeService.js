@@ -209,3 +209,129 @@ await update(ref(db, `orders/${orderId}`), {
 
   return { success: true, shipmentNo };
 }
+
+// ======================
+// 🔵 Update Prime Shipments Status
+// ======================
+export async function updatePrimeStatusesFromFirebase() {
+
+  const token = await loginToPrime();
+  if (!token) {
+    console.log("❌ Prime login failed for status update");
+    return;
+  }
+
+  // 🔎 جلب كل الطلبات المرتبطة بـ prime
+  const snap = await get(ref(db, "orders"));
+  if (!snap.exists()) return;
+
+  const allOrders = snap.val();
+
+  const primeOrders = Object.entries(allOrders)
+    .filter(([id, o]) =>
+      o.shippingCompany === "prime" &&
+      o.receiptNum
+    )
+    .map(([id, o]) => ({
+      id,
+      receiptNum: o.receiptNum,
+      totalPrice: o.totalPrice
+    }));
+
+  if (primeOrders.length === 0) return;
+
+  const shipmentIds = primeOrders.map(o => Number(o.receiptNum));
+
+  const response = await fetch(
+    PRIME_BASE_URL + "/webapi/external/shipments-info",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify(shipmentIds)
+    }
+  );
+
+  const result = await response.json();
+
+  if (!Array.isArray(result)) {
+    console.log("❌ Prime status response invalid:", result);
+    return;
+  }
+
+  for (const shipment of result) {
+
+    const order = primeOrders.find(
+      o => String(o.receiptNum) === String(shipment.id)
+    );
+
+    if (!order) continue;
+
+    let newStatus = null;
+
+    // ===== مابنك موحد مثل الوسيط =====
+    switch (shipment.status) {
+      case "ONWAY":
+        newStatus = "قيد التوصيل";
+        break;
+
+      case "DELIVERED":
+        newStatus = "تم التسليم";
+        break;
+
+      case "PART_DELIVERED":
+        newStatus = "تم التسليم";
+        break;
+
+      case "CNCL":
+        newStatus = "راجع";
+        break;
+
+      case "FAILED_DELIVER_RETURNED_TO_SENDER":
+        newStatus = "تم استلام الراجع";
+        break;
+
+      case "DELETED":
+        newStatus = "رفض";
+        break;
+
+      case "POSTPONED":
+        newStatus = "قيد التوصيل";
+        break;
+
+      case "DELIVERED_CHANGE_PRICE":
+        newStatus = "تم التسليم";
+        break;
+    }
+
+    if (!newStatus) continue;
+
+    const updateData = {
+      status: newStatus,
+      lastUpdateBy: "system-prime",
+      lastStatusAt: new Date().toISOString()
+    };
+
+    // ⭐ معالجة تغيير السعر
+    if (shipment.status === "DELIVERED_CHANGE_PRICE") {
+
+      updateData.priceChanged = true;
+      updateData.oldPrice = order.totalPrice;
+      updateData.newPrice = shipment.receiptAmount;
+      updateData.totalPrice = shipment.receiptAmount;
+    }
+
+    await update(ref(db, `orders/${order.id}`), updateData);
+
+    await update(ref(db, `orders/${order.id}/statusHistory/${newStatus}`), {
+      time: new Date().toISOString(),
+      by: "Prime"
+    });
+
+    console.log("✅ Updated order:", order.id, "→", newStatus);
+  }
+
+  console.log("🔄 Prime status update completed.");
+}

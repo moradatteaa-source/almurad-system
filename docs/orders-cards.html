@@ -126,7 +126,11 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.08);
     cursor: pointer;
   }
-
+/* ⭐ حالة تغيير السعر من شركة التوصيل */
+.order-card.price-changed {
+  background: rgba(255, 0, 0, 0.07);
+  border: 2px solid rgba(255, 0, 0, 0.4);
+}
   /* ▼ يمين الكارت — المنتج + رقم الطلب + التاريخ ▼ */
   .right-side {
     text-align: right;
@@ -805,6 +809,10 @@ function renderOrders(list) {
   list.forEach((o) => {
     const card = document.createElement("div");
     card.className = "order-card";
+    // ⭐ إذا السعر متغير نخلي الكارت أحمر
+if (o.priceChanged === true) {
+  card.classList.add("price-changed");
+}
     card.setAttribute("data-id", o.id);
 
     card.innerHTML = `
@@ -839,6 +847,20 @@ function renderOrders(list) {
       <div class="left-side">
 <div class="qty">${o.totalQty || o.quantity || 1}</div>
 <div class="price">${Number(o.totalPrice || o.price || 0).toLocaleString("en-US")} د.ع</div>
+${o.priceChanged ? `
+  <div style="
+    color:#c0392b;
+    font-size:12px;
+    margin-top:4px;
+    font-weight:bold;
+  ">
+    ⚠ تم تغيير السعر
+    <br>
+    القديم: ${Number(o.oldPrice || 0).toLocaleString("en-US")} د.ع
+    <br>
+    الجديد: ${Number(o.newPrice || 0).toLocaleString("en-US")} د.ع
+  </div>
+` : ""}
         <div class="advertiser">${o.advertiser || ""}</div>
         <div class="status-badge ${getStatusClass(o.status)}">
   ${o.status && o.status.trim() !== "" ? o.status : "جديد"}
