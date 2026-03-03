@@ -137,15 +137,24 @@ if (!cleanedPhone) {
   return { success: false, msg: "Invalid phone format" };
 }
 
+
+// ===== نفس منطق الوسيط 100% =====
+const productInfoString = order.totalProducts || order.productName || "منتج";
+const totalQty = Number(order.totalQty) > 0 
+  ? Number(order.totalQty) 
+  : 1;
+const finalNotes = order.notes || "";
 const shipmentData = [
   {
     custReceiptNoOri: 0,
 district: 0,
     haveReturnItems: "N",
+    receiverHp2: order.phone2 || "",
+rmk: finalNotes,
     locationDetails: order.address || "",
     merchantLoginId: PRIME_MERCHANT_LOGIN,
-    productInfo: order.productName + "*" + order.quantity,
-    qty: Number(order.quantity) || 1,
+productInfo: productInfoString,
+qty: totalQty,
     receiptAmtIqd: Number(order.totalPrice) || 0,
 receiverHp1: cleanedPhone,
 receiverName: order.receiverName || order.customerName || "زبون",
