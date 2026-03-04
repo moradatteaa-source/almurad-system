@@ -262,46 +262,28 @@ const response = await fetch(
 for (const shipment of result) {
 
   const order = primeOrders.find(
-    o => String(o.receiptNum) === String(shipment.id)
+o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
   );
 
   if (!order) continue;
-
+const primeStatus = shipment.shipmentStatus;
   let newStatus = null;  // ✅ مهم جداً
 
   const currentStatus = allOrders[order.id].status;
 
   // 🟢 تم التسليم
-// 🟢 تم التسليم (نهائي)
-if (
-  [
-    "DLEIVERD",
-    "PART_SUCC",
-    "SUCC_CHANGEPRICE",
-    "FORCE_DLV"
-  ].includes(shipment.status)
-) {
+if (["DELIVERED"].includes(primeStatus)) {
   newStatus = "تم التسليم";
 }
-
-// 🔴 راجع نهائي (مستلم عندك)
-else if (["RTNARCHV"].includes(shipment.status)) {
-  newStatus = "تم استلام الراجع";
+else if (["PART_DELIVERED", "DELIVERED_CHANGE_PRICE"].includes(primeStatus)) {
+  newStatus = "تم التسليم";
 }
-
-// 🔴 راجع قيد الرجوع
-else if (
-  [
-    "RTN_WITHAGENT",
-    "RTN_INSTORE",
-    "RETURNED_TO_CUSTOMER",
-    "RTN_WITH_PICKUPAGENT"
-  ].includes(shipment.status)
-) {
+else if (["FAILED_DELIVER_RETURNED_TO_SENDER", "CNCL"].includes(primeStatus)) {
   newStatus = "راجع";
 }
-
-// 🟡 باقي الحالات
+else if (["POSTPONED", "ONWAY"].includes(primeStatus)) {
+  newStatus = "قيد التوصيل";
+}
 else {
   newStatus = "قيد التوصيل";
 }
@@ -311,13 +293,13 @@ else {
 
   const updateData = {
     status: newStatus,
-    primeStatus: shipment.status,
+primeStatus: primeStatus,
     lastUpdateBy: "system-prime",
     lastStatusAt: new Date().toISOString()
   };
 
     // ⭐ معالجة تغيير السعر
-if (shipment.status === "SUCC_CHANGEPRICE") {
+if (primeStatus === "DELIVERED_CHANGE_PRICE") {
 
       updateData.priceChanged = true;
       updateData.oldPrice = order.totalPrice;
