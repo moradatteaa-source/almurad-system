@@ -1,4 +1,4 @@
-import { updatePrimeStatusesFromFirebase } from "./services/shipping/primeServer.js";
+import { updatePrimeStatusesFromFirebase } from "./services/shipping/primeService.js";
 import * as primeService from "./services/shipping/primeService.js";
 import { db } from "./firebase.js";
 import { ref, get, update } from "firebase/database";
