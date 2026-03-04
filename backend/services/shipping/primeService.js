@@ -272,29 +272,42 @@ for (const shipment of result) {
   const currentStatus = allOrders[order.id].status;
 
   // 🟢 تم التسليم
-  if (
-    shipment.status === "DELIVERED" ||
-    shipment.status === "PART_DELIVERED" ||
-    shipment.status === "DELIVERED_CHANGE_PRICE"
-  ) {
-    newStatus = "تم التسليم";
-  }
+// 🟢 تم التسليم (نهائي)
+if (
+  [
+    "DLEIVERD",
+    "PART_SUCC",
+    "SUCC_CHANGEPRICE",
+    "FORCE_DLV"
+  ].includes(shipment.status)
+) {
+  newStatus = "تم التسليم";
+}
 
-  // 🔴 راجع نهائي
-  else if (
-    shipment.status === "FAILED_DELIVER_RETURNED_TO_SENDER" ||
-    shipment.status === "CNCL"
-  ) {
-    newStatus = "راجع";
-  }
+// 🔴 راجع نهائي (مستلم عندك)
+else if (["RTNARCHV"].includes(shipment.status)) {
+  newStatus = "تم استلام الراجع";
+}
 
-  // 🟡 باقي الحالات
-  else {
-    newStatus = "قيد التوصيل";
-  }
+// 🔴 راجع قيد الرجوع
+else if (
+  [
+    "RTN_WITHAGENT",
+    "RTN_INSTORE",
+    "RETURNED_TO_CUSTOMER",
+    "RTN_WITH_PICKUPAGENT"
+  ].includes(shipment.status)
+) {
+  newStatus = "راجع";
+}
+
+// 🟡 باقي الحالات
+else {
+  newStatus = "قيد التوصيل";
+}
 
   // 🔒 لا تغيّر إذا صارت تم التسليم سابقاً
-  if (currentStatus === "تم التسليم") continue;
+ if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) continue;
 
   const updateData = {
     status: newStatus,
@@ -304,7 +317,7 @@ for (const shipment of result) {
   };
 
     // ⭐ معالجة تغيير السعر
-    if (shipment.status === "DELIVERED_CHANGE_PRICE") {
+if (shipment.status === "SUCC_CHANGEPRICE") {
 
       updateData.priceChanged = true;
       updateData.oldPrice = order.totalPrice;
