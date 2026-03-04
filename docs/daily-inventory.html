@@ -109,6 +109,7 @@
 <div id="outSection" style="display:none;">
 
   <h3>📦 الطلبات الطالعة</h3>
+  <p id="outSummary" style="font-weight:bold;color:#043B64;"></p>
   <table id="outTable">
     <thead>
       <tr>
@@ -131,6 +132,7 @@
 <div id="returnSection" style="display:none;margin-top:30px;">
 
   <h3 style="color:#842029;">🔴 الطلبات الراجعة</h3>
+  <p id="returnSummary" style="font-weight:bold;color:#842029;"></p>
   <table id="returnTable" style="background:#fff5f5;">
     <thead>
       <tr>
@@ -188,6 +190,8 @@ import {
 const barcodeInput = document.getElementById("barcodeInput");
 const outTable = document.querySelector("#outTable tbody");
 const returnTable = document.querySelector("#returnTable tbody");
+const outSummary = document.getElementById("outSummary");
+const returnSummary = document.getElementById("returnSummary");
 
 const outSection = document.getElementById("outSection");
 const returnSection = document.getElementById("returnSection");
@@ -198,7 +202,9 @@ let pendingOut = [];
 let pendingReturn = [];
 let scannedShipments = new Set();
 
-    async function processBarcode(shipmentId) {
+async function processBarcode(shipmentId) {
+
+  shipmentId = String(shipmentId).trim();
 
   scanMsg.textContent = "⏳ جاري البحث...";
 
@@ -217,7 +223,7 @@ if (!snap.exists()) {
 }
 
 const data = snap.val();
-const foundOrder = Object.values(data)[0];
+const foundOrder = Object.values(data)[0] || null;
 
   if (!foundOrder) {
     scanMsg.textContent = "❌ رقم الوصل غير موجود";
@@ -270,9 +276,10 @@ function renderPendingTable() {
 
     data.forEach(item => {
 
-      const variantText = Object.entries(item.variants || {})
-        .map(([k, v]) => v)
-        .join(" / ");
+      const variants = item.variants || {};
+const variantText = Object.entries(variants)
+  .map(([k, v]) => `${k} | ${v}`)
+  .join(" | ");
 
       const fullName = variantText
         ? item.name + " - " + variantText
@@ -298,8 +305,23 @@ function renderPendingTable() {
     }
   };
 
-  render(pendingOut, outTable);
-  render(pendingReturn, returnTable);
+render(pendingOut, outTable);
+render(pendingReturn, returnTable);
+
+// حساب المجاميع
+let outOrders = pendingOut.length;
+let outQty = pendingOut.reduce((sum,i)=>sum+i.qty,0);
+
+let returnOrders = pendingReturn.length;
+let returnQty = pendingReturn.reduce((sum,i)=>sum+i.qty,0);
+
+// عرض المجاميع
+outSummary.textContent = `عدد الطلبات: ${outOrders} | إجمالي الكمية: ${outQty}`;
+if (returnOrders > 0) {
+  returnSummary.textContent = `عدد الطلبات: ${returnOrders} | إجمالي الكمية: ${returnQty}`;
+} else {
+  returnSummary.textContent = "";
+}
 }
 
  
@@ -355,10 +377,10 @@ if (!pendingOut.length) {
  const productTotals = new Map();
 
 pendingOut.forEach(item => {
-
-  const variantText = Object.entries(item.variants || {})
-    .map(([k, v]) => `${k} | ${v}`)
-    .join(" | ");
+const variants = item.variants || {};
+const variantText = Object.entries(variants)
+  .map(([k, v]) => `${k} | ${v}`)
+  .join(" | ");
 
   const key = variantText
     ? item.name + " || " + variantText
@@ -392,6 +414,8 @@ if (key.toLowerCase().trim() === name.toLowerCase().trim()) {
 
   const stock = item.stock || {};
 
+
+
   const hasVariants = Object.keys(stock)
     .some(k => k.includes("اللون") || k.includes("القياس"));
 
@@ -417,7 +441,7 @@ if (key.toLowerCase().trim() === name.toLowerCase().trim()) {
 
     // 🔵 بمتغيرات
 // نبني نفس مفتاح المتغير المخزن في warehouse
-const variantKey = variantPart || "";
+const variantKey = variantPart ? variantPart.trim() : "";
 
 if (!variantKey) {
   scanMsg.textContent = `❌ المتغير غير محدد للمنتج: ${name}`;
@@ -478,10 +502,10 @@ if (!pendingReturn.length) {
   const productTotals = new Map();
 
 pendingReturn.forEach(item => {
-
-    const variantText = Object.entries(item.variants || {})
-      .map(([k, v]) => `${k} | ${v}`)
-      .join(" | ");
+const variants = item.variants || {};
+const variantText = Object.entries(variants)
+  .map(([k, v]) => `${k} | ${v}`)
+  .join(" | ");
 
     const key = variantText
       ? item.name + " || " + variantText
@@ -531,7 +555,7 @@ pendingReturn.forEach(item => {
 
         } else {
 
-          const variantKey = variantPart || "";
+const variantKey = variantPart ? variantPart.trim() : "";
 
           if (!variantKey) {
             scanMsg.textContent = `❌ المتغير غير محدد للمنتج: ${name}`;
@@ -572,6 +596,23 @@ pendingReturn = [];
 
   scanMsg.textContent = "✅ تم إضافة الراجع بنجاح";
 });
+function fixArabicText(text) {
+  if (!text) return "";
+
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ")
+    .replace(/\s+/g, " ");
+}
 const pdfBtn = document.getElementById("pdfBtn");
 
 pdfBtn.addEventListener("click", generateInventoryPDF);
@@ -601,68 +642,211 @@ async function generateInventoryPDF() {
     }
   };
 
-  // 🔹 بناء بيانات الجدول
-  let body = [
-    [
-      { text: "الحالة", style: "tableHeader", alignment: "center" },
-      { text: "المنتج", style: "tableHeader", alignment: "center" },
-      { text: "الكمية", style: "tableHeader", alignment: "center" }
-    ]
-  ];
+// جدول الطالع
+let outBody = [
+[
+{ text:fixArabicText("ت"), style:"tableHeader", alignment:"center"},
+{ text:fixArabicText("المنتج"), style:"tableHeader", alignment:"center"},
+{ text:fixArabicText("عدد الطلبات"), style:"tableHeader", alignment:"center"},
+{ text:fixArabicText("الكمية"), style:"tableHeader", alignment:"center"}
+]
+];
 
-  pendingOut.forEach(item => {
-    const variant = Object.values(item.variants || {}).join(" / ");
-    const name = variant ? item.name + " - " + variant : item.name;
-    body.push([
-      { text: "طالع", alignment: "center", color: "#043B64" },
-      { text: name, alignment: "center" },
-      { text: item.qty.toLocaleString("en-US"), alignment: "center", direction:"ltr" }
-    ]);
-  });
+// جدول الراجع
+let returnBody = [
+[
+{ text:fixArabicText("ت"), style:"returnHeader", alignment:"center"},
+{ text:fixArabicText("المنتج"), style:"returnHeader", alignment:"center"},
+{ text:fixArabicText("عدد الطلبات"), style:"returnHeader", alignment:"center"},
+{ text:fixArabicText("الكمية"), style:"returnHeader", alignment:"center"}
+]
+];
 
-  pendingReturn.forEach(item => {
-    const variant = Object.values(item.variants || {}).join(" / ");
-    const name = variant ? item.name + " - " + variant : item.name;
-    body.push([
-      { text: "راجع", alignment: "center", color: "#c0392b" },
-      { text: name, alignment: "center" },
-      { text: item.qty.toLocaleString("en-US"), alignment: "center", direction:"ltr" }
-    ]);
-  });
+const outMap = new Map();
+const returnMap = new Map();
 
+// الطالع
+pendingOut.forEach(item=>{
+
+const variant = Object.entries(item.variants || {})
+  .map(([k,v]) => `${k} | ${v}`)
+  .join(" | ");
+const name = variant ? item.name+" - "+variant : item.name;
+
+if(!outMap.has(name)){
+outMap.set(name,{orders:0,qty:0});
+}
+
+const obj = outMap.get(name);
+obj.orders+=1;
+obj.qty+=item.qty;
+
+});
+
+// الراجع
+pendingReturn.forEach(item=>{
+
+const variant = Object.entries(item.variants || {})
+  .map(([k,v]) => `${k} | ${v}`)
+  .join(" | ");
+const name = variant ? item.name+" - "+variant : item.name;
+
+if(!returnMap.has(name)){
+returnMap.set(name,{orders:0,qty:0});
+}
+
+const obj = returnMap.get(name);
+obj.orders+=1;
+obj.qty+=item.qty;
+
+});
+
+// تعبئة الطالع
+let i=1;
+[...outMap.entries()]
+.sort((a,b)=>b[1].qty-a[1].qty)
+.forEach(([name,data])=>{
+
+outBody.push([
+i++,
+fixArabicText(name),
+data.orders,
+data.qty
+]);
+
+});
+
+// تعبئة الراجع
+let r=1;
+[...returnMap.entries()]
+.sort((a,b)=>b[1].qty-a[1].qty)
+.forEach(([name,data])=>{
+
+returnBody.push([
+r++,
+fixArabicText(name),
+data.orders,
+data.qty
+]);
+
+});
+
+// ملخص الطالع
+let outOrders = pendingOut.length;
+let outProducts = outMap.size;
+let outQty = 0;
+
+for(const [,data] of outMap){
+outQty += data.qty;
+}
+
+// ملخص الراجع
+let returnOrders = pendingReturn.length;
+let returnProducts = returnMap.size;
+let returnQty = 0;
+
+for(const [,data] of returnMap){
+returnQty += data.qty;
+}
+// إضافة صف المجموع للطالع
+outBody.push([
+"",
+fixArabicText("المجموع"),
+outOrders,
+outQty
+]);
+
+// إضافة صف المجموع للراجع
+returnBody.push([
+"",
+fixArabicText("المجموع"),
+returnOrders,
+returnQty
+]);
+const contentBlocks = [];
+
+if(outMap.size){
+contentBlocks.push(
+{
+text:fixArabicText("📦 جرد الطالع"),
+bold:true,
+margin:[0,10,0,5]
+},
+{
+table:{
+headerRows:1,
+widths:[30,"*",80,60],
+body:outBody
+},
+layout:{
+hLineColor:"#ddd",
+vLineColor:"#ddd",
+paddingTop:()=>6,
+paddingBottom:()=>6
+}
+}
+);
+}
+
+if(returnMap.size){
+contentBlocks.push(
+{
+text:fixArabicText("🔴 جرد الراجع"),
+bold:true,
+margin:[0,20,0,5]
+},
+{
+table:{
+headerRows:1,
+widths:[30,"*",80,60],
+body:returnBody
+},
+layout:{
+hLineColor:"#ddd",
+vLineColor:"#ddd",
+paddingTop:()=>6,
+paddingBottom:()=>6
+}
+}
+);
+}
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 50, 40, 50],
-    pageDirection: "rtl",
+pageDirection:"rtl",
+defaultStyle: {
+  font: "Tajawal"
+},
+styles: {
+tableHeader:{
+bold:true,
+color:"white",
+fillColor:"#043B64",
+alignment:"center"
+},
 
-    defaultStyle: {
-      font: "Tajawal",
-      alignment: "right"
-    },
+returnHeader:{
+bold:true,
+color:"white",
+fillColor:"#842029",
+alignment:"center"
+}
+},
+content: [
 
-    styles: {
-      tableHeader: {
-        bold: true,
-        color: "white",
-        fillColor: "#043B64",
-        alignment: "center"
-      }
-    },
-
-    content: [
 
       // 🔹 العنوان الرئيسي
       {
-        text: "شركة المراد التجارية",
+     text: fixArabicText("شركة المراد التجارية"),
         fontSize: 20,
         bold: true,
         color: "#FF6B2D",
         alignment: "right",
         margin: [0,0,0,10]
       },
-
+...contentBlocks,
       {
-        text: "تقرير الجرد اليومي",
+text: fixArabicText("تقرير الجرد اليومي"),
         fontSize: 14,
         bold: true,
         alignment: "center",
@@ -671,27 +855,48 @@ async function generateInventoryPDF() {
       },
 
       {
-        text: "تاريخ الجرد: " + new Date().toLocaleString("en-GB"),
+  text: fixArabicText("تاريخ الجرد: ") + new Date().toLocaleString("en-GB"),
         alignment: "right",
         margin: [0,0,0,10]
       },
 
-      {
-        table: {
-          headerRows: 1,
-          widths: ["auto","*","auto"],
-          body: body
-        },
-        layout: {
-          hLineColor: "#ddd",
-          vLineColor: "#ddd",
-          paddingTop: () => 6,
-          paddingBottom: () => 6
-        }
-      },
+{
+text:fixArabicText("ملخص الطالع"),
+fontSize:14,
+bold:true,
+margin:[0,20,0,10]
+},
 
+{
+table:{
+widths:["*","*"],
+body:[
+[fixArabicText("عدد الطلبات"), outOrders],
+[fixArabicText("عدد المنتجات"), outProducts],
+[fixArabicText("إجمالي الكمية"), outQty]
+]
+}
+},
+
+{
+text:fixArabicText("ملخص الراجع"),
+fontSize:14,
+bold:true,
+margin:[0,20,0,10]
+},
+
+{
+table:{
+widths:["*","*"],
+body:[
+[fixArabicText("عدد الطلبات"), returnOrders],
+[fixArabicText("عدد المنتجات"), returnProducts],
+[fixArabicText("إجمالي الكمية"), returnQty]
+]
+}
+},
       {
-        text: "🔹 تقرير صادر من نظام المراد 🔹",
+       text: fixArabicText("🔹 تقرير صادر من نظام المراد 🔹"),
         alignment: "center",
         italics: true,
         color: "#777",
