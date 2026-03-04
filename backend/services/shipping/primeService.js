@@ -241,9 +241,8 @@ export async function updatePrimeStatusesFromFirebase() {
   if (primeOrders.length === 0) return;
 
   const shipmentIds = primeOrders.map(o => Number(o.receiptNum));
-
-  const response = await fetch(
-    PRIME_BASE_URL + "/webapi/external/shipments-info",
+const response = await fetch(
+  PRIME_BASE_URL + "/myp/webapi/external/shipments-info",
     {
       method: "POST",
       headers: {
@@ -260,59 +259,49 @@ export async function updatePrimeStatusesFromFirebase() {
     console.log("❌ Prime status response invalid:", result);
     return;
   }
+for (const shipment of result) {
 
-  for (const shipment of result) {
+  const order = primeOrders.find(
+    o => String(o.receiptNum) === String(shipment.id)
+  );
 
-    const order = primeOrders.find(
-      o => String(o.receiptNum) === String(shipment.id)
-    );
+  if (!order) continue;
 
-    if (!order) continue;
+  let newStatus = null;  // ✅ مهم جداً
 
-    let newStatus = null;
+  const currentStatus = allOrders[order.id].status;
 
-    // ===== مابنك موحد مثل الوسيط =====
-    switch (shipment.status) {
-      case "ONWAY":
-        newStatus = "قيد التوصيل";
-        break;
+  // 🟢 تم التسليم
+  if (
+    shipment.status === "DELIVERED" ||
+    shipment.status === "PART_DELIVERED" ||
+    shipment.status === "DELIVERED_CHANGE_PRICE"
+  ) {
+    newStatus = "تم التسليم";
+  }
 
-      case "DELIVERED":
-        newStatus = "تم التسليم";
-        break;
+  // 🔴 راجع نهائي
+  else if (
+    shipment.status === "FAILED_DELIVER_RETURNED_TO_SENDER" ||
+    shipment.status === "CNCL"
+  ) {
+    newStatus = "راجع";
+  }
 
-      case "PART_DELIVERED":
-        newStatus = "تم التسليم";
-        break;
+  // 🟡 باقي الحالات
+  else {
+    newStatus = "قيد التوصيل";
+  }
 
-      case "CNCL":
-        newStatus = "راجع";
-        break;
+  // 🔒 لا تغيّر إذا صارت تم التسليم سابقاً
+  if (currentStatus === "تم التسليم") continue;
 
-      case "FAILED_DELIVER_RETURNED_TO_SENDER":
-        newStatus = "تم استلام الراجع";
-        break;
-
-      case "DELETED":
-        newStatus = "رفض";
-        break;
-
-      case "POSTPONED":
-        newStatus = "قيد التوصيل";
-        break;
-
-      case "DELIVERED_CHANGE_PRICE":
-        newStatus = "تم التسليم";
-        break;
-    }
-
-    if (!newStatus) continue;
-
-    const updateData = {
-      status: newStatus,
-      lastUpdateBy: "system-prime",
-      lastStatusAt: new Date().toISOString()
-    };
+  const updateData = {
+    status: newStatus,
+    primeStatus: shipment.status,
+    lastUpdateBy: "system-prime",
+    lastStatusAt: new Date().toISOString()
+  };
 
     // ⭐ معالجة تغيير السعر
     if (shipment.status === "DELIVERED_CHANGE_PRICE") {

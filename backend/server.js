@@ -1,3 +1,4 @@
+import { updatePrimeStatusesFromFirebase } from "./services/shipping/primeServer.js";
 import * as primeService from "./services/shipping/primeService.js";
 import { db } from "./firebase.js";
 import { ref, get, update } from "firebase/database";
@@ -456,14 +457,19 @@ cron.schedule("* * * * *", async () => {
   isUpdating = true;
 
   try {
+
+    // 🔵 تحديث الوسيط
     await autoUpdateStatuses();
+
+    // 🟣 تحديث برايم
+    await updatePrimeStatusesFromFirebase();
+
   } catch (err) {
     console.error("❌ Error inside cron:", err);
   }
 
   isUpdating = false;
 });
-
 
 // =======================================================
 // 🟢 8) API خارجي لتحديث المخزن من صفحة التفاصيل

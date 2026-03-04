@@ -39,3 +39,18 @@ export async function createOrder(payload, token) {
 
   return await response.json();
 }
+// 🟢 تسجيل دخول تلقائي للوسيط
+export async function loginToWaseet() {
+
+  const USERNAME = "ramadan@almurad";
+  const PASSWORD = "ramadan1998@";
+
+  const result = await login(USERNAME, PASSWORD);
+
+  if (!result?.status || !result?.data?.token) {
+    console.log("❌ Waseet login failed:", result);
+    return null;
+  }
+
+  return result.data.token;
+}

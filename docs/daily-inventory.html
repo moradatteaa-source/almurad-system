@@ -190,6 +190,7 @@ import {
 const barcodeInput = document.getElementById("barcodeInput");
 const outTable = document.querySelector("#outTable tbody");
 const returnTable = document.querySelector("#returnTable tbody");
+const scanMsg = document.getElementById("scanMsg");
 const outSummary = document.getElementById("outSummary");
 const returnSummary = document.getElementById("returnSummary");
 
@@ -215,16 +216,26 @@ const q = query(
   equalTo(shipmentId)
 );
 
-const snap = await get(q);
+let snap = await get(q);
+
+// إذا لم يجد حاول البحث كرقم
+if (!snap.exists()) {
+  const q2 = query(
+    ordersRef,
+    orderByChild("receiptNum"),
+    equalTo(Number(shipmentId))
+  );
+  snap = await get(q2);
+}
 
 if (!snap.exists()) {
   scanMsg.textContent = "❌ رقم الوصل غير موجود";
   return;
 }
-
 const data = snap.val();
+console.log("ORDER DATA:", data);
 const foundOrder = Object.values(data)[0] || null;
-
+console.log("ORDER:", foundOrder);
   if (!foundOrder) {
     scanMsg.textContent = "❌ رقم الوصل غير موجود";
     return;
@@ -239,9 +250,11 @@ const foundOrder = Object.values(data)[0] || null;
 
 for (const p of foundOrder.productsDetailed || []) {
 
+  const productName = p.name || foundOrder.productName || "منتج غير معروف";
+
   const itemData = {
-    name: p.name,
-    qty: Number(p.qty),
+    name: productName,
+    qty: Number(p.qty || 1),
     variants: p.variants || {}
   };
 
@@ -281,16 +294,16 @@ const variantText = Object.entries(variants)
   .map(([k, v]) => `${k} | ${v}`)
   .join(" | ");
 
-      const fullName = variantText
-        ? item.name + " - " + variantText
-        : item.name;
+   const fullName = variantText
+  ? item.name + " - " + variantText
+  : item.name;
 
       if (!map.has(fullName)) {
         map.set(fullName, { orders: 0, qty: 0 });
       }
 
       const obj = map.get(fullName);
-      obj.orders += 1;
+obj.orders += 1;
       obj.qty += item.qty;
     });
 
@@ -393,102 +406,74 @@ const variantText = Object.entries(variants)
   productTotals.set(key, productTotals.get(key) + item.qty);
 });
 
-// نجيب المخزن مرة وحدة فقط
-const warehouseSnap = await get(child(ref(db), "warehouse"));
-
-if (!warehouseSnap.exists()) {
-  scanMsg.textContent = "❌ لا يوجد مخزن";
-  return;
-}
-
-const warehouseData = warehouseSnap.val();
-
 for (const [fullKey, qty] of productTotals.entries()) {
+
 const parts = fullKey.split(" || ");
 const name = parts[0];
 const variantPart = parts.length > 1 ? parts[1] : null;
 
-  for (const [key, item] of Object.entries(warehouseData)) {
+// جلب المنتج مباشرة من المخزن
+const productRef = ref(db, "warehouse/" + name);
+const productSnap = await get(productRef);
 
-if (key.toLowerCase().trim() === name.toLowerCase().trim()) {
+if (!productSnap.exists()) {
+  scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
+  continue;
+}
 
-  const stock = item.stock || {};
+const productData = productSnap.val();
+const stock = productData.stock || {};
 
+if (!productData.hasVariants) {
 
+const currentQty = Number(stock["إجمالي الكمية"] || 0);
+const newQty = currentQty - qty;
 
-  const hasVariants = Object.keys(stock)
-    .some(k => k.includes("اللون") || k.includes("القياس"));
+await update(productRef, {
+"stock/إجمالي الكمية": newQty,
+totalQty: newQty,
+lastUpdate: new Date().toISOString()
+});
 
-  // 🟢 بدون متغيرات
-  if (!hasVariants) {
+}
 
-    const currentQty = Number(stock["إجمالي الكمية"] || 0);
+else {
 
-    if (currentQty < qty) {
-      scanMsg.textContent = `❌ المخزون غير كافي للمنتج: ${name}`;
-      return;
-    }
-
-    const newQty = currentQty - qty;
-
-    await update(ref(db, "warehouse/" + key), {
-      "stock/إجمالي الكمية": newQty,
-      totalQty: newQty,
-      lastUpdate: new Date().toISOString()
-    });
-
-  } else {
-
-    // 🔵 بمتغيرات
-// نبني نفس مفتاح المتغير المخزن في warehouse
 const variantKey = variantPart ? variantPart.trim() : "";
 
-if (!variantKey) {
-  scanMsg.textContent = `❌ المتغير غير محدد للمنتج: ${name}`;
-  return;
-}
-
 const currentVariantQty = Number(stock[variantKey] || 0);
+const newVariantQty = currentVariantQty - qty;
 
-    if (currentVariantQty < qty) {
-      scanMsg.textContent = `❌ المخزون غير كافي للمتغير: ${name}`;
-      return;
-    }
+const updatedStock = {
+...stock,
+[variantKey]: newVariantQty
+};
 
-    const newVariantQty = currentVariantQty - qty;
-
-    const updatedStock = {
-      ...stock,
-      [variantKey]: newVariantQty
-    };
-
-    let total = 0;
-    for (const [k, v] of Object.entries(updatedStock)) {
-      if (k !== "إجمالي الكمية") {
-        total += Number(v) || 0;
-      }
-    }
-
-    updatedStock["إجمالي الكمية"] = total;
-
-    await update(ref(db, "warehouse/" + key), {
-      stock: updatedStock,
-      totalQty: total,
-      lastUpdate: new Date().toISOString()
-    });
-
-  }
-
-  break;
+let total = 0;
+for (const v of Object.values(updatedStock)) {
+total += Number(v) || 0;
 }
-  }
+
+await update(productRef, {
+stock: updatedStock,
+totalQty: total,
+lastUpdate: new Date().toISOString()
+});
+
 }
+
+}
+
+
+// إنشاء التقرير قبل التصفير
+await generateInventoryPDF();
 
 pendingOut = [];
-  scannedShipments.clear();
-  renderPendingTable();
+scannedShipments = new Set();
+renderPendingTable();
 
-  scanMsg.textContent = "✅ تم الخصم بنجاح";
+scanMsg.textContent = "✅ تم الخصم بنجاح";
+
 });
  returnBtn.addEventListener("click", async () => {
 
@@ -518,14 +503,6 @@ const variantText = Object.entries(variants)
     productTotals.set(key, productTotals.get(key) + item.qty);
   });
 
-  const warehouseSnap = await get(child(ref(db), "warehouse"));
-
-  if (!warehouseSnap.exists()) {
-    scanMsg.textContent = "❌ لا يوجد مخزن";
-    return;
-  }
-
-  const warehouseData = warehouseSnap.val();
 
   for (const [fullKey, qty] of productTotals.entries()) {
 
@@ -533,68 +510,64 @@ const variantText = Object.entries(variants)
     const name = parts[0];
     const variantPart = parts.length > 1 ? parts[1] : null;
 
-    for (const [key, item] of Object.entries(warehouseData)) {
+// جلب المنتج مباشرة من المخزن
+const productRef = ref(db, "warehouse/" + name);
+const productSnap = await get(productRef);
 
-      if (key.toLowerCase().trim() === name.toLowerCase().trim()) {
+if (!productSnap.exists()) {
+  scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
+  continue;
+}
 
-        const stock = item.stock || {};
-        const hasVariants = Object.keys(stock)
-          .some(k => k.includes("اللون") || k.includes("القياس"));
+const productData = productSnap.val();
+const stock = productData.stock || {};
 
-        // 🟢 بدون متغيرات
-        if (!hasVariants) {
+if (!productData.hasVariants) {
 
-          const currentQty = Number(stock["إجمالي الكمية"] || 0);
-          const newQty = currentQty + qty;
+  const currentQty = Number(stock["إجمالي الكمية"] || 0);
+  const newQty = currentQty + qty;
 
-          await update(ref(db, "warehouse/" + key), {
-            "stock/إجمالي الكمية": newQty,
-            totalQty: newQty,
-            lastUpdate: new Date().toISOString()
-          });
+  await update(productRef, {
+    "stock/إجمالي الكمية": newQty,
+    totalQty: newQty,
+    lastUpdate: new Date().toISOString()
+  });
 
-        } else {
+}
+else {
 
-const variantKey = variantPart ? variantPart.trim() : "";
+  const variantKey = variantPart ? variantPart.trim() : "";
 
-          if (!variantKey) {
-            scanMsg.textContent = `❌ المتغير غير محدد للمنتج: ${name}`;
-            return;
-          }
+  const currentVariantQty = Number(stock[variantKey] || 0);
+  const newVariantQty = currentVariantQty + qty;
 
-          const currentVariantQty = Number(stock[variantKey] || 0);
-          const newVariantQty = currentVariantQty + qty;
+  const updatedStock = {
+    ...stock,
+    [variantKey]: newVariantQty
+  };
 
-          const updatedStock = {
-            ...stock,
-            [variantKey]: newVariantQty
-          };
-
-          let total = 0;
-          for (const [k, v] of Object.entries(updatedStock)) {
-            if (k !== "إجمالي الكمية") {
-              total += Number(v) || 0;
-            }
-          }
-
-          updatedStock["إجمالي الكمية"] = total;
-
-          await update(ref(db, "warehouse/" + key), {
-            stock: updatedStock,
-            totalQty: total,
-            lastUpdate: new Date().toISOString()
-          });
-        }
-
-        break;
-      }
-    }
+  let total = 0;
+  for (const v of Object.values(updatedStock)) {
+    total += Number(v) || 0;
   }
-pendingReturn = [];
-  scannedShipments.clear();
-  renderPendingTable();
 
-  scanMsg.textContent = "✅ تم إضافة الراجع بنجاح";
+  await update(productRef, {
+    stock: updatedStock,
+    totalQty: total,
+    lastUpdate: new Date().toISOString()
+  });
+
+}
+  }
+// إنشاء التقرير قبل التصفير
+await generateInventoryPDF();
+
+pendingReturn = [];
+scannedShipments = new Set();
+renderPendingTable();
+
+scanMsg.textContent = "✅ تم إضافة الراجع بنجاح";
+ 
 });
 function fixArabicText(text) {
   if (!text) return "";
@@ -634,6 +607,7 @@ async function generateInventoryPDF() {
 
   pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
   pdfMake.fonts = {
+    
     Tajawal: {
       normal: "Tajawal-Regular.ttf",
       bold: "Tajawal-Regular.ttf",
@@ -641,7 +615,14 @@ async function generateInventoryPDF() {
       bolditalics: "Tajawal-Regular.ttf"
     }
   };
-
+// تحميل شعار المراد
+const logoBase64 = await fetch("almurad-logo.png")
+.then(r => r.blob())
+.then(blob => new Promise(res => {
+const reader = new FileReader();
+reader.onloadend = () => res(reader.result);
+reader.readAsDataURL(blob);
+}));
 // جدول الطالع
 let outBody = [
 [
@@ -678,7 +659,7 @@ outMap.set(name,{orders:0,qty:0});
 }
 
 const obj = outMap.get(name);
-obj.orders+=1;
+obj.orders += 1;
 obj.qty+=item.qty;
 
 });
@@ -696,7 +677,7 @@ returnMap.set(name,{orders:0,qty:0});
 }
 
 const obj = returnMap.get(name);
-obj.orders+=1;
+obj.orders += 1;
 obj.qty+=item.qty;
 
 });
@@ -739,7 +720,15 @@ let outQty = 0;
 for(const [,data] of outMap){
 outQty += data.qty;
 }
+let topProduct = "";
+let topQty = 0;
 
+for (const [name, data] of outMap) {
+  if (data.qty > topQty) {
+    topQty = data.qty;
+    topProduct = name;
+  }
+}
 // ملخص الراجع
 let returnOrders = pendingReturn.length;
 let returnProducts = returnMap.size;
@@ -768,7 +757,7 @@ const contentBlocks = [];
 if(outMap.size){
 contentBlocks.push(
 {
-text:fixArabicText("📦 جرد الطالع"),
+text:fixArabicText(" جرد الطالع"),
 bold:true,
 margin:[0,10,0,5]
 },
@@ -810,9 +799,23 @@ paddingBottom:()=>6
 }
 );
 }
-  const docDefinition = {
-    pageSize: "A4",
-    pageMargins: [40, 50, 40, 50],
+ const docDefinition = {
+  pageSize: "A4",
+  pageMargins: [40, 50, 40, 50],
+
+footer: function() {
+  return {
+    columns: [
+      {
+        text: fixArabicText("مسؤول المخزن: عبد المجيد أحمد"),
+        alignment: "left",
+        margin: [40,0,40,10],
+        bold: true
+      }
+    ]
+  };
+},
+
 pageDirection:"rtl",
 defaultStyle: {
   font: "Tajawal"
@@ -836,29 +839,40 @@ content: [
 
 
       // 🔹 العنوان الرئيسي
-      {
-     text: fixArabicText("شركة المراد التجارية"),
-        fontSize: 20,
-        bold: true,
-        color: "#FF6B2D",
-        alignment: "right",
-        margin: [0,0,0,10]
-      },
-...contentBlocks,
-      {
-text: fixArabicText("تقرير الجرد اليومي"),
-        fontSize: 14,
-        bold: true,
-        alignment: "center",
-        color: "#043B64",
-        margin: [0,0,0,15]
-      },
+    {
+columns: [
 
-      {
-  text: fixArabicText("تاريخ الجرد: ") + new Date().toLocaleString("en-GB"),
-        alignment: "right",
-        margin: [0,0,0,10]
-      },
+{ image: logoBase64, width: 80, alignment: "left", margin: [0,-10,0,0] },
+
+{
+text: fixArabicText("شركة المراد التجارية"),
+fontSize: 20,
+bold: true,
+color: "#FF6B2D",
+alignment: "right",
+margin: [0,15,0,0]
+}
+
+],
+margin:[0,0,0,10]
+},
+{
+text: fixArabicText("تقرير الجرد اليومي"),
+fontSize: 16,
+bold: true,
+alignment: "center",
+color: "#043B64",
+margin: [0,5,0,5]
+},
+{
+text: fixArabicText("تاريخ الجرد: ") + new Date().toLocaleString("en-US", {
+hour12: true
+}),
+alignment: "center",
+margin: [0,0,0,15]
+},
+...contentBlocks,
+   
 
 {
 text:fixArabicText("ملخص الطالع"),
@@ -873,11 +887,13 @@ widths:["*","*"],
 body:[
 [fixArabicText("عدد الطلبات"), outOrders],
 [fixArabicText("عدد المنتجات"), outProducts],
-[fixArabicText("إجمالي الكمية"), outQty]
+[fixArabicText("إجمالي الكمية"), outQty],
+[fixArabicText("أكثر منتج مبيعاً"), fixArabicText(topProduct + " (" + topQty + ")")]
 ]
 }
 },
 
+...(returnQty > 0 ? [
 {
 text:fixArabicText("ملخص الراجع"),
 fontSize:14,
@@ -894,15 +910,17 @@ body:[
 [fixArabicText("إجمالي الكمية"), returnQty]
 ]
 }
-},
-      {
-       text: fixArabicText("🔹 تقرير صادر من نظام المراد 🔹"),
-        alignment: "center",
-        italics: true,
-        color: "#777",
-        fontSize: 9,
-        margin: [0,15,0,0]
-      }
+}
+] : []),
+
+{
+text: fixArabicText(" تقرير صادر من نظام المراد "),
+alignment: "center",
+italics: true,
+color: "#777",
+fontSize: 9,
+margin: [0,10,0,0]
+}
     ]
   };
 
