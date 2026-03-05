@@ -266,40 +266,64 @@ o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
   );
 
   if (!order) continue;
-const primeStatus = shipment.shipmentStatus;
-  let newStatus = null;  // ✅ مهم جداً
-
   const currentStatus = allOrders[order.id].status;
+const step = shipment.stepCode;
+let newStatus = null;
 
-  // 🟢 تم التسليم
-if (["DELIVERED"].includes(primeStatus)) {
+// 🟢 تم التسليم
+if ([
+  "DLEIVERD",
+  "PART_SUCC",
+  "SUCC_CHANGEPRICE",
+  "FORCE_DLV",
+  "SUCCARCHV"
+].includes(step)) {
   newStatus = "تم التسليم";
 }
-else if (["PART_DELIVERED", "DELIVERED_CHANGE_PRICE"].includes(primeStatus)) {
-  newStatus = "تم التسليم";
-}
-else if (["FAILED_DELIVER_RETURNED_TO_SENDER", "CNCL"].includes(primeStatus)) {
+
+// 🔴 راجع (مؤكد راجع عند برايم)
+else if ([
+  "RTN_INSTORE",
+  "RETURNED_TO_CUSTOMER"
+].includes(step)) {
   newStatus = "راجع";
 }
-else if (["POSTPONED", "ONWAY"].includes(primeStatus)) {
+
+// ✅ تم استلام الراجع (أرشيف برايم)
+else if (step === "RTNARCHV") {
+  newStatus = "تم استلام الراجع";
+}
+
+// 🔵 قيد التوصيل
+else if ([
+  "ONWAY",
+  "POSTPONED",
+  "TRY_AGAIN",
+  "RESENEDSHIPMENTS"
+].includes(step)) {
   newStatus = "قيد التوصيل";
 }
+
 else {
-  newStatus = "قيد التوصيل";
+  continue;
 }
 
-  // 🔒 لا تغيّر إذا صارت تم التسليم سابقاً
- if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) continue;
+// 🔒 لا تغيّر إذا صارت تم التسليم سابقاً
+if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) continue;
 
-  const updateData = {
-    status: newStatus,
-primeStatus: primeStatus,
-    lastUpdateBy: "system-prime",
-    lastStatusAt: new Date().toISOString()
-  };
+const updateData = {
+  status: newStatus,
+  primeStepCode: step,
+  lastUpdateBy: "system-prime",
+  lastStatusAt: new Date().toISOString()
+};
 
     // ⭐ معالجة تغيير السعر
-if (primeStatus === "DELIVERED_CHANGE_PRICE") {
+if (
+  step === "SUCC_CHANGEPRICE" &&
+  shipment.receiptAmount &&
+  Number(shipment.receiptAmount) !== Number(order.totalPrice)
+) {
 
       updateData.priceChanged = true;
       updateData.oldPrice = order.totalPrice;
