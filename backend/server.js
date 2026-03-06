@@ -448,7 +448,10 @@ async function adjustStock(orderId, newStatus) {
 
 let isUpdating = false;
 
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
+
+  console.log("⏱ Cron running:", new Date().toISOString());
+
   if (isUpdating) {
     console.log("⚠️ Skipped — update still running...");
     return;
@@ -458,19 +461,21 @@ cron.schedule("* * * * *", async () => {
 
   try {
 
-    // 🔵 تحديث الوسيط
-    await autoUpdateStatuses();
+    // ❌ إيقاف الوسيط
+    // await autoUpdateStatuses();
 
-    // 🟣 تحديث برايم
+    // 🟣 تحديث برايم فقط
     await updatePrimeStatusesFromFirebase();
+
+    console.log("✅ Prime update completed");
 
   } catch (err) {
     console.error("❌ Error inside cron:", err);
   }
 
   isUpdating = false;
-});
 
+});
 // =======================================================
 // 🟢 8) API خارجي لتحديث المخزن من صفحة التفاصيل
 // =======================================================
@@ -605,6 +610,24 @@ const token = await primeService.loginToPrime();    if (!token) {
   } catch (err) {
     console.log("❌ ERROR:", err);
     res.json({ success: false, error: err.message });
+  }
+
+});
+app.get("/cron-update", async (req, res) => {
+
+  console.log("🔄 External cron triggered");
+
+  try {
+
+    await autoUpdateStatuses();
+    await updatePrimeStatusesFromFirebase();
+
+    res.send("Update done");
+
+  } catch (err) {
+
+    res.send("Error: " + err.message);
+
   }
 
 });

@@ -294,11 +294,16 @@ else if (step === "RTNARCHV") {
   newStatus = "تم استلام الراجع";
 }
 
-// 🔵 قيد التوصيل
+// 🔵 قيد التوصيل (كل الحالات التي تعني الشحنة عند شركة التوصيل)
 else if ([
+  "NEWINSTORE",
+  "PRINTMANIFEST",
+  "NEW_ONWAY",
+  "LIAISONAGT_NEWONWAY",
   "ONWAY",
   "POSTPONED",
   "TRY_AGAIN",
+  "MANIFEST_BRANCHES",
   "RESENEDSHIPMENTS"
 ].includes(step)) {
   newStatus = "قيد التوصيل";
