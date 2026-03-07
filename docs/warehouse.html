@@ -468,7 +468,18 @@ return text
 }
 // 🧾 حفظ أو تعديل المنتج
 window.saveProduct = async function() {
+  
   const name = document.getElementById("productName").value.trim();
+  const safeName = safeKey(name);
+
+// 🔴 منع تكرار اسم المنتج
+if (!editingProduct) {
+  const checkSnap = await get(ref(db, "warehouse/" + safeName));
+  if (checkSnap.exists()) {
+    alert("⚠️ هذا المنتج موجود مسبقاً في المخزن.");
+    return;
+  }
+}
   const buyPrice = parseFloat(document.getElementById("buyPrice").value);
 const sellPricePos = parseFloat(document.getElementById("sellPricePos").value);
 const sellPriceOnline = parseFloat(document.getElementById("sellPriceOnline").value);
@@ -574,7 +585,6 @@ if (typeof stock === "number") {
 } else if (typeof stock === "object") {
   totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
 }
-const safeName = safeKey(name);
 
 
 await set(ref(db, "warehouse/" + safeName), {
@@ -697,19 +707,27 @@ if (typeof p.stock === "object") {
     <td class="num-en">${invoiceValue.toLocaleString("en-US")} د.ع</td>
     <td>${p.lastUpdate ? new Date(p.lastUpdate).toLocaleDateString("ar-EG") : "-"}</td>
     <td>
-      <button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
+     
 
-      <button
-        style="background:#FF6B2D;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
-        onclick="editProduct('${productName}')">
-        ✏️
-      </button>
+<button class="delete-btn" onclick="deleteProduct('${productName}')">🗑</button>
 
-      <button
-        style="background:#043B64;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
-        onclick="printBarcodes('${productName}')">
-        🖨 باركود
-      </button>
+<button
+style="background:#FF6B2D;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+onclick="editProduct('${productName}')">
+✏️
+</button>
+
+<button
+style="background:#28a745;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+onclick="addQuantity('${productName}')">
+➕ كمية
+</button>
+
+<button
+style="background:#043B64;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+onclick="printBarcodes('${productName}')">
+🖨 باركود
+</button>
     </td>
   `;
 
@@ -751,9 +769,72 @@ totalSellValue += totalQty * (p.prices?.pos || 0);
       totalSellValue,
       lastUpdate: new Date().toISOString()
     }).catch(err => console.error("خطأ في حفظ الإحصائيات:", err));
+    filterWarehouse();
   });
 }
+window.addQuantity = async function(productName) {
 
+const qty = prompt("كم كمية تريد إضافتها؟");
+
+if (!qty || isNaN(qty)) return;
+
+const safeName = safeKey(productName);
+
+const snap = await get(ref(db, "warehouse/" + safeName));
+
+if (!snap.exists()) return;
+
+const data = snap.val();
+
+
+// إذا المنتج بدون متغيرات
+if (typeof data.stock === "number") {
+
+const newQty = data.stock + parseInt(qty);
+
+await update(ref(db, "warehouse/" + safeName), {
+stock: newQty,
+totalQty: newQty,
+lastUpdate: new Date().toISOString()
+});
+
+}
+
+
+// إذا المنتج يحتوي متغيرات
+else if (typeof data.stock === "object") {
+
+const keys = Object.keys(data.stock);
+
+let list = "اختر المتغير:\n\n";
+
+keys.forEach((k,i)=>{
+list += (i+1) + " - " + k + " ( " + data.stock[k] + " )\n";
+});
+
+const choice = prompt(list + "\nاكتب رقم المتغير:");
+
+const index = parseInt(choice) - 1;
+
+if (index < 0 || index >= keys.length) return;
+
+const key = keys[index];
+
+data.stock[key] += parseInt(qty);
+
+const total = Object.values(data.stock).reduce((a,b)=>a+b,0);
+
+await update(ref(db, "warehouse/" + safeName), {
+stock: data.stock,
+totalQty: total,
+lastUpdate: new Date().toISOString()
+});
+
+}
+
+loadWarehouse();
+
+};
 
 // 🗑️ حذف منتج من المخزون
 window.deleteProduct = async function(productName) {
