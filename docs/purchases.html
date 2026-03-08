@@ -494,6 +494,24 @@ table {
 />
 
       <button class="action" onclick="savePurchase()">💾 حفظ</button>
+      <h4 style="margin-top:15px;">📦 منتجات الفاتورة</h4>
+
+<table id="invoiceItemsTable">
+<thead>
+<tr>
+<th>المنتج</th>
+<th>المتغير</th>
+<th>الكمية</th>
+<th>السعر</th>
+<th>الإجمالي</th>
+<th>حذف</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+</table>
+
+<button class="action" onclick="addItemToInvoice()">➕ إضافة المنتج للفاتورة</button>
       <button class="action" style="background:#777;" onclick="closePurchasePopup()">❌ إغلاق</button>
 </div>
 </div>
@@ -505,8 +523,7 @@ table {
    🔧 إعداد Firebase
 ========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-
+import { getDatabase, ref, get, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
   authDomain: "almurad-system.firebaseapp.com",
@@ -536,7 +553,7 @@ const newVariantContainer = document.getElementById("newVariantContainer");
 let suppliers = {};
 let warehouseProducts = {};
 let purchases = [];
-
+let invoiceItems = [];
 /* =========================
    🪟 النوافذ المنبثقة
 ========================= */
@@ -551,13 +568,14 @@ window.openPurchasePopup = () => {
 document.getElementById("deliveryFee").value = "";
 
   // 🧹 مسح الحقول الخاصة بالمنتج
-  const inputFields = [
-    "productSearchInput",
-    "simpleProductName",
-    "simpleBuyPrice",
-    "simpleSellPrice",
-    "simpleQty",
-  ];
+const inputFields = [
+  "productSearchInput",
+  "simpleProductName",
+  "simpleBuyPrice",
+  "simpleSellPricePos",
+  "simpleSellPriceOnline",
+  "simpleQty",
+];
   inputFields.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -566,6 +584,8 @@ document.getElementById("deliveryFee").value = "";
   // 🧹 تفريغ الحاويات
   document.getElementById("variantContainer").innerHTML = "";
   document.getElementById("newVariantContainer").innerHTML = "";
+  invoiceItems = [];
+document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
 
   // 🧹 إخفاء أقسام المنتج
   document.getElementById("existingProductDiv").style.display = "none";
@@ -878,23 +898,7 @@ function renderExistingProducts(names) {
 
 /* =========================
    📊 عند اختيار منتج موجود
-========================= */
-existingProductSelect.addEventListener("change", () => {
-  const name = existingProductSelect.value;
-  variantContainer.innerHTML = "";
-  if (!name) return;
-  const prod = warehouseProducts[name];
-  if (!prod?.stock) return;
 
-  Object.keys(prod.stock).forEach((v) => {
-    variantContainer.innerHTML += `
-      <div class="variant-item">
-        <input type="text" value="${v}" disabled>
-        <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
-        <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
-      </div>`;
-  });
-});
 
 /* =========================
    ➕ إضافة متغير جديد
@@ -919,7 +923,107 @@ window.addNewVariant = function () {
   const simpleFields = document.getElementById("simpleFields");
   if (simpleFields) simpleFields.style.display = "none";
 };
+window.addItemToInvoice = function () {
 
+  const type = document.getElementById("productType").value;
+
+  // 🟢 المنتج الموجود
+  if (type === "existing") {
+
+    const name = document.getElementById("productSearchInput").value;
+    const qtyInputs = document.querySelectorAll(".variantQty");
+    const priceInputs = document.querySelectorAll(".variantPrice");
+
+    let added = false;
+
+    qtyInputs.forEach((qInput, i) => {
+
+      const qty = parseFloat(qInput.value) || 0;
+      const price = parseFloat(priceInputs[i].value) || 0;
+      const variant = qInput.dataset.variant || "-";
+
+      if (qty > 0 && price > 0) {
+
+        const subtotal = qty * price;
+
+        invoiceItems.push({
+          product: name,
+          variant,
+          quantity: qty,
+          price,
+          subtotal
+        });
+
+        added = true;
+      }
+
+    });
+
+    if (!added) {
+      alert("⚠️ أدخل الكمية والسعر");
+      return;
+    }
+  }
+
+  // 🟢 المنتج الجديد
+  else if (type === "new") {
+
+    const name = document.getElementById("simpleProductName").value.trim();
+    const qty = parseFloat(document.getElementById("simpleQty").value) || 0;
+    const price = parseFloat(document.getElementById("simpleBuyPrice").value) || 0;
+
+    if (!name || qty <= 0 || price <= 0) {
+      alert("⚠️ أدخل اسم المنتج والكمية والسعر");
+      return;
+    }
+
+    const subtotal = qty * price;
+
+    invoiceItems.push({
+      product: name,
+      variant: "-",
+      quantity: qty,
+      price,
+      subtotal
+    });
+  }
+
+  renderInvoiceItems();
+
+  // تنظيف الحقول
+  document.querySelectorAll(".variantQty").forEach(i => i.value = "");
+  document.querySelectorAll(".variantPrice").forEach(i => i.value = "");
+  document.getElementById("productSearchInput").value = "";
+  document.getElementById("simpleProductName").value = "";
+};
+
+
+function renderInvoiceItems() {
+
+  const table = document.querySelector("#invoiceItemsTable tbody");
+  table.innerHTML = "";
+
+  invoiceItems.forEach((it, i) => {
+
+    table.innerHTML += `
+    <tr>
+      <td>${it.product}</td>
+      <td>${it.variant}</td>
+      <td>${it.quantity}</td>
+      <td>${it.price}</td>
+      <td>${it.subtotal}</td>
+      <td>
+        <button onclick="removeInvoiceItem(${i})">🗑</button>
+      </td>
+    </tr>
+    `;
+  });
+}
+
+window.removeInvoiceItem = function(i) {
+  invoiceItems.splice(i,1);
+  renderInvoiceItems();
+};
 
 
 /* =========================
@@ -940,135 +1044,95 @@ window.savePurchase = async function () {
   const type = document.getElementById("productType").value;
 
 if (type === "existing") {
-  const name = existingProductSelect.value;
-  if (!name) return alert("⚠️ اختر المنتج.");
 
-  const productRef = ref(db, `warehouse/${name}`);
-  const productSnap = await get(productRef);
-  const productData = productSnap.exists() ? productSnap.val() : null;
+  if (invoiceItems.length === 0) {
+    return alert("⚠️ لم تضف أي منتج للفاتورة.");
+  }
 
-  if (!productData) return alert("⚠️ المنتج غير موجود في المخزن.");
+  for (let it of invoiceItems) {
+const productKey = it.product.replace(/[.#$[\]]/g, "_");
+const productRef = ref(db, "warehouse/" + productKey);
+const snap = await get(productRef);
 
-  const qtyInputs = document.querySelectorAll(".variantQty");
-  const priceInputs = document.querySelectorAll(".variantPrice");
+  if (!snap.exists()) continue;
 
-  for (let i = 0; i < qtyInputs.length; i++) {
-    const variant = qtyInputs[i].dataset.variant;
-    const q = parseFloat(qtyInputs[i].value) || 0;
-    const price = parseFloat(priceInputs[i].value) || 0;
+  const productData = snap.val();
 
-    if (q > 0 && price > 0) {
-      const subtotal = q * price;
+  if (productData.hasVariants) {
+    productData.stock[it.variant] =
+      (productData.stock[it.variant] || 0) + it.quantity;
+  } else {
+    productData.stock =
+      (productData.stock || 0) + it.quantity;
+  }
 
-      totalQty += q;
-      totalAmount += subtotal;
+  productData.totalQty =
+    (productData.totalQty || 0) + it.quantity;
 
-      items.push({
-        product: name,
-        variant,
-        quantity: q,
-        price,
-        subtotal
-      });
+  await set(productRef, productData);
+}
+}else if (type === "new") {
 
-      // ✅ تحديث المخزون بطريقة آمنة
+  if (invoiceItems.length === 0) {
+    return alert("⚠️ لم تضف أي منتج للفاتورة.");
+  }
+
+  for (let it of invoiceItems) {
+
+    const productKey = it.product.replace(/[.#$[\]]/g, "_");
+    const productRef = ref(db, "warehouse/" + productKey);
+    const snap = await get(productRef);
+
+    if (snap.exists()) {
+
+      let productData = snap.val();
+
       if (productData.hasVariants) {
-        productData.stock[variant] =
-          (productData.stock[variant] || 0) + q;
+        productData.stock[it.variant] =
+          (productData.stock[it.variant] || 0) + it.quantity;
       } else {
         productData.stock =
-          (productData.stock || 0) + q;
+          (productData.stock || 0) + it.quantity;
       }
 
       productData.totalQty =
-        (productData.totalQty || 0) + q;
+        (productData.totalQty || 0) + it.quantity;
+
+      await set(productRef, productData);
+
+    } else {
+
+      await set(productRef, {
+        name: it.product,
+        buyPrice: it.price,
+        totalQty: it.quantity,
+        stock: it.quantity,
+        hasVariants: false,
+        lastUpdate: new Date().toISOString()
+      });
+
     }
+
   }
 
-  // ✅ نحفظ المنتج بعد التعديل مرة وحدة فقط
-  await set(productRef, productData);
+} 
+
+
+
+
+// ✅ إذا كان المنتج جديد نستخدم items مباشرة
+if (type === "new") {
+  items = items.length ? items : [...invoiceItems];
+} else {
+  items = [...invoiceItems];
 }
-  else if (type === "new") {
-  const name = document.getElementById("simpleProductName")?.value.trim() || "";
-  const buyPrice = parseFloat(document.getElementById("simpleBuyPrice")?.value) || 0;
-const sellPricePos = parseFloat(document.getElementById("simpleSellPricePos")?.value) || 0;
-const sellPriceOnline = parseFloat(document.getElementById("simpleSellPriceOnline")?.value) || 0;
-
-  const qty = parseFloat(document.getElementById("simpleQty")?.value) || 0;
-
-  let stock = {};
-  let itemsAdded = false;
-
-  // 🟢 المنتج بدون متغيرات
-  if (newVariantContainer.querySelectorAll(".variant-item").length === 0) {
-    if (name && qty > 0 && buyPrice > 0) {
-      const subtotal = qty * buyPrice;
-      items.push({ product: name, variant: "-", quantity: qty, price: buyPrice, subtotal });
-      totalQty += qty;
-      totalAmount += subtotal;
-      itemsAdded = true;
-await set(ref(db, "warehouse/" + name), {
-  name: name,
-  buyPrice: buyPrice,
-  prices: {
-    pos: sellPricePos,
-    online: sellPriceOnline
-  },
-  totalQty: qty,
-  stock: qty,          // ✅ رقم مباشر
-  hasVariants: false,  // ✅ بدون متغيرات
-  lastUpdate: new Date().toISOString(),
-});
-
-
-
-
-    }
-  } 
-  // 🟢 المنتج فيه متغيرات
-  else {
-    const newVariants = newVariantContainer.querySelectorAll(".variant-item");
-    for (let div of newVariants) {
-      const type1 = div.children[0].value.trim();
-      const value1 = div.children[1].value.trim();
-      const type2 = div.children[2].value.trim();
-      const value2 = div.children[3].value.trim();
-      const q = parseFloat(div.children[4].value) || 0;
-      const price = parseFloat(div.children[5].value) || 0;
-
-      if (!type1 || !value1 || q <= 0 || price <= 0) continue;
-
-      const variantKey = [type1, value1, type2, value2].filter(Boolean).join(" | ");
-      const subtotal = q * price;
-
-      stock[variantKey] = q;
-      totalQty += q;
-      totalAmount += subtotal;
-      items.push({ product: name, variant: variantKey, quantity: q, price, subtotal });
-      itemsAdded = true;
-    }
-
-    if (itemsAdded) {
-await set(ref(db, "warehouse/" + name), {
-  name: name,
-  buyPrice: buyPrice,
-  prices: {
-    pos: sellPricePos,
-    online: sellPriceOnline
-  },
-  totalQty,
-  stock,
-  hasVariants: true,
-  lastUpdate: new Date().toISOString(),
-});
-
-
-    }
-  }
+if (items.length === 0) {
+  return alert("⚠️ لا توجد منتجات في الفاتورة.");
 }
 
-
-  if (items.length === 0) return alert("⚠️ لم تدخل أي كميات.");
+// ✅ حساب الإجماليات
+totalQty = items.reduce((a,b)=>a + b.quantity, 0);
+totalAmount = items.reduce((a,b)=>a + b.subtotal, 0);
 const finalTotalAmount = totalAmount + deliveryFee;
 
   const idRef = push(ref(db, "purchases"));
@@ -1087,6 +1151,8 @@ await set(idRef, {
 
 
   alert("✅ تم حفظ العملية بنجاح!");
+  invoiceItems = [];
+document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
   closePurchasePopup();
   loadPurchases();
 
@@ -1237,6 +1303,16 @@ function loadPurchases() {
       ? `<button onclick="shareInvoice('${id}')">📤 مشاركة</button>`
       : `<button onclick="printInvoice('${id}')">🖨️ طباعة</button>`
   }
+
+  <button onclick="deletePurchase('${id}')" style="
+    background:#c0392b;
+    color:white;
+    border:none;
+    padding:5px 8px;
+    border-radius:6px;
+    margin-right:5px;
+    cursor:pointer;
+  ">🗑 حذف</button>
 </td>
 
         </tr>`;
@@ -1557,7 +1633,7 @@ window.downloadFullExcel = async () => {
         Quantity: it.quantity,
         Price: it.price,
         Subtotal: it.subtotal,
-        TotalInvoice: p.totalAmount,
+       TotalInvoice: p.finalTotalAmount ?? p.totalAmount,
       });
     });
   });
@@ -1570,6 +1646,26 @@ loadSuppliers();
 loadProducts();
 loadPurchases();
 window.purchases = purchases;
+window.deletePurchase = async function(id){
+
+  const confirmDelete = confirm("⚠️ هل تريد حذف هذه الفاتورة؟");
+
+  if(!confirmDelete) return;
+
+  try{
+
+    await remove(ref(db,"purchases/" + id));
+
+    alert("✅ تم حذف الفاتورة");
+
+  }catch(err){
+
+    console.error(err);
+    alert("❌ حدث خطأ أثناء الحذف");
+
+  }
+
+}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>

@@ -255,7 +255,8 @@ for (const p of foundOrder.productsDetailed || []) {
   const itemData = {
     name: productName,
     qty: Number(p.qty || 1),
-    variants: p.variants || {}
+    variants: p.variants || {},
+    orderId: shipmentId   // ⭐ مهم
   };
 
   if (foundOrder.status === "قيد التجهيز") {
@@ -303,8 +304,12 @@ const variantText = Object.entries(variants)
       }
 
       const obj = map.get(fullName);
-obj.orders += 1;
-      obj.qty += item.qty;
+obj.qty += item.qty;
+
+// نحسب الطلبات مرة واحدة فقط لكل وصل
+if (!obj.orderSet) obj.orderSet = new Set();
+obj.orderSet.add(item.orderId);
+obj.orders = obj.orderSet.size;
     });
 
     for (const [name, data] of map.entries()) {
@@ -322,10 +327,10 @@ render(pendingOut, outTable);
 render(pendingReturn, returnTable);
 
 // حساب المجاميع
-let outOrders = pendingOut.length;
+let outOrders = new Set(pendingOut.map(i => i.orderId)).size;
 let outQty = pendingOut.reduce((sum,i)=>sum+i.qty,0);
 
-let returnOrders = pendingReturn.length;
+let returnOrders = new Set(pendingReturn.map(i => i.orderId)).size;
 let returnQty = pendingReturn.reduce((sum,i)=>sum+i.qty,0);
 
 // عرض المجاميع
@@ -655,12 +660,13 @@ const variant = Object.entries(item.variants || {})
 const name = variant ? item.name+" - "+variant : item.name;
 
 if(!outMap.has(name)){
-outMap.set(name,{orders:0,qty:0});
+outMap.set(name,{orders:0,qty:0,orderSet:new Set()});
 }
 
 const obj = outMap.get(name);
-obj.orders += 1;
-obj.qty+=item.qty;
+obj.qty += item.qty;
+obj.orderSet.add(item.orderId);
+obj.orders = obj.orderSet.size;
 
 });
 
@@ -670,15 +676,17 @@ pendingReturn.forEach(item=>{
 const variant = Object.entries(item.variants || {})
   .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
+
 const name = variant ? item.name+" - "+variant : item.name;
 
 if(!returnMap.has(name)){
-returnMap.set(name,{orders:0,qty:0});
+returnMap.set(name,{orders:0,qty:0,orderSet:new Set()});
 }
 
 const obj = returnMap.get(name);
-obj.orders += 1;
-obj.qty+=item.qty;
+obj.qty += item.qty;
+obj.orderSet.add(item.orderId);
+obj.orders = obj.orderSet.size;
 
 });
 
@@ -713,7 +721,7 @@ data.qty
 });
 
 // ملخص الطالع
-let outOrders = pendingOut.length;
+let outOrders = new Set(pendingOut.map(i => i.orderId)).size;
 let outProducts = outMap.size;
 let outQty = 0;
 
@@ -730,7 +738,7 @@ for (const [name, data] of outMap) {
   }
 }
 // ملخص الراجع
-let returnOrders = pendingReturn.length;
+let returnOrders = new Set(pendingReturn.map(i => i.orderId)).size;
 let returnProducts = returnMap.size;
 let returnQty = 0;
 
@@ -780,7 +788,7 @@ paddingBottom:()=>6
 if(returnMap.size){
 contentBlocks.push(
 {
-text:fixArabicText("🔴 جرد الراجع"),
+text:fixArabicText(" جرد الراجع"),
 bold:true,
 margin:[0,20,0,5]
 },
@@ -874,6 +882,8 @@ margin: [0,0,0,15]
 ...contentBlocks,
    
 
+...(outQty > 0 ? [
+
 {
 text:fixArabicText("ملخص الطالع"),
 fontSize:14,
@@ -891,7 +901,9 @@ body:[
 [fixArabicText("أكثر منتج مبيعاً"), fixArabicText(topProduct + " (" + topQty + ")")]
 ]
 }
-},
+}
+
+] : []),
 
 ...(returnQty > 0 ? [
 {

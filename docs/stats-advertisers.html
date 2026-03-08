@@ -151,7 +151,13 @@
   <div class="container">
 
     <div class="filters">
-      <select id="advertiserSelect"><option value="">كل المعلنين</option></select>
+<div class="dropdown">
+  <button class="dropbtn">👤 المعلنين</button>
+  <div class="dropdown-content" id="advertiserDropdown">
+    <label><input type="checkbox" id="selectAllAdvertisers"> ✅ تحديد الكل</label>
+    <div id="advertiserCheckboxes"></div>
+  </div>
+</div>
 <div class="dropdown">
   <button class="dropbtn">🧾 الحالات</button>
   <div class="dropdown-content" id="statusCheckboxes">
@@ -223,7 +229,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  const advertiserSelect = document.getElementById("advertiserSelect");
+
   const fromDate = document.getElementById("fromDate");
   const toDate = document.getElementById("toDate");
   const tbody = document.querySelector("#ordersTable tbody");
@@ -239,7 +245,18 @@ document.addEventListener("change", (e) => {
     applyFilter();
   }
 });
+// ✅ تحديد كل المعلنين بضغطة واحدة
+document.addEventListener("change", (e) => {
+  if (e.target.id === "selectAllAdvertisers") {
+    const checkAll = e.target.checked;
 
+    document
+      .querySelectorAll("#advertiserCheckboxes input[type='checkbox']")
+      .forEach(c => c.checked = checkAll);
+
+    applyFilter();
+  }
+});
  async function loadData() {
   const ordersSnap = await get(ref(db, "orders"));
   if (ordersSnap.exists()) allOrders = Object.values(ordersSnap.val());
@@ -254,10 +271,15 @@ document.addEventListener("change", (e) => {
 }
 
 
-  function populateAdvertisers() {
-    const advs = [...new Set(allOrders.map(o => o.advertiser || "").filter(Boolean))];
-    advertiserSelect.innerHTML = '<option value="">كل المعلنين</option>' + advs.map(a => `<option>${a}</option>`).join('');
-  }
+function populateAdvertisers() {
+  const advs = [...new Set(allOrders.map(o => o.advertiser || "").filter(Boolean))];
+
+  const container = document.getElementById("advertiserCheckboxes");
+
+  container.innerHTML = advs.map(a =>
+    `<label><input type="checkbox" value="${a}"> ${a}</label>`
+  ).join('');
+}
 
   document.getElementById("applyBtn").onclick = applyFilter;
   document.getElementById("adCost").oninput = applyFilter;
@@ -296,13 +318,12 @@ document.getElementById("productSearch").addEventListener("input", (e) => {
   });
 });
 
-advertiserSelect.onchange = () => {
-  populateProductsForAdvertiser();
-  applyFilter();
-};
+
 
   function applyFilter() {
-    const adv = advertiserSelect.value;
+const adv = Array.from(
+  document.querySelectorAll("#advertiserCheckboxes input:checked")
+).map(c => c.value);
 const statusFilter = Array.from(document.querySelectorAll("#statusCheckboxes input:checked")).map(c => c.value);
 const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxes input:checked")).map(c => c.value);
     const adCost = Number(document.getElementById("adCost").value) || 0;
@@ -310,7 +331,7 @@ const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxe
     const t = toDate.value ? new Date(toDate.value + "T23:59:59") : null;
 
     let filtered = allOrders.filter(o => {
-      if (adv && o.advertiser !== adv) return false;
+if (adv.length && !adv.includes(o.advertiser)) return false;
 if (statusFilter.length && !statusFilter.includes(o.status)) return false;
   // ✅ فلترة المنتجات تطابق تام (ما تطلع إلا المنتجات المختارة فقط)
   if (selectedProducts.length) {
