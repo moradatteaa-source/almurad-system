@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>📢 إدارة الإعلانات</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--blue:#043B64;
+--orange:#FF6B2D;
+--bg:#f4f6fa;
+}
+
+body{
+font-family:'Tajawal',sans-serif;
+background:var(--bg);
+margin:0;
+}
+
+header{
+background:var(--blue);
+color:white;
+text-align:center;
+padding:15px;
+font-size:20px;
+font-weight:bold;
+}
+
+.container{
+max-width:900px;
+margin:20px auto;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.form{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-bottom:20px;
+}
+
+input,select{
+padding:8px;
+border:1px solid #ddd;
+border-radius:6px;
+font-family:'Tajawal';
+}
+
+button{
+background:var(--orange);
+color:white;
+border:none;
+padding:10px 15px;
+border-radius:6px;
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+padding:8px;
+border-bottom:1px solid #eee;
+text-align:center;
+}
+
+th{
+background:var(--blue);
+color:white;
+}
+
+.total{
+margin-top:15px;
+font-size:18px;
+font-weight:bold;
+color:var(--orange);
+text-align:center;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>📢 إدارة الإعلانات</header>
+
+<div class="container">
+
+<div class="form">
+
+<select id="platform">
+<option value="تيك توك">تيك توك</option>
+<option value="فيسبوك">فيسبوك</option>
+<option value="انستغرام">انستغرام</option>
+</select>
+
+<input type="text" id="employee" placeholder="اسم المعلن">
+
+<input type="number" id="amount" placeholder="المبلغ">
+
+<input type="text" id="note" placeholder="ملاحظة">
+
+<button onclick="addAd()">إضافة إعلان</button>
+<textarea id="whatsappText" placeholder="الصق رسالة الواتساب هنا بالشكل التالي:
+مقداد
+تيك توك
+150000
+اعلان مرايا" style="width:100%;height:100px;margin-top:10px"></textarea>
+<button onclick="parseWhatsapp()">تحليل الرسالة</button>
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>المعلن</th>
+<th>المنصة</th>
+<th>المبلغ</th>
+<th>ملاحظة</th>
+<th>التاريخ</th>
+</tr>
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+<div class="total">
+إجمالي الإعلانات: <span id="total">0</span>
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, push, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+authDomain:"almurad-system.firebaseapp.com",
+databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+projectId:"almurad-system",
+storageBucket:"almurad-system.appspot.com",
+messagingSenderId:"911755824405",
+appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+function format(n){
+return Number(n||0).toLocaleString("en-US");
+}
+
+window.addAd = async function(){
+
+const platform = document.getElementById("platform").value;
+const employee = document.getElementById("employee").value;
+const amount = Number(document.getElementById("amount").value);
+const note = document.getElementById("note").value;
+
+if(!employee) return alert("ادخل اسم المعلن");
+if(!amount) return alert("ادخل المبلغ");
+
+await push(ref(db,"ads"),{
+platform,
+employee,
+amount,
+note,
+date:new Date().toISOString()
+});
+
+document.getElementById("amount").value="";
+document.getElementById("note").value="";
+document.getElementById("employee").value="";
+document.getElementById("whatsappText").value="";
+
+loadAds();
+}
+
+window.parseWhatsapp = async function(){
+
+const text = document.getElementById("whatsappText").value;
+
+if(!text) return alert("الصق الرسائل أولاً");
+
+const blocks = text.split("\n\n");
+
+for(const block of blocks){
+
+const lines = block.split("\n");
+
+if(lines.length < 3) continue;
+
+const employee = lines[0].trim();
+const platform = lines[1].trim();
+const amount = Number(lines[2].trim());
+if(!amount) continue;
+const note = lines[3] ? lines[3].trim() : "";
+
+await push(ref(db,"ads"),{
+employee,
+platform,
+amount,
+note,
+date:new Date().toISOString()
+});
+
+}
+
+document.getElementById("whatsappText").value="";
+
+loadAds();
+
+alert("تم إضافة الإعلانات بنجاح");
+
+}
+
+async function loadAds(){
+
+const snap = await get(ref(db,"ads"));
+
+if(!snap.exists()) return;
+
+let rows="";
+let total=0;
+
+Object.values(snap.val()).reverse().forEach(a=>{
+
+total+=a.amount;
+
+rows+=`
+<tr>
+ <td>${a.employee || ""}</td>
+<td>${a.platform}</td>
+<td>${format(a.amount)}</td>
+<td>${a.note||""}</td>
+<td>${new Date(a.date).toLocaleDateString("en-GB")}</td>
+</tr>
+`;
+
+});
+
+document.getElementById("tableBody").innerHTML=rows;
+document.getElementById("total").textContent=format(total);
+
+}
+
+loadAds();
+
+</script>
+
+</body>
+</html>

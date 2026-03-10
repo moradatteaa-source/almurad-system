@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>💰 لوحة الحسابات - نظام المراد</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--blue:#043B64;
+--orange:#FF6B2D;
+--bg:#f4f6fa;
+}
+
+body{
+font-family:'Tajawal',sans-serif;
+background:var(--bg);
+margin:0;
+padding:0;
+color:var(--blue);
+}
+
+header{
+background:var(--blue);
+color:white;
+padding:16px;
+font-size:20px;
+font-weight:bold;
+text-align:center;
+}
+
+.container{
+max-width:1200px;
+margin:25px auto;
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.settings{
+display:flex;
+gap:10px;
+align-items:center;
+margin-bottom:20px;
+}
+
+.settings input{
+padding:6px 8px;
+border-radius:6px;
+border:1px solid #ccc;
+font-family:'Tajawal';
+}
+
+.settings button{
+background:var(--blue);
+color:white;
+border:none;
+padding:6px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:15px;
+}
+
+.card{
+background:var(--bg);
+border-radius:10px;
+padding:16px;
+text-align:center;
+}
+
+.card h3{
+margin:0;
+font-size:14px;
+}
+
+.card p{
+font-size:22px;
+margin-top:5px;
+color:var(--orange);
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>💰 لوحة الحسابات</header>
+
+<div class="container">
+
+<div class="settings">
+
+<label>🚚 كلفة التوصيل العامة</label>
+<input type="number" id="deliveryCostInput">
+
+<button onclick="saveDeliveryCost()">حفظ</button>
+
+</div>
+
+<div class="cards">
+
+<div class="card">
+<h3>📦 الطلبات اليوم</h3>
+<p id="ordersToday">0</p>
+</div>
+
+<div class="card">
+<h3>📦 الطلبات هذا الشهر</h3>
+<p id="ordersMonth">0</p>
+</div>
+
+<div class="card">
+<h3>💰 المبيعات</h3>
+<p id="sales">0</p>
+</div>
+
+<div class="card">
+<h3>💵 تكلفة الشراء</h3>
+<p id="buyCost">0</p>
+</div>
+
+<div class="card">
+<h3>🚚 التوصيل</h3>
+<p id="deliveryCost">0</p>
+</div>
+
+<div class="card">
+<h3>📈 الربح الصافي</h3>
+<p id="profit">0</p>
+</div>
+
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+authDomain:"almurad-system.firebaseapp.com",
+databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+projectId:"almurad-system",
+storageBucket:"almurad-system.appspot.com",
+messagingSenderId:"911755824405",
+appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let deliveryPerOrder = 0;
+
+function format(n){
+return Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+}
+
+async function loadDeliveryCost(){
+
+const snap = await get(ref(db,"settings/deliveryCost"));
+
+if(snap.exists()){
+
+deliveryPerOrder = Number(snap.val());
+
+document.getElementById("deliveryCostInput").value = deliveryPerOrder;
+
+}
+
+}
+
+window.saveDeliveryCost = async function(){
+
+const v = Number(document.getElementById("deliveryCostInput").value);
+
+await set(ref(db,"settings/deliveryCost"),v);
+
+deliveryPerOrder = v;
+
+alert("تم حفظ كلفة التوصيل");
+
+loadDashboard();
+
+}
+
+async function loadDashboard(){
+
+const ordersSnap = await get(ref(db,"orders"));
+
+const warehouseSnap = await get(ref(db,"warehouse"));
+
+if(!ordersSnap.exists()) return;
+
+const orders = Object.values(ordersSnap.val());
+
+const warehouse = warehouseSnap.exists()?warehouseSnap.val():{};
+
+const today = new Date();
+const month = today.getMonth();
+const year = today.getFullYear();
+
+let ordersToday = 0;
+let ordersMonth = 0;
+
+let totalSales = 0;
+let totalBuy = 0;
+
+orders.forEach(order=>{
+
+const status = order.status || "";
+
+const date = new Date(order.orderDate || Date.now());
+
+if(date.toDateString() === today.toDateString()) ordersToday++;
+
+if(date.getMonth() === month && date.getFullYear() === year) ordersMonth++;
+
+if(status !== "تم التسليم") return;
+
+(order.productsDetailed || []).forEach(p=>{
+
+const name = p.name;
+
+const qty = p.qty || 1;
+
+const sell = p.price || 0;
+
+const buy = warehouse[name]?.buyPrice || 0;
+
+totalSales += sell * qty;
+
+totalBuy += buy * qty;
+
+});
+
+});
+
+const deliveryCost = ordersMonth * deliveryPerOrder;
+
+const profit = totalSales - totalBuy - deliveryCost;
+
+document.getElementById("ordersToday").textContent = format(ordersToday);
+
+document.getElementById("ordersMonth").textContent = format(ordersMonth);
+
+document.getElementById("sales").textContent = format(totalSales);
+
+document.getElementById("buyCost").textContent = format(totalBuy);
+
+document.getElementById("deliveryCost").textContent = format(deliveryCost);
+
+document.getElementById("profit").textContent = format(profit);
+
+}
+
+loadDeliveryCost();
+
+loadDashboard();
+
+</script>
+
+</body>
+</html>

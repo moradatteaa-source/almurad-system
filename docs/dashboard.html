@@ -333,13 +333,25 @@ p, div, span, button {
 
 
     <!-- 💰 الحسابات -->
-<div class="menu-item" onclick="toggleMenu('financeMenu')">💰 الحسابات</div>
-<div class="submenu" id="financeMenu">
-  <div onclick="openFinance('sales')">المبيعات</div>
-  <div onclick="openFinance('expenses')">المصروفات</div>
-  <div onclick="openFinance('profits')">الأرباح والخسائر</div>
-  <div onclick="openFinance('suppliers')">الموردين</div>
-  <div onclick="openFinance('balances')">الأرصدة</div>
+<!-- 💰 المحاسبة -->
+<div class="menu-item" onclick="toggleMenu('accountingMenu')">💰 المحاسبة</div>
+
+<div class="submenu" id="accountingMenu">
+
+  <div onclick="openAccounting('dashboard')">📊 لوحة الحسابات</div>
+
+  <div onclick="openAccounting('orders-profit')">🧾 أرباح الطلبات</div>
+
+  <div onclick="openAccounting('expenses')">💸 المصروفات</div>
+
+  <div onclick="openAccounting('salaries')">👨‍💼 الرواتب</div>
+
+  <div onclick="openAccounting('ads')">📢 الإعلانات</div>
+
+  <div onclick="openAccounting('suppliers')">🚚 الموردين</div>
+
+  <div onclick="openAccounting('reports')">📈 التقارير المالية</div>
+
 </div>
 
 <!-- 🏬 المخزن -->
@@ -353,7 +365,14 @@ p, div, span, button {
   <div onclick="openStore('summary')">الجرد الشهري</div>
 </div>
 
-    <!-- 📊 الإحصائيات -->
+<!-- 🛒 متجر المراد -->
+<div class="menu-item" onclick="toggleMenu('shopMenu')">🛒 متجر المراد</div>
+
+<div class="submenu" id="shopMenu">
+  <div onclick="openShop('orders')">📦 الطلبات</div>
+  <div onclick="openShop('products')">🛍 المنتجات</div>
+  <div onclick="openShop('settings')">⚙️ إعدادات المتجر</div>
+</div>
 <!-- 📊 الإحصائيات -->
 <div class="menu-item" onclick="toggleMenu('statsMenu')">📊 الإحصائيات</div>
 <div class="submenu" id="statsMenu">
@@ -681,6 +700,7 @@ const storeMenu    = document.querySelector(".menu-item[onclick*='openStore']");
 const settingsMenu = document.querySelector(".menu-item[onclick*='openSettings']");
 const centerMenu = document.querySelector(".menu-item[onclick*='centerMenu']");
 
+
 // إخفاء الكل بالبداية
 if (ordersMenu) ordersMenu.style.display = "none";
 if (financeMenu) financeMenu.style.display = "none";
@@ -777,7 +797,23 @@ if (
     if (detailsItem) detailsItem.style.display = "block";
   }
 }
+function openShop(tab){
 
+ if(tab === "orders"){
+   window.location.href = "shop-orders.html"
+ }
+
+ if(tab === "products"){
+   window.location.href = "shop-products.html"
+ }
+
+ if(tab === "settings"){
+   window.location.href = "shop-settings.html"
+ }
+
+}
+
+window.openShop = openShop
 
 
 

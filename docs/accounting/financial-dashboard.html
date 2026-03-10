@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>📊 لوحة الحسابات</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--blue:#043B64;
+--orange:#FF6B2D;
+--bg:#f4f6fa;
+}
+
+body{
+font-family:'Tajawal';
+background:var(--bg);
+margin:0;
+}
+
+header{
+background:var(--blue);
+color:white;
+padding:15px;
+text-align:center;
+font-size:22px;
+font-weight:bold;
+}
+
+.filters{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
+padding:15px;
+background:white;
+}
+
+.filters input{
+padding:6px;
+border-radius:6px;
+border:1px solid #ccc;
+font-family:'Tajawal';
+}
+
+.filters button{
+background:var(--orange);
+color:white;
+border:none;
+padding:6px 14px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px;
+padding:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+text-align:center;
+}
+
+.card h3{
+margin:0;
+font-size:15px;
+color:#555;
+}
+
+.card p{
+margin-top:10px;
+font-size:22px;
+color:var(--blue);
+font-weight:bold;
+}
+
+.highlight{
+background:var(--blue);
+}
+
+.highlight h3{
+color:white;
+}
+
+.highlight p{
+color:#FF6B2D;
+font-size:26px;
+font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>📊 لوحة الحسابات</header>
+
+<div class="filters">
+
+<label>من</label>
+<input type="date" id="fromDate">
+
+<label>إلى</label>
+<input type="date" id="toDate">
+
+<button onclick="loadDashboard()">تحديث</button>
+
+</div>
+
+<div class="container">
+
+<div class="card">
+<h3>عدد الطلبات</h3>
+<p id="orders">0</p>
+</div>
+
+<div class="card">
+<h3>عدد المنتجات</h3>
+<p id="products">0</p>
+</div>
+
+<div class="card">
+<h3>المبيعات</h3>
+<p id="sales">0</p>
+</div>
+
+<div class="card">
+<h3>تكلفة الشراء</h3>
+<p id="buy">0</p>
+</div>
+
+<div class="card">
+<h3>التوصيل</h3>
+<p id="delivery">0</p>
+</div>
+
+<div class="card">
+<h3>ربح الطلبات</h3>
+<p id="ordersProfit">0</p>
+</div>
+
+<div class="card">
+<h3>المصاريف</h3>
+<p id="expenses">0</p>
+</div>
+
+<div class="card highlight">
+<h3>صافي الربح</h3>
+<p id="netProfit">0</p>
+</div>
+
+<div class="card">
+<h3>متوسط الربح / طلب</h3>
+<p id="avgProfit">0</p>
+</div>
+
+<div class="card">
+<h3>نسبة الربح</h3>
+<p id="profitRate">0%</p>
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+authDomain:"almurad-system.firebaseapp.com",
+databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+projectId:"almurad-system",
+storageBucket:"almurad-system.appspot.com",
+messagingSenderId:"911755824405",
+appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
+
+
+
+function format(n){
+return Number(n||0).toLocaleString("en-US");
+}
+
+function checkDate(date){
+
+const from=document.getElementById("fromDate").value;
+const to=document.getElementById("toDate").value;
+
+if(!from && !to) return true;
+
+const d=new Date(date);
+
+if(from){
+const fromDate=new Date(from);
+if(d<fromDate) return false;
+}
+
+if(to){
+const toDate=new Date(to);
+toDate.setHours(23,59,59);
+if(d>toDate) return false;
+}
+
+return true;
+
+}
+
+window.setFilter=function(f){
+
+currentFilter=f;
+
+document.querySelectorAll(".filters button").forEach(b=>b.classList.remove("active"));
+event.target.classList.add("active");
+
+loadDashboard();
+
+}
+
+async function loadDashboard(){
+
+const ordersSnap=await get(ref(db,"orders"));
+const warehouseSnap=await get(ref(db,"warehouse"));
+const expensesSnap=await get(ref(db,"expenses"));
+const deliverySnap=await get(ref(db,"settings/deliveryCost"));
+
+let ordersCount=0;
+let productsCount=0;
+let sales=0;
+let buy=0;
+let ordersProfit=0;
+let deliveryTotal=0;
+
+const deliveryCost=deliverySnap.exists()?Number(deliverySnap.val()):0;
+
+if(ordersSnap.exists()){
+
+const orders=Object.values(ordersSnap.val());
+const warehouse=warehouseSnap.exists()?warehouseSnap.val():{};
+
+orders.forEach(order=>{
+
+if(order.status!=="تم التسليم") return;
+if(!checkDate(order.orderDate)) return;
+
+ordersCount++;
+deliveryTotal+=deliveryCost;
+
+let orderProfit=(order.price||0)-deliveryCost;
+
+sales += order.price || 0;
+
+(order.productsDetailed||[]).forEach(p=>{
+
+const qty=p.qty||1;
+const buyPrice=warehouse[p.name]?.buyPrice||0;
+const buyTotal=buyPrice*qty;
+
+buy+=buyTotal;
+productsCount+=qty;
+
+orderProfit-=buyTotal;
+
+});
+
+ordersProfit+=orderProfit;
+
+});
+
+}
+
+let expenses=0;
+
+if(expensesSnap.exists()){
+
+Object.values(expensesSnap.val()).forEach(e=>{
+if(checkDate(e.date))
+expenses+=e.amount;
+});
+
+}
+
+const netProfit=ordersProfit-expenses;
+
+const avgProfit=ordersCount?netProfit/ordersCount:0;
+
+const profitRate=sales?((netProfit/sales)*100):0;
+
+document.getElementById("orders").textContent=format(ordersCount);
+document.getElementById("products").textContent=format(productsCount);
+document.getElementById("sales").textContent=format(sales);
+document.getElementById("buy").textContent=format(buy);
+document.getElementById("delivery").textContent=format(deliveryTotal);
+document.getElementById("ordersProfit").textContent=format(ordersProfit);
+document.getElementById("expenses").textContent=format(expenses);
+document.getElementById("netProfit").textContent=format(netProfit);
+document.getElementById("avgProfit").textContent=format(avgProfit);
+document.getElementById("profitRate").textContent=profitRate.toFixed(1)+"%";
+
+}
+
+loadDashboard();
+
+</script>
+
+</body>
+</html>

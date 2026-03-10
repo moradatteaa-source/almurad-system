@@ -107,7 +107,7 @@ th{background:#f9fafc;color:var(--blue)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const config = {
   apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -221,6 +221,9 @@ function renderAllEmployees(filtered){
     const rate=d.total?((d.del/d.total)*100).toFixed(1):0;
     const retRate=d.total?((d.ret/d.total)*100).toFixed(1):0;
     const commission=(d.del*(commissionRates[u]||250));
+
+
+set(ref(db,"commissions/"+u),commission);
     summary.push({u,rate,retRate,commission,...d});
   }
   summary.sort((a,b)=>b.rate-a.rate);

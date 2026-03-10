@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<title>إدارة الفريق</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--blue:#043B64;
+--orange:#FF6B2D;
+--bg:#f4f6fa;
+}
+
+body{
+font-family:Tajawal;
+margin:0;
+background:var(--bg);
+}
+
+/* header */
+
+header{
+background:var(--blue);
+color:white;
+padding:16px;
+font-size:22px;
+text-align:center;
+font-weight:bold;
+}
+
+/* navigation */
+
+.tabs{
+display:flex;
+background:white;
+border-bottom:2px solid #eee;
+}
+
+.tab{
+flex:1;
+text-align:center;
+padding:14px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.tab.active{
+background:var(--orange);
+color:white;
+}
+
+/* sections */
+
+.section{
+display:none;
+padding:25px;
+}
+
+.section.active{
+display:block;
+}
+
+/* cards */
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+margin-bottom:20px;
+}
+
+/* inputs */
+
+input,select{
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+margin:4px;
+}
+
+/* buttons */
+
+button{
+background:var(--orange);
+border:none;
+color:white;
+padding:10px 14px;
+border-radius:8px;
+cursor:pointer;
+}
+
+/* table */
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:15px;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #eee;
+text-align:center;
+}
+
+th{
+background:var(--blue);
+color:white;
+}
+
+/* progress */
+
+.progress{
+background:#ddd;
+border-radius:10px;
+height:10px;
+overflow:hidden;
+}
+
+.progress-bar{
+height:10px;
+background:var(--orange);
+}
+
+.totalBox{
+font-size:28px;
+font-weight:bold;
+color:var(--blue);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+إدارة الفريق والرواتب
+</header>
+
+
+<div class="tabs">
+
+<div class="tab active" onclick="openSection('salary')">
+الرواتب
+</div>
+
+<div class="tab" onclick="openSection('points')">
+المكافآت والخصومات
+</div>
+
+<div class="tab" onclick="openSection('tasks')">
+إدارة الفريق
+</div>
+
+</div>
+
+
+
+<!-- الرواتب -->
+
+<div id="salary" class="section active">
+
+<div class="card">
+
+<h3>الرواتب الكلية</h3>
+
+<div class="totalBox" id="totalSalary">
+0
+</div>
+
+</div>
+
+<div class="card">
+
+<table>
+
+<thead>
+
+<tr>
+<th>الموظف</th>
+<th>الراتب الثابت</th>
+<th>العمولة</th>
+<th>المكافآت</th>
+<th>الخصومات</th>
+<th>قيمة النقاط</th>
+<th>الراتب النهائي</th>
+
+</tr>
+
+</thead>
+
+<tbody id="salaryTable"></tbody>
+
+</table>
+
+<br>
+
+<button onclick="addEmployeePrompt()">➕ إضافة موظف</button>
+<br><br>
+
+<div class="card">
+
+<h3>إزالة موظف من الرواتب</h3>
+
+<select id="removeEmpSelect">
+<option>اختر الموظف</option>
+</select>
+
+<button onclick="removeEmployeeSelected()">
+حذف من الرواتب
+</button>
+
+</div>
+</div>
+
+</div>
+
+
+<!-- المكافآت -->
+
+<div id="points" class="section">
+
+<div class="card">
+
+<h3>إضافة مكافأة أو خصم</h3>
+
+<select id="empSelect">
+<option>اختر الموظف</option>
+</select>
+
+<select id="typeSelect">
+<option value="bonus">مكافأة</option>
+<option value="penalty">خصم</option>
+</select>
+
+<input type="number" id="pointsInput" placeholder="النقاط">
+
+<input type="number" id="pointPrice" placeholder="سعر النقطة">
+
+<input type="text" id="noteInput" placeholder="الملاحظة">
+
+<button onclick="addPoint()">
+إضافة
+</button>
+
+</div>
+
+
+<div class="card">
+
+<table>
+
+<thead>
+<tr>
+<th>الموظف</th>
+<th>النوع</th>
+<th>النقاط</th>
+<th>الملاحظة</th>
+</tr>
+</thead>
+
+<tbody id="pointsTable">
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- المهام -->
+
+<div id="tasks" class="section">
+
+<div class="card">
+
+<h3>إضافة مهمة</h3>
+
+<select id="taskEmp">
+
+<option>اختر الموظف</option>
+
+</select>
+
+<input id="taskTitle" placeholder="عنوان المهمة">
+
+<input id="taskReward" placeholder="المكافأة بالنقاط">
+
+<button onclick="addTask()">
+إضافة مهمة
+</button>
+
+</div>
+
+
+<div class="card">
+
+<table>
+
+<thead>
+
+<tr>
+<th>الموظف</th>
+<th>المهمة</th>
+<th>المكافأة</th>
+<th>الإنجاز</th>
+<th>تنفيذ</th>
+</tr>
+
+</thead>
+
+<tbody id="tasksTable">
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+authDomain: "almurad-system.firebaseapp.com",
+databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+projectId: "almurad-system",
+storageBucket: "almurad-system.appspot.com",
+messagingSenderId: "911755824405",
+appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+let employees = []
+let orders = []
+let commissionRates = {}
+onValue(ref(db,"commissions"),snap=>{
+
+if(!snap.exists()) return
+
+const data = snap.val()
+
+for(const emp in data){
+
+if(!salaryData[emp])
+salaryData[emp] = {base:0,commission:0}
+salaryData[emp].commission = Number(data[emp]) || 0
+
+}
+
+renderSalary()
+
+})
+
+
+
+let hiddenEmployees = []
+async function loadEmployees(){
+
+const usersSnap = await get(ref(db,"users"))
+
+if(!usersSnap.exists()) return
+
+const users = usersSnap.val()
+
+// جلب الموظفين المخفيين
+const hiddenSnap = await get(ref(db,"hiddenEmployees"))
+const hidden = hiddenSnap.exists() ? Object.keys(hiddenSnap.val()) : []
+
+employees = Object.keys(users)
+.filter(e => !hidden.includes(e))
+
+
+employees.forEach(e=>{
+
+if(!pointsData[e])
+pointsData[e]={bonus:0,penalty:0}
+
+if(!salaryData[e])
+salaryData[e]={base:0,commission:0}
+
+})
+
+loadPoints()
+onValue(ref(db,"pointsHistory"),snap=>{
+
+
+
+if(!snap.exists()) return
+
+const data = snap.val()
+
+for(const id in data){
+
+const p = data[id]
+
+const row=document.createElement("tr")
+
+row.innerHTML=`
+<td>${p.employee}</td>
+<td>${p.type==="bonus"?"مكافأة":"خصم"}</td>
+<td>${p.points}</td>
+<td>${p.note || ""}</td>
+`
+
+document.getElementById("pointsTable").appendChild(row)
+
+}
+
+})
+// تحديث القوائم المنسدلة
+const selects=["empSelect","taskEmp","removeEmpSelect"]
+
+selects.forEach(id=>{
+
+const s=document.getElementById(id)
+
+s.innerHTML='<option>اختر الموظف</option>'
+
+employees.forEach(e=>{
+
+const o=document.createElement("option")
+o.value=e
+o.textContent=e
+
+s.appendChild(o)
+
+})
+
+})
+
+renderSalary()
+
+}
+/* تخزين النقاط */
+
+let pointsData={}
+let salaryData={}
+let globalPointPrice = 1000
+function loadPoints(){
+
+onValue(ref(db,"points"),snap=>{
+
+pointsData = {}
+
+
+
+if(snap.exists()){
+
+const data = snap.val()
+
+for(const emp in data){
+
+const bonus = Number(data[emp].bonus || data[emp].bonusPoints) || 0
+const penalty = Number(data[emp].penalty || data[emp].penaltyPoints) || 0
+
+pointsData[emp] = {
+bonus: bonus,
+penalty: penalty
+}
+
+
+// عرض الخصومات
+if(penalty>0){
+
+const row=document.createElement("tr")
+row.innerHTML=`
+<td>${emp}</td>
+<td>خصم</td>
+<td>${penalty}</td>
+<td></td>
+`
+
+document.getElementById("pointsTable").appendChild(row)
+
+}
+
+}
+
+}
+
+// تأكد وجود كل الموظفين
+employees.forEach(emp=>{
+
+if(!pointsData[emp])
+pointsData[emp]={bonus:0,penalty:0}
+
+})
+
+renderSalary()
+
+})
+
+}
+function formatNumber(n){
+return Number(n || 0).toLocaleString('en-US')
+}
+/* تهيئة البيانات */
+
+
+
+/* tabs */
+
+function openSection(id){
+
+document.querySelectorAll(".section")
+.forEach(s=>s.classList.remove("active"))
+
+document.querySelectorAll(".tab")
+.forEach(t=>t.classList.remove("active"))
+
+document.getElementById(id).classList.add("active")
+
+document.querySelector(`[onclick="openSection('${id}')"]`)
+.classList.add("active")
+
+}
+
+window.openSection = openSection
+
+async function addEmployeePrompt(){
+
+const name = prompt("اكتب اسم الموظف")
+
+if(!name) return
+
+await set(ref(db,"users/"+name),{
+password:"",
+roles:["center"]
+})
+
+alert("تم إضافة الموظف")
+
+loadEmployees()
+
+}
+
+
+window.addEmployeePrompt = addEmployeePrompt
+function removeEmployee(name){
+
+if(!confirm("حذف الموظف من الرواتب؟")) return
+
+hiddenEmployees.push(name)
+
+employees = employees.filter(e => !hiddenEmployees.includes(e))
+
+loadEmployees()
+
+}
+
+async function removeEmployeeSelected(){
+
+const name = document.getElementById("removeEmpSelect").value
+
+if(!name || name==="اختر الموظف") return
+
+if(!confirm("هل تريد إخفاء الموظف من الرواتب؟")) return
+
+await set(ref(db,"hiddenEmployees/"+name),true)
+
+loadEmployees()
+
+}
+
+window.removeEmployeeSelected = removeEmployeeSelected
+loadEmployees()
+
+
+/* رسم جدول الرواتب */
+
+function renderSalary(){
+
+let rows=""
+let total=0
+
+
+const pointPrice = globalPointPrice
+
+employees.forEach(emp=>{
+
+const base = salaryData[emp].base
+const commission = salaryData[emp].commission
+
+const bonus = pointsData[emp].bonus
+const penalty = pointsData[emp].penalty
+
+const pointsValue = (bonus-penalty)*pointPrice
+
+const finalSalary = base + commission + pointsValue
+
+total += finalSalary
+
+rows+=`
+
+<tr>
+
+<td>${emp}</td>
+
+<td>
+<input type="text"
+value="${formatNumber(base)}"
+onchange="updateBase('${emp}',this.value.replace(/,/g,''))">
+</td>
+
+<td>${formatNumber(commission)}</td>
+
+<td>${formatNumber(bonus)}</td>
+<td>${formatNumber(penalty)}</td>
+<td>${formatNumber(pointsValue)}</td>
+<td>${formatNumber(finalSalary)}</td>
+
+
+
+</tr>
+
+`
+
+})
+
+document.getElementById("salaryTable").innerHTML=rows
+
+document.getElementById("totalSalary").innerText = formatNumber(total)
+
+}
+
+
+/* تحديث الراتب */
+
+window.updateBase = async function(emp,val){
+
+salaryData[emp].base = Number(data[emp].base || data[emp].baseSalary) || 0
+
+await set(ref(db,"salaries/"+emp+"/base"),salaryData[emp].base)
+
+renderSalary()
+
+}
+
+window.updateCommission = async function(emp,val){
+
+salaryData[emp].commission = Number(val)||0
+
+await set(ref(db,"salaries/"+emp+"/commission"),salaryData[emp].commission)
+
+renderSalary()
+
+}
+
+/* إضافة مكافأة أو خصم */
+window.addPoint = async function(){
+
+const emp = document.getElementById("empSelect").value
+const type = document.getElementById("typeSelect").value
+const points = Number(document.getElementById("pointsInput").value) || 0
+globalPointPrice = Number(document.getElementById("pointPrice").value) || globalPointPrice
+const note = document.getElementById("noteInput").value
+
+if(!emp || emp==="اختر الموظف" || !points) return
+
+// حفظ العملية في السجل
+const id = Date.now()
+
+await set(ref(db,"pointsHistory/"+id),{
+employee:emp,
+type:type,
+points:points,
+note:note
+})
+
+// تحديث المجموع
+if(!pointsData[emp])
+pointsData[emp]={bonus:0,penalty:0}
+
+if(type==="bonus"){
+
+pointsData[emp].bonus += points
+set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
+
+}else{
+
+pointsData[emp].penalty += points
+set(ref(db,"points/"+emp+"/penalty"),pointsData[emp].penalty)
+
+}
+
+document.getElementById("pointsInput").value=""
+document.getElementById("noteInput").value=""
+
+renderSalary()
+
+}
+
+
+/* إضافة مهمة */
+
+window.addTask = async function(){
+
+const emp = document.getElementById("taskEmp").value
+const title = document.getElementById("taskTitle").value
+const reward = Number(document.getElementById("taskReward").value) || 0
+
+if(!emp || !title) return
+
+const id = Date.now()
+
+await set(ref(db,"tasks/"+id),{
+employee:emp,
+title:title,
+reward:reward,
+done:false
+})
+
+document.getElementById("taskTitle").value=""
+document.getElementById("taskReward").value=""
+
+}
+
+
+/* إنهاء المهمة */
+
+window.finishTask = async function(id,emp,reward){
+
+await set(ref(db,"tasks/"+id+"/done"),true)
+
+pointsData[emp].bonus += reward
+
+set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
+
+alert("تمت إضافة مكافأة "+reward+" نقطة")
+
+renderSalary()
+
+}
+onValue(ref(db,"tasks"),snap=>{
+
+document.getElementById("tasksTable").innerHTML=""
+
+if(!snap.exists()) return
+
+const data = snap.val()
+
+for(const id in data){
+
+const t = data[id]
+
+const row=document.createElement("tr")
+
+row.innerHTML=`
+
+<td>${t.employee}</td>
+<td>${t.title}</td>
+<td>${t.reward}</td>
+
+<td>
+<div class="progress">
+<div class="progress-bar" style="width:${t.done?100:0}%"></div>
+</div>
+</td>
+
+<td>
+<button onclick="finishTask('${id}','${t.employee}',${t.reward})">
+تم الإنجاز
+</button>
+</td>
+
+`
+
+document.getElementById("tasksTable").appendChild(row)
+
+}
+
+})
+</script>
+
+</body>
+</html>

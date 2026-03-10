@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<title>إضافة منتج</title>
+</head>
+
+<body>
+
+<h2>إضافة منتج</h2>
+
+<input type="text" id="name" placeholder="اسم المنتج"><br><br>
+
+<input type="number" id="price" placeholder="السعر"><br><br>
+
+<input type="file" id="image"><br><br>
+
+<button onclick="addProduct()">إضافة المنتج</button>
+
+<script type="module">
+
+import { db, storage } from "../js/firebase.js";
+
+import { ref, push } from
+"https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+import { ref as sRef, uploadBytes, getDownloadURL }
+from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+window.addProduct = async function(){
+
+const name = document.getElementById("name").value;
+const price = document.getElementById("price").value;
+const file = document.getElementById("image").files[0];
+
+if(!file){
+alert("اختر صورة للمنتج");
+return;
+}
+
+try{
+
+// رفع الصورة إلى Firebase Storage
+const imageRef = sRef(storage,"products/"+Date.now()+"_"+file.name);
+
+await uploadBytes(imageRef,file);
+
+// جلب رابط الصورة
+const url = await getDownloadURL(imageRef);
+
+// حفظ المنتج في قاعدة البيانات
+await push(ref(db,"shop/products"),{
+
+name:name,
+price:price,
+image:url
+
+});
+
+alert("✅ تم إضافة المنتج مع الصورة");
+
+}catch(err){
+
+console.error(err);
+alert("❌ خطأ أثناء رفع المنتج");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
