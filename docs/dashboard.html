@@ -334,7 +334,7 @@ p, div, span, button {
 
     <!-- 💰 الحسابات -->
 <!-- 💰 المحاسبة -->
-<div class="menu-item" onclick="toggleMenu('accountingMenu')">💰 المحاسبة</div>
+<div class="menu-item" onclick="openAccountingProtected()">💰 المحاسبة</div>
 
 <div class="submenu" id="accountingMenu">
 
@@ -657,8 +657,29 @@ function openStatistics(tab) {
   }
 }
 
+function openAccountingProtected(){
 
+if(localStorage.getItem("financeUnlocked") === "yes"){
+toggleMenu('accountingMenu')
+return
+}
 
+const code = prompt("🔒 أدخل رمز المحاسبة")
+
+if(code === "09870987"){
+
+localStorage.setItem("financeUnlocked","yes")
+toggleMenu('accountingMenu')
+
+}else{
+
+alert("❌ الرمز غير صحيح")
+
+}
+
+}
+
+window.openAccountingProtected = openAccountingProtected
 
 
     function toggleMenu(id) {
@@ -797,23 +818,39 @@ if (
     if (detailsItem) detailsItem.style.display = "block";
   }
 }
-function openShop(tab){
+function openAccounting(tab){
 
- if(tab === "orders"){
-   window.location.href = "shop-orders.html"
+ if(tab === "dashboard"){
+   window.location.href = "accounting/dashboard.html"
  }
 
- if(tab === "products"){
-   window.location.href = "shop-products.html"
+ if(tab === "orders-profit"){
+   window.location.href = "accounting/orders-profit.html"
  }
 
- if(tab === "settings"){
-   window.location.href = "shop-settings.html"
+ if(tab === "expenses"){
+   window.location.href = "accounting/expenses.html"
+ }
+
+ if(tab === "salaries"){
+   window.location.href = "accounting/salaries.html"
+ }
+
+ if(tab === "ads"){
+   window.location.href = "accounting/ads.html"
+ }
+
+ if(tab === "suppliers"){
+   window.location.href = "accounting/suppliers.html"
+ }
+
+ if(tab === "reports"){
+   window.location.href = "accounting/reports.html"
  }
 
 }
 
-window.openShop = openShop
+window.openAccounting = openAccounting
 
 
 

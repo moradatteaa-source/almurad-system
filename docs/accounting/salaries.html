@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <title>إدارة الفريق</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600&display=swap" rel="stylesheet">
+
 
 <style>
 
@@ -166,12 +166,21 @@ color:var(--blue);
 
 <div id="salary" class="section active">
 
+<div style="display:flex;gap:20px;flex-wrap:wrap">
+
 <div class="card">
-
 <h3>الرواتب الكلية</h3>
+<div class="totalBox" id="totalSalary">0</div>
+</div>
 
-<div class="totalBox" id="totalSalary">
-0
+<div class="card">
+<h3>عدد الطلبات المسلمة</h3>
+<div class="totalBox" id="totalDelivered">0</div>
+</div>
+
+<div class="card">
+<h3>إجمالي العمولات</h3>
+<div class="totalBox" id="totalCommission">0</div>
 </div>
 
 </div>
@@ -204,6 +213,15 @@ color:var(--blue);
 <button onclick="addEmployeePrompt()">➕ إضافة موظف</button>
 <br><br>
 
+<button onclick="exportExcel()" style="background:#0d6efd">
+تصدير Excel
+</button>
+
+<button onclick="exportPDF()" style="background:#198754">
+تصدير PDF
+</button>
+<br><br>
+
 <div class="card">
 
 <h3>إزالة موظف من الرواتب</h3>
@@ -215,7 +233,11 @@ color:var(--blue);
 <button onclick="removeEmployeeSelected()">
 حذف من الرواتب
 </button>
+<br><br>
 
+<button onclick="archivePayroll()" style="background:#b00020">
+أرشفة الرواتب للشهر الحالي
+</button>
 </div>
 </div>
 
@@ -262,6 +284,7 @@ color:var(--blue);
 <th>النوع</th>
 <th>النقاط</th>
 <th>الملاحظة</th>
+<th>التاريخ</th>
 </tr>
 </thead>
 
@@ -346,9 +369,60 @@ appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 let employees = []
+
+
+onValue(ref(db,"orders"),snap=>{
+
+if(!snap.exists()) return
+
+orders = Object.values(snap.val())
+
+if(employees.length === 0) return
+
+calculateCommissions()
+
+})
+function calculateCommissions(){
+
+let totalDelivered = 0
+let totalCommission = 0
+
+employees.forEach(emp=>{
+let delivered = 0
+
+orders.forEach(o=>{
+if(o.status === "تم التسليم" && (o.fixedBy || "غير محدد") === emp){
+delivered++
+}
+})
+
+const rate = 250
+
+const commission = delivered * rate
+
+salaryData[emp].commission = commission
+
+totalDelivered += delivered
+totalCommission += commission
+
+})
+
+document.getElementById("totalDelivered").innerText =
+totalDelivered.toLocaleString('en-US')
+
+document.getElementById("totalCommission").innerText =
+totalCommission.toLocaleString('en-US')
+
+renderSalary()
+
+}
 let orders = []
 let commissionRates = {}
-onValue(ref(db,"commissions"),snap=>{
+
+
+
+let hiddenEmployees = []
+onValue(ref(db,"salaries"),snap=>{
 
 if(!snap.exists()) return
 
@@ -357,18 +431,15 @@ const data = snap.val()
 for(const emp in data){
 
 if(!salaryData[emp])
-salaryData[emp] = {base:0,commission:0}
-salaryData[emp].commission = Number(data[emp]) || 0
+salaryData[emp]={base:0,commission:0}
+
+salaryData[emp].base = Number(data[emp].base) || 0
 
 }
 
 renderSalary()
 
 })
-
-
-
-let hiddenEmployees = []
 async function loadEmployees(){
 
 const usersSnap = await get(ref(db,"users"))
@@ -394,11 +465,11 @@ if(!salaryData[e])
 salaryData[e]={base:0,commission:0}
 
 })
-
+calculateCommissions()
 loadPoints()
 onValue(ref(db,"pointsHistory"),snap=>{
 
-
+document.getElementById("pointsTable").innerHTML=""
 
 if(!snap.exists()) return
 
@@ -415,6 +486,7 @@ row.innerHTML=`
 <td>${p.type==="bonus"?"مكافأة":"خصم"}</td>
 <td>${p.points}</td>
 <td>${p.note || ""}</td>
+<td>${p.date || ""}</td>
 `
 
 document.getElementById("pointsTable").appendChild(row)
@@ -443,7 +515,6 @@ s.appendChild(o)
 
 })
 
-renderSalary()
 
 }
 /* تخزين النقاط */
@@ -474,20 +545,6 @@ penalty: penalty
 }
 
 
-// عرض الخصومات
-if(penalty>0){
-
-const row=document.createElement("tr")
-row.innerHTML=`
-<td>${emp}</td>
-<td>خصم</td>
-<td>${penalty}</td>
-<td></td>
-`
-
-document.getElementById("pointsTable").appendChild(row)
-
-}
 
 }
 
@@ -593,9 +650,8 @@ const pointPrice = globalPointPrice
 
 employees.forEach(emp=>{
 
-const base = salaryData[emp].base
-const commission = salaryData[emp].commission
-
+const base = salaryData[emp]?.base || 0
+const commission = salaryData[emp]?.commission || 0
 const bonus = pointsData[emp].bonus
 const penalty = pointsData[emp].penalty
 
@@ -643,7 +699,7 @@ document.getElementById("totalSalary").innerText = formatNumber(total)
 
 window.updateBase = async function(emp,val){
 
-salaryData[emp].base = Number(data[emp].base || data[emp].baseSalary) || 0
+salaryData[emp].base = Number(val) || 0
 
 await set(ref(db,"salaries/"+emp+"/base"),salaryData[emp].base)
 
@@ -667,7 +723,10 @@ window.addPoint = async function(){
 const emp = document.getElementById("empSelect").value
 const type = document.getElementById("typeSelect").value
 const points = Number(document.getElementById("pointsInput").value) || 0
-globalPointPrice = Number(document.getElementById("pointPrice").value) || globalPointPrice
+const price = Number(document.getElementById("pointPrice").value) || globalPointPrice
+globalPointPrice = price
+
+set(ref(db,"settings/pointPrice"),price)
 const note = document.getElementById("noteInput").value
 
 if(!emp || emp==="اختر الموظف" || !points) return
@@ -679,7 +738,8 @@ await set(ref(db,"pointsHistory/"+id),{
 employee:emp,
 type:type,
 points:points,
-note:note
+note:note,
+date:new Date().toLocaleDateString()
 })
 
 // تحديث المجموع
@@ -688,13 +748,17 @@ pointsData[emp]={bonus:0,penalty:0}
 
 if(type==="bonus"){
 
-pointsData[emp].bonus += points
-set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
+const newBonus = (pointsData[emp].bonus || 0) + points
+pointsData[emp].bonus = newBonus
+
+await set(ref(db,"points/"+emp+"/bonus"), newBonus)
 
 }else{
 
-pointsData[emp].penalty += points
-set(ref(db,"points/"+emp+"/penalty"),pointsData[emp].penalty)
+const newPenalty = (pointsData[emp].penalty || 0) + points
+pointsData[emp].penalty = newPenalty
+
+await set(ref(db,"points/"+emp+"/penalty"), newPenalty)
 
 }
 
@@ -785,7 +849,198 @@ document.getElementById("tasksTable").appendChild(row)
 }
 
 })
-</script>
+window.archivePayroll = async function(){
 
+if(!confirm("سيتم أرشفة الرواتب والعمولات والمكافآت ثم تصفيرها. هل أنت متأكد؟")) return
+
+// اسم الشهر
+const now = new Date()
+const month = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")
+
+// جلب البيانات الحالية
+const salariesSnap = await get(ref(db,"salaries"))
+
+const pointsSnap = await get(ref(db,"points"))
+const historySnap = await get(ref(db,"pointsHistory"))
+const tasksSnap = await get(ref(db,"tasks"))
+
+const archiveData = {
+date: new Date().toLocaleString('en-US'),
+salaries: salariesSnap.exists()?salariesSnap.val():{},
+
+points: pointsSnap.exists()?pointsSnap.val():{},
+pointsHistory: historySnap.exists()?historySnap.val():{},
+tasks: tasksSnap.exists()?tasksSnap.val():{}
+}
+
+// حفظ الأرشيف
+await set(ref(db,"archive/payroll/"+month),archiveData)
+
+// تصفير البيانات التشغيلية
+
+await set(ref(db,"points"),{})
+await set(ref(db,"pointsHistory"),{})
+await set(ref(db,"tasks"),{})
+
+alert("تمت أرشفة الرواتب بنجاح")
+
+}
+window.exportExcel = function(){
+
+const table = document.getElementById("salaryTable")
+let data = []
+
+let totalCommission = 0
+let totalDelivered = 0
+
+// حساب الطلبات المسلمة
+orders.forEach(o=>{
+if(o.status === "تم التسليم") totalDelivered++
+})
+
+// العناوين
+data.push([
+"Employee",
+"Base Salary",
+"Commission",
+"Bonus",
+"Penalty",
+"Points Value",
+"Final Salary"
+])
+
+// البيانات
+Array.from(table.rows).forEach(row=>{
+
+let cells = []
+
+row.querySelectorAll("td").forEach(td=>{
+
+const input = td.querySelector("input")
+
+if(input){
+cells.push(input.value)
+}else{
+cells.push(td.innerText)
+}
+
+})
+
+const commission = Number(cells[2].replace(/,/g,'')) || 0
+totalCommission += commission
+
+data.push(cells)
+
+})
+
+// صف فارغ
+data.push([])
+
+// الإجماليات
+data.push(["Total Delivered Orders", totalDelivered])
+data.push(["Total Commissions", totalCommission])
+data.push(["Total Salaries", document.getElementById("totalSalary").innerText])
+
+const ws = XLSX.utils.aoa_to_sheet(data)
+const wb = XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb, ws, "Payroll Report")
+
+XLSX.writeFile(wb,"payroll_report.xlsx")
+
+}
+window.exportPDF = function(){
+
+const { jsPDF } = window.jspdf
+const doc = new jsPDF()
+
+let rows = []
+
+let totalCommission = 0
+let totalDelivered = 0
+
+document.querySelectorAll("#salaryTable tr").forEach(tr=>{
+
+let row = []
+let cells = tr.querySelectorAll("td")
+
+cells.forEach((td,i)=>{
+
+let input = td.querySelector("input")
+
+let text = input ? input.value : td.innerText
+
+// تحويل اسم الموظف للإنكليزي
+if(i === 0){
+text = arabicToEnglish(text)
+}
+
+// جمع العمولات
+if(i === 2){
+const num = Number(text.replace(/,/g,'')) || 0
+totalCommission += num
+}
+
+row.push(text)
+
+})
+
+rows.push(row)
+
+})
+
+// حساب الطلبات المسلمة من الطلبات
+orders.forEach(o=>{
+if(o.status === "تم التسليم") totalDelivered++
+})
+
+const totalSalary = document.getElementById("totalSalary").innerText
+
+doc.text("ALMURAD TEAM PAYROLL REPORT",14,15)
+
+doc.text("Total Salaries: " + totalSalary,14,25)
+
+doc.text("Total Delivered Orders: " + totalDelivered,14,33)
+
+doc.text("Total Commissions: " + totalCommission.toLocaleString('en-US'),14,41)
+
+doc.autoTable({
+startY:50,
+head:[[
+"Employee",
+"Base Salary",
+"Commission",
+"Bonus",
+"Penalty",
+"Points Value",
+"Final Salary"
+]],
+body:rows
+})
+
+doc.save("payroll_report.pdf")
+
+}
+function arabicToEnglish(text){
+
+const map = {
+"ا":"a","أ":"a","إ":"e","آ":"a",
+"ب":"b","ت":"t","ث":"th","ج":"j",
+"ح":"h","خ":"kh","د":"d","ذ":"th",
+"ر":"r","ز":"z","س":"s","ش":"sh",
+"ص":"s","ض":"d","ط":"t","ظ":"z",
+"ع":"a","غ":"gh","ف":"f","ق":"q",
+"ك":"k","ل":"l","م":"m","ن":"n",
+"ه":"h","و":"w","ي":"y","ى":"a",
+"ة":"a"
+}
+
+return text.split("").map(c => map[c] || c).join("")
+
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>
