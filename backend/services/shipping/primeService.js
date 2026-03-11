@@ -76,7 +76,10 @@ function cleanPhoneNumber(input) {
 
 function convertState(city) {
 
-  if (!city) return "BGD";
+  if (!city) {
+    console.log("❌ City is empty");
+    return null;
+  }
 
   let c = city.trim();
 
@@ -116,7 +119,14 @@ function convertState(city) {
     "موصل": "MOS"
   };
 
-  return states[c] || "BGD";
+  const code = states[c];
+
+  if (!code) {
+    console.log("❌ Unknown city sent to Prime:", city);
+    return null;
+  }
+
+  return code;
 }
 // ======================
 // 🔵 Create Order From Firebase
@@ -163,23 +173,36 @@ const totalQty = Number(order.totalQty) > 0
   ? Number(order.totalQty) 
   : 1;
 const finalNotes = order.notes || "";
+
+// 🔴 فحص المحافظة قبل الإرسال
+console.log("📍 City from order:", order.city);
+
+const stateCode = convertState(order.city);
+
+if (!stateCode) {
+  console.log("❌ Order blocked. Invalid city:", order.city);
+  return { success:false, msg:"Invalid city name. Order not sent to Prime." };
+}
+
 const shipmentData = [
   {
     custReceiptNoOri: 0,
-district: 0,
+    district: 0,
     haveReturnItems: "N",
     receiverHp2: order.phone2 || "",
-rmk: finalNotes,
+    rmk: finalNotes,
     locationDetails: order.address || "",
     merchantLoginId: PRIME_MERCHANT_LOGIN,
-productInfo: productInfoString,
-qty: totalQty,
+    productInfo: productInfoString,
+    qty: totalQty,
     receiptAmtIqd: Number(order.totalPrice) || 0,
-receiverHp1: cleanedPhone,
-receiverName: order.code || order.receiverName || order.customerName || "زبون",
+    receiverHp1: cleanedPhone,
+    receiverName: order.code || order.receiverName || order.customerName || "زبون",
     senderId: PRIME_SENDER_ID,
     senderSystemCaseIdWithCharacters: caseId,
-    state: convertState(order.city)
+
+    // 👇 هنا نستخدم الكود الصحيح
+    state: stateCode
   }
 ];
 console.log("📦 FINAL PAYLOAD SENT TO PRIME:");
