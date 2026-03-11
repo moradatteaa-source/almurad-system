@@ -284,9 +284,11 @@ function populateAdvertisers() {
   document.getElementById("applyBtn").onclick = applyFilter;
   document.getElementById("adCost").oninput = applyFilter;
 function populateProductsForAdvertiser() {
-  const adv = advertiserSelect.value;
+ const adv = Array.from(
+  document.querySelectorAll("#advertiserCheckboxes input:checked")
+).map(c => c.value);
   const products = allOrders
-    .filter(o => !adv || o.advertiser === adv)
+.filter(o => !adv.length || adv.includes(o.advertiser))
     .flatMap(o => (o.productName || "").split("،").map(x => x.trim()))
     .filter(Boolean);
 

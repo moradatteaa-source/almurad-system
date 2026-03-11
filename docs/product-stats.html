@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📦 إحصائيات المنتجات</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--blue:#043B64;
+--orange:#FF6B2D;
+--bg:#f4f6fa;
+}
+
+body{
+font-family:Tajawal;
+margin:0;
+background:var(--bg);
+}
+
+header{
+background:var(--blue);
+color:white;
+padding:16px;
+font-size:22px;
+text-align:center;
+font-weight:bold;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+padding:20px;
+}
+
+.controls{
+display:flex;
+gap:10px;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.controls input{
+padding:8px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+.controls button{
+background:var(--blue);
+color:white;
+border:none;
+padding:8px 14px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.table-wrap{
+background:white;
+border-radius:10px;
+padding:10px;
+box-shadow:0 4px 12px rgba(0,0,0,0.05);
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:14px;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #eee;
+text-align:center;
+}
+
+th{
+background:#f7f7f7;
+color:var(--blue);
+}
+
+.good{
+color:#198754;
+font-weight:bold;
+}
+
+.medium{
+color:#ffc107;
+font-weight:bold;
+}
+
+.bad{
+color:#dc3545;
+font-weight:bold;
+}
+
+.advice{
+font-size:13px;
+color:#555;
+}
+.dropdown{
+position:relative;
+display:inline-block;
+}
+
+.dropbtn{
+background:var(--blue);
+color:white;
+padding:8px 12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.dropdown-content{
+display:none;
+position:absolute;
+background:white;
+border:1px solid #ccc;
+border-radius:8px;
+padding:8px;
+min-width:200px;
+z-index:5;
+}
+
+.dropdown:hover .dropdown-content{
+display:block;
+}
+
+#productDropdown{
+max-height:250px;
+overflow-y:auto;
+}
+</style>
+</head>
+
+<body>
+
+<header>📦 إحصائيات المنتجات</header>
+
+<div class="container">
+
+<div class="controls">
+
+<label>من</label>
+<input type="date" id="fromDate">
+
+<label>إلى</label>
+<input type="date" id="toDate">
+<div class="dropdown">
+<button class="dropbtn">📦 المنتجات</button>
+
+<div class="dropdown-content" id="productDropdown">
+
+<input type="text" id="productSearch"
+placeholder="🔍 بحث..."
+style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px">
+
+<label>
+<input type="checkbox" id="selectAllProducts"> تحديد الكل
+</label>
+
+<div id="productCheckboxes"></div>
+
+</div>
+</div>
+<button onclick="loadStats()">تطبيق</button>
+
+</div>
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>#</th>
+<th>المنتج</th>
+<th>إجمالي الطلبات</th>
+<th>تم التسليم</th>
+<th>الراجع</th>
+<th>الطالع</th>
+<th>نسبة الراجع</th>
+<th>تقييم المنتج</th>
+<th>نصيحة النظام</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+authDomain: "almurad-system.firebaseapp.com",
+databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+projectId: "almurad-system",
+storageBucket: "almurad-system.appspot.com",
+messagingSenderId: "911755824405",
+appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let allOrders=[]
+
+function toDateObj(d){
+
+const n = new Date(d)
+
+if(!isNaN(n)) return n
+
+return null
+
+}
+
+async function loadStats(){
+
+const snap = await get(ref(db,"orders"))
+
+if(!snap.exists()) return
+
+const obj = snap.val()
+
+allOrders = Object.values(obj)
+
+const from = document.getElementById("fromDate").value
+const to = document.getElementById("toDate").value
+
+let fromDate = from ? new Date(from+"T00:00:00") : null
+let toDate = to ? new Date(to+"T23:59:59") : null
+
+const filtered = allOrders.filter(o=>{
+
+const dt = toDateObj(o.orderDate)
+
+if(!dt) return false
+
+if(fromDate && dt < fromDate) return false
+if(toDate && dt > toDate) return false
+
+return true
+
+})
+
+analyzeProducts(filtered)
+
+}
+
+function analyzeProducts(orders){
+
+const products = {}
+
+orders.forEach(o=>{
+
+const name = o.productName || o.product || "غير معروف"
+
+if(!products[name]){
+
+products[name]={
+
+total:0,
+delivered:0,
+returned:0
+
+}
+
+}
+
+products[name].total++
+
+if(o.status==="تم التسليم")
+products[name].delivered++
+
+if(o.status==="تم استلام الراجع")
+products[name].returned++
+
+})
+
+renderTable(products)
+
+}
+
+function renderTable(products){
+
+const tbody = document.getElementById("tableBody")
+
+tbody.innerHTML=""
+
+let index=1
+
+Object.keys(products).forEach(p=>{
+
+const data = products[p]
+
+const outgoing = data.delivered + data.returned
+
+let returnRate = 0
+
+if(outgoing>0)
+returnRate = (data.returned/outgoing*100).toFixed(1)
+
+let status=""
+let advice=""
+let className=""
+
+if(outgoing<30){
+
+status="📊 بيانات قليلة"
+advice="نحتاج طلبات أكثر للحكم على المنتج"
+className="medium"
+
+}
+
+else if(returnRate<15){
+
+status="🔥 ناجح"
+advice="يمكن زيادة الإعلان والكمية"
+className="good"
+
+}
+
+else if(returnRate<=25){
+
+status="⚠️ متوسط"
+advice="تحسين الصور أو وصف الإعلان"
+className="medium"
+
+}
+
+else{
+
+status="❌ فاشل"
+advice="مراجعة جودة المنتج أو إيقاف الإعلان"
+className="bad"
+
+}
+
+const tr = document.createElement("tr")
+
+tr.innerHTML=`
+
+<td>${index++}</td>
+
+<td>${p}</td>
+
+<td>${data.total}</td>
+
+<td>${data.delivered}</td>
+
+<td>${data.returned}</td>
+
+<td>${outgoing}</td>
+
+<td>${returnRate}%</td>
+
+<td class="${className}">${status}</td>
+
+<td class="advice">${advice}</td>
+
+`
+
+tbody.appendChild(tr)
+
+})
+
+}
+
+loadStats()
+
+</script>
+
+</body>
+
+</html>

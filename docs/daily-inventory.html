@@ -152,8 +152,27 @@
 </div>
   <p id="scanMsg" class="loading"></p>
 </div>
+<div id="errorSection" style="display:none;margin-top:30px;">
+
+<h3 style="color:#b02a37;">⚠️ مشاكل المخزن</h3>
+
+<table id="errorTable" style="background:#fff3cd;">
+<thead>
+<tr>
+<th>المنتج</th>
+<th>المتغير</th>
+<th>المشكلة</th>
+<th>الكمية</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+</table>
+
+</div>
+
 <button id="pdfBtn" style="background:#043B64;margin-top:10px;">
-  📄 تحميل تقرير الجرد PDF
+📄 تحميل تقرير الجرد PDF
 </button>
  
   </main>
@@ -199,6 +218,10 @@ const returnSection = document.getElementById("returnSection");
 
 const deductBtn = document.getElementById("deductBtn");
 const returnBtn = document.getElementById("returnBtn");
+const errorSection = document.getElementById("errorSection");
+const errorTable = document.querySelector("#errorTable tbody");
+
+let inventoryErrors = [];
 let pendingOut = [];
 let pendingReturn = [];
 let scannedShipments = new Set();
@@ -292,7 +315,8 @@ function renderPendingTable() {
 
       const variants = item.variants || {};
 const variantText = Object.entries(variants)
-  .map(([k, v]) => `${k} | ${v}`)
+  .sort(([a],[b]) => a.localeCompare(b))
+  .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
 
    const fullName = variantText
@@ -383,6 +407,29 @@ document.addEventListener("keydown", (e) => {
     barcodeBuffer = "";
   }, 200); // لو توقف أكثر من 200ms يعتبر إدخال يدوي
 });
+function findMatchingVariant(stock, variantText){
+
+const normalize = (text)=>
+text
+.split("|")
+.map(s=>s.trim())
+.filter(Boolean)
+.sort()
+.join("|");
+
+const target = normalize(variantText);
+
+for(const key of Object.keys(stock)){
+
+if(normalize(key) === target){
+return key;
+}
+
+}
+
+return null;
+
+}
 deductBtn.addEventListener("click", async () => {
 
 if (!pendingOut.length) {
@@ -397,7 +444,8 @@ if (!pendingOut.length) {
 pendingOut.forEach(item => {
 const variants = item.variants || {};
 const variantText = Object.entries(variants)
-  .map(([k, v]) => `${k} | ${v}`)
+  .sort(([a],[b]) => a.localeCompare(b))
+  .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
 
   const key = variantText
@@ -422,14 +470,23 @@ const productRef = ref(db, "warehouse/" + name);
 const productSnap = await get(productRef);
 
 if (!productSnap.exists()) {
-  scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
+inventoryErrors.push({
+name:name,
+variant:variantPart,
+problem:"المنتج غير موجود بالمخزن",
+qty:qty
+});
+
+renderErrors();
+
+scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
   continue;
 }
 
 const productData = productSnap.val();
 const stock = productData.stock || {};
 
-if (!productData.hasVariants) {
+if (!variantPart) {
 
 const currentQty = Number(stock["إجمالي الكمية"] || 0);
 const newQty = currentQty - qty;
@@ -444,10 +501,29 @@ lastUpdate: new Date().toISOString()
 
 else {
 
-const variantKey = variantPart ? variantPart.trim() : "";
+let variantKey = findMatchingVariant(stock, variantPart);
+
+if(!variantKey){
+variantKey = variantPart.trim();
+}
 
 const currentVariantQty = Number(stock[variantKey] || 0);
-const newVariantQty = currentVariantQty - qty;
+let newVariantQty = currentVariantQty - qty;
+
+if(newVariantQty < 0){
+
+inventoryErrors.push({
+name:name,
+variant:variantKey,
+problem:"الكمية سالبة",
+qty:newVariantQty
+});
+
+renderErrors();
+
+newVariantQty = 0;
+
+}
 
 const updatedStock = {
 ...stock,
@@ -494,9 +570,9 @@ if (!pendingReturn.length) {
 pendingReturn.forEach(item => {
 const variants = item.variants || {};
 const variantText = Object.entries(variants)
-  .map(([k, v]) => `${k} | ${v}`)
+  .sort(([a],[b]) => a.localeCompare(b))
+  .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
-
     const key = variantText
       ? item.name + " || " + variantText
       : item.name;
@@ -520,14 +596,23 @@ const productRef = ref(db, "warehouse/" + name);
 const productSnap = await get(productRef);
 
 if (!productSnap.exists()) {
-  scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
+inventoryErrors.push({
+name:name,
+variant:variantPart,
+problem:"المنتج غير موجود بالمخزن",
+qty:qty
+});
+
+renderErrors();
+
+scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
   continue;
 }
 
 const productData = productSnap.val();
 const stock = productData.stock || {};
 
-if (!productData.hasVariants) {
+if (!variantPart) {
 
   const currentQty = Number(stock["إجمالي الكمية"] || 0);
   const newQty = currentQty + qty;
@@ -541,8 +626,11 @@ if (!productData.hasVariants) {
 }
 else {
 
-  const variantKey = variantPart ? variantPart.trim() : "";
+let variantKey = findMatchingVariant(stock, variantPart);
 
+if(!variantKey){
+variantKey = variantPart.trim();
+}
   const currentVariantQty = Number(stock[variantKey] || 0);
   const newVariantQty = currentVariantQty + qty;
 
@@ -574,6 +662,31 @@ renderPendingTable();
 scanMsg.textContent = "✅ تم إضافة الراجع بنجاح";
  
 });
+function renderErrors(){
+
+errorTable.innerHTML = "";
+
+if(!inventoryErrors.length){
+errorSection.style.display = "none";
+return;
+}
+
+errorSection.style.display = "block";
+
+inventoryErrors.forEach(err=>{
+
+errorTable.innerHTML += `
+<tr>
+<td>${err.name}</td>
+<td>${err.variant || "-"}</td>
+<td>${err.problem}</td>
+<td>${err.qty}</td>
+</tr>
+`;
+
+});
+
+}
 function fixArabicText(text) {
   if (!text) return "";
 
@@ -655,6 +768,7 @@ const returnMap = new Map();
 pendingOut.forEach(item=>{
 
 const variant = Object.entries(item.variants || {})
+  .sort(([a],[b]) => a.localeCompare(b))
   .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
 const name = variant ? item.name+" - "+variant : item.name;
@@ -672,8 +786,8 @@ obj.orders = obj.orderSet.size;
 
 // الراجع
 pendingReturn.forEach(item=>{
-
 const variant = Object.entries(item.variants || {})
+  .sort(([a],[b]) => a.localeCompare(b))
   .map(([k,v]) => `${k} | ${v}`)
   .join(" | ");
 
@@ -936,7 +1050,11 @@ margin: [0,10,0,0]
     ]
   };
 
-  pdfMake.createPdf(docDefinition).download("تقرير_الجرد.pdf");
+const now = new Date();
+
+const fileName = `جرد_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.pdf`;
+
+pdfMake.createPdf(docDefinition).download(fileName);
 }
   </script>
 
