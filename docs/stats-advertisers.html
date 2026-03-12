@@ -351,7 +351,17 @@ if (
       .includes(p)             // تطابق تام للاسم
   )
 ) return false;
-      const d = new Date(o.orderDate || o.createdAt || Date.now());
+let statusTime = null;
+
+if (o.statusHistory) {
+  const history = Object.values(o.statusHistory);
+
+  const match = history.find(h => h && h.time);
+
+  if (match) statusTime = match.time;
+}
+
+const d = new Date(statusTime || o.orderDate || o.createdAt || Date.now());
       if (f && d < f) return false;
       if (t && d > t) return false;
       return true;

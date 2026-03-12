@@ -356,7 +356,22 @@ body {
     <!-- قائمة المعلنين -->
     <div id="advList" style="max-height:180px; overflow-y:auto; border:1px solid #ddd; padding:8px; border-radius:8px;"></div>
   </div>
+<!-- ▸ تصفية حسب التاريخ -->
+<div style="margin-top:10px;">
 
+  <div style="font-weight:bold;color:#043B64;margin-bottom:6px;">
+    تصفية حسب التاريخ
+  </div>
+
+  <div style="display:flex; gap:10px;">
+    <input type="date" id="dateFrom"
+      style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;">
+
+    <input type="date" id="dateTo"
+      style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;">
+  </div>
+
+</div>
   <!-- زر تطبيق -->
   <button id="applyFilter" style="
     width:100%; padding:10px; margin-top:10px;
@@ -474,6 +489,17 @@ body {
     style="display:none; margin-top:8px; background:#e74c3c; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
     حذف المحدد
   </button>
+  <div id="selectedCount"
+style="
+text-align:center;
+font-size:13px;
+margin-top:6px;
+color:#e74c3c;
+font-weight:bold;
+display:none;
+">
+عدد المحدد: 0
+</div>
 </div>
 <div id="bulkStatusBox" style="display:none; text-align:center; margin-top:10px;">
   <select id="bulkStatusSelect"
@@ -505,7 +531,16 @@ body {
     تحديث الحالة
   </button>
 </div>
-
+<div id="ordersCount"
+style="
+text-align:center;
+font-size:14px;
+margin-top:10px;
+color:#043B64;
+font-weight:bold;
+">
+عدد الطلبات: 0
+</div>
 <div id="ordersList"></div>
 
 <script type="module">
@@ -800,6 +835,8 @@ function getStatusClass(status) {
 
 // ⭐ دالة عرض الطلبات
 function renderOrders(list) {
+  document.getElementById("ordersCount").innerText =
+"عدد الطلبات: " + list.length;
   allOrdersList = list;
   originalOrders = list;
 
@@ -869,11 +906,21 @@ ${o.priceChanged ? `
       </div>
     `;
 
-   card.onclick = () => {
-  if (window.selectionMode) {
-    card.classList.toggle("selected");
-    return;
-  }
+card.onclick = () => {
+
+if (window.selectionMode) {
+
+  document.getElementById("selectedCount").style.display = "block";
+
+  card.classList.toggle("selected");
+
+  const count = document.querySelectorAll(".order-card.selected").length;
+
+  document.getElementById("selectedCount").innerText =
+  "عدد المحدد: " + count;
+
+  return;
+}
 
   // الدخول للتفاصيل
   localStorage.setItem("selectedOrder", o.id);
@@ -1050,6 +1097,27 @@ document.getElementById("applyFilter").onclick = () => {
   ).map(el => el.value);
 
   let filtered = masterOrders;
+  // ⭐ فلترة حسب التاريخ
+// ⭐ فلترة حسب التاريخ (دقيق)
+const dateFrom = document.getElementById("dateFrom").value;
+const dateTo = document.getElementById("dateTo").value;
+
+if (dateFrom || dateTo) {
+
+  filtered = filtered.filter(o => {
+
+    const t = getCurrentStatusTime(o);
+    if (!t) return false;
+
+    const orderDate = t.split("T")[0];   // نأخذ التاريخ فقط
+
+    if (dateFrom && orderDate < dateFrom) return false;
+    if (dateTo && orderDate > dateTo) return false;
+
+    return true;
+  });
+
+}
 // ⭐ حفظ الفلاتر
 localStorage.setItem("filterProducts", JSON.stringify(selectedProducts));
 localStorage.setItem("filterAdvertisers", JSON.stringify(selectedAdvertisers));

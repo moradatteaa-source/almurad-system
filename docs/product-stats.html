@@ -221,7 +221,28 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 let allOrders=[]
+let productsBuilt = false
+function buildProductList(orders){
 
+const box = document.getElementById("productCheckboxes")
+box.innerHTML=""
+
+const names = [...new Set(orders.map(o => o.productName || o.product || "غير معروف"))]
+
+names.forEach(n=>{
+
+const label=document.createElement("label")
+
+label.innerHTML=`
+<input type="checkbox" value="${n}" checked>
+${n}
+`
+
+box.appendChild(label)
+
+})
+
+}
 function toDateObj(d){
 
 const n = new Date(d)
@@ -232,7 +253,7 @@ return null
 
 }
 
-async function loadStats(){
+window.loadStats = async function(){
 
 const snap = await get(ref(db,"orders"))
 
@@ -241,14 +262,25 @@ if(!snap.exists()) return
 const obj = snap.val()
 
 allOrders = Object.values(obj)
-
+if(!productsBuilt){
+  buildProductList(allOrders)
+  productsBuilt = true
+}
 const from = document.getElementById("fromDate").value
 const to = document.getElementById("toDate").value
 
 let fromDate = from ? new Date(from+"T00:00:00") : null
 let toDate = to ? new Date(to+"T23:59:59") : null
 
+const selectedProducts = [...document.querySelectorAll('#productCheckboxes input:checked')]
+.map(c => c.value)
+
 const filtered = allOrders.filter(o=>{
+
+const name = o.productName || o.product || "غير معروف"
+
+if(selectedProducts.length && !selectedProducts.includes(name))
+return false
 
 const dt = toDateObj(o.orderDate)
 
@@ -383,7 +415,28 @@ tbody.appendChild(tr)
 })
 
 }
+document.getElementById("selectAllProducts").addEventListener("change",e=>{
 
+document.querySelectorAll("#productCheckboxes input")
+.forEach(c=> c.checked = e.target.checked)
+
+})
+document.getElementById("productSearch")
+.addEventListener("input",function(){
+
+const val = this.value.toLowerCase()
+
+document.querySelectorAll("#productCheckboxes label")
+.forEach(l=>{
+
+l.style.display =
+l.textContent.toLowerCase().includes(val)
+? "block"
+: "none"
+
+})
+
+})
 loadStats()
 
 </script>

@@ -304,59 +304,73 @@ const response = await fetch(
 for (const shipment of result) {
 
   const order = primeOrders.find(
-o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
+    o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
   );
 
   if (!order) continue;
-  const currentStatus = allOrders[order.id].status;
+
+const currentStatus = (allOrders[order.id].status || "").trim();
 const step = shipment.stepCode;
+
 let newStatus = null;
 
-// 🟢 تم التسليم
-if ([
-  "DLEIVERD",
-  "PART_SUCC",
-  "SUCC_CHANGEPRICE",
-  "FORCE_DLV",
-  "SUCCARCHV"
-].includes(step)) {
-  newStatus = "تم التسليم";
-}
+  // 🟢 تم التسليم
+  if ([
+    "DLEIVERD",
+    "PART_SUCC",
+    "SUCC_CHANGEPRICE",
+    "FORCE_DLV",
+    "SUCCARCHV"
+  ].includes(step)) {
+    newStatus = "تم التسليم";
+  }
 
-// 🔴 راجع (مؤكد راجع عند برايم)
-else if ([
-  "RTN_INSTORE",
-  "RETURNED_TO_CUSTOMER"
-].includes(step)) {
-  newStatus = "راجع";
-}
+  // 🔴 راجع
+  else if ([
+    "RTN_INSTORE",
+    "RETURNED_TO_CUSTOMER"
+  ].includes(step)) {
+    newStatus = "راجع";
+  }
 
-// ✅ تم استلام الراجع (أرشيف برايم)
-else if (step === "RTNARCHV") {
-  newStatus = "تم استلام الراجع";
-}
+  // ✅ تم استلام الراجع
+  else if (step === "RTNARCHV") {
+    newStatus = "تم استلام الراجع";
+  }
 
-// 🔵 قيد التوصيل (كل الحالات التي تعني الشحنة عند شركة التوصيل)
-else if ([
-  "NEWINSTORE",
-  "PRINTMANIFEST",
-  "NEW_ONWAY",
-  "LIAISONAGT_NEWONWAY",
-  "ONWAY",
-  "POSTPONED",
-  "TRY_AGAIN",
-  "MANIFEST_BRANCHES",
-  "RESENEDSHIPMENTS"
-].includes(step)) {
-  newStatus = "قيد التوصيل";
-}
+  // 🔵 قيد التوصيل
+  else if ([
+    "NEWINSTORE",
+    "PRINTMANIFEST",
+    "NEW_ONWAY",
+    "LIAISONAGT_NEWONWAY",
+    "ONWAY",
+    "POSTPONED",
+    "TRY_AGAIN",
+    "MANIFEST_BRANCHES",
+    "RESENEDSHIPMENTS"
+  ].includes(step)) {
+    newStatus = "قيد التوصيل";
+  }
 
-else {
-  continue;
-}
+  else {
+    continue;
+  }
 
-// 🔒 لا تغيّر إذا صارت تم التسليم سابقاً
-if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) continue;
+console.log("Prime step:", step, "→", newStatus);
+
+newStatus = (newStatus || "").trim();
+
+  // ⭐ أهم شرط — لا تحدث إذا الحالة نفسها
+  if (currentStatus === newStatus) {
+    console.log("⏩ Skip same status:", order.id, newStatus);
+    continue;
+  }
+
+  // 🔒 لا تغيّر إذا الحالة نهائية
+  if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) {
+    continue;
+  }
 
 const updateData = {
   status: newStatus,
