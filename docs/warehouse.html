@@ -1092,18 +1092,17 @@ const scale = getLabelScale(labelText);
   const canvas = document.createElement("canvas");
 JsBarcode(canvas, String(code), {
   format: "CODE128",
-  width: 1.5 * scale,
-  height: 34 * scale,
+  width: 1,      // سماكة الخط
+  height: 18,      // ارتفاع الباركود
   margin: 0,
   displayValue: false
 });
   const img = canvas.toDataURL("image/png");
 
   content.push({
-    stack: [
+stack: [
 
-
-// 🟦 اسم المنتج (سطرين كحد أقصى)
+/* اسم المنتج */
 (() => {
 const style = fitTextStyle(labelText);
 return {
@@ -1112,31 +1111,38 @@ fontSize: style.fontSize * scale,
 lineHeight: 1.1,
 bold: true,
 alignment: "center",
-margin: [2, 2, 2, 2],
-maxHeight: 22 * scale, // ⬅️ مهم (سطرين فقط)
-noWrap: false
+margin: [0,1,0,2]
 };
 })(),
 
-
-// 🟧 الباركود (مكان ثابت)
+/* السعر داخل مربع كبير */
 {
-image: img,
-width: 95 * scale,
-alignment: "center",
-margin: [0, 0, 0, 2]
-},
-
-
-// 🟩 السعر (تحت الباركود دائمًا)
-{
-text: fixArabicText(`السعر ${price} د.ع`),
-fontSize: 8 * scale,
+text: price + "",
+fontSize: 22,
 bold: true,
 alignment: "center",
-margin: [0, 0, 0, 0]
-}
+margin: [0,2,0,3],
+border: [true,true,true,true],
+borderColor: ["black","black","black","black"],
+borderWidth: [1.5,1.5,1.5,1.5]
+},
 
+/* الباركود */
+/* الباركود */
+{
+image: img,
+width: 70,
+alignment: "center",
+margin: [0,1,0,2]
+},
+
+/* اسم السنتر */
+{
+text: fixArabicText("سنتر المراد"),
+fontSize: 7,
+alignment: "center",
+margin: [0,0,0,0]
+}
 
 ],
 pageBreak: "after"
