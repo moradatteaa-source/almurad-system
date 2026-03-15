@@ -822,7 +822,7 @@ function getCurrentStatusBy(order) {
 
 let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
 let visibleOrders = [];
-let ordersPerLoad = 50;
+let ordersPerLoad = 40;
 let currentIndex = 0;
 let originalOrders = [];  // تتغير عند الفلترة والبحث
 let allOrdersList = [];   // قائمة العمل حالياً
@@ -848,13 +848,7 @@ function getStatusClass(status) {
 
   return map[status] || "status-unknown";
 }
-
-
-
-
-// ⭐ دالة عرض الطلبات
-function renderOrders(list) {
-  function loadMoreOrders(){
+function loadMoreOrders(){
 
   const ordersList = document.getElementById("ordersList");
 
@@ -876,7 +870,6 @@ function renderOrders(list) {
 
     card.innerHTML = `
       <div class="right-side">
-
         <div class="date">
         ${
           getCurrentStatusTime(o)
@@ -889,11 +882,9 @@ function renderOrders(list) {
           <div class="order-id">#${o.id}</div>
           <div class="product-name">${o.productName || "-"}</div>
         </div>
-
       </div>
 
       <div class="left-side">
-
         <div class="qty">${o.quantity || 1}</div>
 
         <div class="price">
@@ -905,34 +896,31 @@ function renderOrders(list) {
         <div class="status-badge ${getStatusClass(o.status)}">
         ${o.status && o.status.trim() !== "" ? o.status : "جديد"}
         </div>
-
       </div>
     `;
+card.onclick = () => {
 
-    card.onclick = () => {
+  if (window.selectionMode) {
 
-      if (window.selectionMode) {
+    document.getElementById("selectedCount").style.display = "block";
 
-        document.getElementById("selectedCount").style.display = "block";
+    card.classList.toggle("selected");
 
-        card.classList.toggle("selected");
+    const count = document.querySelectorAll(".order-card.selected").length;
 
-        const count = document.querySelectorAll(".order-card.selected").length;
+    document.getElementById("selectedCount").innerText =
+      "عدد المحدد: " + count;
 
-        document.getElementById("selectedCount").innerText =
-        "عدد المحدد: " + count;
+    return;
+  }
 
-        return;
-      }
+  localStorage.setItem("selectedOrder", o.id);
+  localStorage.setItem("previousScrollPosition", window.scrollY);
+  localStorage.setItem("currentFilterStatus", filterStatus);
 
-      localStorage.setItem("selectedOrder", o.id);
-      localStorage.setItem("previousScrollPosition", window.scrollY);
-      localStorage.setItem("currentFilterStatus", filterStatus);
+  window.location.href = "order-details.html";
 
-      window.location.href = "order-details.html";
-
-    };
-
+};
     ordersList.appendChild(card);
 
     const line = document.createElement("div");
@@ -944,18 +932,24 @@ function renderOrders(list) {
   currentIndex += ordersPerLoad;
 
 }
+
+
+
+function renderOrders(list) {
+  
   document.getElementById("ordersCount").innerText =
-"عدد الطلبات: " + list.length;
+  "عدد الطلبات: " + list.length;
+
   allOrdersList = list;
   originalOrders = list;
 
-  const ordersList = document.getElementById("ordersList");
-visibleOrders = list;
-currentIndex = 0;
-ordersList.innerHTML = "";
-loadMoreOrders();
-    
-  }
+  visibleOrders = list;
+  currentIndex = 0;
+
+  ordersList.innerHTML = "";
+
+  loadMoreOrders();
+}
 // ⭐ فتح وإغلاق قائمة الوسيط (⋮)
 document.getElementById("menuIcon").onclick = () => {
   const box = document.getElementById("menuDropdown");
@@ -1206,7 +1200,29 @@ document.getElementById("advSearch").oninput = () => {
   });
 };
 let searchType = "orderId";
+let loadingMore = false;
 
+window.addEventListener("scroll", () => {
+
+  if (loadingMore) return;
+
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+
+    if (currentIndex < visibleOrders.length) {
+
+      loadingMore = true;
+
+      loadMoreOrders();
+
+      setTimeout(() => {
+        loadingMore = false;
+      }, 200);
+
+    }
+
+  }
+
+});
 // اختيار نوع البحث
 document.querySelectorAll(".searchTypeBtn").forEach(btn => {
   btn.onclick = () => {

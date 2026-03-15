@@ -249,6 +249,12 @@ await update(ref(db, `orders/${orderId}`), {
   lastStatusAt: new Date().toISOString()
 });
 
+// ⭐ تسجيل تاريخ قيد التجهيز
+await update(ref(db, `orders/${orderId}/statusHistory/قيد التجهيز`), {
+  time: new Date().toISOString(),
+  by: "Prime"
+});
+
   return { success: true, shipmentNo };
 }
 
