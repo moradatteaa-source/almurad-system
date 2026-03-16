@@ -327,8 +327,7 @@ html, body {
     <!-- سكربت الفايربيس -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, push, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-    import { citiesData, allCities } from "./citiesData.js";
+import { getDatabase, ref, set, get, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";    import { citiesData, allCities } from "./citiesData.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -1004,10 +1003,19 @@ order.updatedBy = userName; // يتحدث دائمًا
 
 
 
-const newOrderRef = push(ref(db, "orders"));
-await set(newOrderRef, order);
-const orderId = newOrderRef.key;
+// إنشاء رقم طلب متسلسل بدون تكرار
+const counterRef = ref(db, "orderCounter");
 
+const result = await runTransaction(counterRef, (current) => {
+  return (current || 0) + 1;
+});
+
+const orderNumber = result.snapshot.val();
+order.orderNumber = orderNumber;
+// حفظ الطلب بالرقم الجديد
+await set(ref(db, `orders/${orderNumber}`), order);
+
+const orderId = orderNumber;
 // 🟧 تسجيل الهستوري لأول حالة عند إنشاء الطلب
 const initialStatus = order.status;
 

@@ -124,7 +124,12 @@ overflow:hidden;
 
 .progress-bar{
 height:10px;
-background:var(--orange);
+background:#ff6b2d;
+transition:0.3s;
+}
+
+.progress-bar.complete{
+background:#28a745;
 }
 
 .totalBox{
@@ -283,6 +288,8 @@ color:var(--blue);
 <th>الموظف</th>
 <th>النوع</th>
 <th>النقاط</th>
+<th>سعر النقطة</th>
+<th>القيمة</th>
 <th>الملاحظة</th>
 <th>التاريخ</th>
 </tr>
@@ -306,7 +313,10 @@ color:var(--blue);
 <div class="card">
 
 <h3>إضافة مهمة</h3>
-
+<select id="taskType">
+<option value="task">مهمة يدوية</option>
+<option value="target">هدف تلقائي</option>
+</select>
 <select id="taskEmp">
 
 <option>اختر الموظف</option>
@@ -315,8 +325,25 @@ color:var(--blue);
 
 <input id="taskTitle" placeholder="عنوان المهمة">
 
-<input id="taskReward" placeholder="المكافأة بالنقاط">
+<select id="fromStatus">
+<option value="">الحالة السابقة</option>
+<option>رفض</option>
+<option>قيد المعالجة</option>
+<option>بانتظار البضاعة</option>
+<option>مثبت</option>
+</select>
 
+<select id="toStatus">
+<option value="">الحالة الجديدة</option>
+<option>تم التسليم</option>
+</select>
+
+<input id="taskDays" placeholder="عدد الأيام (اختياري)">
+<input type="date" id="taskStart">
+<input type="date" id="taskEnd">
+<input id="taskTarget" placeholder="عدد الطلبات (للأهداف)">
+<input id="taskReward" placeholder="المكافأة بالنقاط">
+<input id="taskPointPrice" placeholder="سعر النقطة (اختياري)">
 <button onclick="addTask()">
 إضافة مهمة
 </button>
@@ -331,10 +358,12 @@ color:var(--blue);
 <thead>
 
 <tr>
+<th>النوع</th>
 <th>الموظف</th>
-<th>المهمة</th>
+<th>العنوان</th>
+<th>الهدف</th>
 <th>المكافأة</th>
-<th>الإنجاز</th>
+<th>التقدم</th>
 <th>تنفيذ</th>
 </tr>
 
@@ -369,17 +398,18 @@ appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 let employees = []
-
+let ordersLoaded = false
 
 onValue(ref(db,"orders"),snap=>{
 
 if(!snap.exists()) return
 
 orders = Object.values(snap.val())
+ordersLoaded = true
 
-if(employees.length === 0) return
-
+if(employees.length > 0){
 calculateCommissions()
+}
 
 })
 function calculateCommissions(){
@@ -391,9 +421,14 @@ employees.forEach(emp=>{
 let delivered = 0
 
 orders.forEach(o=>{
-if(o.status === "تم التسليم" && (o.fixedBy || "غير محدد") === emp){
+
+if(
+o.status === "تم التسليم" &&
+(o.fixedBy || "غير محدد") === emp
+){
 delivered++
 }
+
 })
 
 const rate = 250
@@ -470,7 +505,7 @@ loadPoints()
 onValue(ref(db,"pointsHistory"),snap=>{
 
 document.getElementById("pointsTable").innerHTML=""
-
+pointsValueMap = {}
 if(!snap.exists()) return
 
 const data = snap.val()
@@ -478,13 +513,24 @@ const data = snap.val()
 for(const id in data){
 
 const p = data[id]
+const value = (p.points || 0) * (p.price || 250)
 
+if(!pointsValueMap[p.employee])
+pointsValueMap[p.employee] = 0
+
+if(p.type === "bonus"){
+pointsValueMap[p.employee] += value
+}else{
+pointsValueMap[p.employee] -= value
+}
 const row=document.createElement("tr")
 
 row.innerHTML=`
 <td>${p.employee}</td>
 <td>${p.type==="bonus"?"مكافأة":"خصم"}</td>
 <td>${p.points}</td>
+<td>${p.price || 250}</td>
+<td>${(p.points || 0)*(p.price || 250)}</td>
 <td>${p.note || ""}</td>
 <td>${p.date || ""}</td>
 `
@@ -492,7 +538,7 @@ row.innerHTML=`
 document.getElementById("pointsTable").appendChild(row)
 
 }
-
+renderSalary()
 })
 // تحديث القوائم المنسدلة
 const selects=["empSelect","taskEmp","removeEmpSelect"]
@@ -520,6 +566,7 @@ s.appendChild(o)
 /* تخزين النقاط */
 
 let pointsData={}
+let pointsValueMap={}
 let salaryData={}
 let globalPointPrice = 250
 function loadPoints(){
@@ -655,9 +702,10 @@ const commission = salaryData[emp]?.commission || 0
 const bonus = pointsData[emp].bonus
 const penalty = pointsData[emp].penalty
 
-const pointsValue = (bonus-penalty)*pointPrice
+const netPoints = (bonus || 0) - (penalty || 0)
+const pointsValue = netPoints * globalPointPrice
 
-const finalSalary = base + commission + pointsValue
+const finalSalary = base + commission + (netPoints * globalPointPrice)
 
 total += finalSalary
 
@@ -738,6 +786,8 @@ await set(ref(db,"pointsHistory/"+id),{
 employee:emp,
 type:type,
 points:points,
+price:price,
+value:points * price,
 note:note,
 date:new Date().toLocaleDateString()
 })
@@ -774,38 +824,79 @@ renderSalary()
 
 window.addTask = async function(){
 
+const type = document.getElementById("taskType").value
 const emp = document.getElementById("taskEmp").value
 const title = document.getElementById("taskTitle").value
+const target = Number(document.getElementById("taskTarget").value) || 0
 const reward = Number(document.getElementById("taskReward").value) || 0
-
+const pointPrice =
+Number(document.getElementById("taskPointPrice").value)
+|| globalPointPrice
+const fromStatus = document.getElementById("fromStatus").value
+const toStatus = document.getElementById("toStatus").value
+const days = Number(document.getElementById("taskDays").value) || 0
+const startDate = document.getElementById("taskStart").value
+const endDate = document.getElementById("taskEnd").value
 if(!emp || !title) return
 
 const id = Date.now()
 
 await set(ref(db,"tasks/"+id),{
+
+type:type,
 employee:emp,
 title:title,
+target:target,
 reward:reward,
+pointPrice:pointPrice,
+fromStatus:fromStatus,
+toStatus:toStatus,
+days:days,
+startDate:startDate,
+endDate:endDate,
+createdAt:Date.now(),
 done:false
-})
 
+})
 document.getElementById("taskTitle").value=""
-document.getElementById("taskReward").value=""
+document.getElementById("taskTarget").value=""
+document.getElementById("taskPointPrice").value=""
 
 }
 
 
 /* إنهاء المهمة */
 
-window.finishTask = async function(id,emp,reward){
+window.finishTask = async function(id,emp,reward,price){
+
+// تأكد أن المهمة لم تنتهِ
+const snap = await get(ref(db,"tasks/"+id))
+if(snap.exists() && snap.val().done) return
 
 await set(ref(db,"tasks/"+id+"/done"),true)
+// إضافة النقاط للمجموع
+if(!pointsData[emp]){
+pointsData[emp] = {bonus:0,penalty:0}
+}
 
 pointsData[emp].bonus += reward
 
-set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
-
+await set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
+await loadPoints()
+// إضافة سجل في history حتى يظهر في الرواتب
+const historyId = Date.now()
+await set(ref(db,"pointsHistory/"+historyId),{
+employee:emp,
+type:"bonus",
+points:reward,
+price:(price || globalPointPrice),
+value:reward * (price || globalPointPrice),
+note:"مكافأة إنجاز مهمة",
+date:new Date().toLocaleDateString()
+})
 alert("تمت إضافة مكافأة "+reward+" نقطة")
+
+
 
 renderSalary()
 
@@ -822,24 +913,118 @@ for(const id in data){
 
 const t = data[id]
 
+let delivered = 0
+
+if(!ordersLoaded) continue
+
+orders.forEach(o=>{
+
+
+// تجاهل الطلبات القديمة قبل إنشاء المهمة
+if(o.orderDate && new Date(o.orderDate).getTime() < t.createdAt) return
+// فحص تاريخ المهمة
+if(t.startDate){
+const start = new Date(t.startDate)
+const orderDate = new Date(o.orderDate || Date.now())
+if(orderDate < start) return
+}
+
+if(t.endDate){
+const end = new Date(t.endDate)
+const orderDate = new Date(o.orderDate || Date.now())
+if(orderDate > end) return
+}
+
+if(!o.fixedBy || o.fixedBy.trim() !== t.employee.trim()) return
+
+// يجب أن يكون الطلب وصل للحالة النهائية
+if(t.toStatus && o.status !== t.toStatus) return
+
+// فحص هل مر بالحالة السابقة
+if(t.fromStatus){
+
+let hadStatus = false
+let statusDate = null
+
+if(o.statusHistory && o.statusHistory[t.fromStatus]){
+hadStatus = true
+statusDate = new Date(o.statusHistory[t.fromStatus].time || o.orderDate || Date.now())
+}
+
+if(!hadStatus) return
+
+// فحص عدد الأيام
+if(t.days && statusDate){
+
+const now = new Date()
+
+const diffDays = Math.floor(
+(Math.abs(now - statusDate)) / (1000*60*60*24)
+)
+
+if(diffDays < t.days) return
+
+}
+
+}
+
+delivered++
+
+})
+
+let progress = ""
+
+if(t.type==="target"){
+
+progress = delivered+" / "+(t.target || 0)
+
+if(delivered >= (t.target || 0) && !t.done){
+
+finishTask(id,t.employee,t.reward,t.pointPrice)
+
+}
+
+}else{
+
+progress = t.done ? "مكتمل" : "بانتظار التنفيذ"
+
+}
+
 const row=document.createElement("tr")
 
 row.innerHTML=`
 
+<td>${t.type==="target" ? "هدف" : "مهمة"}</td>
 <td>${t.employee}</td>
 <td>${t.title}</td>
-<td>${t.reward}</td>
-
 <td>
-<div class="progress">
-<div class="progress-bar" style="width:${t.done?100:0}%"></div>
-</div>
+${t.target || "-"}
+<br>
+${t.fromStatus || ""} ➜ ${t.toStatus || ""}
+<br>
+${t.days ? t.days+" أيام" : ""}
+</td>
+<td>
+${t.reward} نقطة
+<br>
+سعر النقطة: ${t.pointPrice || globalPointPrice}
 </td>
 
 <td>
-<button onclick="finishTask('${id}','${t.employee}',${t.reward})">
+<div class="progress">
+<div class="progress-bar ${(delivered>=t.target)?"complete":""}"
+style="width:${Math.min((delivered/(t.target||1))*100,100)}%">
+</div>
+</div>
+<br>
+${delivered} / ${t.target || 0}
+</td>
+
+<td>
+${t.type==="task" ? `
+<button onclick="finishTask('${id}','${t.employee}',${t.reward},${t.pointPrice})">
 تم الإنجاز
-</button>
+</button>` : "-"}
 </td>
 
 `

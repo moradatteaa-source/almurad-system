@@ -395,7 +395,20 @@ p, div, span, button {
 
 <!-- 🗂️ الأرشيف الشهري -->
 <div class="menu-item" onclick="openArchive()">🗂️ الأرشيف الشهري</div>
-
+<div class="menu-item" onclick="openMyTasks()" style="position:relative">
+🎯 مهامي وأهدافي
+<span id="taskBadge" style="
+position:absolute;
+top:10px;
+left:15px;
+background:#e74c3c;
+color:white;
+font-size:12px;
+padding:2px 6px;
+border-radius:50%;
+display:none;
+">!</span>
+</div>
     <!-- 👥 إدارة المستخدمين (تظهر فقط للأدمن) -->
 <div class="menu-item" id="usersMenu" style="display:none;" onclick="openUsers()">👥 إدارة المستخدمين</div>
 
@@ -1019,6 +1032,12 @@ function openArchive() {
   window.location.href = "monthly-archive.html";
 }
 window.openArchive = openArchive;
+function openMyTasks(){
+  const u = JSON.parse(localStorage.getItem("loggedInUser"));
+  const name = encodeURIComponent(u?.user || u?.username || u?.name || "");
+  window.location.href = "my-tasks.html?user=" + name;
+}
+window.openMyTasks = openMyTasks;
 
   </script>
 <!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
@@ -1144,6 +1163,134 @@ const audio = new Audio("cash-register-kaching.mp3");
     });
   });
 
+function showTaskNotification(message){
+
+const oldBar = document.getElementById("taskNotificationBar");
+if(oldBar) oldBar.remove();
+
+const bar = document.createElement("div");
+bar.id = "taskNotificationBar";
+
+bar.innerHTML = `
+<div style="display:flex;align-items:center;gap:12px">
+<span style="
+font-size:28px;
+background:#fff;
+color:#e74c3c;
+border-radius:50%;
+width:46px;
+height:46px;
+display:flex;
+align-items:center;
+justify-content:center;
+">🎯</span>
+
+<div>
+<div style="font-weight:bold;font-size:16px">${message}</div>
+<div style="font-size:13px;opacity:0.9">افتح قسم المهام الآن</div>
+</div>
+</div>
+`;
+
+Object.assign(bar.style,{
+position:"fixed",
+bottom:"25px",
+right:"25px",
+background:"linear-gradient(135deg,#e74c3c,#ff6b2d)",
+color:"white",
+padding:"14px 22px",
+borderRadius:"16px",
+fontFamily:"Tajawal",
+boxShadow:"0 8px 25px rgba(0,0,0,0.3)",
+zIndex:"999999"
+});
+
+document.body.appendChild(bar);
+
+// 🔊 نفس صوت الطلبات
+if(window.soundAllowed){
+const audio = new Audio("cash-register-kaching.mp3");
+audio.volume = 1;
+audio.play().catch(()=>{});
+}
+
+setTimeout(()=>{
+bar.style.opacity="0";
+setTimeout(()=>bar.remove(),500);
+},6000);
+
+}
+// 🔔 مراقبة المهام الجديدة
+
+import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
+.then(async ({ getDatabase, ref, onValue }) => {
+
+const db = getDatabase();
+
+const tasksRef = ref(db,"tasks");
+
+let previousTaskCount = 0;
+
+onValue(tasksRef,(snapshot)=>{
+
+if(!snapshot.exists()) return;
+
+const data = snapshot.val();
+const allTasks = Object.values(data);
+
+// المستخدم الحالي
+const user = JSON.parse(localStorage.getItem("loggedInUser"));
+const displayName = user?.user || user?.username || user?.name;
+
+const myTasks = allTasks.filter(t => t.employee === displayName);
+
+// 🔴 إظهار النقطة الحمراء
+const badge = document.getElementById("taskBadge");
+
+if(myTasks.length > 0){
+badge.style.display = "block";
+}else{
+badge.style.display = "none";
+}
+
+// 🎯 مهمة جديدة
+if(previousTaskCount && myTasks.length > previousTaskCount){
+
+showTaskNotification("🎯 تم تلقي مهمة جديدة! يلا ننجزها");
+
+}
+
+previousTaskCount = myTasks.length;
+
+
+// ⚠️ فحص انتهاء المهام
+const today = new Date();
+
+myTasks.forEach(task=>{
+
+if(!task.endDate) return;
+
+const end = new Date(task.endDate);
+
+const diff = (end - today)/(1000*60*60*24);
+
+if(diff <= 0){
+
+showTaskNotification("⛔ انتهت فترة إحدى المهام");
+
+}
+
+else if(diff <= 1){
+
+showTaskNotification("⚠️ تبقى أقل من يوم لإنهاء هدفك");
+
+}
+
+});
+
+});
+
+});
 
 </script>
 
