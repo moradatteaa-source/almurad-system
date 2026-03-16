@@ -418,6 +418,10 @@ let totalDelivered = 0
 let totalCommission = 0
 
 employees.forEach(emp=>{
+
+if(!salaryData[emp])
+salaryData[emp] = {base:0,commission:0}
+
 let delivered = 0
 
 orders.forEach(o=>{
@@ -699,13 +703,13 @@ employees.forEach(emp=>{
 
 const base = salaryData[emp]?.base || 0
 const commission = salaryData[emp]?.commission || 0
-const bonus = pointsData[emp].bonus
-const penalty = pointsData[emp].penalty
+const bonus = pointsData[emp]?.bonus || 0
+const penalty = pointsData[emp]?.penalty || 0
 
 const netPoints = (bonus || 0) - (penalty || 0)
 const pointsValue = netPoints * globalPointPrice
 
-const finalSalary = base + commission + (netPoints * globalPointPrice)
+const finalSalary = base + commission + pointsValue
 
 total += finalSalary
 

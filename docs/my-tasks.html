@@ -146,10 +146,13 @@ line-height:1.8;
 <h3 id="deliveredOrders">0</h3>
 <span>طلبات تم التسليم</span>
 </div>
-
+<div class="card">
+<h3 id="commissionTotal">0</h3>
+<span>العمولة</span>
+</div>
 <div class="card">
 <h3 id="pointPrice">250</h3>
-<span>سعر النقطة</span>
+<span>قيمة النقاط</span>
 </div>
 
 <div class="card">
@@ -324,44 +327,49 @@ document.getElementById("deliveredOrders").innerText = delivered;
 
 onValue(ref(db,"points/"+user),snap=>{
 
-if(!snap.exists()) return;
+const data = snap.exists() ? snap.val() : {};
 
-const data=snap.val();
+const bonus = data.bonus || 0;
+const penalty = data.penalty || 0;
+const points = bonus - penalty;
 
-const bonus=data.bonus||0;
-const penalty=data.penalty||0;
-const points=bonus-penalty;
-const pointPrice = 250;
+
 
 const delivered = Number(document.getElementById("deliveredOrders").innerText) || 0;
 
 const commission = delivered * commissionRate;
 
-const salary = commission + (points * pointPrice);
+document.getElementById("commissionTotal").innerText = commission;
 
-document.getElementById("pointPrice").innerText = pointPrice;
-document.getElementById("salaryTotal").innerText = salary;
-document.getElementById("bonus").innerText=bonus;
-document.getElementById("penalty").innerText=penalty;
-document.getElementById("points").innerText=points;
+onValue(ref(db,"salaries/"+user+"/base"),snap=>{
 
+const baseSalary = snap.exists() ? snap.val() : 0;
+
+const salaryTotal = baseSalary + commission + pointValue;
+
+document.getElementById("salaryTotal").innerText = salaryTotal;
+
+});
+
+const pointValue = points * 250;
+
+document.getElementById("pointPrice").innerText = pointValue;
+document.getElementById("bonus").innerText = bonus;
+document.getElementById("penalty").innerText = penalty;
+document.getElementById("points").innerText = points;
 let rating="برونزي";
-let trophy="🥉";
 
 if(points>=50){
 rating="فضي";
-trophy="🥈";
 }
 
 if(points>=120){
 rating="ذهبي";
-trophy="🥇";
 }
 
-document.getElementById("rating").innerText=rating;
-document.getElementById("trophy").innerText=trophy;
-
+document.getElementById("rating").innerText = rating;
 });
+
 
 </script>
 <div id="taskNotification" style="
