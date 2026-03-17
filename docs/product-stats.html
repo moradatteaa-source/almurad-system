@@ -15,7 +15,13 @@
 --orange:#FF6B2D;
 --bg:#f4f6fa;
 }
-
+.analysis{
+margin-top:15px;
+padding:10px;
+border-radius:10px;
+background:#fff3cd;
+line-height:1.6;
+}
 body{
 font-family:Tajawal;
 margin:0;
@@ -127,13 +133,137 @@ min-width:200px;
 z-index:5;
 }
 
-.dropdown:hover .dropdown-content{
+.dropdown-content{
+display:none;
+position:absolute;
+top:110%;
+right:0;
+background:white;
+border:1px solid #ddd;
+border-radius:12px;
+padding:10px;
+width:260px;
+box-shadow:0 6px 20px rgba(0,0,0,0.1);
+z-index:100;
+}
+
+/* لما تكون مفتوحة */
+.dropdown.active .dropdown-content{
 display:block;
 }
 
 #productDropdown{
 max-height:250px;
 overflow-y:auto;
+}
+.card-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+gap:10px;
+margin-top:15px;
+}
+
+.card{
+background:#f4f6fa;
+padding:15px;
+border-radius:10px;
+text-align:center;
+}
+
+.card h3{
+margin:0;
+font-size:20px;
+color:#043B64;
+}
+
+.card span{
+font-size:13px;
+color:#777;
+}
+
+.analysis{
+margin-top:15px;
+padding:10px;
+border-radius:10px;
+background:#fff3cd;
+}
+@media (max-width:600px){
+
+header{
+font-size:18px;
+padding:12px;
+}
+
+.container{
+padding:10px;
+}
+
+/* الأزرار */
+.controls{
+flex-direction:column;
+gap:8px;
+}
+
+.controls input,
+.controls button{
+width:100%;
+font-size:14px;
+}
+
+/* الجدول */
+table{
+font-size:12px;
+}
+
+th,td{
+padding:6px;
+}
+
+/* الكروت */
+.card-grid{
+grid-template-columns:repeat(2,1fr);
+}
+
+.card{
+padding:10px;
+}
+
+.card h3{
+font-size:16px;
+}
+
+.card span{
+font-size:11px;
+}
+
+/* المودال */
+#productModal div{
+margin:10px auto !important;
+padding:15px !important;
+width:95% !important;
+max-height:90vh;
+overflow-y:auto;
+}
+
+#modalTitle{
+font-size:18px;
+}
+
+.analysis{
+font-size:13px;
+}
+
+}
+#productCheckboxes{
+display:flex;
+flex-direction:column;
+}
+
+#productCheckboxes label{
+display:block;
+width:100%;
+padding:6px;
+border-radius:6px;
 }
 </style>
 </head>
@@ -152,7 +282,9 @@ overflow-y:auto;
 <label>إلى</label>
 <input type="date" id="toDate">
 <div class="dropdown">
-<button class="dropbtn">📦 المنتجات</button>
+<button class="dropbtn" onclick="toggleDropdown(event)">
+📦 المنتجات
+</button>
 
 <div class="dropdown-content" id="productDropdown">
 
@@ -172,7 +304,7 @@ style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bot
 
 </div>
 
-<div class="table-wrap">
+<div class="table-wrap" style="overflow-x:auto">
 
 <table>
 
@@ -227,7 +359,9 @@ function buildProductList(orders){
 const box = document.getElementById("productCheckboxes")
 box.innerHTML=""
 
-const names = [...new Set(orders.map(o => o.productName || o.product || "غير معروف"))]
+const names = [...new Set(
+orders.map(o => o.productName || o.product || "غير معروف")
+)].sort((a,b) => a.localeCompare(b, 'ar'))
 
 names.forEach(n=>{
 
@@ -255,17 +389,23 @@ return null
 
 window.loadStats = async function(){
 
+// ✅ إذا البيانات موجودة لا تعيد تحميلها
+if(allOrders.length === 0){
+
 const snap = await get(ref(db,"orders"))
 
 if(!snap.exists()) return
 
 const obj = snap.val()
-
 allOrders = Object.values(obj)
+
 if(!productsBuilt){
   buildProductList(allOrders)
   productsBuilt = true
 }
+
+}
+
 const from = document.getElementById("fromDate").value
 const to = document.getElementById("toDate").value
 
@@ -275,23 +415,26 @@ let toDate = to ? new Date(to+"T23:59:59") : null
 const selectedProducts = [...document.querySelectorAll('#productCheckboxes input:checked')]
 .map(c => c.value)
 
-const filtered = allOrders.filter(o=>{
+const filtered = []
+
+for(let i=0;i<allOrders.length;i++){
+
+const o = allOrders[i]
 
 const name = o.productName || o.product || "غير معروف"
 
 if(selectedProducts.length && !selectedProducts.includes(name))
-return false
+continue
 
 const dt = toDateObj(o.orderDate)
 
-if(!dt) return false
+if(!dt) continue
+if(fromDate && dt < fromDate) continue
+if(toDate && dt > toDate) continue
 
-if(fromDate && dt < fromDate) return false
-if(toDate && dt > toDate) return false
+filtered.push(o)
 
-return true
-
-})
+}
 
 analyzeProducts(filtered)
 
@@ -392,7 +535,11 @@ tr.innerHTML=`
 
 <td>${index++}</td>
 
-<td>${p}</td>
+<td style="cursor:pointer;color:#043B64;font-weight:bold"
+onclick="showProductDetails(this.dataset.name)"
+data-name="${p.replace(/"/g, '&quot;')}">
+${p}
+</td>
 
 <td>${data.total}</td>
 
@@ -438,9 +585,138 @@ l.textContent.toLowerCase().includes(val)
 
 })
 loadStats()
+window.showProductDetails = function(productName){
 
+const orders = allOrders.filter(o => 
+(o.productName || o.product || "غير معروف") === productName
+)
+
+let stats = {
+total:0,
+statuses:{}
+}
+
+orders.forEach(o=>{
+
+stats.total++
+
+const status = o.status || "غير محدد"
+
+if(!stats.statuses[status]){
+stats.statuses[status] = 0
+}
+
+stats.statuses[status]++
+
+})
+const delivered = stats.statuses["تم التسليم"] || 0
+const returned = stats.statuses["تم استلام الراجع"] || 0
+const rejected = stats.statuses["رفض"] || 0
+const successRate = stats.total ? (delivered / stats.total * 100).toFixed(1) : 0
+const returnRate = (delivered+returned) ? (returned/(delivered+returned)*100).toFixed(1) : 0
+const rejectRate = stats.total ? (rejected / stats.total * 100).toFixed(1) : 0
+
+let analysis = ""
+let advice = ""
+
+// تحليل احترافي 🔥
+if(successRate >= 60 && returnRate < 15){
+analysis = "🔥 المنتج قوي جداً"
+advice = "هذا المنتج رابح → ضاعف الإعلان فوراً"
+}
+else if(successRate >= 40){
+analysis = "⚠️ المنتج متوسط"
+advice = "جرب تحسين الصور + العنوان + السعر"
+}
+else{
+analysis = "❌ المنتج ضعيف"
+advice = "يفضل إيقاف الإعلان أو تغيير المنتج"
+}
+
+if(rejectRate > 30){
+advice += "<br>⚠️ مشكلة تثبيت أو استهداف"
+}
+
+if(returnRate > 25){
+advice += "<br>⚠️ مشكلة جودة أو توصيل"
+}
+
+// عرض البيانات
+document.getElementById("modalTitle").innerText = productName
+let statusHTML = ""
+
+for(let s in stats.statuses){
+statusHTML += `
+<div class="card">
+<h3>${stats.statuses[s]}</h3>
+<span>${s}</span>
+</div>
+`
+}
+document.getElementById("modalContent").innerHTML = `
+
+<div class="card-grid">
+
+<div class="card"><h3>${stats.total}</h3><span>إجمالي الطلبات</span></div>
+
+${statusHTML}
+
+<div class="card"><h3>${successRate}%</h3><span>نسبة النجاح</span></div>
+<div class="card"><h3>${returnRate}%</h3><span>نسبة الراجع</span></div>
+<div class="card"><h3>${rejectRate}%</h3><span>نسبة الرفض</span></div>
+
+</div>
+
+<div class="analysis">
+<h3>${analysis}</h3>
+<p>${advice}</p>
+</div>
+
+`
+
+document.getElementById("productModal").style.display = "block"
+}
+
+window.closeModal = function(){
+document.getElementById("productModal").style.display = "none"
+}
+window.toggleDropdown = function(e){
+e.stopPropagation()
+const dropdown = e.target.closest('.dropdown')
+dropdown.classList.toggle('active')
+}
+
+// اغلاق عند الضغط خارجها
+document.addEventListener('click', function(e){
+
+const isInsideDropdown = e.target.closest('.dropdown')
+
+if(!isInsideDropdown){
+document.querySelectorAll('.dropdown')
+.forEach(d => d.classList.remove('active'))
+}
+
+})
 </script>
+<div id="productModal" style="display:none;position:fixed;top:0;right:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100">
 
+<div style="background:white;width:95%;max-width:900px;
+max-height:90vh;overflow-y:auto;margin:40px auto;padding:20px;border-radius:12px;position:relative">
+
+<button onclick="closeModal()" 
+style="position:absolute;top:10px;left:10px;
+background:red;color:white;border:none;
+border-radius:6px;padding:8px 12px;
+font-size:16px;cursor:pointer">
+✖
+</button>
+<h2 id="modalTitle">تفاصيل المنتج</h2>
+
+<div id="modalContent"></div>
+
+</div>
+
+</div>
 </body>
 
 </html>

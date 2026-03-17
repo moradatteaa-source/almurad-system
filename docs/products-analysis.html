@@ -151,9 +151,7 @@
   <div class="container">
 
     <div class="filters">
-<button onclick="goToProductsPage()">
-📊 تحليل أرباح المنتجات
-</button>
+
 
       <input type="number" id="deliveryPerOrder" placeholder="🚚 كلفة التوصيل للطلب" value="3500" style="width:180px">
 <div class="dropdown">
@@ -188,9 +186,11 @@
 
       <input type="date" id="fromDate">
       <input type="date" id="toDate">
-      <input type="number" id="adCost" placeholder="💸 كلفة الإعلان" min="0" style="width:140px">
+ <input type="number" id="exchangeRate" placeholder="💱 سعر الصرف" value="1400" style="width:140px">
+ <input type="number" id="returnRate" placeholder="↩️ نسبة الراجع %" value="20" style="width:140px">
       <button id="applyBtn">تطبيق</button>
       <button id="exportExcel">📁 تصدير Excel</button>
+      <button id="exportPDF">📄 تحميل PDF</button>
     </div>
 
     <div class="cards">
@@ -202,23 +202,29 @@
       <div class="card"><h3>💰 المبيعات الكلية</h3><p id="totalSales">0</p></div>
       <div class="card"><h3>💵 كلفة الشراء</h3><p id="totalBuy">0</p></div>
       <div class="card"><h3>🚚 كلفة التوصيل</h3><p id="deliveryCost">0</p></div>
-      <div class="card"><h3>📣 كلفة الإعلان</h3><p id="adCostDisplay">0</p></div>
+<div class="card"><h3>💱 سعر الصرف</h3><p id="exchangeDisplay">0</p></div>
+<div class="card"><h3>↩️ نسبة الراجع</h3><p id="returnDisplay">0%</p></div>
       <div class="card"><h3>📈 الربح الصافي</h3><p id="profit">0</p></div>
     </div>
 
-    <h3 class="section-title">📋 تفاصيل الطلبات</h3>
-    <div style="overflow:auto;max-height:400px">
-      <table id="ordersTable">
-        <thead>
-          <tr>
-            <th>#</th><th>المعلن</th><th>المنتج</th><th>الكمية</th>
-            <th>سعر البيع</th><th>سعر الشراء</th><th>الحالة</th><th>التاريخ</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+<h3 class="section-title">📦 إحصائيات المنتجات</h3>
 
-  </div>
+<table id="productsStats">
+<thead>
+<tr>
+<th>المنتج</th>
+<th>عدد الطلبات</th>
+<th>الكمية</th>
+<th>💰 المبيعات</th>
+<th>💵 الشراء</th>
+<th>🚚 التوصيل</th>
+<th>📣 الإعلان</th>
+<th>📈 الربح</th>
+</tr>
+</thead>
+
+<tbody id="productsStatsBody"></tbody>
+</table>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -239,7 +245,7 @@
 
   const fromDate = document.getElementById("fromDate");
   const toDate = document.getElementById("toDate");
-  const tbody = document.querySelector("#ordersTable tbody");
+const statsBody = document.getElementById("productsStatsBody");
 
   let allOrders = [], warehouse = {};
 // ✅ تحديد كل الحالات بضغطة واحدة
@@ -290,7 +296,7 @@ function populateAdvertisers() {
 }
 
   document.getElementById("applyBtn").onclick = applyFilter;
-  document.getElementById("adCost").oninput = applyFilter;
+
 function populateProductsForAdvertiser() {
  const adv = Array.from(
   document.querySelectorAll("#advertiserCheckboxes input:checked")
@@ -353,7 +359,7 @@ const adv = Array.from(
 ).map(c => c.value);
 const statusFilter = Array.from(document.querySelectorAll("#statusCheckboxes input:checked")).map(c => c.value);
 const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxes input:checked")).map(c => c.value);
-    const adCost = Number(document.getElementById("adCost").value) || 0;
+const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
     const f = fromDate.value ? new Date(fromDate.value) : null;
     const t = toDate.value ? new Date(toDate.value + "T23:59:59") : null;
 
@@ -408,21 +414,11 @@ if (!isNaN(d)) {
     if (!match) return false;
   }
 
-if (
-  selectedProducts.length &&
-  !selectedProducts.some(p =>
-    (o.productName || "")
-      .split("،")              // تفصل المنتجات داخل الطلب
-      .map(x => x.trim())      // تشيل الفراغات
-      .includes(p)             // تطابق تام للاسم
-  )
-) return false;
-
       return true;
     });
 
     if (!filtered.length) {
-      tbody.innerHTML = "<tr><td colspan='8'>لا توجد بيانات مطابقة للفلترة</td></tr>";
+statsBody.innerHTML = "<tr><td colspan='8'>لا توجد بيانات</td></tr>";
       updateCards({});
       return;
     }
@@ -431,7 +427,7 @@ const deliveryPerOrder = Number(document.getElementById("deliveryPerOrder").valu
     let totalSales = 0, totalBuy = 0, delivered = 0, returned = 0, totalOrders = filtered.length;
     let totalQty = 0;
 let productStats = {};
-    let rows = "";
+let stats = {};
 
     filtered.forEach((order, i) => {
   const status = order.status || "-";
@@ -497,20 +493,32 @@ const matched = history.some(([statusName, h]) => {
 }
 
   const buyVal = buy * qty;
-
+const deliveryVal = deliveryPerOrder;
+const adPerOrder = 0;
   totalSales += saleVal;
   totalBuy += buyVal;
 
-  rows += `<tr>
-      <td>${i + 1}</td>
-      <td>${order.advertiser || "-"}</td>
-      <td>${p}</td>
-      <td>${formatNumber(qty)}</td>
-      <td>${formatNumber(sell)}</td>
- <td>${formatNumber(buy * qty)}</td>
-      <td>${status}</td>
-      <td>${new Date(order.orderDate).toLocaleDateString('en-GB')}</td>
-  </tr>`;
+if (!stats[p]) {
+  stats[p] = {
+    orders: 0,
+    qty: 0,
+    sales: 0,
+    buy: 0,
+    delivery: 0,
+    ad: 0
+  };
+}
+
+if (!stats[p].orderIds) stats[p].orderIds = new Set();
+
+stats[p].orderIds.add(order.id || i);
+
+stats[p].orders = stats[p].orderIds.size;
+stats[p].qty += qty;
+stats[p].sales += sell;
+stats[p].buy += buyVal;
+stats[p].delivery += deliveryVal;
+stats[p].ad += adPerOrder;
 });
 
 
@@ -530,20 +538,79 @@ Object.keys(productStats).forEach(p => {
 });
 
     const deliveryCost = totalOrders * deliveryPerOrder;
-    const profit = totalSales - totalBuy - deliveryCost - adCost;
+let totalAd = 0;
 
-    tbody.innerHTML = rows;
-  updateCards({
+Object.values(window.productAds || {}).forEach(v => {
+  totalAd += v;
+});
+const returnRate = Number(document.getElementById("returnRate").value) || 0;
+
+const rawProfit = totalSales - totalBuy - deliveryCost - totalAd;
+
+const lossFromReturns = rawProfit * (returnRate / 100);
+
+const profit = rawProfit - lossFromReturns;
+let html = "";
+
+Object.keys(stats).forEach(p => {
+  const d = stats[p];
+
+const adCostProduct = window.productAds[p] || 0;
+
+
+const rawProfit = d.sales - d.buy - d.delivery - adCostProduct;
+
+const lossFromReturns = rawProfit * (returnRate / 100);
+
+const profit = rawProfit - lossFromReturns;
+html += `
+<tr>
+  <td>${p}</td>
+  <td>${formatNumber(d.orders)}</td>
+  <td>${formatNumber(d.qty)}</td>
+  <td>${formatNumber(d.sales)}</td>
+  <td>${formatNumber(d.buy)}</td>
+  <td>${formatNumber(d.delivery)}</td>
+<td>
+<input type="number"
+class="adInput"
+data-product="${p}"
+value="${exchangeRate ? (window.productAds[p] || 0) / exchangeRate : 0}"
+style="width:70px">
+</td>
+  <td>${formatNumber(profit)}</td>
+</tr>`;
+});
+
+statsBody.innerHTML = html;
+document.querySelectorAll(".adInput").forEach(input => {
+
+  input.addEventListener("input", (e) => {
+    const product = e.target.dataset.product;
+    const usd = e.target.value;
+
+    const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
+    const iqd = (Number(usd) || 0) * exchangeRate;
+
+    window.productAds[product] = iqd;
+  });
+
+  // ✅ يحدث بعد ما تخلص كتابة
+  input.addEventListener("blur", () => {
+    applyFilter();
+  });
+
+});
+updateCards({
   totalOrders,
   delivered,
   returned,
   totalSales,
   totalBuy,
   deliveryCost,
-  adCost,
-  profit,
   totalQty,
-  bestProduct
+  bestProduct,
+  profit
 });
   }
 // ✅ دالة لتنسيق الأرقام بالإنكليزي مع فواصل الألوف
@@ -552,34 +619,77 @@ function formatNumber(num) {
 }
 
   function updateCards(v) {
+document.getElementById("exchangeDisplay").textContent =
+  formatNumber(Number(document.getElementById("exchangeRate").value) || 0);
+
+document.getElementById("returnDisplay").textContent =
+  (Number(document.getElementById("returnRate").value) || 0) + "%";
+document.getElementById("profit").textContent = formatNumber(v.profit || 0);
   document.getElementById("totalOrders").textContent = formatNumber(v.totalOrders || 0);
   document.getElementById("deliveredCount").textContent = formatNumber(v.delivered || 0);
   document.getElementById("returnedCount").textContent = formatNumber(v.returned || 0);
   document.getElementById("totalSales").textContent = formatNumber(v.totalSales || 0);
   document.getElementById("totalBuy").textContent = formatNumber(v.totalBuy || 0);
   document.getElementById("deliveryCost").textContent = formatNumber(v.deliveryCost || 0);
-  document.getElementById("adCostDisplay").textContent = formatNumber(v.adCost || 0);
   document.getElementById("totalQty").textContent = formatNumber(v.totalQty || 0);
 document.getElementById("bestProduct").textContent = v.bestProduct || "-";
 }
 
+document.getElementById("exportExcel").onclick = () => {
+  const table = document.getElementById("productsStats");
+  let html = '<table border="1">' + table.innerHTML + '</table>';
+  const blob = new Blob([`\uFEFF${html}`], { type: "application/vnd.ms-excel" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "advertisers_stats.xls";
+  a.click();
+};
+document.getElementById("exportPDF").onclick = () => {
 
-  // ✅ تصدير ملف Excel بصيغة سليمة (XLSX)
-  document.getElementById("exportExcel").onclick = () => {
-    const table = document.getElementById("ordersTable");
-    let html = '<table border="1">' + table.innerHTML + '</table>';
-    const blob = new Blob([`\uFEFF${html}`], { type: "application/vnd.ms-excel" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "advertisers_stats.xls";
-    a.click();
-  };
+  const today = new Date().toISOString().split('T')[0];
+
+  const element = document.createElement("div");
+
+  element.innerHTML = `
+    <div style="font-family:Tajawal;padding:20px">
+      <h2 style="text-align:center;color:#043B64">
+        Al-Murad - Daily Profit Report
+      </h2>
+      <hr>
+
+     ${document.querySelector(".cards").outerHTML}
+<br><br>
+${document.getElementById("productsStats").outerHTML}
+    </div>
+  `;
+
+  html2pdf()
+    .set({
+      margin: 10,
+      filename: `report-${today}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4' }
+    })
+    .from(element)
+    .save();
+};
+
 // فتح المودال
 window.openProductsAnalysis = function() {
   document.getElementById("productsModal").style.display = "block";
   renderProductsModal();
 }
+window.productAds = {};
 
+window.updateAd = function(product, usd){
+  const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
+  const returnRate = Number(document.getElementById("returnRate").value) || 0;
+  const iqd = (Number(usd) || 0) * exchangeRate;
+
+  window.productAds[product] = iqd;
+
+  applyFilter();
+}
 // اغلاق المودال
 window.closeProductsAnalysis = function() {
   document.getElementById("productsModal").style.display = "none";
@@ -706,5 +816,6 @@ overflow:auto;
 
 </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>

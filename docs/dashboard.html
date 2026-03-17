@@ -663,13 +663,17 @@ window.location.href = `orders-cards.html?status=${encodeURIComponent(status || 
 function openStatistics(tab) {
   if (tab === "employees") {
     window.location.href = "stats-employees.html";
-  } else if (tab === "advertisers") {
-    window.location.href = "stats-advertisers.html"; // ✅ هذه الصفحة الجديدة
-  } else {
+  } 
+  else if (tab === "advertisers") {
+    window.location.href = "stats-advertisers.html";
+  } 
+else if (tab === "products") {
+  window.location.href = "product-stats.html"; // ✅ اسم ملفك
+}
+  else {
     window.location.href = `statistics.html?tab=${tab}`;
   }
 }
-
 function openAccountingProtected(){
 
 if(localStorage.getItem("financeUnlocked") === "yes"){
