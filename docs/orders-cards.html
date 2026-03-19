@@ -219,7 +219,10 @@ body {
 #addOrderFab:active {
   transform: scale(0.95);
 }
-
+.order-card.processing-danger {
+  background: rgba(231, 76, 60, 0.08);
+  border: 2px solid #e74c3c;
+}
 </style>
 
 </head>
@@ -818,6 +821,26 @@ function getCurrentStatusBy(order) {
     return order.statusHistory[order.status].by;
   }
   return "";
+}function getRemainingTimeText(order) {
+
+  if (order.status !== "قيد المعالجة") return "";
+
+  const statusTime = getCurrentStatusTime(order);
+  if (!statusTime) return "";
+
+  const start = new Date(statusTime);
+  const now = new Date();
+
+  const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+
+  const remaining = 3 - diffDays;
+
+  if (remaining >= 3) return "متبقي 3 أيام";
+  if (remaining === 2) return "متبقي يومان";
+  if (remaining === 1) return "متبقي يوم";
+if (remaining <= 0) return "🚨 متأخر";
+
+  return "";
 }
 
 let masterOrders = [];    // القائمة الأصلية (تتعبى من Firebase فقط)
@@ -860,8 +883,26 @@ function loadMoreOrders(){
   slice.forEach((o) => {
 
     const card = document.createElement("div");
+    
     card.className = "order-card";
+// 🔥 إذا الحالة قيد المعالجة أكثر من 3 أيام → يصير أحمر
+if (o.status === "قيد المعالجة") {
 
+  const statusTime = getCurrentStatusTime(o);
+  if (statusTime) {
+
+    const diffDays = Math.floor(
+      (Date.now() - new Date(statusTime)) / (1000 * 60 * 60 * 24)
+    );
+
+    // 🔴 يصير أحمر فقط بعد 3 أيام
+    if (diffDays >= 3) {
+      card.classList.add("processing-danger");
+    }
+
+  }
+
+}
     if (o.priceChanged === true) {
       card.classList.add("price-changed");
     }
@@ -891,7 +932,12 @@ function loadMoreOrders(){
         ${Number(o.price || 0).toLocaleString("en-US")} د.ع
         </div>
 
-        <div class="advertiser">${o.advertiser || ""}</div>
+      <div class="advertiser">
+  ${o.advertiser || ""}
+  <div style="font-size:11px; color:#e74c3c; margin-top:3px;">
+    ${getRemainingTimeText(o)}
+  </div>
+</div>
 
         <div class="status-badge ${getStatusClass(o.status)}">
         ${o.status && o.status.trim() !== "" ? o.status : "جديد"}

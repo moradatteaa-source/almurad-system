@@ -1235,11 +1235,20 @@ window.saveStatus = async function (val) {
   const oldData = snap.exists() ? snap.val() : {};
   const prevFixed = oldData.fixedBy || "";
 
-  let newFixedBy = prevFixed;
+let newFixedBy = prevFixed;
 
-  if (!prevFixed && (val === "مثبت" || val === "رفض")) {
-    newFixedBy = userName;
-  }
+// الحالات اللي نريد يتحول بيها المثبت
+const reassignStatuses = ["رفض", "قيد المعالجة", "بانتظار البضاعة"];
+
+// 🔥 إذا الحالة من ضمنها → نخلي المثبت هو آخر شخص
+if (reassignStatuses.includes(val)) {
+  newFixedBy = userName;
+}
+
+// إذا أول مرة تثبيت
+if (!prevFixed && val === "مثبت") {
+  newFixedBy = userName;
+}
 
   // 🔥 التحديث الرئيسي
   await update(ref(db, `orders/${orderId}`), {

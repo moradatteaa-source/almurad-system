@@ -361,45 +361,37 @@ const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxe
 if (adv.length && !adv.includes(o.advertiser)) return false;
 if (statusFilter.length) {
 
-  let matched = false;
-
-  // ✅ إذا عنده history
+  // إذا عنده history
   if (o.statusHistory && Object.keys(o.statusHistory).length) {
 
-const history = Object.entries(o.statusHistory);
+    const history = Object.entries(o.statusHistory);
 
-matched = history.some(([statusName, h]) => {
+    const matched = history.some(([statusName, h]) => {
 
-  if (!statusFilter.includes(statusName)) return false;
+      // لازم الحالة ضمن الفلترة
+      if (!statusFilter.includes(statusName)) return false;
 
-      // إذا ماكو وقت لا ترفضه مباشرة
+      // إذا ماكو وقت نعتبره مطابق
       if (!h.time) return true;
 
-   let d;
+      let d = typeof h.time === "number"
+        ? new Date(h.time)
+        : new Date(h.time);
 
-if (typeof h.time === "number") {
-  d = new Date(h.time);
-} else {
-  d = new Date(h.time);
-}
-
-// إذا التاريخ غير صالح لا نرفضه مباشرة
-if (!isNaN(d)) {
-  if (f && d < f) return false;
-  if (t && d > t) return false;
-}
+      if (!isNaN(d)) {
+        if (f && d < f) return false;
+        if (t && d > t) return false;
+      }
 
       return true;
     });
 
-  } else {
-    // ✅ fallback للحالة الحالية
-    if (statusFilter.includes(o.status)) {
-      matched = true;
-    }
-  }
+    if (!matched) return false;
 
-  if (!matched) return false;
+  } else {
+    // fallback للحالة الحالية إذا ماكو history
+    if (!statusFilter.includes(o.status)) return false;
+  }
 }
   // ✅ فلترة المنتجات تطابق تام (ما تطلع إلا المنتجات المختارة فقط)
   if (selectedProducts.length) {
