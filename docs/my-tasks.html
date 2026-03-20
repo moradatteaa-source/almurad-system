@@ -230,8 +230,7 @@ clearTimeout(window.notifTimeout);
 
 window.notifTimeout = setTimeout(()=>{
   box.style.display = "none";
-},5000);
-
+},10000);
   // 🔥 مهم
   set(ref(db, "notifications/" + user + "/" + id + "/read"), true);
 
