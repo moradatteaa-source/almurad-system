@@ -538,7 +538,7 @@ import { getDatabase, ref, get, child, set, update } from "https://www.gstatic.c
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
+window.db = db;
 const user = JSON.parse(localStorage.getItem("loggedInUser"));
 
 
@@ -1041,7 +1041,7 @@ function openMyTasks(){
   const name = encodeURIComponent(u?.user || u?.username || u?.name || "");
   window.location.href = "my-tasks.html?user=" + name;
 }
-
+window.openMyTasks = openMyTasks;
 
   </script>
 <!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
@@ -1138,34 +1138,8 @@ const audio = new Audio("cash-register-kaching.mp3");
     document.head.appendChild(style);
   }
 
-  // ✅ مراقبة الطلبات الجديدة مثل صفحة الطلبات تماماً
-  import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js").then(async ({ initializeApp }) => {
-    const { getDatabase, ref, onValue } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js");
-    const app = initializeApp({
-      apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-      authDomain: "almurad-system.firebaseapp.com",
-      databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-      projectId: "almurad-system",
-      storageBucket: "almurad-system.appspot.com",
-      messagingSenderId: "911755824405",
-      appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-    });
 
-    const db = getDatabase(app);
-    const ordersRef = ref(db, "orders");
-    let previousCount = 0;
 
-    onValue(ordersRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-      const data = snapshot.val();
-      const count = Object.keys(data).length;
-      if (previousCount && count > previousCount) {
-        const diff = count - previousCount;
-        showNewOrderNotification(diff);
-      }
-      previousCount = count;
-    });
-  });
 
 function showTaskNotification(message){
 
@@ -1229,13 +1203,18 @@ setTimeout(()=>bar.remove(),500);
 import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
 .then(async ({ getDatabase, ref, onValue, set }) => {
 
-const db = getDatabase();
+setTimeout(async () => {
+  if(!window.db){
+  console.warn("⏳ Firebase لسه ما جاهز...");
+  return;
+}
+const db = window.db;
+if(!db) return;
 
 const userData = JSON.parse(localStorage.getItem("loggedInUser"));
 const username = userData?.user || userData?.username || userData?.name;
 
 if(!username) return;
-
 onValue(ref(db, "notifications/" + username), (snap)=>{
 
 if(!snap.exists()) return;
@@ -1263,13 +1242,19 @@ set(ref(db, "notifications/" + username + "/" + id + "/read"), true);
 
 });
 
+}, 500);
+
 });
+;
 // 🔔 مراقبة المهام الجديدة
 
 import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
 .then(async ({ getDatabase, ref, onValue }) => {
 
-const db = getDatabase();
+setTimeout(() => {
+
+const db = window.db;
+if(!db) return;
 
 const tasksRef = ref(db,"tasks");
 
@@ -1329,10 +1314,11 @@ else if(diff <= 1){
 showTaskNotification("⚠️ تبقى أقل من يوم لإنهاء هدفك");
 
 }
-
 });
 
 });
+
+}, 500);
 
 });
 
