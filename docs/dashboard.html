@@ -1041,7 +1041,7 @@ function openMyTasks(){
   const name = encodeURIComponent(u?.user || u?.username || u?.name || "");
   window.location.href = "my-tasks.html?user=" + name;
 }
-window.openMyTasks = openMyTasks;
+
 
   </script>
 <!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
@@ -1224,6 +1224,45 @@ setTimeout(()=>bar.remove(),500);
 },6000);
 
 }
+
+// 🔔 إشعارات المكافآت والخصومات
+import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
+.then(async ({ getDatabase, ref, onValue, set }) => {
+
+const db = getDatabase();
+
+const userData = JSON.parse(localStorage.getItem("loggedInUser"));
+const username = userData?.user || userData?.username || userData?.name;
+
+if(!username) return;
+
+onValue(ref(db, "notifications/" + username), (snap)=>{
+
+if(!snap.exists()) return;
+
+const data = snap.val();
+const keys = Object.keys(data).reverse();
+
+keys.forEach(id => {
+
+const n = data[id];
+
+if(n.read) return;
+
+showTaskNotification(n.title);
+
+if(window.soundAllowed){
+const audio = new Audio("cash-register-kaching.mp3");
+audio.play().catch(()=>{});
+}
+
+set(ref(db, "notifications/" + username + "/" + id + "/read"), true);
+
+});
+
+});
+
+});
 // 🔔 مراقبة المهام الجديدة
 
 import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
