@@ -1199,7 +1199,9 @@ setTimeout(()=>bar.remove(),500);
 
 }
 
-
+// 🔔 إشعارات المكافآت والخصومات
+import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
+.then(async ({ getDatabase, ref, onValue, set }) => {
 
 setTimeout(async () => {
   if(!window.db){
@@ -1213,6 +1215,8 @@ const userData = JSON.parse(localStorage.getItem("loggedInUser"));
 const username = userData?.user || userData?.username || userData?.name;
 
 if(!username) return;
+let firstLoad = true;
+
 onValue(ref(db, "notifications/" + username), (snap)=>{
 
 if(!snap.exists()) return;
@@ -1220,21 +1224,39 @@ if(!snap.exists()) return;
 const data = snap.val();
 const keys = Object.keys(data).reverse();
 
+// ❌ أول مرة لا تعرض إشعارات قديمة
+if(firstLoad){
+firstLoad = false;
+
+// نخلي تأخير بسيط حتى يتأكد أنه مو أول تحميل
+setTimeout(()=>{
+firstLoad = false;
+}, 1500);
+
+return;
+}
 keys.forEach(id => {
 
 const n = data[id];
 
+// فقط غير المقروء
 if(n.read) return;
 
 const message = n.title + (n.note ? " - " + n.note : "");
+
+// 🔔 عرض الإشعار
 showTaskNotification(message);
 
+// 🔊 صوت
 if(window.soundAllowed){
 const audio = new Audio("cash-register-kaching.mp3");
 audio.play().catch(()=>{});
 }
 
+// ⏳ تأخير بسيط قبل تحويل read
+setTimeout(()=>{
 set(ref(db, "notifications/" + username + "/" + id + "/read"), true);
+}, 1000);
 
 });
 
