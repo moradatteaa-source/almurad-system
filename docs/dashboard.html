@@ -1249,7 +1249,8 @@ const n = data[id];
 
 if(n.read) return;
 
-showTaskNotification(n.title);
+const message = n.title + (n.note ? " - " + n.note : "");
+showTaskNotification(message);
 
 if(window.soundAllowed){
 const audio = new Audio("cash-register-kaching.mp3");
