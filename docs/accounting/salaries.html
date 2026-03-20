@@ -821,6 +821,22 @@ document.getElementById("noteInput").value=""
 
 renderSalary()
 
+// ===== إشعار الموظف =====
+const notifId = Date.now();
+
+let title = type === "bonus" 
+  ? `🎉 مبروك! حصلت على مكافأة ${points} نقطة`
+  : `⚠️ تم تسجيل خصم ${points} نقطة`;
+
+await set(ref(db, "notifications/" + emp + "/" + notifId), {
+  title: title,
+  note: note || "",
+  type: type,
+  points: points,
+  date: new Date().toLocaleString(),
+  read: false
+});
+
 }
 
 
