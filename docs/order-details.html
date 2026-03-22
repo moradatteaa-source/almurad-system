@@ -1539,11 +1539,16 @@ const autoNotes = notesArray.join(" | ").trim();
 // ⭐ 2 — الملاحظات القديمة المكتوبة يدويًا فقط (نحذف أي ملاحظات تلقائية سابقة)
 let userNotes = document.getElementById("notes").value.trim();
 
+// 🔥 نحذف الجزء التلقائي القديم
+if (userNotes.includes("||")) {
+  userNotes = userNotes.split("||").slice(1).join("||").trim();
+}
+
 // نحذف أي سطر يحتوي (× أو : أو |) لأنها من الملاحظات التلقائية
 userNotes = userNotes
   .split("||")
   .map(p => p.trim())
-  .filter(p => p && !p.includes("×") && !p.includes(":") && !p.includes("|"))
+  .filter(p => p) // ❌ حذف شرط الفلترة
   .join(" || ")
   .trim();
 
