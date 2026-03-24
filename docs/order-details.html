@@ -1246,24 +1246,47 @@ if (val === "رفض") {
 // 2️⃣ قيد المعالجة
 else if (val === "قيد المعالجة") {
 
-  const oldTime =
-    oldData?.statusHistory?.["قيد المعالجة"]?.time ||
-    oldData?.statusHistory?.["مثبت"]?.time;
-
+const oldTime = oldData?.statusHistory?.["قيد المعالجة"]?.time;
   if (oldTime) {
     const diffDays = Math.floor(
       (now - new Date(oldTime)) / (1000 * 60 * 60 * 24)
     );
 
-    if (diffDays >= 3) {
+if (diffDays >= 3 && oldData.status === "قيد المعالجة") {
       newFixedBy = userName;
     }
   }
 }
+if (val === "مثبت") {
 
-// 3️⃣ أول تثبيت
-if (!prevFixed && val === "مثبت") {
-  newFixedBy = userName;
+  // أول مرة
+  if (!prevFixed) {
+    newFixedBy = userName;
+  }
+
+  // 🔴 إذا كان قبلها رفض → يتغير فوراً
+  else if (oldData.status === "رفض") {
+    newFixedBy = userName;
+  }
+
+  // 🟡 إذا كان قيد المعالجة
+  else if (oldData.status === "قيد المعالجة") {
+
+    const oldTime = oldData?.statusHistory?.["قيد المعالجة"]?.time;
+
+    if (oldTime) {
+      const diffDays = Math.floor(
+        (now - new Date(oldTime)) / (1000 * 60 * 60 * 24)
+      );
+
+      // 🔥 فقط بعد 3 أيام
+  if (diffDays >= 3 && oldData.status === "قيد المعالجة") {
+        newFixedBy = userName;
+      }
+    }
+
+  }
+
 }
 
 
