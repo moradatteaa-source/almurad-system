@@ -543,7 +543,7 @@ function formatNumber(num) {
   return Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-  function updateCards(v) {
+function updateCards(v) {
   document.getElementById("totalOrders").textContent = formatNumber(v.totalOrders || 0);
   document.getElementById("deliveredCount").textContent = formatNumber(v.delivered || 0);
   document.getElementById("returnedCount").textContent = formatNumber(v.returned || 0);
@@ -552,9 +552,11 @@ function formatNumber(num) {
   document.getElementById("deliveryCost").textContent = formatNumber(v.deliveryCost || 0);
   document.getElementById("adCostDisplay").textContent = formatNumber(v.adCost || 0);
   document.getElementById("totalQty").textContent = formatNumber(v.totalQty || 0);
-document.getElementById("bestProduct").textContent = v.bestProduct || "-";
-}
+  document.getElementById("bestProduct").textContent = v.bestProduct || "-";
 
+  // 🔥 هذا المهم
+  document.getElementById("profit").textContent = formatNumber(v.profit || 0);
+}
 
   // ✅ تصدير ملف Excel بصيغة سليمة (XLSX)
   document.getElementById("exportExcel").onclick = () => {

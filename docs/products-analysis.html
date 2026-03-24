@@ -563,21 +563,24 @@ const rawProfit = d.sales - d.buy - d.delivery - adCostProduct;
 const lossFromReturns = rawProfit * (returnRate / 100);
 
 const profit = rawProfit - lossFromReturns;
+const rowColor = profit >= 0 ? "#d4edda" : "#f8d7da";
+const textColor = profit >= 0 ? "#155724" : "#721c24";
+
 html += `
-<tr>
+<tr style="background:${rowColor};color:${textColor};font-weight:bold;">
   <td>${p}</td>
   <td>${formatNumber(d.orders)}</td>
   <td>${formatNumber(d.qty)}</td>
   <td>${formatNumber(d.sales)}</td>
   <td>${formatNumber(d.buy)}</td>
   <td>${formatNumber(d.delivery)}</td>
-<td>
-<input type="number"
-class="adInput"
-data-product="${p}"
-value="${exchangeRate ? (window.productAds[p] || 0) / exchangeRate : 0}"
-style="width:70px">
-</td>
+  <td>
+    <input type="number"
+    class="adInput"
+    data-product="${p}"
+    value="${exchangeRate ? (window.productAds[p] || 0) / exchangeRate : 0}"
+    style="width:70px">
+  </td>
   <td>${formatNumber(profit)}</td>
 </tr>`;
 });
