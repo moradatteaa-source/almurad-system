@@ -552,21 +552,20 @@ const lossFromReturns = rawProfit * (returnRate / 100);
 const profit = rawProfit - lossFromReturns;
 let html = "";
 
-Object.keys(stats).forEach(p => {
-  const d = stats[p];
+Object.entries(stats)
+.sort((a, b) => b[1].qty - a[1].qty)
+.forEach(([p, d]) => {
 
-const adCostProduct = window.productAds[p] || 0;
+  const adCostProduct = window.productAds[p] || 0;
 
+  const rawProfit = d.sales - d.buy - d.delivery - adCostProduct;
+  const lossFromReturns = rawProfit * (returnRate / 100);
+  const profit = rawProfit - lossFromReturns;
 
-const rawProfit = d.sales - d.buy - d.delivery - adCostProduct;
+  const rowColor = profit >= 0 ? "#d4edda" : "#f8d7da";
+  const textColor = profit >= 0 ? "#155724" : "#721c24";
 
-const lossFromReturns = rawProfit * (returnRate / 100);
-
-const profit = rawProfit - lossFromReturns;
-const rowColor = profit >= 0 ? "#d4edda" : "#f8d7da";
-const textColor = profit >= 0 ? "#155724" : "#721c24";
-
-html += `
+  html += `
 <tr style="background:${rowColor};color:${textColor};font-weight:bold;">
   <td>${p}</td>
   <td>${formatNumber(d.orders)}</td>
