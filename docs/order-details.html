@@ -1234,21 +1234,39 @@ window.saveStatus = async function (val) {
   const snap = await get(ref(db, `orders/${orderId}`));
   const oldData = snap.exists() ? snap.val() : {};
   const prevFixed = oldData.fixedBy || "";
+const now = new Date(); // ✅ مهم جداً
 
 let newFixedBy = prevFixed;
 
-// الحالات اللي نريد يتحول بيها المثبت
-const reassignStatuses = ["رفض", "قيد المعالجة", "بانتظار البضاعة"];
-
-// 🔥 إذا الحالة من ضمنها → نخلي المثبت هو آخر شخص
-if (reassignStatuses.includes(val)) {
+// 1️⃣ رفض
+if (val === "رفض") {
   newFixedBy = userName;
 }
 
-// إذا أول مرة تثبيت
+// 2️⃣ قيد المعالجة
+else if (val === "قيد المعالجة") {
+
+  const oldTime =
+    oldData?.statusHistory?.["قيد المعالجة"]?.time ||
+    oldData?.statusHistory?.["مثبت"]?.time;
+
+  if (oldTime) {
+    const diffDays = Math.floor(
+      (now - new Date(oldTime)) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays >= 3) {
+      newFixedBy = userName;
+    }
+  }
+}
+
+// 3️⃣ أول تثبيت
 if (!prevFixed && val === "مثبت") {
   newFixedBy = userName;
 }
+
+
 
   // 🔥 التحديث الرئيسي
   await update(ref(db, `orders/${orderId}`), {
@@ -1259,9 +1277,9 @@ if (!prevFixed && val === "مثبت") {
   });
 
   // ⭐ حفظ الهستوري هنا بالضبط
-  const now = new Date().toISOString();
+const timeNow = new Date().toISOString();
 await update(ref(db, `orders/${orderId}/statusHistory/${val}`), {
-  time: now,
+time: timeNow,
   by: userName
 });
 

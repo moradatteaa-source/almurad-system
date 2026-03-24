@@ -910,20 +910,32 @@ if (o.status === "قيد المعالجة") {
     card.setAttribute("data-id", o.id);
 
     card.innerHTML = `
-      <div class="right-side">
-        <div class="date">
-        ${
-          getCurrentStatusTime(o)
-          ? new Date(getCurrentStatusTime(o)).toLocaleString("en-GB")
-          : ""
-        }
-        </div>
+   <div class="right-side">
+  
+  <div class="date">
+  ${
+    getCurrentStatusTime(o)
+    ? new Date(getCurrentStatusTime(o)).toLocaleString("en-GB")
+    : ""
+  }
+  </div>
 
-        <div style="display:flex; gap:10px;">
-          <div class="order-id">#${o.id}</div>
-          <div class="product-name">${o.productName || "-"}</div>
-        </div>
-      </div>
+  <!-- المنتج + رقم الطلب -->
+  <div style="display:flex; gap:10px;">
+    <div class="order-id">#${o.id}</div>
+    <div class="product-name">${o.productName || "-"}</div>
+  </div>
+
+  <!-- اسم الموظف -->
+<div style="font-size:11px; color:#000; font-weight:bold; margin-top:4px;">
+  ${
+    o.fixedBy
+    ? 'تم التثبيت بواسطة: <span style="color:#FF6B2D;">' + o.fixedBy + '</span>'
+    : ""
+  }
+</div>
+
+</div>
 
       <div class="left-side">
         <div class="qty">${o.quantity || 1}</div>
@@ -934,6 +946,7 @@ if (o.status === "قيد المعالجة") {
 
       <div class="advertiser">
   ${o.advertiser || ""}
+
   <div style="font-size:11px; color:#e74c3c; margin-top:3px;">
     ${getRemainingTimeText(o)}
   </div>
@@ -1367,7 +1380,7 @@ await update(ref(db2, "orders/" + id), {
   status: newStatus,
   [`statusHistory/${newStatus}`]: {
     time: now,
-    by: "Admin" // غيرها لاحقًا لاسم الموظف
+by: localStorage.getItem("loggedInUserName") || "غير معروف"
   }
 });
 
