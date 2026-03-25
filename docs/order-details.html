@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>تفاصيل الطلب - نظام المراد</title>
   
@@ -15,7 +16,28 @@
   font-size: 14px;
   line-height: 1.6;
 }
+.source-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
 
+.source-btn {
+  width: 45px;
+  height: 45px;
+  background: #eee;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.source-btn.active {
+  background: #FF6B2D;
+  color: white;
+}
 .history-title {
   font-weight: bold;
   color: #043B64;
@@ -473,7 +495,11 @@ input, select, textarea {
         </div>
       </div>
     </div>
+<div class="field single">
+  <label>مصدر الطلب:</label>
 
+  <div id="sourceButtons" class="source-buttons"></div>
+</div>
     <div class="card">
       <div class="row">
         <div class="field small">
@@ -1027,6 +1053,7 @@ function formatIraqiDate(t) {
       const snapshot = await get(ref(db, `orders/${orderId}`));
       if (!snapshot.exists()) return;
       const data = snapshot.val();
+      renderSourceButtons(data.source || "");
       const receiptCard = document.getElementById("receiptCard");
 const receiptInput = document.getElementById("receiptNum");
 
@@ -1121,7 +1148,40 @@ waBtn.setAttribute("target", "_blank");
 waBtn.setAttribute("rel", "noopener noreferrer");
 
 }
+function renderSourceButtons(selected = "") {
+  document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".source-btn");
+  if (!btn) return;
 
+  // إزالة التحديد من الكل
+  document.querySelectorAll(".source-btn").forEach(b => b.classList.remove("active"));
+
+  // إضافة التحديد
+  btn.classList.add("active");
+
+  const value = btn.dataset.value;
+
+  // 🔥 حفظ في Firebase مباشرة
+  update(ref(db, `orders/${orderId}`), {
+    source: value
+  });
+});
+  const container = document.getElementById("sourceButtons");
+
+  const sources = [
+    { name: "انستغرام", icon: "ri-instagram-line" },
+    { name: "فيسبوك", icon: "ri-facebook-circle-fill" },
+    { name: "تيك توك", icon: "ri-tiktok-fill" },
+    { name: "واتساب", icon: "ri-whatsapp-line" },
+    { name: "اتصال", icon: "ri-phone-fill" }
+  ];
+
+  container.innerHTML = sources.map(s => `
+    <div class="source-btn ${selected === s.name ? "active" : ""}" data-value="${s.name}">
+      <i class="${s.icon}"></i>
+    </div>
+  `).join("");
+}
 
       // المدينة والمنطقة
       const cityDiv = document.getElementById("city");
