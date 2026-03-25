@@ -661,7 +661,7 @@ if (typeof p.stock === "number") {
 } else if (typeof p.stock === "object") {
   total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
 }
-  const invoiceValue = (p.prices?.pos || 0) * total;
+const invoiceValue = (p.buyPrice || 0) * total;
 
 let variantsList = "";
 
