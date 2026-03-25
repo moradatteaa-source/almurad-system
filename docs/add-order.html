@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>➕ إضافة طلب جديد - نظام المراد</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
   <style>
     :root {
       --main-blue: #043B64;
@@ -215,7 +216,35 @@ html, body {
   background: var(--background-gray);
   box-sizing: border-box;
 }
+.source-buttons{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin-top:10px;
+}
 
+.source-btn{
+  width:50px;
+  height:50px;
+  border-radius:12px;
+  background:#f1f1f1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.source-btn i{
+  font-size:24px;
+}
+
+.source-btn.active{
+  background:#FF6B2D;
+  color:white;
+  transform:scale(1.1);
+}
 
   </style>
 </head>
@@ -237,6 +266,7 @@ html, body {
         <div class="field small">
           <label>رقم الهاتف الأول:</label>
           <input id="phone1" type="text">
+
         </div>
         <div class="field small">
           <label>الرقم الثاني:</label>
@@ -244,7 +274,17 @@ html, body {
         </div>
       </div>
     </div>
+          <div class="field single">
+  <label>مصدر الطلب:</label>
 
+  <div id="sourceButtons" class="source-buttons">
+    <div class="source-btn" data-value="انستغرام"><i class="ri-instagram-line"></i></div>
+    <div class="source-btn" data-value="فيسبوك"><i class="ri-facebook-circle-fill"></i></div>
+    <div class="source-btn" data-value="تيك توك"><i class="ri-tiktok-fill"></i></div>
+    <div class="source-btn" data-value="واتساب"><i class="ri-whatsapp-line"></i></div>
+    <div class="source-btn" data-value="اتصال"><i class="ri-phone-fill"></i></div>
+  </div>
+</div>
     <div class="card">
       <div class="row">
         <div class="field small">
@@ -342,8 +382,36 @@ import { getDatabase, ref, set, get, onValue, runTransaction } from "https://www
     const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 let mainProductObj = {}; // ✅ تعريف عام
+let selectedSource = "";
 
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".source-btn");
+  if (btn) {
+    document.querySelectorAll(".source-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedSource = btn.dataset.value;
+  }
+});
 
+function normalizeIraqiPhone(phone) {
+  if (!phone) return null;
+
+  const arabicToEnglish = {
+    "٠": "0","١": "1","٢": "2","٣": "3","٤": "4",
+    "٥": "5","٦": "6","٧": "7","٨": "8","٩": "9"
+  };
+
+  let cleaned = phone.replace(/[٠-٩]/g, d => arabicToEnglish[d]);
+  let raw = cleaned.replace(/\D/g, "");
+
+  if (raw.startsWith("00964")) raw = raw.slice(5);
+  else if (raw.startsWith("964")) raw = raw.slice(3);
+  else if (raw.startsWith("0")) raw = raw.slice(1);
+
+  if (!raw.startsWith("7") || raw.length !== 10) return null;
+
+  return "0" + raw;
+}
 function createDropdown(options, selected, onChange) {
   const wrapper = document.createElement("div");
 
@@ -785,35 +853,20 @@ function validateOrder() {
 if (!phone1) {
   errors.push("رقم الهاتف مطلوب");
 } else {
-  let raw = phone1.replace(/\D/g, ""); // إزالة أي رموز أو مسافات
+  const normalizedPhone1 = normalizeIraqiPhone(phone1);
 
-  // إزالة كل أنواع المفاتيح
-  if (raw.startsWith("00964")) raw = raw.slice(5);
-  else if (raw.startsWith("964")) raw = raw.slice(3);
-  else if (raw.startsWith("0")) raw = raw.slice(1);
-
-  // يجب أن يبدأ بـ 7
-  if (!raw.startsWith("7")) {
-    errors.push("رقم الهاتف يجب أن يبدأ بالرقم 7 بعد المفتاح");
-  }
-
-  // يجب أن يكون 10 أرقام بعد 7
-  if (raw.length !== 10) {
-    errors.push("رقم الهاتف يجب أن يكون 10 أرقام بعد الرقم 7");
+  if (!normalizedPhone1) {
+    errors.push("رقم الهاتف غير صحيح");
   }
 }
 
-// 🔹 الرقم الثاني اختياري ولكن إذا موجود يجب تصحيحه
 const phone2 = document.getElementById("phone2").value.trim();
+
 if (phone2) {
-  let raw2 = phone2.replace(/\D/g, "");
+  const normalizedPhone2 = normalizeIraqiPhone(phone2);
 
-  if (raw2.startsWith("00964")) raw2 = raw2.slice(5);
-  else if (raw2.startsWith("964")) raw2 = raw2.slice(3);
-  else if (raw2.startsWith("0")) raw2 = raw2.slice(1);
-
-  if (!raw2.startsWith("7") || raw2.length !== 10) {
-    errors.push("الرقم الثاني غير صحيح — يجب أن يكون 10 أرقام بعد الرقم 7");
+  if (!normalizedPhone2) {
+    errors.push("الرقم الثاني غير صحيح");
   }
 }
 
@@ -961,8 +1014,9 @@ extraProducts.forEach(p => {
 
 const order = {
   code: document.getElementById("code").value.trim(),
-  phone1: document.getElementById("phone1").value.trim(),
-  phone2: document.getElementById("phone2").value.trim(),
+phone1: normalizeIraqiPhone(document.getElementById("phone1").value.trim()),
+phone2: normalizeIraqiPhone(document.getElementById("phone2").value.trim()),
+source: selectedSource,
   address: document.getElementById("address").value.trim(),
   city: document.querySelector("#city input")?.value || "",
   area: document.querySelector("#area input")?.value || "",
