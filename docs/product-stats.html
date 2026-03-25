@@ -590,14 +590,22 @@ window.showProductDetails = function(productName){
 const orders = allOrders.filter(o => 
 (o.productName || o.product || "غير معروف") === productName
 )
-
 let stats = {
 total:0,
-statuses:{}
+statuses:{},
+sources:{} // 🔥 جديد
 }
 
 orders.forEach(o=>{
+const source = o.source || "غير محدد"
 
+// نحسب فقط المثبت
+if(o.status === "مثبت"){
+  if(!stats.sources[source]){
+    stats.sources[source] = 0
+  }
+  stats.sources[source]++
+}
 stats.total++
 
 const status = o.status || "غير محدد"
@@ -644,7 +652,16 @@ advice += "<br>⚠️ مشكلة جودة أو توصيل"
 // عرض البيانات
 document.getElementById("modalTitle").innerText = productName
 let statusHTML = ""
+let sourcesHTML = ""
 
+for(let s in stats.sources){
+  sourcesHTML += `
+  <div class="card">
+    <h3>${stats.sources[s]}</h3>
+    <span>${s}</span>
+  </div>
+  `
+}
 for(let s in stats.statuses){
 statusHTML += `
 <div class="card">
@@ -654,7 +671,11 @@ statusHTML += `
 `
 }
 document.getElementById("modalContent").innerHTML = `
+<h3 style="margin-top:15px">📊 التثبيت حسب المصدر</h3>
 
+<div class="card-grid">
+${sourcesHTML}
+</div>
 <div class="card-grid">
 
 <div class="card"><h3>${stats.total}</h3><span>إجمالي الطلبات</span></div>
