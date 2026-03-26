@@ -166,6 +166,9 @@
   <header>
 
     <h2>🏬 إدارة المخزون</h2>
+    <button onclick="resetAudit()" style="background:#dc3545;color:white;margin-right:10px;">
+🔄 إعادة الجرد
+</button>
     <button onclick="togglePopup(true)">➕ إضافة منتج جديد</button>
   </header>
   <!-- 📤 زر رفع ملف Excel -->
@@ -216,13 +219,21 @@
       border:1px solid #ccc;
       font-size:16px;
     "
-    oninput="filterWarehouse()"
+oninput="applyFilters()"
   >
 </div>
-
+<div style="width:95%;margin:10px auto;display:flex;gap:10px;">
+<input type="date" id="fromDate">
+<input type="date" id="toDate">
+<button id="dateFilterBtn" onclick="toggleDateFilter()">📅 فلترة بالتاريخ</button>
+<button onclick="currentAuditFilter='all';applyFilters()">📦 الكل</button>
+<button onclick="currentAuditFilter='audited';applyFilters()">✅ مجرود</button>
+<button onclick="currentAuditFilter='not';applyFilters()">❌ غير مجرود</button>
+</div>
   <table id="warehouseTable">
     <thead>
       <tr>
+        <th>#</th>
         <th>اسم المنتج</th>
         <th>سعر الشراء</th>
         <th>سعر البيع</th>
@@ -230,7 +241,7 @@
         <th>الكمية الإجمالية</th>
 <th>💸 الفاتورة الإجمالية</th>
 <th>آخر تحديث</th>
-
+<th>📊 الجرد</th>
         <th>الخيارات</th>
       </tr>
     </thead>
@@ -317,21 +328,6 @@
   };
 }
 
-  // 🔍 فلترة منتجات المخزن حسب الاسم
-window.filterWarehouse = function () {
-  const query = document.getElementById("searchInput").value.trim().toLowerCase();
-  const rows = document.querySelectorAll("#warehouseTable tbody tr");
-
-  rows.forEach(row => {
-    const productNameCell = row.querySelector("td");
-    if (!productNameCell) return;
-
-    const productName = productNameCell.textContent.toLowerCase();
-
-    // إظهار أو إخفاء الصف
-    row.style.display = productName.includes(query) ? "" : "none";
-  });
-};
 const query = document
   .getElementById("searchInput")
   .value.replace(/\s+/g, " ")
@@ -387,6 +383,7 @@ window.togglePopup = (show) => {
   const btn = document.getElementById("toggleVariantsBtn");
 
 if (show) {
+  document.getElementById("toggleVariantsBtn").style.display = "block";
   qtySection.style.display = "block";
   variantsSection.style.display = "none";
   btn.textContent = "➕ إضافة متغيرات";
@@ -586,9 +583,20 @@ if (typeof stock === "number") {
   totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
 }
 
+const now = new Date().toISOString();
+
+// 🔥 جلب createdAt القديم اذا موجود
+let createdAt = now;
+
+if (editingProduct) {
+  const oldSnap = await get(ref(db, "warehouse/" + safeName));
+  if (oldSnap.exists()) {
+    createdAt = oldSnap.val().createdAt || now;
+  }
+}
 
 await set(ref(db, "warehouse/" + safeName), {
-name: name, // نخزن الاسم الحقيقي للعرض
+name: name,
 buyPrice: buyPrice,
 prices: {
 pos: sellPricePos,
@@ -597,11 +605,9 @@ online: sellPriceOnline
 totalQty,
 stock,
 barcodes,
-lastUpdate: new Date().toISOString()
+lastUpdate: now,
+createdAt: createdAt
 });
-
-
-
 
 
   // ✅ إشعار النجاح
@@ -646,11 +652,11 @@ const data = snapshot.val();
 
 // ✅ نحول البيانات إلى Array ونرتبها حسب آخر تحديث (الأحدث أولاً)
 const productsArray = Object.entries(data).sort((a, b) => {
-  const dateA = new Date(a[1].lastUpdate || 0).getTime();
-  const dateB = new Date(b[1].lastUpdate || 0).getTime();
-  return dateB - dateA; // الأحدث يطلع فوق
+const dateA = new Date(a[1].createdAt || 0).getTime();
+const dateB = new Date(b[1].createdAt || 0).getTime();
+return dateA - dateB;
 });
-
+let index = 1;
 for (const [safeName, p] of productsArray) {
 
   const productName = p.name || safeName;
@@ -692,11 +698,19 @@ if (typeof p.stock === "object") {
     </div>
   `;
 }
-
+const auditStatus = p.lastAudit ? "✅ مجرود" : "❌ غير مجرود";
 
   const tr = document.createElement("tr");
+  if(!p.lastAudit){
+tr.style.background = "#fff3cd";
+}
+
+if(total < 0){
+tr.style.background = "#ffdddd";
+}
   tr.innerHTML = `
-    <td><strong>${productName}</strong></td>
+<td>${index++}</td>
+<td><strong>${productName}</strong></td>
     <td>${p.buyPrice || "-"}</td>
     <td>
       حضوري: ${p.prices?.pos || "-"}<br>
@@ -705,7 +719,10 @@ if (typeof p.stock === "object") {
     <td>${variantsList}</td>
     <td>${total}</td>
     <td class="num-en">${invoiceValue.toLocaleString("en-US")} د.ع</td>
-    <td>${p.lastUpdate ? new Date(p.lastUpdate).toLocaleDateString("ar-EG") : "-"}</td>
+<td data-date="${p.lastUpdate}">
+${p.lastUpdate ? new Date(p.lastUpdate).toLocaleDateString("ar-EG") : "-"}
+</td>
+    <td>${auditStatus}</td>
     <td>
      
 
@@ -722,11 +739,16 @@ style="background:#28a745;color:white;border:none;border-radius:6px;padding:5px 
 onclick="addQuantity('${productName}')">
 ➕ كمية
 </button>
-
 <button
 style="background:#043B64;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
 onclick="printBarcodes('${productName}')">
 🖨 باركود
+</button>
+
+<button
+style="background:#222;color:white;border:none;border-radius:6px;padding:5px 8px;margin:2px;"
+onclick="auditProduct('${productName}')">
+📊 جرد
 </button>
     </td>
   `;
@@ -769,7 +791,7 @@ totalSellValue += totalQty * (p.prices?.pos || 0);
       totalSellValue,
       lastUpdate: new Date().toISOString()
     }).catch(err => console.error("خطأ في حفظ الإحصائيات:", err));
-    filterWarehouse();
+applyFilters();
   });
 }
 window.addQuantity = async function(productName) {
@@ -789,7 +811,7 @@ const data = snap.val();
 
 // إذا المنتج بدون متغيرات
 if (typeof data.stock === "number") {
-
+document.getElementById("toggleVariantsBtn").style.display = "none";
 const newQty = data.stock + parseInt(qty);
 
 await update(ref(db, "warehouse/" + safeName), {
@@ -857,7 +879,7 @@ const safeName = safeKey(productName);
 const snapshot = await get(ref(db, "warehouse/" + safeName));
 editingProduct = safeName;
     const data = snapshot.val();
-    editingProduct = productName; // ✅ يخزّن اسم المنتج الجاري تعديله
+  
 
     togglePopup(true);
     popupTitle.textContent = `✏️ تعديل المنتج: ${productName}`;
@@ -869,6 +891,7 @@ document.getElementById("sellPriceOnline").value = data.prices?.online || "";
     variants = [];
 
 if (typeof data.stock === "object") {
+  document.getElementById("toggleVariantsBtn").style.display = "block";
   for (const [key, qty] of Object.entries(data.stock)) {
     const parts = key.split("|").map(s => s.trim());
     variants.push({
@@ -1166,7 +1189,163 @@ pageBreak: "after"
 };
 
 
+window.auditProduct = async function(productName){
 
+const realQty = prompt("ادخل الكمية الحقيقية:");
+
+if(realQty === null) return;
+
+if(isNaN(realQty)) return alert("❌ لازم رقم");
+
+const safeName = safeKey(productName);
+
+const snap = await get(ref(db, "warehouse/" + safeName));
+
+if(!snap.exists()) return;
+
+const data = snap.val();
+
+if(typeof data.stock === "number"){
+
+await update(ref(db, "warehouse/" + safeName), {
+stock: parseInt(realQty),
+totalQty: parseInt(realQty),
+lastAudit: new Date().toISOString(),
+lastUpdate: new Date().toISOString()
+});
+
+}
+
+else if(typeof data.stock === "object"){
+
+const keys = Object.keys(data.stock);
+
+let list = "اختر المتغير:\n\n";
+
+keys.forEach((k,i)=>{
+list += (i+1) + " - " + k + " ( " + data.stock[k] + " )\n";
+});
+
+const choice = prompt(list + "\nاكتب رقم المتغير:");
+
+const index = parseInt(choice) - 1;
+
+if(index < 0 || index >= keys.length) return;
+
+const key = keys[index];
+
+data.stock[key] = parseInt(realQty);
+
+const total = Object.values(data.stock).reduce((a,b)=>a+b,0);
+
+await update(ref(db, "warehouse/" + safeName), {
+stock: data.stock,
+totalQty: total,
+lastAudit: new Date().toISOString(),
+lastUpdate: new Date().toISOString()
+});
+
+}
+
+alert("✅ تم الجرد");
+
+loadWarehouse();
+
+};
+
+window.resetAudit = async function(){
+
+if(!confirm("⚠️ راح يتم تصفير الجرد لكل المنتجات، متأكد؟")) return;
+
+const snap = await get(ref(db,"warehouse"));
+
+if(!snap.exists()) return;
+
+const data = snap.val();
+
+for(const key in data){
+
+await update(ref(db,"warehouse/"+key),{
+lastAudit: null
+});
+
+}
+
+alert("✅ تم تصفير الجرد لكل المنتجات");
+
+loadWarehouse();
+
+};
+window.currentAuditFilter = "all";
+window.dateFilterActive = false;
+window.applyFilters = function(){
+
+const query = document.getElementById("searchInput").value.toLowerCase();
+const from = document.getElementById("fromDate").value;
+const to = document.getElementById("toDate").value;
+
+const rows = document.querySelectorAll("#warehouseTable tbody tr");
+
+rows.forEach(row => {
+
+const name = row.children[1]?.textContent.toLowerCase() || "";
+const dateText = row.children[7]?.getAttribute("data-date") || "";
+const audit = row.children[8]?.textContent.trim() || "";
+
+// 🔍 الاسم
+let matchName = name.includes(query);
+
+// 📅 التاريخ
+let matchDate = true;
+
+if(window.dateFilterActive){
+
+if(from){
+matchDate = new Date(dateText) >= new Date(from);
+}
+
+if(to){
+matchDate = matchDate && new Date(dateText) <= new Date(to);
+}
+
+}
+
+// 📊 الجرد
+let matchAudit = true;
+
+if(window.currentAuditFilter === "audited"){
+matchAudit = audit === "✅ مجرود";
+}
+else if(window.currentAuditFilter === "not"){
+matchAudit = audit === "❌ غير مجرود";
+}
+
+// ✅ النتيجة النهائية
+row.style.display = (matchName && matchDate && matchAudit) ? "" : "none";
+
+});
+
+};
+window.toggleDateFilter = function(){
+
+const btn = document.getElementById("dateFilterBtn");
+
+window.dateFilterActive = !window.dateFilterActive;
+
+// 🎨 تغيير اللون
+if(window.dateFilterActive){
+btn.style.background = "#FF6B2D";
+btn.style.color = "white";
+}
+else{
+btn.style.background = "#ddd";
+btn.style.color = "#043B64";
+}
+
+// تشغيل الفلترة
+applyFilters();
+
+};
 </script>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
