@@ -282,13 +282,23 @@ for (const p of foundOrder.productsDetailed || []) {
     orderId: shipmentId   // ⭐ مهم
   };
 
-  if (foundOrder.status === "قيد التجهيز") {
-    pendingOut.push(itemData);
-  }
+const status = (foundOrder.status || "").trim();
 
-  if (foundOrder.status === "راجع") {
-    pendingReturn.push(itemData);
-  }
+// الطالع
+if (
+  status.includes("توصيل") ||
+  status.includes("تجهيز") ||
+  status.includes("تم التسليم")
+) {
+  pendingOut.push(itemData);
+}
+
+// الراجع
+if (
+  status.includes("راجع")
+) {
+  pendingReturn.push(itemData);
+}
 }
 
   renderPendingTable();
