@@ -896,9 +896,6 @@ function renderExistingProducts(names) {
   );
 }
 
-/* =========================
-   📊 عند اختيار منتج موجود
-
 
 /* =========================
    ➕ إضافة متغير جديد
@@ -968,24 +965,67 @@ window.addItemToInvoice = function () {
   // 🟢 المنتج الجديد
   else if (type === "new") {
 
-    const name = document.getElementById("simpleProductName").value.trim();
-    const qty = parseFloat(document.getElementById("simpleQty").value) || 0;
-    const price = parseFloat(document.getElementById("simpleBuyPrice").value) || 0;
+  const name = document.getElementById("simpleProductName").value.trim();
+const variantRows = document.querySelectorAll("#newVariantContainer .variant-item");
 
-    if (!name || qty <= 0 || price <= 0) {
-      alert("⚠️ أدخل اسم المنتج والكمية والسعر");
-      return;
-    }
+let added = false;
 
-    const subtotal = qty * price;
+// 🟢 إذا عنده متغيرات
+if (variantRows.length > 0) {
+
+  variantRows.forEach(row => {
+
+    const inputs = row.querySelectorAll("input");
+
+    const dim1 = inputs[0].value.trim();
+    const val1 = inputs[1].value.trim();
+    const dim2 = inputs[2].value.trim();
+    const val2 = inputs[3].value.trim();
+    const qty = parseFloat(inputs[4].value) || 0;
+    const price = parseFloat(inputs[5].value) || 0;
+
+    if (!dim1 || !val1 || qty <= 0 || price <= 0) return;
+
+    const variant = dim2 && val2
+      ? `${dim1} | ${val1} | ${dim2} | ${val2}`
+      : `${dim1} | ${val1}`;
 
     invoiceItems.push({
       product: name,
-      variant: "-",
+      variant,
       quantity: qty,
       price,
-      subtotal
+      subtotal: qty * price
     });
+
+    added = true;
+  });
+
+} else {
+  // 🟢 بدون متغيرات (الوضع القديم)
+  const qty = parseFloat(document.getElementById("simpleQty").value) || 0;
+  const price = parseFloat(document.getElementById("simpleBuyPrice").value) || 0;
+
+  if (!name || qty <= 0 || price <= 0) {
+    alert("⚠️ أدخل اسم المنتج والكمية والسعر");
+    return;
+  }
+
+  invoiceItems.push({
+    product: name,
+    variant: "-",
+    quantity: qty,
+    price,
+    subtotal: qty * price
+  });
+
+  added = true;
+}
+
+if (!added) {
+  alert("⚠️ أدخل بيانات المتغيرات بشكل صحيح");
+  return;
+}
   }
 
   renderInvoiceItems();
@@ -1083,44 +1123,80 @@ const snap = await get(productRef);
     const productRef = ref(db, "warehouse/" + productKey);
     const snap = await get(productRef);
 
-    if (snap.exists()) {
+if (snap.exists()) {
 
-      let productData = snap.val();
+  let productData = snap.val();
 
-      if (productData.hasVariants) {
-        productData.stock[it.variant] =
-          (productData.stock[it.variant] || 0) + it.quantity;
-      } else {
-        productData.stock =
-          (productData.stock || 0) + it.quantity;
-      }
+  if (productData.hasVariants) {
+    productData.stock[it.variant] =
+      (productData.stock[it.variant] || 0) + it.quantity;
+  } else {
+    productData.stock =
+      (productData.stock || 0) + it.quantity;
+  }
 
-      productData.totalQty =
-        (productData.totalQty || 0) + it.quantity;
+  productData.totalQty =
+    (productData.totalQty || 0) + it.quantity;
 
-      await set(productRef, productData);
+  await set(productRef, productData);
 
-    } else {
+} else {
 
-      await set(productRef, {
-        name: it.product,
-        buyPrice: it.price,
-        totalQty: it.quantity,
-        stock: it.quantity,
-        hasVariants: false,
-        lastUpdate: new Date().toISOString()
-      });
+  // 🔥 هذا ينفذ فقط إذا المنتج جديد
 
-    }
+  let stockObj = {};
+  let hasVariants = false;
+
+if (it.variant !== "-") {
+  hasVariants = true;
+  stockObj[it.variant] = it.quantity;
+}
+
+  if (hasVariants) {
+
+    const totalQty = Object.values(stockObj).reduce((a,b)=>a+b,0);
+
+    await set(productRef, {
+      name: it.product,
+      buyPrice: it.price,
+
+      prices: {
+        pos: parseFloat(document.getElementById("simpleSellPricePos").value) || 0,
+        online: parseFloat(document.getElementById("simpleSellPriceOnline").value) || 0
+      },
+
+      stock: stockObj,
+      totalQty: totalQty,
+      hasVariants: true,
+      lastUpdate: new Date().toISOString()
+    });
+
+  } else {
+
+    await set(productRef, {
+      name: it.product,
+      buyPrice: it.price,
+
+      prices: {
+        pos: parseFloat(document.getElementById("simpleSellPricePos").value) || 0,
+        online: parseFloat(document.getElementById("simpleSellPriceOnline").value) || 0
+      },
+
+      stock: it.quantity,
+      totalQty: it.quantity,
+      hasVariants: false,
+      lastUpdate: new Date().toISOString()
+    });
 
   }
+
+}
 
 } 
 
 
 
-
-// ✅ إذا كان المنتج جديد نستخدم items مباشرة
+} 
 if (type === "new") {
   items = items.length ? items : [...invoiceItems];
 } else {
