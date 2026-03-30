@@ -522,6 +522,7 @@ table {
 /* =========================
    🔧 إعداد Firebase
 ========================= */
+import { update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 const firebaseConfig = {
@@ -1106,10 +1107,13 @@ const snap = await get(productRef);
       (productData.stock || 0) + it.quantity;
   }
 
-  productData.totalQty =
-    (productData.totalQty || 0) + it.quantity;
-
-  await set(productRef, productData);
+productData.totalQty =
+  Number(productData.totalQty || 0) + Number(it.quantity);
+await update(productRef, {
+  stock: productData.stock,
+  totalQty: Number(productData.totalQty),
+  lastUpdate: new Date().toISOString()
+});
 }
 }else if (type === "new") {
 
@@ -1131,14 +1135,18 @@ if (snap.exists()) {
     productData.stock[it.variant] =
       (productData.stock[it.variant] || 0) + it.quantity;
   } else {
-    productData.stock =
-      (productData.stock || 0) + it.quantity;
+   productData.stock =
+  Number(productData.stock || 0) + Number(it.quantity);
   }
 
-  productData.totalQty =
-    (productData.totalQty || 0) + it.quantity;
+productData.totalQty =
+  Number(productData.totalQty || 0) + Number(it.quantity);
 
-  await set(productRef, productData);
+await update(productRef, {
+  stock: productData.stock,
+  totalQty: Number(productData.totalQty),
+  lastUpdate: new Date().toISOString()
+});
 
 } else {
 
