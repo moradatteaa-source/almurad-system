@@ -498,11 +498,19 @@ const stock = productData.stock || {};
 
 if (!variantPart) {
 
-const currentQty = Number(stock["إجمالي الكمية"] || 0);
-const newQty = currentQty - qty;
+let currentQty = 0;
+
+if (typeof stock === "number") {
+  currentQty = Number(stock) || 0;
+} else if (typeof stock === "object") {
+  currentQty = Number(stock["إجمالي الكمية"]) || 0;
+}
+let newQty = currentQty - qty;
+
+if (newQty < 0) newQty = 0;
 
 await update(productRef, {
-"stock/إجمالي الكمية": newQty,
+stock: newQty,
 totalQty: newQty,
 lastUpdate: new Date().toISOString()
 });
@@ -624,7 +632,7 @@ const stock = productData.stock || {};
 
 if (!variantPart) {
 
-  const currentQty = Number(stock["إجمالي الكمية"] || 0);
+const currentQty = Number(stock || 0);
   const newQty = currentQty + qty;
 
   await update(productRef, {
