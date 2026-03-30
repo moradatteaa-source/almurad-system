@@ -650,11 +650,10 @@ document.getElementById("sellPriceOnline").value = "";
 
 const data = snapshot.val();
 
-// ✅ نحول البيانات إلى Array ونرتبها حسب آخر تحديث (الأحدث أولاً)
 const productsArray = Object.entries(data).sort((a, b) => {
-const dateA = new Date(a[1].createdAt || 0).getTime();
-const dateB = new Date(b[1].createdAt || 0).getTime();
-return dateA - dateB;
+  const dateA = new Date(a[1].lastUpdate || 0).getTime();
+  const dateB = new Date(b[1].lastUpdate || 0).getTime();
+  return dateB - dateA; // 🔥 الأحدث فوق
 });
 let index = 1;
 for (const [safeName, p] of productsArray) {
