@@ -6,11 +6,31 @@
 <title>الكاشير</title>
 
 <style>
+  .old-price{
+  text-decoration: line-through;
+  color: #c0392b;
+  font-size: 12px;
+  display:block;
+}
+
+.new-price{
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.discount-label{
+  font-size:11px;
+  color:#888;
+}
   .sub-item{
   border-style:dashed;
   font-size:12px;
 }
-    .product{position:relative}
+.product{
+  position:relative;
+  overflow:visible;
+}
 .searchInput{
   width:100%;
   padding:8px;
@@ -18,24 +38,19 @@
   border:1px solid #ccc;
 }
 .dropdown{
-  position:absolute;
-  top:100%;
+  position:fixed;
+  top:calc(100% + 4px); /* نزله شوي */
   right:0;
   left:0;
   background:white;
   border:1px solid #ccc;
-  max-height:160px;
+  max-height:200px;
   overflow-y:auto;
   display:none;
-  z-index:50;
-}
-.dropdown {
-  pointer-events: none;
+  z-index:99999; /* 🔥 مهم جداً */
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);
 }
 
-.dropdown[style*="display: block"] {
-  pointer-events: auto;
-}
 
 
 .dropdown div{
@@ -80,6 +95,7 @@ table{
   width:100%;
   border-collapse:collapse;
   background:white;
+  overflow:visible !important; /* 🔥 هذا تضيفه */
 }
 th,td{
   border:1px solid #ddd;
@@ -604,21 +620,38 @@ gap:8px;
 <!-- جدول -->
 <!-- 🟨 حاوية الجدول + الإجماليات -->
 <div class="invoice-area">
+<div style="display:flex;gap:8px;margin-bottom:10px">
 
+  <input 
+    id="quickInput"
+    placeholder="🔍 باركود أو اسم المنتج"
+    style="flex:1;padding:10px;border-radius:10px;border:1px solid #ccc"
+  >
+
+  <input 
+    id="quickQty"
+    type="number"
+    value="1"
+    style="width:80px;padding:10px;border-radius:10px;border:1px solid #ccc"
+  >
+
+</div>
   <!-- جدول -->
   <table id="table">
     <tr>
-      <th>المنتج</th>
-      <th>السعر</th>
-      <th>المخزن</th>
-      <th>العدد</th>
-      <th>المجموع</th>
+    <th>المنتج</th>
+<th>السعر</th>
+<th>المخزن</th>
+<th>العدد</th>
+<th>المجموع</th>
+<th>#</th>
+<th></th>
     </tr>
   </table>
 
   <!-- زر إضافة صف -->
   <div style="text-align:center; margin-top:6px;">
-    <button onclick="addRow()">+</button>
+
   </div>
 
   <!-- الإجماليات -->
@@ -630,10 +663,15 @@ gap:8px;
       <button class="payBtn" onclick="setCredit(this)">📄 دين</button>
     </div>
 
-    <div>
-      المدفوع:
-      <input type="number" id="paid" disabled>
-    </div>
+<div>
+  الخصم:
+  <input type="number" id="discount" value="0" oninput="calc()">
+</div>
+
+<div>
+  المدفوع:
+  <input type="number" id="paid" disabled>
+</div>
 
     <div id="restLine">
       الباقي (دين): <strong id="rest">0 د.ع</strong>
@@ -870,13 +908,9 @@ if (!stockSnap.exists()) {
 const stock = stockSnap.val();
 let qty = 0;
 
-// 🟢 إذا المنتج بدون متغيرات
-if (typeof stock === "number") {
-  qty = stock;
-}
 
 // 🔵 إذا المنتج بمتغيرات
-else if (typeof stock === "object") {
+if (typeof stock === "object") {
   const realKey = Object.keys(stock).find(
     k => k.trim() === variantKey.trim()
   );
@@ -888,12 +922,9 @@ if (qty <= 0) {
   return;
 }
 // 3️⃣ استخدم صف فاضي أو أنشئ واحد فقط عند الحاجة
-let row = getReusableRow();
-
-if (!row) {
-  addRow();
-  row = table.rows[table.rows.length - 1];
-}
+// 🔥 دائماً أضف صف جديد (تسلسل)
+addRow();
+let row = table.rows[table.rows.length - 1];
 
   row.cells[0].querySelector("input").value = productName;
   row.dataset.unitPrice = price;
@@ -903,7 +934,7 @@ if (!row) {
   row.querySelector(".variantSelect").value = variantKey;
 
 multiplyRow(row.cells[3].querySelector("input"));
-
+calc(); // 🔥 
 }
 
 
@@ -913,7 +944,7 @@ const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
 const table = document.getElementById("table");
 
-
+let rowsData = [];
 
 
 
@@ -932,8 +963,9 @@ function showAllProducts(input){
   products.forEach(p=>{
     const d = document.createElement("div");
     d.textContent = p.name;
-    d.onclick = (e)=>{
-      e.stopPropagation(); // ⛔ لا تغلق قبل الاختيار
+d.onclick = (e)=>{
+e.stopPropagation();
+setTimeout(()=>document.body.click(),0);
       input.value = p.name;
       box.style.display = "none";
 
@@ -1038,10 +1070,9 @@ function highlightItem(items, index) {
   });
 
   // 🔥 هذا السطر المهم
-  items[index].scrollIntoView({
-    block: "nearest",
-    behavior: "smooth"
-  });
+scrollIntoView({
+  block: "center"
+});
 }
 
   }
@@ -1050,8 +1081,57 @@ function highlightItem(items, index) {
 // أدوات الدينار
 const f=n=>Number(n||0).toLocaleString("en-US")+" د.ع";
 const p=v=>Number(String(v).replace(/[^0-9]/g,""))||0;
+function calc(){
+  let total = 0;
+  rowsData = [];
 
+  for(let i=1;i<table.rows.length;i++){
+    const r = table.rows[i];
 
+    const qty = Number(r.cells[3].querySelector("input").value || 0);
+    const price = Number(r.dataset.unitPrice || 0);
+
+    const rowTotal = qty * price;
+
+    r.cells[4].textContent = f(rowTotal);
+
+    if(r.cells[0].querySelector("input").value){
+      total += rowTotal;
+
+      rowsData.push({
+        row: r,
+        qty,
+        rowTotal
+      });
+    }
+  }
+
+const discount = Number(document.getElementById("discount").value || 0);
+
+// 🔵 تقريب الخصم لأقرب 250
+const fixedDiscount = Math.floor(discount / 250) * 250;
+
+// 🔹 المنتجات بدون خصم
+rowsData.forEach(item => {
+  item.row.cells[4].textContent = f(item.rowTotal);
+});
+// 🔹 المنتجات بدون خصم
+rowsData.forEach(item => {
+  item.row.cells[4].textContent = f(item.rowTotal);
+});
+  // 🔹 عرض المجموع
+grandEl.textContent = f(total - fixedDiscount);
+
+const finalTotal = total - fixedDiscount;
+
+if(!isCredit){
+  paidEl.value = finalTotal;
+
+}else{
+  restEl.textContent = f(finalTotal - Number(paidEl.value || 0));
+}
+
+  }
 let products = [];
 let barcodeIndex = {}; // 🔥 فهرس سريع للباركود
 let uiCategories = {};     // الأقسام
@@ -1078,7 +1158,8 @@ addInput.addEventListener("input", () => {
       d.style.cursor = "pointer";
 
         d.onclick = (e) => {
-  e.stopPropagation();
+e.stopPropagation();
+setTimeout(()=>document.body.click(),0);
         const exists = uiCategories[activeCategory]
           .some(x => x.name === p.name);
 
@@ -1400,21 +1481,7 @@ const stockSpan = row.querySelector(".stockQty");
 
 let stock = data.stock;
 
-// 🟢 إذا المنتج بدون متغيرات (رقم مباشر)
-if (typeof stock === "number") {
 
-  stockSpan.textContent = stock;
-
-  // نخلي المتغير اختيار افتراضي واحد
-  select.innerHTML = `
-    <option value="__single__">بدون متغير</option>
-  `;
-
-  row._stock = { "__single__": stock };
-  row._totalStock = stock;
-
-  return;
-}
 
 // 🔵 إذا المنتج بمتغيرات
 if (typeof stock === "object") {
@@ -1457,29 +1524,19 @@ select.onchange = () => {
   // ⭐⭐⭐ هنا بالضبط ⭐⭐⭐
 if (
   Object.keys(stock).length === 1 &&
-  stock["إجمالي الكمية"] !== undefined
-) {
+  stock["default"] !== undefined
+){
   select.innerHTML =
-    `<option value="إجمالي الكمية">إجمالي الكمية</option>`;
+    `<option value="default">إجمالي الكمية</option>`;
 
   // ✅ اكتب المخزن فورًا
-  stockSpan.textContent = stock["إجمالي الكمية"] ?? 0;
+ stockSpan.textContent = stock["default"] ?? 0;
 
   return;
 }
 
 
-  // المتغيرات العادية (لون / قياس / ...)
-  for(const key in stock){
-    if(stock[key] > 0){
-      const opt = document.createElement("option");
-      opt.value = key;
-      opt.textContent = `${key} (${stock[key]})`;
-      select.appendChild(opt);
-      opt.dataset.qty = stock[key];
 
-    }
-  }
 }
 
 
@@ -1492,6 +1549,111 @@ if (savedCats) {
 
 // ✅ شغّل الكاشير بعد ما الجدول صار موجود
 await loadProducts();// إذا ماكو أقسام محفوظة، أنشئ افتراضي
+const quickInput = document.getElementById("quickInput");
+const quickDropdown = document.createElement("div");
+quickDropdown.style = `
+  position:absolute;
+  background:white;
+  border:1px solid #ccc;
+  max-height:200px;
+  overflow-y:auto;
+  display:none;
+  z-index:9999;
+`;
+
+quickInput.parentElement.style.position = "relative";
+quickInput.parentElement.appendChild(quickDropdown);
+quickInput.addEventListener("input", () => {
+  const val = quickInput.value.trim().toLowerCase();
+  quickDropdown.innerHTML = "";
+
+  if (!val) {
+    quickDropdown.style.display = "none";
+    return;
+  }
+
+  products
+    .filter(p => p.name.toLowerCase().includes(val))
+    .forEach(p => {
+      const d = document.createElement("div");
+      d.textContent = p.name;
+      d.style.padding = "8px";
+      d.style.cursor = "pointer";
+d.onclick = async (e) => {
+e.stopPropagation();
+setTimeout(()=>document.body.click(),0);
+
+  const qty = Number(quickQty.value || 1);
+
+  for (let i = 0; i < qty; i++) {
+    await addQuickProduct(p.name, p.price);
+  }
+
+  quickInput.value = "";
+  quickQty.value = 1;
+  quickDropdown.style.display = "none";
+
+  setTimeout(() => {
+    quickInput.focus();   // 🔥 هذا الحل الحقيقي
+  }, 0);
+};
+      quickDropdown.appendChild(d);
+    });
+
+  quickDropdown.style.display = "block";
+});
+const quickQty = document.getElementById("quickQty");
+
+quickInput.addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+
+  const value = quickInput.value.trim();
+  const qty = Number(quickQty.value || 1);
+
+  if (!value) return;
+
+  let product = null;
+
+  // 🟢 باركود
+  if (/^\d+$/.test(value)) {
+    const item = barcodeIndex[value];
+
+    if (!item) {
+      alert("❌ باركود غير موجود");
+      return;
+    }
+
+    product = {
+      name: item.productName,
+      price: item.price,
+      variant: item.variantKey
+    };
+  }
+
+  // 🔵 اسم منتج
+  else {
+    const p = products.find(x => x.name === value);
+
+    if (!p) {
+      alert("❌ المنتج غير موجود");
+      return;
+    }
+
+    product = {
+      name: p.name,
+      price: p.price
+    };
+  }
+
+  for (let i = 0; i < qty; i++) {
+    await addQuickProduct(product.name, product.price);
+  }
+
+  quickInput.value = "";
+  quickQty.value = 1;
+  quickDropdown.style.display = "none";
+  quickInput.focus();
+});
 // إذا ماكو أقسام، لا تضيف شي
 if (Object.keys(uiCategories).length === 0) {
   activeCategory = null;
@@ -1499,7 +1661,9 @@ if (Object.keys(uiCategories).length === 0) {
 
 renderCategories();
 renderCategoryProducts();
-addRow();
+
+// نخلي صف واحد فقط بالبداية
+
 const grandEl=document.getElementById("grand");
 const paidEl=document.getElementById("paid");
 const debtorName = document.getElementById("debtorName");
@@ -1531,6 +1695,7 @@ r.innerHTML = `
 <td class="product">
 <input 
   class="searchInput"
+
   placeholder="اكتب اسم المنتج"
   onclick="event.stopPropagation(); showAllProducts(this)"
   oninput="filterProducts(this)"
@@ -1573,10 +1738,13 @@ r.innerHTML = `
     cursor:pointer;
   ">✖</button>
 </td>
+<td class="rowIndex">0</td>
 `;
 
 const searchInput = r.querySelector(".searchInput");
 enableKeyboardNavigation(searchInput);
+
+updateRowNumbers(); // ✅ هنا بالضبط
 
 }
 
@@ -1606,38 +1774,12 @@ function removeRow(btn){
   }
 
   // إذا أكثر من صف → احذف عادي
-  row.remove();
-  calc();
-}
-
-function calc(){
-  let total = 0;
-
-  for(let i = 1; i < table.rows.length; i++){
-    const r = table.rows[i];
-
-    const unitPrice = Number(r.dataset.unitPrice || 0); // ⭐ السعر الحقيقي
+row.remove();
+updateRowNumbers(); // ✅ هنا بالضبط
+calc();
 
 
-const qty = Number(r.cells[3].children[0].value || 0);
-const sign = isReturnMode ? -1 : 1;
-const sum = sign * unitPrice * qty;
-
-r.cells[4].textContent = f(sum);
-
-
-
-    total += sum;
-  }
-
-  grandEl.textContent = f(total);
-
-  if(!isCredit){
-    paidEl.value = total;
-    restEl.textContent = f(0);
-  }else{
-    restEl.textContent = f(total - Number(paidEl.value || 0));
-  }
+  // 🔻 الخصم الكلي
 }
 
 
@@ -1684,6 +1826,8 @@ r._stock = {};
 r._totalStock = 0;
 
   }
+
+  updateRowNumbers(); // ✅ 
 }
 function switchToCash(){
   isReturnMode = false;
@@ -1763,49 +1907,37 @@ if(!isReturnMode && data.totalQty < qty){
 let stock;
 let newTotalQty;
 
-// 🟢 منتج بدون متغيرات
-if (typeof data.stock === "number") {
-
-  let currentQty = Number(data.stock || 0);
-
-  if (!isReturnMode && currentQty < qty) {
-    alert("الكمية غير كافية: " + name);
-    return;
-  }
-
-  let newQty = isReturnMode
-    ? currentQty + qty
-    : currentQty - qty;
-
-  if (isNaN(newQty)) {
-    alert("خطأ في الكمية");
-    return;
-  }
-
-  stock = newQty;
-  newTotalQty = newQty;
-}
-
-// 🔵 منتج بمتغيرات
-else if (typeof data.stock === "object") {
+// 🔵 إذا بي متغيرات
+if (typeof data.stock === "object") {
 
   stock = { ...data.stock };
 
-  const variantKey = r.querySelector(".variantSelect").value;
+const variantKey = r.querySelector(".variantSelect").value;
 
-  if (!variantKey && !isReturnMode) {
+const keys = Object.keys(stock);
+const isSimpleProduct = (
+  keys.length === 1 &&
+ keys[0] === "default"
+);
+
+const hasVariants = !isSimpleProduct;
+
+if (hasVariants && !variantKey && !isReturnMode){
     alert("اختر المتغير للمنتج: " + name);
     return;
   }
 
-  let currentQty = Number(stock[variantKey] || 0);
+const key = isSimpleProduct
+  ? "default"
+  : variantKey;
+  let currentQty = Number(stock[key] || 0);
 
   if (!isReturnMode && currentQty < qty) {
     alert("الكمية غير كافية لهذا المتغير");
     return;
   }
 
-  stock[variantKey] = isReturnMode
+  stock[key] = isReturnMode
     ? currentQty + qty
     : currentQty - qty;
 
@@ -1815,7 +1947,23 @@ else if (typeof data.stock === "object") {
   );
 }
 
+// 🟡 إذا بدون متغيرات
+else {
 
+  let currentQty = Number(data.totalQty || 0);
+
+  if (!isReturnMode && currentQty < qty) {
+    alert("الكمية غير كافية");
+    return;
+  }
+
+  newTotalQty = isReturnMode
+    ? currentQty + qty
+    : currentQty - qty;
+stock = {
+  default: newTotalQty
+};
+}
 
 
 // 🔹 تحديث Firebase
@@ -1871,12 +2019,15 @@ await push(ref(rtdb, "posInvoices"), {
 
 // 🧾 تخزين بيانات الطباعة (مصدر واحد)
 window._printData = {
-  items: items.map(i => ({
-    name: i.product,
-    qty: Math.abs(i.qty),
-    total: Math.abs(i.total)
+  items: rowsData.map(item => ({
+    name: item.row.cells[0].querySelector("input").value,
+    qty: item.qty,
+    total: item.rowTotal   // ✅ بدون خصم
   })),
-  total: p(grandEl.textContent)
+  total: Number(
+    grandEl.textContent.replace(/[^\d\-]/g, "")
+  ),
+  discount: Number(document.getElementById("discount").value || 0)
 };
 
   console.log("✅ Invoice saved successfully");
@@ -1937,7 +2088,7 @@ resetRows();
 // صفّر الإجماليات
 grandEl.textContent = f(0);
 restEl.textContent = f(0);
-
+document.getElementById("discount").value = 0;
 }
 function parkInvoice(){
   const rows = [];
@@ -2104,18 +2255,33 @@ window.buildAndPrintReceipt = function () {
     return;
   }
 
-  window._printData.items.forEach(item => {
-    const row = document.createElement("div");
-    row.style.display = "flex";
-    row.style.justifyContent = "space-between";
-    row.style.fontSize = "12px";
-    row.innerHTML = `
-      <span>${item.name} × ${item.qty}</span>
-      <span>${f(item.total)}</span>
-    `;
-    itemsBox.appendChild(row);
-  });
+ window._printData.items.forEach(item => {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.justifyContent = "space-between";
+  row.style.fontSize = "12px";
 
+  row.innerHTML = `
+   <span>${item.name}</span>
+<span>× ${item.qty}</span>
+    <span>${f(item.total)}</span>
+  `;
+
+  itemsBox.appendChild(row);
+});
+const discount = window._printData.discount;
+
+if(discount > 0){
+  const d = document.createElement("div");
+  d.style.display = "flex";
+  d.style.justifyContent = "space-between";
+  d.style.fontSize = "12px";
+  d.innerHTML = `
+    <span>الخصم</span>
+    <span>- ${f(discount)}</span>
+  `;
+  itemsBox.appendChild(d);
+}
   totalBox.textContent = f(window._printData.total);
 // 🧾 معلومات إضافية للطباعة
 document.getElementById("printCashier").textContent =
@@ -2153,13 +2319,15 @@ window.parkInvoice = parkInvoice;
 window.resumeInvoice = resumeInvoice;
 window.loadParkedInvoice = loadParkedInvoice;
 window.closeParkedModal = closeParkedModal;
-
+window.calc = calc; // 🔥 هذا الحل
 window.onload = () => {
-  document.body.focus();
+  document.getElementById("quickInput")?.focus();
 };
 
-// 🟢 إغلاق منسدلات البحث عند النقر خارجها
+
 document.addEventListener("click", (e) => {
+
+  // 🟢 dropdown المنتجات داخل الجدول
   document.querySelectorAll(".dropdown").forEach(box => {
     const input = box.previousElementSibling;
 
@@ -2167,63 +2335,18 @@ document.addEventListener("click", (e) => {
       box.style.display = "none";
     }
   });
-});
 
-
-// 🟢 كتابة مباشرة باسم المنتج (CAPTURE MODE)
-document.addEventListener("keydown", (e) => {
-
-  // ❌ تجاهل الباركود (أرقام فقط)
-  if (/^\d$/.test(e.key)) return;
-
-  // ❌ تجاهل Enter والكميات
-  if (["Enter", "+", "-", "="].includes(e.key)) return;
-
-  // ❌ تجاهل الاختصارات
-  if (e.ctrlKey || e.altKey || e.metaKey) return;
-
-  // ❌ إذا داخل input أصلاً
-  const active = document.activeElement;
-  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
-    return;
+  // 🟢 quick search dropdown
+  if (!e.target.closest("#quickInput")) {
+    quickDropdown.style.display = "none";
   }
 
-  // 🟢 آخر صف
-  let targetInput = null;
-  for (let i = table.rows.length - 1; i >= 1; i--) {
-    const inp = table.rows[i].querySelector(".searchInput");
-    if (inp) {
-      targetInput = inp;
-      break;
-    }
+  // 🟢 add product dropdown
+  if (!e.target.closest("#addProductDropdownBox")) {
+    addDropdown.style.display = "none";
+    document.getElementById("addProductDropdownBox").style.display = "none";
   }
 
-  if (!targetInput) return;
-
-  // 🟢 اكتب الحرف
-  targetInput.focus();
-  targetInput.value += e.key;
-  filterProducts(targetInput);
-
-  e.preventDefault();
-  e.stopPropagation(); // 🔥 مهم
-}, true); // 🔥 capture phase
-document.addEventListener("click", (e) => {
-
-  // 🛑 إذا داخل صندوق إضافة منتج
-  if (e.target.closest("#addProductDropdownBox")) return;
-
-  // 🛑 إذا داخل creditBox (خانات الدين)
-  if (e.target.closest("#creditBox")) return;
-
-  // 🛑 إذا داخل أي input أو select
-  if (
-    e.target.tagName === "INPUT" ||
-    e.target.tagName === "TEXTAREA" ||
-    e.target.tagName === "SELECT"
-  ) return;
-
-  document.getElementById("barcodeInput")?.focus();
 });
 
 function deleteParkedInvoice(key){
@@ -2394,6 +2517,7 @@ for (let i = 1; i < table.rows.length; i++) {
   }
 
   multiplyRow(row.cells[3].querySelector("input"));
+  calc(); // 🔥
 }
 let lastEnterTime = 0;
 
@@ -2431,7 +2555,11 @@ if (barcodeJustScanned) return;
 
 }, true); // 🔥 capture phase
 
-
+function updateRowNumbers(){
+  for(let i = 1; i < table.rows.length; i++){
+    table.rows[i].querySelector(".rowIndex").textContent = i;
+  }
+}
 
 
 </script>

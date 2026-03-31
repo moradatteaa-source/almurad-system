@@ -277,7 +277,7 @@ for (const p of foundOrder.productsDetailed || []) {
 
   const itemData = {
     name: productName,
-    qty: Number(p.qty || 1),
+qty: (!p.qty || isNaN(Number(p.qty))) ? 1 : Number(p.qty),
     variants: p.variants || {},
     orderId: shipmentId   // ⭐ مهم
   };
@@ -503,16 +503,19 @@ let currentQty = 0;
 if (typeof stock === "number") {
   currentQty = Number(stock) || 0;
 } else if (typeof stock === "object") {
-  currentQty = Number(stock["إجمالي الكمية"]) || 0;
+  currentQty = Number(stock.default || 0) || 0;
 }
-let newQty = currentQty - qty;
+const safeQty = Number(qty) || 0;
+let newQty = currentQty - safeQty;
 
 if (newQty < 0) newQty = 0;
 
 await update(productRef, {
-stock: newQty,
-totalQty: newQty,
-lastUpdate: new Date().toISOString()
+ stock: {
+  default: newQty
+},
+  totalQty: newQty,
+  lastUpdate: new Date().toISOString()
 });
 
 }
@@ -525,9 +528,10 @@ if(!variantKey){
 variantKey = variantPart.trim();
 }
 
-const currentVariantQty = Number(stock[variantKey] || 0);
-let newVariantQty = currentVariantQty - qty;
-
+const rawValue = stock[variantKey];
+const currentVariantQty = isNaN(Number(rawValue)) ? 0 : Number(rawValue);
+const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
+const newVariantQty = currentVariantQty - safeQty;
 if(newVariantQty < 0){
 
 inventoryErrors.push({
@@ -632,14 +636,23 @@ const stock = productData.stock || {};
 
 if (!variantPart) {
 
-const currentQty = Number(stock || 0);
-  const newQty = currentQty + qty;
+let currentQty = Number(stock.default) || 0;
+const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
 
-  await update(productRef, {
-    "stock/إجمالي الكمية": newQty,
-    totalQty: newQty,
-    lastUpdate: new Date().toISOString()
-  });
+let newQty = currentQty + safeQty;
+
+if (isNaN(newQty)) {
+  console.error("❌ NaN بالراجع", { stock, qty });
+  return;
+}
+
+await update(productRef, {
+ stock: {
+  default: newQty
+},
+  totalQty: newQty,
+  lastUpdate: new Date().toISOString()
+});
 
 }
 else {
@@ -650,7 +663,8 @@ if(!variantKey){
 variantKey = variantPart.trim();
 }
   const currentVariantQty = Number(stock[variantKey] || 0);
-  const newVariantQty = currentVariantQty + qty;
+  const safeQty = Number(qty) || 0;
+const newVariantQty = currentVariantQty + safeQty;
 
   const updatedStock = {
     ...stock,

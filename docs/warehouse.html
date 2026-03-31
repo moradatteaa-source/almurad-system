@@ -521,10 +521,12 @@ if (variants.length > 0) {
   });
 } else {
   // منتج بدون متغيرات
-  stock = qty; // رقم مباشر
+stock = {
+  default: qty
+};
 }
 
-if (typeof stock === "number") {
+if (typeof stock === "object" && stock.default !== undefined) {
 
   if (!barcodes["main"]) {
     if (manualBarcode) {
@@ -577,8 +579,8 @@ variants.forEach(v => {
   const productRef = ref(db, "warehouse/" + name);
 let totalQty = 0;
 
-if (typeof stock === "number") {
-  totalQty = stock;
+if (typeof stock === "object" && stock.default !== undefined) {
+totalQty = stock.default || 0;
 } else if (typeof stock === "object") {
   totalQty = Object.values(stock).reduce((a, b) => a + b, 0);
 }
@@ -661,11 +663,10 @@ for (const [safeName, p] of productsArray) {
   const productName = p.name || safeName;
 let total = 0;
 
-if (typeof p.stock === "number") {
-  total = p.stock; // منتج بدون متغيرات
-} else if (typeof p.stock === "object") {
+if (typeof p.stock === "object") {
   total = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
 }
+
 const invoiceValue = (p.buyPrice || 0) * total;
 
 let variantsList = "";
@@ -685,9 +686,10 @@ if (typeof p.stock === "object") {
         </div>
       `;
     })
-    .join("");
+.join("");
+}
 
-} else if (typeof p.stock === "number") {
+else {
 
   variantsList = `
     <div style="margin:4px 0;text-align:center;">
@@ -764,12 +766,10 @@ onclick="auditProduct('${productName}')">
 
     products.forEach(([name, p]) => {
 let totalQty = 0;
-
-if (typeof p.stock === "number") {
-  totalQty = p.stock;
-} else if (typeof p.stock === "object") {
+if (typeof p.stock === "object") {
   totalQty = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
 }
+
       totalQtyAll += totalQty;
       totalBuyValue += totalQty * (p.buyPrice || 0);
 totalSellValue += totalQty * (p.prices?.pos || 0);
@@ -809,12 +809,16 @@ const data = snap.val();
 
 
 // إذا المنتج بدون متغيرات
-if (typeof data.stock === "number") {
+if (typeof data.stock === "object" && data.stock.default !== undefined) {
 document.getElementById("toggleVariantsBtn").style.display = "none";
-const newQty = data.stock + parseInt(qty);
+const newQty = (data.stock.default || 0) + parseInt(qty);
+
+data.stock.default = newQty;
 
 await update(ref(db, "warehouse/" + safeName), {
-stock: newQty,
+stock: {
+  default: newQty
+},
 totalQty: newQty,
 lastUpdate: new Date().toISOString()
 });
@@ -889,7 +893,7 @@ document.getElementById("sellPriceOnline").value = data.prices?.online || "";
     document.getElementById("productQty").value = data.totalQty || "";
     variants = [];
 
-if (typeof data.stock === "object") {
+if (Object.keys(data.stock).length === 1 && data.stock.default !== undefined) {
   document.getElementById("toggleVariantsBtn").style.display = "block";
   for (const [key, qty] of Object.entries(data.stock)) {
     const parts = key.split("|").map(s => s.trim());
@@ -907,7 +911,7 @@ if (typeof data.stock === "object") {
   document.getElementById("quantitySection").style.display = "none";
   document.getElementById("variantsSection").style.display = "block";
 
-} else if (typeof data.stock === "number") {
+} else {
 
   document.getElementById("productQty").value = data.stock;
   document.getElementById("quantitySection").style.display = "block";
@@ -1204,18 +1208,9 @@ if(!snap.exists()) return;
 
 const data = snap.val();
 
-if(typeof data.stock === "number"){
 
-await update(ref(db, "warehouse/" + safeName), {
-stock: parseInt(realQty),
-totalQty: parseInt(realQty),
-lastAudit: new Date().toISOString(),
-lastUpdate: new Date().toISOString()
-});
 
-}
-
-else if(typeof data.stock === "object"){
+if(typeof data.stock === "object"){
 
 const keys = Object.keys(data.stock);
 
@@ -1345,6 +1340,45 @@ btn.style.color = "#043B64";
 applyFilters();
 
 };
+window.fixOldWarehouse = async function(){
+
+  const warehouseRef = ref(db, "warehouse");
+  const snap = await get(warehouseRef);
+
+  if(snap.exists()){
+    const data = snap.val();
+
+    for(const [name, p] of Object.entries(data)){
+
+      let newStock = {};
+      let totalQty = 0;
+
+      if(typeof p.stock === "number"){
+        newStock = { default: p.stock };
+        totalQty = p.stock;
+      }
+
+      else if(p.stock && p.stock["إجمالي الكمية"] !== undefined){
+        newStock = { default: p.stock["إجمالي الكمية"] };
+        totalQty = p.stock["إجمالي الكمية"];
+      }
+
+      else if(typeof p.stock === "object"){
+        newStock = p.stock;
+        totalQty = Object.values(p.stock).reduce((a,b)=>a+Number(b||0),0);
+      }
+
+      await update(ref(db, "warehouse/" + name), {
+        stock: newStock,
+        totalQty: totalQty
+      });
+
+      console.log("✅ تم تصحيح:", name);
+    }
+
+    alert("✅ تم تصحيح كل المخزن");
+  }
+}
 </script>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 

@@ -1103,12 +1103,17 @@ const snap = await get(productRef);
     productData.stock[it.variant] =
       (productData.stock[it.variant] || 0) + it.quantity;
   } else {
-    productData.stock =
-      (productData.stock || 0) + it.quantity;
-  }
+if (!productData.stock || typeof productData.stock !== "object") {
+  productData.stock = { default: Number(productData.stock || 0) };
+}
 
-productData.totalQty =
-  Number(productData.totalQty || 0) + Number(it.quantity);
+const variant = it.variant === "-" ? "default" : it.variant;
+
+productData.stock[variant] =
+  (productData.stock[variant] || 0) + Number(it.quantity);
+  }
+productData.totalQty = Object.values(productData.stock)
+  .reduce((a,b)=>a + Number(b || 0),0);
 await update(productRef, {
   stock: productData.stock,
   totalQty: Number(productData.totalQty),
@@ -1135,12 +1140,17 @@ if (snap.exists()) {
     productData.stock[it.variant] =
       (productData.stock[it.variant] || 0) + it.quantity;
   } else {
-   productData.stock =
-  Number(productData.stock || 0) + Number(it.quantity);
+  if (!productData.stock || typeof productData.stock !== "object") {
+    productData.stock = { default: Number(productData.stock || 0) };
   }
 
-productData.totalQty =
-  Number(productData.totalQty || 0) + Number(it.quantity);
+  const variant = it.variant === "-" ? "default" : it.variant;
+
+  productData.stock[variant] =
+    (productData.stock[variant] || 0) + Number(it.quantity);
+}
+productData.totalQty = Object.values(productData.stock)
+  .reduce((a,b)=>a + Number(b || 0),0);
 
 await update(productRef, {
   stock: productData.stock,
@@ -1190,7 +1200,9 @@ if (it.variant !== "-") {
         online: parseFloat(document.getElementById("simpleSellPriceOnline").value) || 0
       },
 
-      stock: it.quantity,
+stock: {
+  default: it.quantity
+},
       totalQty: it.quantity,
       hasVariants: false,
       lastUpdate: new Date().toISOString()
