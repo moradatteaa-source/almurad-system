@@ -713,31 +713,59 @@ gap:8px;
   // ✅ USB BARCODE SCANNER (GLOBAL – بدون فوكس)
 let scanBuffer = "";
 let barcodeJustScanned = false; // ⭐ جديد
+let lastScannedValue = "";
 let scanTimer = null;
+function forceFocusToQuickInput(){
+  const input = document.getElementById("quickInput");
 
+  if(!input) return;
+
+  // ⛔ إذا دا نكتب كمية لا تغير الفوكس
+  if (qtyMode) return;
+
+  input.focus();
+}
 document.addEventListener("keydown", async (e) => {
 
   // Enter = نهاية الباركود
 if (e.key === "Enter") {
 if (scanBuffer.length >= 4 && /^\d+$/.test(scanBuffer)) {
 
-  barcodeJustScanned = true; // ⭐ أضف هذا
+const code = scanBuffer.trim();
+scanBuffer = "";
+if (code === lastScannedValue) return;
+lastScannedValue = code;
+if (barcodeJustScanned) return;
 
-  const code = scanBuffer.trim();
-  scanBuffer = "";
-  await handleBarcode(code);
+barcodeJustScanned = true;
 
-  setTimeout(()=>{
-    barcodeJustScanned = false; // ⭐ يرجع طبيعي بعد لحظة
-  },300);
+if (barcodeJustScanned) return;
 
+barcodeJustScanned = true;
+
+// 🔥 قفل فوري يمنع التكرار
 e.preventDefault();
 e.stopImmediatePropagation();
+e.stopPropagation();
+
+await handleBarcode(code);
+
+// 🔥 تأخير فك القفل
+setTimeout(()=>{
+  barcodeJustScanned = false;
+  lastScannedValue = "";
+},400);
+
+setTimeout(()=>{
+  barcodeJustScanned = false;
+  lastScannedValue = "";
+},500);
+e.preventDefault();
+e.stopImmediatePropagation();
+e.stopPropagation();
 
 // 🔥 رجّع الفوكس بعد الباركود
-setTimeout(()=>{
-  document.getElementById("quickInput")?.focus();
-},0);
+forceFocusToQuickInput();
 
 return;
 
@@ -759,6 +787,7 @@ if (/^\d$/.test(e.key)) {
       scanBuffer = "";
     }, 300);
   }
+  forceFocusToQuickInput();
 });
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -792,24 +821,37 @@ let lastKeyTime = Date.now(); // ✅ أضف هذا السطر
 // 🟦 GLOBAL POS KEYBOARD (FINAL)
 let qtyBuffer = "";
 let qtyMode = null;
-
+let lastSelectedRow = null;
 document.addEventListener("keydown", (e) => {
-  // 🛑 إذا الماسح يكتب باركود، لا نتدخل
+  // ✅ تشغيل وضع الكمية من الكيبورد
+if (e.key === "+" || (e.key === "=" && e.shiftKey)) {
+  qtyMode = "+";
+  qtyBuffer = "";
+  return;
+}
 
+if (e.key === "-") {
+  qtyMode = "-";
+  qtyBuffer = "";
+  return;
+}
+  // 🛑 إذا الماسح يكتب باركود، لا نتدخل
+if (barcodeJustScanned) return;
 
 console.log("KEY:", e.key, "SHIFT:", e.shiftKey);
 
-  // ➕ (Mac + Windows)
-  if (
-    (e.key === "=" && e.shiftKey) ||
-    e.key === "+" ||
-    e.key === "-"
-  ) {
-    qtyMode = (e.key === "-" ? "-" : "+");
-    qtyBuffer = "";
-    e.preventDefault();
-    return;
-  }
+// 🔥 اسمح للـ Enter يشتغل حتى داخل الحقول
+if (
+  el &&
+  (
+    el.classList.contains("searchInput") ||
+    el.classList.contains("qtyInput") ||
+    el.id === "addProductInput"
+  )
+) {
+  // ⛔ بس إذا عندك مود تعديل كمية لا تقطع
+  if (qtyMode) return;
+}
 
   // 🔢 أرقام
   if (qtyMode && /^\d$/.test(e.key)) {
@@ -1612,6 +1654,7 @@ setTimeout(()=>document.body.click(),0);
 const quickQty = document.getElementById("quickQty");
 
 quickInput.addEventListener("keydown", async (e) => {
+  if (qtyMode) return;
   if (e.key !== "Enter") return;
 
   const value = quickInput.value.trim();
@@ -1749,6 +1792,9 @@ r.innerHTML = `
 `;
 
 const searchInput = r.querySelector(".searchInput");
+r.addEventListener("click", () => {
+  lastSelectedRow = r;
+});
 enableKeyboardNavigation(searchInput);
 
 updateRowNumbers(); // ✅ هنا بالضبط
@@ -2460,20 +2506,24 @@ function normalizeQty(input){
 
 
 function applyQtyFromKeyboard(mode, value) {
-  let lastRow = null;
 
-  for (let i = table.rows.length - 1; i >= 1; i--) {
-    const r = table.rows[i];
-    const name = r.cells[0].querySelector("input").value;
-    if (name) {
-      lastRow = r;
-      break;
+  let row = lastSelectedRow;
+
+  // إذا ماكو تحديد → يرجع لآخر صف
+  if (!row) {
+    for (let i = table.rows.length - 1; i >= 1; i--) {
+      const r = table.rows[i];
+      const name = r.cells[0].querySelector("input").value;
+      if (name) {
+        row = r;
+        break;
+      }
     }
   }
 
-  if (!lastRow) return;
+  if (!row) return;
 
-  const qtyInput = lastRow.cells[3].querySelector("input");
+  const qtyInput = row.cells[3].querySelector("input");
   let current = Number(qtyInput.value || 1);
 
   if (mode === "+") current += value;
@@ -2539,6 +2589,7 @@ document.addEventListener("keydown", (e) => {
   // لا تتدخل إذا داخل input
 const el = document.activeElement;
 
+// 🔥 لا توقف Enter إذا عدنا تعديل كمية
 if (
   el &&
   (
@@ -2546,7 +2597,9 @@ if (
     el.classList.contains("qtyInput") ||
     el.id === "addProductInput"
   )
-) return;
+) {
+  if (qtyMode) return; // ⛔ فقط إذا نكتب كمية
+}
 
 
   if (e.key !== "Enter") return;
