@@ -514,9 +514,13 @@ async function loadVariantsForProduct(container, productName, productObj) {
   const productData = snap.val();
 
   const stock = productData.stock || {};
-  const activeKeys = Object.entries(stock)
-    .filter(([key, val]) => Number(val) > 0 && key !== "إجمالي الكمية")
-    .map(([key]) => key);
+const activeKeys = Object.entries(stock)
+  .filter(([key, val]) =>
+    Number(val) > 0 &&
+    key !== "إجمالي الكمية" &&
+    key !== "default"
+  )
+  .map(([key]) => key);
 
   if (activeKeys.length === 0) return;
 
@@ -1165,12 +1169,12 @@ async function updateStockOnOrderCreate(productsDetailed) {
     }
 
     // 🟢 إذا ماكو متغيرات للمنتج → ينقص من إجمالي الكمية
-    else if (stock["إجمالي الكمية"] !== undefined) {
-      const before = Number(stock["إجمالي الكمية"]) || 0;
+else if (stock.default !== undefined){
+const before = Number(stock.default) || 0;
       const after = before - qty;
-      stock["إجمالي الكمية"] = after;
+    stock.default = after;
 
-      await set(ref(db, `warehouse/${name}/stock/إجمالي الكمية`), after);
+await set(ref(db, `warehouse/${name}/stock/default`), after);
     }
 
     // 🔄 إعادة حساب الإجمالي مثل صفحة التفاصيل
