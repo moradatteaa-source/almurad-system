@@ -273,7 +273,9 @@ html, body {
           <input id="phone2" type="text">
         </div>
       </div>
+      
     </div>
+    
           <div class="field single">
   <label>مصدر الطلب:</label>
 
@@ -412,6 +414,23 @@ function normalizeIraqiPhone(phone) {
 
   return "0" + raw;
 }
+function convertArabicToEnglishNumbers(value) {
+  const map = {
+    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4",
+    "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"
+  };
+
+  return value.replace(/[٠-٩]/g, d => map[d]);
+}
+
+// 🔥 تحويل مباشر أثناء الكتابة
+document.getElementById("phone1").addEventListener("input", e => {
+  e.target.value = convertArabicToEnglishNumbers(e.target.value);
+});
+
+document.getElementById("phone2").addEventListener("input", e => {
+  e.target.value = convertArabicToEnglishNumbers(e.target.value);
+});
 function createDropdown(options, selected, onChange) {
   const wrapper = document.createElement("div");
 
