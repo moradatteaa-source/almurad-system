@@ -35,6 +35,40 @@ th{background:#f9fafc;color:var(--blue)}
   .charts{display:flex;flex-direction:column}
   .cards{grid-template-columns:repeat(2,1fr)}
 }
+.chart-row{
+  display:flex;
+  gap:15px;
+  margin-bottom:20px;
+}
+.chart-box{
+  flex:1;
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  min-height:250px;
+}
+.chart-info{
+  
+  flex:1;
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.chart-box canvas{
+  width:100% !important;
+  height:100% !important;
+}
+/* موبايل */
+@media(max-width:768px){
+  .chart-row{
+    flex-direction:column;
+  }
+}
 </style>
 </head>
 <body>
@@ -63,9 +97,19 @@ th{background:#f9fafc;color:var(--blue)}
 
   <div class="cards" id="statusCards"></div>
   
-  <div class="chart-container">
+<div class="chart-row">
+  
+  <!-- الدائرة -->
+  <div class="chart-box">
     <canvas id="mainChart"></canvas>
   </div>
+
+  <!-- معلومات أو جارت ثاني -->
+  <div class="chart-info" id="extraInfo">
+    <!-- هنا نعرض افضل منتج -->
+  </div>
+
+</div>
 
   <div class="table-wrap" id="summaryTableWrap">
     <h3 style="color:var(--blue)">📋 ملخص الموظفين</h3>
@@ -208,18 +252,33 @@ function renderAllEmployees(filtered){
   const usersData={};
   filtered.forEach(o=>{
     const u=o.fixedBy||'غير محدد';
-    usersData[u]=usersData[u]||{del:0,ret:0,rej:0,total:0};
-    usersData[u].total++;
-    if(o.status==="تم التسليم")usersData[u].del++;
-    if(o.status==="راجع")usersData[u].ret++;
-    if(o.status==="رفض")usersData[u].rej++;
+   usersData[u]=usersData[u]||{del:0,ret:0,rej:0,total:0,outgoing:0};
+
+// كل الطلبات
+usersData[u].total++;
+
+// ✅ الطالع (من قيد التوصيل وما بعدها)
+if(["قيد التوصيل","تم التسليم","راجع","تم استلام الراجع"].includes(o.status)){
+  usersData[u].outgoing++;
+}
+
+// التسليم
+if(o.status==="تم التسليم") usersData[u].del++;
+
+// ✅ الراجع (راجع + تم استلام الراجع)
+if(o.status==="راجع" || o.status==="تم استلام الراجع"){
+  usersData[u].ret++;
+}
+
+// رفض
+if(o.status==="رفض") usersData[u].rej++;
   });
 
   const summary=[];
   for(const u in usersData){
     const d=usersData[u];
     const rate=d.total?((d.del/d.total)*100).toFixed(1):0;
-    const retRate=d.total?((d.ret/d.total)*100).toFixed(1):0;
+const retRate=d.outgoing?((d.ret/d.outgoing)*100).toFixed(1):0;
     const commission=(d.del*(commissionRates[u]||250));
 
 
@@ -263,7 +322,10 @@ set(ref(db,"commissions/"+u),commission);
     <div class="card"><h3>إجمالي الطلبات</h3><p>${filtered.length}</p></div>
     <div class="card"><h3>عدد الموظفين</h3><p>${Object.keys(usersData).length}</p></div>
     <div class="card"><h3>أفضل أداء</h3><p>${summary[0]?.u||'-'}</p></div>
-    <div class="card"><h3>💰 العمولة الكلية</h3><p>${totalCommission.toLocaleString()}</p></div>
+<div class="card">
+  <h3>💰 العمولة</h3>
+  <p>${commission.toLocaleString()} دينار</p>
+</div>
   `;
 
   tbody.innerHTML="";
@@ -273,24 +335,79 @@ set(ref(db,"commissions/"+u),commission);
 }
 
 function renderSingleUser(filtered,user){
-  const counts={مثبت:0,"تم التسليم":0,راجع:0,رفض:0,total:0};
+const counts={
+  مثبت:0,
+  "قيد التوصيل":0,
+  "تم التسليم":0,
+  "راجع":0,
+  "تم استلام الراجع":0,
+  رفض:0,
+  total:0
+};
   filtered.forEach(o=>{const st=(o.status||"").trim();counts[st]=(counts[st]||0)+1;counts.total++;});
   const delivered=counts["تم التسليم"]||0;
-  const returned=counts.راجع||0;
+
   const rejected=counts.رفض||0;
   const rate=counts.total?((delivered/counts.total)*100).toFixed(1):0;
-  const returnRate=counts.total?((returned/counts.total)*100).toFixed(1):0;
-  const commission=(delivered*(commissionRates[user]||250));
+const returned=(counts["راجع"]||0) + (counts["تم استلام الراجع"]||0);
 
-  cards.innerHTML=`
-    <div class="card"><h3>📦 مثبت</h3><p>${counts.مثبت}</p></div>
-    <div class="card"><h3>🚚 تم التسليم</h3><p>${delivered}</p></div>
-    <div class="card"><h3>🔁 راجع</h3><p>${returned}</p></div>
-    <div class="card"><h3>❌ رفض</h3><p>${rejected}</p></div>
-    <div class="card"><h3>⭐ نسبة الإنجاز</h3><p>${rate}%</p></div>
-    <div class="card"><h3>⚠️ نسبة الراجع</h3><p>${returnRate}%</p></div>
-    <div class="card"><h3>💰 العمولة الكلية</h3><p>${commission.toLocaleString()}</p></div>
-  `;
+// الطالع
+const outgoing = (counts["قيد التوصيل"]||0)
+               + (counts["تم التسليم"]||0)
+               + (counts["راجع"]||0)
+               + (counts["تم استلام الراجع"]||0);
+
+const returnRate=outgoing?((returned/outgoing)*100).toFixed(1):0;
+const rejectRate=counts.total?((rejected/counts.total)*100).toFixed(1):0;
+  const commission=(delivered*(commissionRates[user]||250));
+// حساب أفضل منتج
+const productCount = {};
+
+filtered.forEach(o=>{
+  if(o.productName){
+    productCount[o.productName] = (productCount[o.productName] || 0) + 1;
+  }
+});
+
+let bestProduct = "-";
+let max = 0;
+
+for(const p in productCount){
+  if(productCount[p] > max){
+    max = productCount[p];
+    bestProduct = p;
+  }
+}
+
+// عرضها
+document.getElementById("extraInfo").innerHTML = `
+  <h3 style="color:#043B64">🔥 أفضل منتج</h3>
+  <p style="font-size:18px;font-weight:bold">${bestProduct}</p>
+  <p>عدد الطلبات: ${max}</p>
+`;
+cards.innerHTML=`
+  <div class="card"><h3>📊 الإجمالي</h3><p>${counts.total}</p></div>
+
+  <div class="card"><h3>📦 مثبت</h3><p>${counts.مثبت}</p></div>
+
+  <div class="card"><h3>🚚 قيد التوصيل</h3><p>${counts["قيد التوصيل"]||0}</p></div>
+
+  <div class="card"><h3>✅ تم التسليم</h3><p>${delivered}</p></div>
+
+<div class="card">
+  <h3>🔁 راجع</h3>
+  <p>${returned}</p>
+  <small>${returnRate}%</small>
+</div>
+
+<div class="card">
+  <h3>❌ رفض</h3>
+  <p>${rejected}</p>
+  <small>${rejectRate}%</small>
+</div>
+
+  <div class="card"><h3>💰 العمولة</h3><p>${commission.toLocaleString()} دينار</p></div>
+`;
 
   const ctx=document.getElementById('mainChart').getContext('2d');
   if(chart)chart.destroy();
@@ -300,7 +417,11 @@ function renderSingleUser(filtered,user){
       labels:['تم التسليم','راجع','رفض'],
       datasets:[{data:[delivered,returned,rejected],backgroundColor:['#198754','#FF6B2D','#DC3545']}]
     },
-    options:{plugins:{legend:{position:'bottom'}}}
+options:{
+  responsive:true,
+  maintainAspectRatio:false,
+  plugins:{legend:{position:'bottom'}}
+}
   });
 
   tbody.innerHTML="";
