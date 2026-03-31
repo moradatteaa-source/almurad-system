@@ -731,9 +731,16 @@ if (scanBuffer.length >= 4 && /^\d+$/.test(scanBuffer)) {
     barcodeJustScanned = false; // ⭐ يرجع طبيعي بعد لحظة
   },300);
 
-  e.preventDefault();
-  e.stopPropagation();
-  return;
+e.preventDefault();
+e.stopImmediatePropagation();
+
+// 🔥 رجّع الفوكس بعد الباركود
+setTimeout(()=>{
+  document.getElementById("quickInput")?.focus();
+},0);
+
+return;
+
 }else {
     // ⬅️ مو باركود، خلّي Enter يكمّل طريقه
     scanBuffer = "";
@@ -2321,7 +2328,13 @@ window.loadParkedInvoice = loadParkedInvoice;
 window.closeParkedModal = closeParkedModal;
 window.calc = calc; // 🔥 هذا الحل
 window.onload = () => {
-  document.getElementById("quickInput")?.focus();
+  const input = document.getElementById("quickInput");
+  input?.focus();
+
+  // 🔥 يرجع الفوكس اذا ضاع
+  document.addEventListener("click", () => {
+    setTimeout(()=>input?.focus(), 0);
+  });
 };
 
 
