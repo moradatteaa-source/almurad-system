@@ -700,7 +700,9 @@ async function loadVariants(productName) {
   if (!productData || !productData.stock) return;
 
   const stock = productData.stock;
-  const activeKeys = Object.keys(stock).filter(k => k !== "إجمالي الكمية" && stock[k] > 0);
+const activeKeys = Object.keys(stock).filter(
+  k => k !== "إجمالي الكمية" && k !== "default" && stock[k] > 0
+);
   if (activeKeys.length === 0) return;
 
   const savedVariantsSnap = await get(ref(db, `orders/${orderId}/selectedVariants`));
@@ -786,7 +788,9 @@ async function loadVariantsForExtra(container, productName, productObj) {
   if (!productData || !productData.stock) return;
 
   const stock = productData.stock;
-  const activeKeys = Object.keys(stock).filter(k => k !== "إجمالي الكمية" && stock[k] > 0);
+const activeKeys = Object.keys(stock).filter(
+  k => k !== "إجمالي الكمية" && k !== "default" && stock[k] > 0
+);
   if (activeKeys.length === 0) return;
 
   const variantsMap = {};
