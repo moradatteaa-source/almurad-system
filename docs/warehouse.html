@@ -1257,13 +1257,17 @@ if(!snap.exists()) return;
 
 const data = snap.val();
 
-for(const key in data){
+const updates = {};
 
-await update(ref(db,"warehouse/"+key),{
-lastAudit: null
-});
+for(const [key, p] of Object.entries(data)){
+
+  if(p.lastAudit){ // 🔥 فقط المجروود
+    updates["warehouse/" + key + "/lastAudit"] = "";
+  }
 
 }
+
+await update(ref(db), updates);
 
 alert("✅ تم تصفير الجرد لكل المنتجات");
 

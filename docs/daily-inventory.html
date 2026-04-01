@@ -495,6 +495,22 @@ scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name
 
 const productData = productSnap.val();
 const stock = productData.stock || {};
+// 🔥 منع التخريب إذا المنتج بي متغيرات
+const hasVariants = Object.keys(stock).some(k => k.includes("|"));
+
+if (!variantPart && hasVariants) {
+
+  inventoryErrors.push({
+    name: name,
+    variant: "-",
+    problem: "يجب اختيار متغير (لون / قياس)",
+    qty: qty
+  });
+
+  renderErrors();
+
+  continue; // ❌ يوقف العملية
+}
 
 if (!variantPart) {
 
@@ -521,13 +537,22 @@ await update(productRef, {
 }
 
 else {
-
 let variantKey = findMatchingVariant(stock, variantPart);
 
 if(!variantKey){
-variantKey = variantPart.trim();
-}
+  console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
 
+  inventoryErrors.push({
+    name: name,
+    variant: variantPart,
+    problem: "متغير غير موجود بالمخزن",
+    qty: qty
+  });
+
+  renderErrors();
+
+  continue;
+}
 const rawValue = stock[variantKey];
 const currentVariantQty = isNaN(Number(rawValue)) ? 0 : Number(rawValue);
 const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
@@ -633,7 +658,22 @@ scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name
 
 const productData = productSnap.val();
 const stock = productData.stock || {};
+// 🔥 منع التخريب إذا المنتج بي متغيرات
+const hasVariants = Object.keys(stock).some(k => k.includes("|"));
 
+if (!variantPart && hasVariants) {
+
+  inventoryErrors.push({
+    name: name,
+    variant: "-",
+    problem: "يجب اختيار متغير (لون / قياس)",
+    qty: qty
+  });
+
+  renderErrors();
+
+  continue; // ❌ يوقف العملية
+}
 if (!variantPart) {
 
 let currentQty = Number(stock.default) || 0;
@@ -660,7 +700,18 @@ else {
 let variantKey = findMatchingVariant(stock, variantPart);
 
 if(!variantKey){
-variantKey = variantPart.trim();
+  console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
+
+  inventoryErrors.push({
+    name: name,
+    variant: variantPart,
+    problem: "متغير غير موجود بالمخزن",
+    qty: qty
+  });
+
+  renderErrors();
+
+  continue;
 }
   const currentVariantQty = Number(stock[variantKey] || 0);
   const safeQty = Number(qty) || 0;
