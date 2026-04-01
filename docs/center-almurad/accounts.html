@@ -208,7 +208,9 @@ function toggleDetails(row, inv){
   html += `
       <tr style="font-weight:bold;background:#eef3f7">
         <td colspan="3">مجموع الفاتورة</td>
-        <td>${fmt(inv.grand)} د.ع</td>
+  <td style="color:${inv.grand < 0 ? 'red' : 'black'}">
+  ${fmt(inv.grand)} د.ع
+</td>
       </tr>
     </table>
   `;
@@ -257,9 +259,13 @@ function render(data){
 const row = table.insertRow();
 row.style.cursor = "pointer";
 
+// 🔴 إذا الفاتورة سالب نخلي الصف كله أحمر
+if (inv.grand < 0) {
+  row.style.color = "red";
+}
+
 row.innerHTML = `
 <td>${inv.cashierId || "غير معروف"}</td>
-
 <td>${fmt(inv.invoiceNo)}</td>
 <td>${inv.date}</td>
 <td>${fmt(inv.grand)} د.ع</td>
@@ -277,9 +283,18 @@ table.insertRow().innerHTML = `
   <td></td>
   <td></td>
   <td><strong>المجموع</strong></td>
-  <td class="total">${fmt(total)} د.ع</td>
-  <td class="total">${fmt(paid)} د.ع</td>
-  <td class="total">${fmt(debt)} د.ع</td>
+
+  <td class="total" style="color:${total < 0 ? 'red' : '#FF6B2D'}">
+    ${fmt(total)} د.ع
+  </td>
+
+  <td class="total" style="color:${paid < 0 ? 'red' : '#FF6B2D'}">
+    ${fmt(paid)} د.ع
+  </td>
+
+  <td class="total" style="color:${debt < 0 ? 'red' : '#FF6B2D'}">
+    ${fmt(debt)} د.ع
+  </td>
 `;
 
 }
@@ -361,11 +376,17 @@ function loadInvoices() {
         dateStr = today();
       }
 
-      invoices.push({
-        invoiceNo: inv.invoiceNo || 0,
-        date: dateStr,
-        grand: Number(inv.total || 0),
-        paid: Number(inv.paid || 0),
+invoices.push({
+  invoiceNo: inv.invoiceNo || 0,
+  date: dateStr,
+
+  // 🔴 إذا راجع نخليها سالب
+  grand: inv.type === "return"
+    ? -Math.abs(Number(inv.total || 0))
+    : Number(inv.total || 0),
+   paid: inv.type === "return"
+  ? -Math.abs(Number(inv.paid || 0))
+  : Number(inv.paid || 0),
         rest: Number(inv.total || 0) - Number(inv.paid || 0),
         cashierId: inv.cashierId || "غير معروف",
         items: inv.items || []

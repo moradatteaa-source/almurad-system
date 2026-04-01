@@ -716,11 +716,24 @@ let barcodeJustScanned = false; // ⭐ جديد
 let lastScannedValue = "";
 let scanTimer = null;
 function forceFocusToQuickInput(){
+
   const input = document.getElementById("quickInput");
 
   if(!input) return;
 
-  // ⛔ إذا دا نكتب كمية لا تغير الفوكس
+  // 🔥 لا تغير الفوكس إذا المستخدم داخل أي input
+  const active = document.activeElement;
+
+  if (
+    active &&
+    (
+      active.tagName === "INPUT" ||
+      active.tagName === "TEXTAREA"
+    )
+  ){
+    return;
+  }
+
   if (qtyMode) return;
 
   input.focus();
@@ -1160,13 +1173,31 @@ const discount = Number(document.getElementById("discount").value || 0);
 // 🔵 تقريب الخصم لأقرب 250
 const fixedDiscount = Math.floor(discount / 250) * 250;
 
-// 🔹 المنتجات بدون خصم
-rowsData.forEach(item => {
-  item.row.cells[4].textContent = f(item.rowTotal);
-});
-// 🔹 المنتجات بدون خصم
-rowsData.forEach(item => {
-  item.row.cells[4].textContent = f(item.rowTotal);
+// 🔹 توزيع الخصم على المنتجات
+let distributed = 0;
+
+rowsData.forEach((item, index) => {
+
+  let share = 0;
+
+  if(total > 0){
+    share = (item.rowTotal / total) * fixedDiscount;
+  }
+
+  // 🔵 تقريب
+  share = Math.floor(share / 250) * 250;
+
+  // 🔴 آخر عنصر ياخذ الفرق
+  if(index === rowsData.length - 1){
+    share = fixedDiscount - distributed;
+  }
+
+  distributed += share;
+
+  const newTotal = item.rowTotal - share;
+
+  item.row.cells[4].textContent = f(newTotal);
+
 });
   // 🔹 عرض المجموع
 grandEl.textContent = f(total - fixedDiscount);
@@ -2142,6 +2173,8 @@ resetRows();
 grandEl.textContent = f(0);
 restEl.textContent = f(0);
 document.getElementById("discount").value = 0;
+
+calc(); // 🔥 هذا مهم جداً
 }
 function parkInvoice(){
   const rows = [];
@@ -2377,7 +2410,9 @@ window.onload = () => {
   const input = document.getElementById("quickInput");
   input?.focus();
 
-
+  // 🔥 تصفير الخصم عند بداية الكاشير
+  document.getElementById("discount").value = 0;
+  calc();
 };
 
 

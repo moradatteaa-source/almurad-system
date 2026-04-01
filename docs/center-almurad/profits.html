@@ -244,8 +244,7 @@ if (to && invDate > to) return;
       const sellTotal = Number(it.total);
 const qty = Number(it.qty);
 
-// تجاهل المسترجع
-if (qty <= 0) return;
+
 
 const buyTotal  = buyPrice * qty;
 const profit    = sellTotal - buyTotal;
@@ -253,17 +252,21 @@ const profit    = sellTotal - buyTotal;
 
       netProfit += profit;
       found = true;
+const r = table.insertRow();
 
-      const r = table.insertRow();
-      r.innerHTML = `
-     <td>${invDate}</td>
+// 🔴 إذا الربح سالب خلي الصف أحمر
+if (profit < 0) {
+  r.style.color = "red";
+}
 
-        <td>${it.product}</td>
-        <td>${it.qty}</td>
-        <td>${sellTotal.toLocaleString("en-US")} د.ع</td>
-        <td>${buyTotal.toLocaleString("en-US")} د.ع</td>
-        <td>${profit.toLocaleString("en-US")} د.ع</td>
-      `;
+r.innerHTML = `
+  <td>${invDate}</td>
+  <td>${it.product}</td>
+  <td>${it.qty}</td>
+  <td>${sellTotal.toLocaleString("en-US")} د.ع</td>
+  <td>${buyTotal.toLocaleString("en-US")} د.ع</td>
+  <td>${profit.toLocaleString("en-US")} د.ع</td>
+`;
     });
   });
 
