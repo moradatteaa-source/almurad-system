@@ -498,7 +498,7 @@ const stock = productData.stock || {};
 // 🔥 منع التخريب إذا المنتج بي متغيرات
 const hasVariants = Object.keys(stock).some(k => k.includes("|"));
 
-if (!variantPart && hasVariants) {
+if ((!variantPart || variantPart.trim() === "") && hasVariants) {
 
   inventoryErrors.push({
     name: name,
@@ -538,7 +538,7 @@ await update(productRef, {
 
 else {
 let variantKey = findMatchingVariant(stock, variantPart);
-
+if (!variantPart) continue;
 if(!variantKey){
   console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
 
@@ -556,7 +556,7 @@ if(!variantKey){
 const rawValue = stock[variantKey];
 const currentVariantQty = isNaN(Number(rawValue)) ? 0 : Number(rawValue);
 const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
-const newVariantQty = currentVariantQty - safeQty;
+let newVariantQty = currentVariantQty - safeQty;
 if(newVariantQty < 0){
 
 inventoryErrors.push({
@@ -567,8 +567,6 @@ qty:newVariantQty
 });
 
 renderErrors();
-
-newVariantQty = 0;
 
 }
 
@@ -661,7 +659,7 @@ const stock = productData.stock || {};
 // 🔥 منع التخريب إذا المنتج بي متغيرات
 const hasVariants = Object.keys(stock).some(k => k.includes("|"));
 
-if (!variantPart && hasVariants) {
+if ((!variantPart || variantPart.trim() === "") && hasVariants) {
 
   inventoryErrors.push({
     name: name,
@@ -698,7 +696,7 @@ await update(productRef, {
 else {
 
 let variantKey = findMatchingVariant(stock, variantPart);
-
+if (!variantPart) continue;
 if(!variantKey){
   console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
 

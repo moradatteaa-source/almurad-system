@@ -893,7 +893,8 @@ document.getElementById("sellPriceOnline").value = data.prices?.online || "";
     document.getElementById("productQty").value = data.totalQty || "";
     variants = [];
 
-if (Object.keys(data.stock).length === 1 && data.stock.default !== undefined) {
+// ✅ إذا المنتج بي متغيرات
+if (typeof data.stock === "object" && data.stock.default === undefined) {
   document.getElementById("toggleVariantsBtn").style.display = "block";
   for (const [key, qty] of Object.entries(data.stock)) {
     const parts = key.split("|").map(s => s.trim());
@@ -913,7 +914,7 @@ if (Object.keys(data.stock).length === 1 && data.stock.default !== undefined) {
 
 } else {
 
-  document.getElementById("productQty").value = data.stock;
+document.getElementById("productQty").value = data.stock?.default || 0;
   document.getElementById("quantitySection").style.display = "block";
   document.getElementById("variantsSection").style.display = "none";
 }
