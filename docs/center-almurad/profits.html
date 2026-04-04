@@ -241,13 +241,21 @@ if (to && invDate > to) return;
     inv.items.forEach(it=>{
  const buyPrice = getBuyPrice(it.product);
 
-      const sellTotal = Number(it.total);
-const qty = Number(it.qty);
+const sellTotal = Number(it.total) || 0;
+const qty = Number(it.qty) || 0;
 
+const absQty = Math.abs(qty);
 
+let profit;
+let buyTotal;
 
-const buyTotal  = buyPrice * qty;
-const profit    = sellTotal - buyTotal;
+if (qty > 0) {
+  buyTotal = buyPrice * absQty;
+  profit = sellTotal - buyTotal;
+} else {
+  buyTotal = buyPrice * absQty;
+  profit = -(sellTotal - buyTotal);
+}
 
 
       netProfit += profit;
