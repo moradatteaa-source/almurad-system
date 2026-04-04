@@ -795,12 +795,16 @@ return;
 if (/^\d$/.test(e.key)) {
   scanBuffer += e.key;
 
-    clearTimeout(scanTimer);
-    scanTimer = setTimeout(() => {
-      scanBuffer = "";
-    }, 300);
-  }
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    scanBuffer = "";
+  }, 300);
+}
+
+// ❌ لا ترجع الفوكس إذا احنا بوضع الكمية
+if (!qtyMode) {
   forceFocusToQuickInput();
+}
 });
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -836,14 +840,34 @@ let qtyBuffer = "";
 let qtyMode = null;
 let lastSelectedRow = null;
 document.addEventListener("keydown", (e) => {
+  // ⛔ إذا المستخدم داخل البحث لا تتدخل نهائياً
+const el = document.activeElement;
+
+// ❌ لا تمنع إذا عدنا وضع الكمية
+if (
+  el &&
+  (
+    el.classList.contains("searchInput") ||
+    el.id === "quickInput"
+  )
+){
+  // ⛔ فقط إذا مو داخل وضع الكمية
+  if (!qtyMode) {
+    if (["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+      return;
+    }
+  }
+}
   // ✅ تشغيل وضع الكمية من الكيبورد
 if (e.key === "+" || (e.key === "=" && e.shiftKey)) {
+  e.preventDefault(); // 🔥 مهم جداً
   qtyMode = "+";
   qtyBuffer = "";
   return;
 }
 
 if (e.key === "-") {
+  e.preventDefault(); // 🔥 مهم جداً
   qtyMode = "-";
   qtyBuffer = "";
   return;
@@ -879,7 +903,7 @@ if (e.key === "Enter" && qtyMode && qtyBuffer) {
   qtyMode = null;
   qtyBuffer = "";
   e.preventDefault();
-  e.stopPropagation();
+
   return;
 }
 
@@ -1078,12 +1102,23 @@ function enableKeyboardNavigation(input) {
 
 input.addEventListener("keydown", (e) => {
 
+  // 🔥 هذا أهم سطر
+ e.stopImmediatePropagation();
+
+
   const items = dropdown.querySelectorAll("div");
 
-  // 🔥 Enter يغلق المنسدلة دائماً
-  if (e.key === "Enter") {
+if (e.key === "Enter") {
+  e.preventDefault();
+
+  if (currentIndex >= 0) {
+    items[currentIndex].click(); // 🔥 اختار العنصر
     dropdown.style.display = "none";
+    currentIndex = -1;
   }
+
+  return;
+}
 
   if (!items.length) return;
 
@@ -1132,7 +1167,7 @@ function highlightItem(items, index) {
   });
 
   // 🔥 هذا السطر المهم
-scrollIntoView({
+items[index].scrollIntoView({
   block: "center"
 });
 }
@@ -1953,6 +1988,8 @@ function multiplyRow(input) {
 
 // حفظ
 async function saveInvoice(){
+  if (window.isSaving) return;
+window.isSaving = true;
   const items=[];
 for(let i=1;i<table.rows.length;i++){
     const r=table.rows[i];
@@ -2059,12 +2096,19 @@ await update(productRef, {
 
 
 
+const newTotal = Number(
+  r.cells[4].textContent.replace(/[^\d\-]/g, "")
+);
+
+const unitPriceAfterDiscount = qty > 0
+  ? Math.round(newTotal / qty)
+  : 0;
 
 items.push({
   product: name,
   qty: isReturnMode ? -qty : qty,
-  price: prod.price,
-  total: isReturnMode ? -prod.price * qty : prod.price * qty
+  price: unitPriceAfterDiscount,
+  total: newTotal
 });
 
 
@@ -2175,6 +2219,9 @@ restEl.textContent = f(0);
 document.getElementById("discount").value = 0;
 
 calc(); // 🔥 هذا مهم جداً
+setTimeout(() => {
+  window.isSaving = false;
+}, 1000);
 }
 function parkInvoice(){
   const rows = [];
@@ -2630,27 +2677,29 @@ if (
     el.id === "addProductInput"
   )
 ) {
-  if (qtyMode) return; // ⛔ فقط إذا نكتب كمية
+
 }
 
 
-  if (e.key !== "Enter") return;
-// ⛔ إذا Enter جاي من باركود لا تحفظ
-if (barcodeJustScanned) return;
-  const now = Date.now();
+if (e.key !== "Enter") return;
 
-  if (now - lastEnterTime < 350) {
-    console.log("💾 DOUBLE ENTER → SAVE");
+const now = Date.now();
 
-    e.preventDefault();
-    e.stopImmediatePropagation(); // 🔥 هذا يحسم كل التعارض
+if (now - lastEnterTime < 350) {
 
-    saveInvoice();
-    lastEnterTime = 0;
-  } else {
-    lastEnterTime = now;
-  }
+  if (window.isSaving) return;
 
+  console.log("💾 DOUBLE ENTER → SAVE");
+
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  saveInvoice();
+  lastEnterTime = 0;
+
+} else {
+  lastEnterTime = now; // 🔥 هذا السطر المهم
+}
 }, true); // 🔥 capture phase
 
 function updateRowNumbers(){

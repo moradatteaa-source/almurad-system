@@ -715,7 +715,7 @@ const bonus = pointsData[emp]?.bonus || 0
 const penalty = pointsData[emp]?.penalty || 0
 
 const netPoints = (bonus || 0) - (penalty || 0)
-const pointsValue = netPoints * globalPointPrice
+const pointsValue = pointsValueMap[emp] || 0
 
 const finalSalary = base + commission + (netPoints * globalPointPrice)
 
