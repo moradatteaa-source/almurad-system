@@ -896,7 +896,7 @@ if (phone2) {
 
 
     if (!product) errors.push("اسم المنتج مطلوب");
-    if (!price || isNaN(price) || price <= 0) errors.push("السعر غير صالح");
+if (price === "" || isNaN(price) || price < 0) errors.push("السعر غير صالح");
     if (!qty || isNaN(qty) || qty <= 0) errors.push("عدد القطع غير صالح");
 // المحافظة يجب أن تكون من القائمتين فقط
 if (!allCities.includes(city)) {

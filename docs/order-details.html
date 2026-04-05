@@ -1484,7 +1484,7 @@ if (phone1.length !== 11) {
 
   // 6) السعر
   const price = document.getElementById("price").value.replace(/,/g, "").trim();
-  if (!price || Number(price) <= 0) {
+if (price === "" || isNaN(price) || Number(price) < 0){
     errorField("#price", "⚠️ يرجى كتابة السعر");
   }
 
@@ -1523,7 +1523,7 @@ valid = false;
       showToast(`⚠️ العدد غير صحيح للمنتج: ${p.name}`);
       valid = false;
     }
-    if (p.price <= 0) {
+if (p.price < 0) {
       const input = card.querySelector(".price-input");
       input.classList.add("input-error");
       showToast(`⚠️ السعر غير صحيح للمنتج: ${p.name}`);
