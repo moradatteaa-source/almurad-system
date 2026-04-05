@@ -938,11 +938,11 @@ if (o.status === "قيد المعالجة") {
 </div>
 
       <div class="left-side">
-        <div class="qty">${o.quantity || 1}</div>
+     <div class="qty">${o.totalQty || o.quantity || 1}</div>
 
-        <div class="price">
-        ${Number(o.price || 0).toLocaleString("en-US")} د.ع
-        </div>
+<div class="price">
+${Number(o.totalPrice || o.price || 0).toLocaleString("en-US")} د.ع
+</div>
 
       <div class="advertiser">
   ${o.advertiser || ""}

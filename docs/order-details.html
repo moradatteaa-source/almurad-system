@@ -1728,7 +1728,8 @@ await fetch("https://YOUR_SERVER/api/update-stock-on-status", {
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadOrder();
-
+document.getElementById("price").addEventListener("input", updateTotals);
+document.getElementById("quantity").addEventListener("input", updateTotals);
   // ✅ مراقبة كل الحقول لتسجيل أي تعديل (نفس نظام الطلبات)
   ["code","phone1","phone2","address","price","quantity","notes","advertiser"].forEach(id => {
     const el = document.getElementById(id);
