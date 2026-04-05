@@ -924,7 +924,7 @@ if (!allowedAreas.includes(area)) {
     // 🟣 التحقق من كل منتج إضافي
     extraProducts.forEach((p, i) => {
       if (!p.name) errors.push(`اسم المنتج الإضافي رقم ${i + 1} مطلوب`);
-      if (!p.price || p.price <= 0) errors.push(`سعر المنتج الإضافي رقم ${i + 1} غير صالح`);
+    if (p.price === "" || isNaN(p.price) || p.price < 0) errors.push(`سعر المنتج الإضافي رقم ${i + 1} غير صالح`);
       if (!p.qty || p.qty <= 0) errors.push(`كمية المنتج الإضافي رقم ${i + 1} غير صالحة`);
 
    if (p.name && productHasVariants(p.name)) {

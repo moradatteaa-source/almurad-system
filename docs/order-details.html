@@ -897,7 +897,7 @@ function addExtraProduct(product = { id: Date.now() + Math.random(), name: "", p
       row.innerHTML = `
         <div class="field small">
           <label>السعر:</label>
-          <input type="number" class="price-input" value="${product.price || ""}">
+          <input type="number" class="price-input"value="${product.price ?? ""}">
         </div>
         <div class="field small">
           <label>العدد:</label>
@@ -926,7 +926,8 @@ function addExtraProduct(product = { id: Date.now() + Math.random(), name: "", p
       const qtyInput = row.querySelector(".qty-input");
 
       priceInput.addEventListener("input", () => {
-        product.price = parseFloat(priceInput.value) || 0;
+     const val = priceInput.value.trim();
+product.price = val === "" ? "" : Number(val);
         updateTotals();
       });
       qtyInput.addEventListener("input", () => {
