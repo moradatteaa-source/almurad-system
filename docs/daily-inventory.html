@@ -672,48 +672,56 @@ if ((!variantPart || variantPart.trim() === "") && hasVariants) {
 
   continue; // ❌ يوقف العملية
 }
-if (!variantPart) {
+// 🔥 نفس منطق الطالع لكن بالعكس (زيادة)
 
-let currentQty = Number(stock.default) || 0;
-const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
+if (!variantPart && !hasVariants) {
 
-let newQty = currentQty + safeQty;
+  // بدون متغير
+  let currentQty = 0;
 
-if (isNaN(newQty)) {
-  console.error("❌ NaN بالراجع", { stock, qty });
-  return;
-}
+  if (typeof stock === "number") {
+    currentQty = Number(stock) || 0;
+  } else if (typeof stock === "object") {
+    currentQty = Number(stock.default || 0) || 0;
+  }
 
-await update(productRef, {
- stock: {
-  default: newQty
-},
-  totalQty: newQty,
-  lastUpdate: new Date().toISOString()
-});
+  const safeQty = Number(qty) || 0;
+  let newQty = currentQty + safeQty;
+
+  if (newQty < 0) newQty = 0;
+
+  await update(productRef, {
+    stock: {
+      default: newQty
+    },
+    totalQty: newQty,
+    lastUpdate: new Date().toISOString()
+  });
 
 }
 else {
 
-let variantKey = findMatchingVariant(stock, variantPart);
-if (!variantPart) continue;
-if(!variantKey){
-  console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
+  // مع متغير
+  let variantKey = findMatchingVariant(stock, variantPart);
 
-  inventoryErrors.push({
-    name: name,
-    variant: variantPart,
-    problem: "متغير غير موجود بالمخزن",
-    qty: qty
-  });
+  if (!variantKey) {
+    inventoryErrors.push({
+      name: name,
+      variant: variantPart,
+      problem: "متغير غير موجود بالمخزن",
+      qty: qty
+    });
 
-  renderErrors();
+    renderErrors();
+    continue;
+  }
 
-  continue;
-}
-  const currentVariantQty = Number(stock[variantKey] || 0);
+  const currentVariantQty = Number(stock[variantKey]) || 0;
   const safeQty = Number(qty) || 0;
-const newVariantQty = currentVariantQty + safeQty;
+
+  let newVariantQty = currentVariantQty + safeQty;
+
+  if (newVariantQty < 0) newVariantQty = 0;
 
   const updatedStock = {
     ...stock,
@@ -732,6 +740,7 @@ const newVariantQty = currentVariantQty + safeQty;
   });
 
 }
+
   }
 // إنشاء التقرير قبل التصفير
 await generateInventoryPDF();
