@@ -320,7 +320,7 @@ await update(orderRef, {
 });
 
 
-await adjustStock(foundKey, mapped);
+// await adjustStock(foundKey, mapped);
 
 
 updateCount++;
@@ -480,25 +480,8 @@ cron.schedule("*/5 * * * *", async () => {
 // 🟢 8) API خارجي لتحديث المخزن من صفحة التفاصيل
 // =======================================================
 app.post("/api/update-stock-on-status", async (req, res) => {
-  try {
-    const { orderId, status } = req.body;
-
-    if (!orderId || !status) {
-      return res.json({ success: false, msg: "Missing data" });
-    }
-
-    console.log("🔥 API استلم طلب تحديث مخزن:", orderId, status);
-
-    await adjustStock(orderId, status);
-
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("❌ Error in update-stock-on-status:", err);
-    res.json({ success: false, msg: "Server error" });
-  }
+  return res.json({ success: true });
 });
-
 app.get("/debug/order/:id", async (req, res) => {
   const id = req.params.id;
   const snap = await get(ref(db, `orders/${id}`));
