@@ -101,7 +101,8 @@ text-align:center;
 <div class="container">
 
 <div class="form">
-
+<input type="number" id="rateInput" placeholder="سعر الصرف" value="1400" 
+style="width:120px">
 <select id="platform">
 <option value="تيك توك">تيك توك</option>
 <option value="فيسبوك">فيسبوك</option>
@@ -122,16 +123,21 @@ text-align:center;
 اعلان مرايا" style="width:100%;height:100px;margin-top:10px"></textarea>
 <button onclick="parseWhatsapp()">تحليل الرسالة</button>
 </div>
-
+<button onclick="deleteSelectedAds()" 
+style="margin-bottom:10px;background:red;color:white;padding:8px 12px;border:none;border-radius:6px;">
+🗑 حذف المحدد
+</button>
 <table>
 
 <thead>
 <tr>
+<th><input type="checkbox" onclick="toggleAll(this)"></th>
 <th>المعلن</th>
 <th>المنصة</th>
 <th>المبلغ</th>
 <th>ملاحظة</th>
 <th>التاريخ</th>
+<th>حذف</th>
 </tr>
 </thead>
 
@@ -148,7 +154,8 @@ text-align:center;
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, push, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, push, get, set, remove, onValue } 
+from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
 apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -162,7 +169,7 @@ appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
+let exchangeRate = 1400;
 function format(n){
 return Number(n||0).toLocaleString("en-US");
 }
@@ -184,7 +191,14 @@ amount,
 note,
 date:new Date().toISOString()
 });
+// تحديث stats
+const statsSnap = await get(ref(db,"stats"));
+const stats = statsSnap.val() || {};
 
+await set(ref(db,"stats"),{
+...stats,
+totalAds: (stats.totalAds || 0) + (amount * exchangeRate)
+});
 document.getElementById("amount").value="";
 document.getElementById("note").value="";
 document.getElementById("employee").value="";
@@ -214,13 +228,13 @@ if(!amount) continue;
 const note = lines[3] ? lines[3].trim() : "";
 
 await push(ref(db,"ads"),{
-employee,
 platform,
-amount,
+employee,
+amount, // دولار
+amountIQD: amount * exchangeRate, // دينار
 note,
 date:new Date().toISOString()
 });
-
 }
 
 document.getElementById("whatsappText").value="";
@@ -230,27 +244,32 @@ loadAds();
 alert("تم إضافة الإعلانات بنجاح");
 
 }
+function loadAds(){
 
-async function loadAds(){
+onValue(ref(db,"ads"), (snap)=>{
 
-const snap = await get(ref(db,"ads"));
-
-if(!snap.exists()) return;
-
+if(!snap.exists()){
+document.getElementById("tableBody").innerHTML="";
+document.getElementById("total").textContent="0";
+return;
+}
+exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
 let rows="";
 let total=0;
 
-Object.values(snap.val()).reverse().forEach(a=>{
+Object.entries(snap.val()).reverse().forEach(([id,a])=>{
 
-total+=a.amount;
+    total+=a.amountIQD || (a.amount * exchangeRate);
 
 rows+=`
 <tr>
- <td>${a.employee || ""}</td>
+<td><input type="checkbox" class="rowCheck" value="${id}" data-amount="${a.amount}"></td>
+<td>${a.employee || ""}</td>
 <td>${a.platform}</td>
-<td>${format(a.amount)}</td>
+<td>${format(a.amount)} $</td>
 <td>${a.note||""}</td>
 <td>${new Date(a.date).toLocaleDateString("en-GB")}</td>
+<td><button onclick="deleteAd('${id}', ${a.amount})">🗑 حذف</button></td>
 </tr>
 `;
 
@@ -259,10 +278,71 @@ rows+=`
 document.getElementById("tableBody").innerHTML=rows;
 document.getElementById("total").textContent=format(total);
 
+});
 }
 
 loadAds();
+window.deleteAd = async function(id, amount){
 
+if(!confirm("تريد حذف الإعلان؟")) return;
+
+await remove(ref(db,"ads/"+id));
+
+// تحديث stats
+const statsSnap = await get(ref(db,"stats"));
+const stats = statsSnap.val() || {};
+
+await set(ref(db,"stats"),{
+totalAds: Math.max((stats.totalAds || 0) - (amount * exchangeRate), 0)
+});
+
+}
+
+window.deleteSelectedAds = async function(){
+
+const selected = document.querySelectorAll(".rowCheck:checked");
+
+if(selected.length === 0){
+alert("حدد إعلانات أولاً");
+return;
+}
+
+if(!confirm("تريد حذف المحدد؟")) return;
+
+let totalDeleted = 0;
+
+for(const cb of selected){
+
+const id = cb.value;
+const amount = Number(cb.dataset.amount);
+
+await remove(ref(db,"ads/"+id));
+
+totalDeleted += (amount * exchangeRate);
+
+}
+
+// تحديث stats
+const statsSnap = await get(ref(db,"stats"));
+const stats = statsSnap.val() || {};
+
+await set(ref(db,"stats"),{
+...stats,
+totalAds: Math.max((stats.totalAds || 0) - totalDeleted, 0)
+});
+
+alert("تم حذف " + selected.length + " إعلان 🔥");
+
+}
+
+window.toggleAll = function(source){
+document.querySelectorAll(".rowCheck").forEach(cb=>{
+cb.checked = source.checked;
+});
+}
+document.getElementById("rateInput").addEventListener("input", ()=>{
+loadAds();
+});
 </script>
 
 </body>

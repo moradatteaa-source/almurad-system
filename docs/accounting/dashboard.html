@@ -134,7 +134,20 @@ font-weight:bold;
 <h3>🚚 التوصيل</h3>
 <p id="deliveryCost">0</p>
 </div>
+<div class="card">
+<h3>📢 الإعلانات</h3>
+<p id="ads">0</p>
+</div>
 
+<div class="card">
+<h3>🧾 المصاريف</h3>
+<p id="expenses">0</p>
+</div>
+
+<div class="card">
+<h3>👨‍💼 الرواتب</h3>
+<p id="salaries">0</p>
+</div>
 <div class="card">
 <h3>📈 الربح الصافي</h3>
 <p id="profit">0</p>
@@ -201,10 +214,14 @@ async function loadDashboard(){
 const ordersSnap = await get(ref(db,"orders"));
 
 const warehouseSnap = await get(ref(db,"warehouse"));
+const adsSnap = await get(ref(db,"ads"));
+const expensesSnap = await get(ref(db,"expenses"));
+const salariesSnap = await get(ref(db,"salaries"));
+if(!ordersSnap.exists()){
+console.log("ماكو طلبات");
+}
 
-if(!ordersSnap.exists()) return;
-
-const orders = Object.values(ordersSnap.val());
+const orders = ordersSnap.exists() ? Object.values(ordersSnap.val()) : [];
 
 const warehouse = warehouseSnap.exists()?warehouseSnap.val():{};
 
@@ -217,7 +234,10 @@ let ordersMonth = 0;
 
 let totalSales = 0;
 let totalBuy = 0;
-
+let totalAds = 0;
+let totalExpenses = 0;
+let totalSalaries = 0;
+let deliveredOrders = 0;
 orders.forEach(order=>{
 
 const status = order.status || "";
@@ -227,34 +247,58 @@ const date = new Date(order.orderDate || Date.now());
 if(date.toDateString() === today.toDateString()) ordersToday++;
 
 if(date.getMonth() === month && date.getFullYear() === year) ordersMonth++;
-
+if(status === "تم التسليم"){
+deliveredOrders++;
+}
 if(status !== "تم التسليم") return;
 
-(order.productsDetailed || []).forEach(p=>{
+const names = (order.productName || "").split("،").map(s => s.trim()).filter(Boolean);
 
-const name = p.name;
+const unique = [...new Set(names)];
 
-const qty = p.qty || 1;
+unique.forEach(name => {
 
-const sell = p.price || 0;
+const detail = order.productsDetailed?.find(d => d.name === name);
 
+const qty = detail?.qty || detail?.quantity || 1;
+const sell = detail?.price || 0;
 const buy = warehouse[name]?.buyPrice || 0;
 
-totalSales += sell * qty;
-
+// نفس المعلنين
+totalSales += sell;
 totalBuy += buy * qty;
 
 });
 
 });
+if(adsSnap.exists()){
+Object.values(adsSnap.val()).forEach(a=>{
+totalAds += Number(a.amount || 0);
+});
+}
+if(expensesSnap.exists()){
+Object.values(expensesSnap.val()).forEach(e=>{
+totalExpenses += Number(e.amount || 0);
+});
+}
 
-const deliveryCost = ordersMonth * deliveryPerOrder;
+const totalSalarySnap = await get(ref(db,"stats/totalSalaries"));
 
-const profit = totalSales - totalBuy - deliveryCost;
+if(totalSalarySnap.exists()){
+totalSalaries = Number(totalSalarySnap.val());
+}
+const deliveryCost = deliveredOrders * deliveryPerOrder;
+
+const profit = totalSales 
+- totalBuy 
+- deliveryCost 
+- totalAds 
+- totalExpenses 
+- totalSalaries;
 
 document.getElementById("ordersToday").textContent = format(ordersToday);
+document.getElementById("ordersMonth").textContent = format(deliveredOrders);
 
-document.getElementById("ordersMonth").textContent = format(ordersMonth);
 
 document.getElementById("sales").textContent = format(totalSales);
 
@@ -263,7 +307,9 @@ document.getElementById("buyCost").textContent = format(totalBuy);
 document.getElementById("deliveryCost").textContent = format(deliveryCost);
 
 document.getElementById("profit").textContent = format(profit);
-
+document.getElementById("ads").textContent = format(totalAds);
+document.getElementById("expenses").textContent = format(totalExpenses);
+document.getElementById("salaries").textContent = format(totalSalaries);
 }
 
 loadDeliveryCost();

@@ -417,6 +417,9 @@ ordersLoaded = true
 
 if(employees.length > 0){
 calculateCommissions()
+setTimeout(()=>{
+renderSalary()
+},500);
 }
 
 })
@@ -751,7 +754,7 @@ onchange="updateBase('${emp}',this.value.replace(/,/g,''))">
 document.getElementById("salaryTable").innerHTML=rows
 
 document.getElementById("totalSalary").innerText = formatNumber(total)
-
+set(ref(db,"stats/totalSalaries"), total);
 }
 
 
