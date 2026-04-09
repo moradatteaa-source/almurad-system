@@ -231,7 +231,10 @@ async function processBarcode(shipmentId) {
   if (isProcessing) return; // 🔥 يمنع التكرار
   isProcessing = true;
 
-  shipmentId = String(shipmentId).trim();
+shipmentId = String(shipmentId)
+  .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+  .replace(/[^\d]/g, "") // يحذف أي شي غير رقم
+  .trim();
 
   scanMsg.textContent = "⏳ جاري البحث...";
 
