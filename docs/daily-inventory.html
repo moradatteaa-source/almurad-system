@@ -225,8 +225,11 @@ let inventoryErrors = [];
 let pendingOut = [];
 let pendingReturn = [];
 let scannedShipments = new Set();
-
+let isProcessing = false;
 async function processBarcode(shipmentId) {
+
+  if (isProcessing) return; // 🔥 يمنع التكرار
+  isProcessing = true;
 
   shipmentId = String(shipmentId).trim();
 
@@ -237,6 +240,7 @@ const q = query(
   ordersRef,
   orderByChild("receiptNum"),
   equalTo(shipmentId)
+  
 );
 
 let snap = await get(q);
@@ -253,23 +257,26 @@ if (!snap.exists()) {
 
 if (!snap.exists()) {
   scanMsg.textContent = "❌ رقم الوصل غير موجود";
+  isProcessing = false; // 🔥 مهم جداً
   return;
 }
 const data = snap.val();
 console.log("ORDER DATA:", data);
 const foundOrder = Object.values(data)[0] || null;
 console.log("ORDER:", foundOrder);
-  if (!foundOrder) {
-    scanMsg.textContent = "❌ رقم الوصل غير موجود";
-    return;
-  }
+if (!foundOrder) {
+  scanMsg.textContent = "❌ رقم الوصل غير موجود";
+  isProcessing = false; // 🔥 مهم
+  return;
+}
 
-  if (scannedShipments.has(shipmentId)) {
-    scanMsg.textContent = "⚠️ هذا الوصل مضاف سابقاً";
-    return;
-  }
+if (scannedShipments.has(shipmentId)) {
+  isProcessing = false; // 🔥 مهم
+  return;
+}
 
-  scannedShipments.add(shipmentId);
+scannedShipments.add(shipmentId); // 🔥 خليه هنا مباشرة
+
 
 for (const p of foundOrder.productsDetailed || []) {
 
@@ -303,6 +310,7 @@ if (
 
   renderPendingTable();
   scanMsg.textContent = "✅ تمت إضافة الطلب للجدول";
+  isProcessing = false; // 🔥 مهم جداً
 }
 function renderPendingTable() {
 
@@ -377,11 +385,15 @@ if (returnOrders > 0) {
 }
 
  
-let barcodeBuffer = "";
-let barcodeTimer = null;
+
 // تشغيل البحث عند الضغط Enter داخل الحقل
 barcodeInput.addEventListener("keydown", (e) => {
+  if (e.repeat) return; // 🔥 يمنع ضغط Enter مرتين
+
   if (e.key === "Enter") {
+
+    e.preventDefault();
+
     const code = barcodeInput.value.trim();
     barcodeInput.value = "";
 
@@ -390,33 +402,7 @@ barcodeInput.addEventListener("keydown", (e) => {
     }
   }
 });
-document.addEventListener("keydown", (e) => {
 
-  // تجاهل المفاتيح الخاصة
-  if (e.key === "Shift" || e.key === "Control" || e.key === "Alt") return;
-
-  // إذا Enter → اعتبر الباركود انتهى
-  if (e.key === "Enter") {
-
-    const code = barcodeBuffer.trim();
-    barcodeBuffer = "";
-
-    if (code.length > 3) { // أقل طول باركود
-      processBarcode(code);
-    }
-
-    return;
-  }
-
-  // نجمع الأحرف
-  barcodeBuffer += e.key;
-
-  // إعادة تصفير لو توقف الإدخال
-  clearTimeout(barcodeTimer);
-  barcodeTimer = setTimeout(() => {
-    barcodeBuffer = "";
-  }, 200); // لو توقف أكثر من 200ms يعتبر إدخال يدوي
-});
 function findMatchingVariant(stock, variantText){
 
 const normalize = (text)=>
