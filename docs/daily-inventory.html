@@ -207,6 +207,15 @@ import {
 
 
 const barcodeInput = document.getElementById("barcodeInput");
+// 🔥 يخلي الفوكس دائمًا على الحقل
+barcodeInput.focus();
+
+// إذا المستخدم لمس الشاشة أو تغير الفوكس
+setInterval(() => {
+  if (document.activeElement !== barcodeInput) {
+    barcodeInput.focus();
+  }
+}, 500);
 const outTable = document.querySelector("#outTable tbody");
 const returnTable = document.querySelector("#returnTable tbody");
 const scanMsg = document.getElementById("scanMsg");
@@ -400,7 +409,7 @@ barcodeInput.addEventListener("input", () => {
 
     const code = barcodeInput.value.trim();
     barcodeInput.value = "";
-
+barcodeInput.focus(); // 🔥 يرجع الفوكس بعد كل قراءة
 if (code.length >= 6) {
   processBarcode(code);
 }
