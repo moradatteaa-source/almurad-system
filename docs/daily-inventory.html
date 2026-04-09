@@ -386,13 +386,13 @@ if (returnOrders > 0) {
 
  
 
-// تشغيل البحث عند الضغط Enter داخل الحقل
-barcodeInput.addEventListener("keydown", (e) => {
-  if (e.repeat) return; // 🔥 يمنع ضغط Enter مرتين
+let scanTimer;
 
-  if (e.key === "Enter") {
+barcodeInput.addEventListener("input", () => {
 
-    e.preventDefault();
+  clearTimeout(scanTimer);
+
+  scanTimer = setTimeout(() => {
 
     const code = barcodeInput.value.trim();
     barcodeInput.value = "";
@@ -400,7 +400,9 @@ barcodeInput.addEventListener("keydown", (e) => {
     if (code.length > 3) {
       processBarcode(code);
     }
-  }
+
+  }, 200); // 🔥 انتظر 200ms بعد آخر إدخال
+
 });
 
 function findMatchingVariant(stock, variantText){
