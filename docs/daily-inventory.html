@@ -274,7 +274,8 @@ if (!foundOrder) {
 }
 
 if (scannedShipments.has(shipmentId)) {
-  isProcessing = false; // 🔥 مهم
+  scanMsg.textContent = "⚠️ هذا الوصل مضروب مسبقًا";
+  isProcessing = false;
   return;
 }
 
