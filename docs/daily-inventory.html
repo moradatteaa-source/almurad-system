@@ -397,11 +397,10 @@ barcodeInput.addEventListener("input", () => {
     const code = barcodeInput.value.trim();
     barcodeInput.value = "";
 
-    if (code.length > 3) {
-      processBarcode(code);
-    }
-
-  }, 200); // 🔥 انتظر 200ms بعد آخر إدخال
+if (code.length >= 6) {
+  processBarcode(code);
+}
+}, 300);
 
 });
 
