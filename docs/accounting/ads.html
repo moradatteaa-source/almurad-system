@@ -179,6 +179,7 @@ window.addAd = async function(){
 const platform = document.getElementById("platform").value;
 const employee = document.getElementById("employee").value;
 const amount = Number(document.getElementById("amount").value);
+exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
 const note = document.getElementById("note").value;
 
 if(!employee) return alert("ادخل اسم المعلن");
@@ -210,7 +211,7 @@ loadAds();
 window.parseWhatsapp = async function(){
 
 const text = document.getElementById("whatsappText").value;
-
+exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
 if(!text) return alert("الصق الرسائل أولاً");
 
 const blocks = text.split("\n\n");
@@ -228,12 +229,21 @@ if(!amount) continue;
 const note = lines[3] ? lines[3].trim() : "";
 
 await push(ref(db,"ads"),{
+    
 platform,
 employee,
 amount, // دولار
-amountIQD: amount * exchangeRate, // دينار
+
 note,
 date:new Date().toISOString()
+});
+// تحديث stats
+const statsSnap = await get(ref(db,"stats"));
+const stats = statsSnap.val() || {};
+
+await set(ref(db,"stats"),{
+...stats,
+totalAds: (stats.totalAds || 0) + (amount * exchangeRate)
 });
 }
 
@@ -255,7 +265,7 @@ return;
 }
 exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
 let rows="";
-let total=0;
+let total = 0;
 
 Object.entries(snap.val()).reverse().forEach(([id,a])=>{
 
@@ -293,6 +303,7 @@ const statsSnap = await get(ref(db,"stats"));
 const stats = statsSnap.val() || {};
 
 await set(ref(db,"stats"),{
+...stats,
 totalAds: Math.max((stats.totalAds || 0) - (amount * exchangeRate), 0)
 });
 

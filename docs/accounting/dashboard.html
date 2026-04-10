@@ -271,10 +271,9 @@ totalBuy += buy * qty;
 });
 
 });
-if(adsSnap.exists()){
-Object.values(adsSnap.val()).forEach(a=>{
-totalAds += Number(a.amount || 0);
-});
+const adsTotalSnap = await get(ref(db,"stats/totalAds"));
+if(adsTotalSnap.exists()){
+totalAds = Number(adsTotalSnap.val());
 }
 if(expensesSnap.exists()){
 Object.values(expensesSnap.val()).forEach(e=>{
