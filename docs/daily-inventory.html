@@ -291,34 +291,54 @@ if (scannedShipments.has(shipmentId)) {
 scannedShipments.add(shipmentId); // 🔥 خليه هنا مباشرة
 
 
-for (const p of foundOrder.productsDetailed || []) {
+let productsList = [];
 
-  const productName = p.name || foundOrder.productName || "منتج غير معروف";
+// ✅ إذا Array
+if (Array.isArray(foundOrder.productsDetailed)) {
+  productsList = foundOrder.productsDetailed;
+}
+
+// ✅ إذا Object
+else if (typeof foundOrder.productsDetailed === "object" && foundOrder.productsDetailed !== null) {
+  productsList = Object.values(foundOrder.productsDetailed);
+}
+
+// ✅ إذا نص (productName)
+else if (foundOrder.productName) {
+  productsList = foundOrder.productName.split("،").map(name => ({
+    name: name.trim(),
+    qty: 1
+  }));
+}
+
+// 🔥 المعالجة
+for (const p of productsList) {
+
+  const productName = p.name || "منتج غير معروف";
+
+const rawQty = String(p.qty ?? p.quantity ?? 1)
+  .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 
   const itemData = {
     name: productName,
-qty: (!p.qty || isNaN(Number(p.qty))) ? 1 : Number(p.qty),
+    qty: isNaN(Number(rawQty)) ? 1 : Number(rawQty),
     variants: p.variants || {},
-    orderId: shipmentId   // ⭐ مهم
+    orderId: shipmentId
   };
 
-const status = (foundOrder.status || "").trim();
+  const status = (foundOrder.status || "").trim();
 
-// الطالع
-if (
-  status.includes("توصيل") ||
-  status.includes("تجهيز") ||
-  status.includes("تم التسليم")
-) {
-  pendingOut.push(itemData);
-}
+  if (
+    status.includes("توصيل") ||
+    status.includes("تجهيز") ||
+    status.includes("تم التسليم")
+  ) {
+    pendingOut.push(itemData);
+  }
 
-// الراجع
-if (
-  status.includes("راجع")
-) {
-  pendingReturn.push(itemData);
-}
+  if (status.includes("راجع")) {
+    pendingReturn.push(itemData);
+  }
 }
 
   renderPendingTable();
