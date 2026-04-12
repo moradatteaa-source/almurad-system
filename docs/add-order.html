@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>➕ إضافة طلب جديد - نظام المراد</title>
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <style>
     :root {
       --main-blue: #043B64;
@@ -363,6 +365,9 @@ html, body {
     </div>
 
     <button id="saveBtn">💾 حفظ الطلب</button>
+    <button id="shareBtn" style="background:#25D366">
+📤 مشاركة الفاتورة
+</button>
     <button id="backBtn">🔙 رجوع</button>
     <div id="savedMsg">✅ تم حفظ الطلب بنجاح</div>
   </div>
@@ -734,7 +739,21 @@ function updateTotals() {
 }
 
 
-
+function fixArabicText(text) {
+  if (!text) return "";
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ");
+}
 
 
     // 🔸 زر الإضافة
@@ -1206,6 +1225,407 @@ await set(ref(db, `warehouse/${name}/stock/default`), after);
   }
 }
 
+function fixArabicText(text) {
+  if (!text) return "";
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ");
+}
+
+// ===== مشاركة الفاتورة PDF =====
+document.getElementById("shareBtn")?.addEventListener("click", async () => {
+  // ✅ حساب السعر داخل الفاتورة (حل مشكلة الصفر)
+const mainPriceRaw = document.getElementById("price").value.replace(/,/g, "");
+const mainPriceNum = parseFloat(mainPriceRaw) || 0;
+
+const extraTotalNum = extraProducts.reduce((sum, p) => sum + (p.price || 0), 0);
+
+const totalPrice = mainPriceNum + extraTotalNum;
+// ✅ تحميل الخط مثل المشتريات
+const res = await fetch("Tajawal-Regular.ttf");
+const buffer = await res.arrayBuffer();
+
+const binary = Array.from(new Uint8Array(buffer))
+  .map(b => String.fromCharCode(b))
+  .join("");
+
+const base64 = btoa(binary);
+
+pdfMake.vfs = {
+  "Tajawal-Regular.ttf": base64
+};
+
+pdfMake.fonts = {
+  Tajawal: {
+    normal: "Tajawal-Regular.ttf",
+    bold: "Tajawal-Regular.ttf"
+  }
+};
+// ✅ تحميل الشعار نفس المشتريات
+const logoBase64 = await fetch("almurad-logo.png")
+  .then(r => r.blob())
+  .then(blob => new Promise(res => {
+    const reader = new FileReader();
+    reader.onloadend = () => res(reader.result);
+    reader.readAsDataURL(blob);
+  }));
+  const name = document.getElementById("code").value || "زبون";
+  const phone = document.getElementById("phone1").value;
+  const address = document.getElementById("address").value;
+
+  const mainName = document.querySelector("#product input")?.value || "";
+  const mainQty = document.getElementById("quantity").value || 0;
+  const mainPrice = document.getElementById("price").value || 0;
+let tableBody = [];
+
+
+async function getBase64FromUrl(url) {
+  try {
+    const res = await fetch(url);
+
+    // ❌ إذا فشل التحميل
+    if (!res.ok) throw new Error("فشل تحميل الصورة");
+
+    const blob = await res.blob();
+
+    // ❌ إذا الملف مو صورة
+    if (!blob.type.startsWith("image/")) {
+      throw new Error("مو صورة");
+    }
+
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+
+  } catch (e) {
+    console.warn("❌ صورة غير صالحة:", url);
+    return null; // 🔥 المهم
+  }
+}
+if (mainName) {
+ const mainProductData = warehouseCache[mainName];
+ const mainImage = mainProductData?.images?.[0];
+
+ let mainBase64 = null;
+ if (mainImage) {
+   mainBase64 = await getBase64FromUrl(mainImage);
+ }
+
+ tableBody.push([
+   mainName,
+   mainQty,
+   mainPrice,
+   mainBase64,
+   mainImage,
+   Object.entries(mainProductObj.selectedVariants || {})
+     .map(([k,v]) => k + " : " + v)
+     .join(" | ")
+ ]);
+}
+
+
+for (const p of extraProducts) {
+
+  const productData = warehouseCache[p.name];
+  const imageUrl = productData?.images?.[0];
+
+  let base64Img = null;
+try {
+  if (imageUrl) {
+    base64Img = await getBase64FromUrl(imageUrl);
+  }
+} catch (e) {
+  console.warn("صورة خربانة:", imageUrl);
+  base64Img = null;
+}
+
+tableBody.push([
+  p.name,
+  p.qty,
+  p.price,
+  base64Img,
+  imageUrl,
+  Object.entries(p.selectedVariants || {})
+    .map(([k,v]) => k + " : " + v)
+    .join(" | ")
+]);
+}
+
+const docDefinition = {
+footer: function(currentPage, pageCount) {
+  return {
+    margin: [20, 0, 20, 20],
+    stack: [
+{
+  text: fixArabicText("مـُرادكم هو مطلبنا • شكراً لثقتكم بنا"),
+  alignment: "center",
+  color: "#FF6B2D",
+  bold: true,
+  fontSize: 11
+},
+
+      {
+        canvas: [
+          {
+            type: 'line',
+            x1: 0, y1: 0,
+            x2: 515, y2: 0,
+            lineWidth: 1,
+            lineColor: '#FF6B2D'
+          }
+        ],
+        margin:[0,5,0,5]
+      },
+
+      {
+        text: fixArabicText("ملاحظة :افحص الطلب جيدًا قبل دفع مبلغ التوصيل، وفي حال إسترجاع المنتج لا تدفع اي كُلفة توصيل للمندوب"),
+        alignment: "right",
+        fontSize: 9
+      }
+    ]
+  };
+},
+  pageDirection: "rtl",
+
+  defaultStyle: {
+    font: "Tajawal"
+  },
+images: {
+  logo: logoBase64
+},
+content: [
+
+  {
+    columns: [
+
+      {
+        image: "logo",
+        width: 90,
+        alignment: "left",
+    margin:[0,-25,0,0]
+      },
+
+      {
+        stack: [
+          {
+            text: fixArabicText("شركة المُراد"),
+            bold: true,
+            fontSize: 16,
+            alignment: "right"
+          },
+          {
+            text: fixArabicText("فاتورة بيع"),
+            alignment: "right",
+            fontSize: 12
+          }
+        ]
+      }
+
+    ],
+    columnGap: 10,
+    margin:[0,0,0,10]
+  },
+
+  // 🔹 العنوان
+  {
+    text: fixArabicText("تأكيد الطلب"),
+    style: "header",
+    alignment: "center"
+  },
+
+    // 🔹 معلومات الزبون
+{
+  table: {
+widths: [150],
+    body: [
+      [{
+        text: fixArabicText("معلومات الزبون"),
+    alignment: "left",
+        color: "white",
+        bold: true,
+        margin:[0,5,0,5],
+        fillColor: "#FF6B2D"
+      }]
+    ]
+  },
+  layout: "noBorders"
+},
+{
+  stack: [
+
+    { text: fixArabicText("الاسم: " + name), bold:true },
+
+    { text: fixArabicText("الهاتف: " + phone) },
+
+    { text: fixArabicText("المحافظة: " + (document.querySelector("#city input")?.value || "")) },
+
+    { text: fixArabicText("المنطقة: " + (document.querySelector("#area input")?.value || "")) },
+
+    { text: fixArabicText("أقرب نقطة: " + address) }
+
+  ],
+  margin:[0,0,0,15]
+},
+
+    // 🔹 جدول الطلب
+    {
+      text: fixArabicText("طلبك"),
+      style: "section"
+    },
+{
+  table: {
+    widths: [60, "*", 50, 80, 80],
+    dontBreakRows: true,
+body: [
+
+  // 🔴 الهيدر
+[
+  {text:"", fillColor:"#FF6B2D", alignment:"center"},
+  {text:fixArabicText("المنتج"), bold:true, fillColor:"#FF6B2D", color:"white", alignment:"center"},
+  {text:fixArabicText("العدد"), bold:true, fillColor:"#FF6B2D", color:"white", alignment:"center"},
+  {text:fixArabicText("السعر"), bold:true, fillColor:"#FF6B2D", color:"white", alignment:"center"},
+  {text:fixArabicText("المبلغ"), bold:true, fillColor:"#FF6B2D", color:"white", alignment:"center"}
+],
+
+  // ✅ البيانات
+  ...tableBody.map((row, i) => ([
+    
+ {
+  stack: [
+
+    // 🔢 الرقم يصير فوق يسار
+    {
+      text: i + 1,
+      bold: true,
+      alignment: "left",
+      margin:[0,0,0,3]
+    },
+
+    // 🖼️ الصورة
+row[3] && row[3].startsWith("data:image")
+  ? { image: row[3], width: 50 }
+  : {
+      text: "عرض الصورة",
+      link: row[4] || "",
+      color: "blue",
+      fontSize: 9,
+      alignment: "center"
+    }
+  ]
+},
+
+{
+  stack: [
+
+    // 🔹 اسم المنتج
+    {
+      text: fixArabicText(row[0]),
+      bold: true,
+      alignment: "center"
+    },
+
+    // 🔹 المتغيرات (تحت الاسم)
+    row[5] ? {
+      text: fixArabicText(row[5]),
+      fontSize: 10,
+      color: "#555",
+      alignment: "center",
+      margin: [0, 3, 0, 0]
+    } : {}
+
+  ],
+  margin: [0, 10, 0, 10]
+},
+
+{ text: row[1], alignment: "center", margin: [0, 10, 0, 10] },
+
+{ text: fixArabicText(row[2] + " د.ع"), alignment: "center", margin: [0, 10, 0, 10] },
+
+{ text: fixArabicText(row[2] + " د.ع"), alignment: "center", margin: [0, 10, 0, 10] }
+
+  ]))
+
+]
+  },
+
+layout: {
+  paddingTop: function() { return 8; },
+  paddingBottom: function() { return 8; },
+
+  hLineWidth: function(i) {
+    if (i === 0) return 0;
+    return 1.2;
+  },
+
+  vLineWidth: function() {
+    return 0;
+  },
+
+  hLineColor: function(i) {
+    return "#FF6B2D";
+  }
+},
+  margin:[0,10,0,10]
+},
+
+
+
+// 🔹 الإجماليات (نفس الصورة)
+{
+ text: fixArabicText(`المبلغ المطلوب للدفع: ${totalPrice} د.ع`),
+ 
+  bold: true,
+  color: "#043B64", // 🔵 أزرق الهوية
+  fontSize: 14,
+  alignment: "center"
+},
+
+
+
+  ],
+
+  styles: {
+    header: {
+      fontSize: 18,
+      bold: true,
+      color: "#FF6B2D"
+    },
+    section: {
+      fontSize: 14,
+      bold: true,
+      margin:[0,10,0,5]
+    }
+  }
+};
+  // 🔥 تحميل PDF
+pdfMake.createPdf(docDefinition).getBlob((blob) => {
+
+  if (navigator.share) {
+    const file = new File([blob], "invoice.pdf", { type: "application/pdf" });
+
+    navigator.share({
+      files: [file],
+      title: "فاتورة بيع"
+    });
+  } else {
+    const url = URL.createObjectURL(blob);
+    window.open(url);
+  }
+
+});
+
+});
 
   </script>
 </body>
