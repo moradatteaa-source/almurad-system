@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>الحسابات</title>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <style>
 :root{
   --blue:#043B64;
@@ -104,6 +105,8 @@ html, body {
 
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button onclick="quickFilter('today')">اليوم</button>
+      <button onclick="quickFilter('yesterday')">أمس</button>
+<button onclick="quickFilter('beforeYesterday')">أول أمس</button>
       <button onclick="quickFilter('week')">هذا الأسبوع</button>
       <button onclick="quickFilter('month')">هذا الشهر</button>
       <button onclick="quickFilter('year')">هذه السنة</button>
@@ -113,6 +116,9 @@ html, body {
 
   <div class="box">
     <h3>🧾 كل الفواتير</h3>
+    <button onclick="exportPDF()" style="margin-bottom:10px">
+📄 تحميل كشف حساب PDF
+</button>
     <table id="table">
       <tr>
    <th>الكاشير</th>
@@ -321,7 +327,16 @@ function quickFilter(type){
   if(type==="today"){
     s = e = today();
   }
-
+if(type==="yesterday"){
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  s = e = d.toLocaleDateString("en-CA");
+}
+if(type==="beforeYesterday"){
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  s = e = d.toLocaleDateString("en-CA");
+}
   if(type==="week"){
     const d = new Date();
     d.setDate(d.getDate()-d.getDay());
@@ -418,6 +433,200 @@ cashierSelect.addEventListener("change", () => {
 
 
 loadInvoices();
+function fixArabicText(text) {
+  if (!text) return "";
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ")
+    .replace(/\s+/g, " ");
+}
+window.exportPDF = async function () {
+
+  const logoBase64 = await fetch("almurad-logo.png")
+    .then(r => r.blob())
+    .then(blob => new Promise(res=>{
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result);
+      reader.readAsDataURL(blob);
+    }));
+
+  let filtered = invoices;
+
+  if(currentCashier !== "all"){
+    filtered = filtered.filter(i => i.cashierId === currentCashier);
+  }
+
+  if(currentFrom && currentTo){
+    filtered = filtered.filter(i =>
+      i.date >= currentFrom && i.date <= currentTo
+    );
+  }
+
+  let total=0, paid=0, debt=0;
+
+const body = [[
+  {text: fixArabicText("الدين"), color:"#fff", alignment:"center"},
+  {text: fixArabicText("المدفوع"), color:"#fff", alignment:"center"},
+  {text: fixArabicText("المجموع"), color:"#fff", alignment:"center"},
+  {text: fixArabicText("التاريخ"), color:"#fff", alignment:"center"},
+  {text: fixArabicText("رقم الفاتورة"), color:"#fff", alignment:"center"},
+  {text: fixArabicText("الكاشير"), color:"#fff", alignment:"center"}
+]];
+
+  filtered.forEach(inv=>{
+    total += +inv.grand;
+    paid  += +inv.paid;
+    debt  += +inv.rest;
+
+body.push([
+
+  {
+    text: inv.rest.toLocaleString("en-US"),
+    color: inv.rest < 0 ? "red" : "black",
+    alignment: "center"
+  },
+
+  {
+    text: inv.paid.toLocaleString("en-US"),
+    color: inv.paid < 0 ? "red" : "black",
+    alignment: "center"
+  },
+
+  {
+    text: inv.grand.toLocaleString("en-US"),
+    color: inv.grand < 0 ? "red" : "black",
+    alignment: "center"
+  },
+
+  { text: inv.date, alignment: "center" },
+  { text: inv.invoiceNo, alignment: "center" },
+  { text: fixArabicText(inv.cashierId), alignment: "center" }
+
+]);
+  });
+
+// ✅ تحميل خط Tajawal الحقيقي
+const res = await fetch("../Tajawal-Regular.ttf");
+const buffer = await res.arrayBuffer();
+const binary = Array.from(new Uint8Array(buffer))
+  .map(b => String.fromCharCode(b)).join("");
+const fontBase64 = btoa(binary);
+
+pdfMake.vfs = {
+  "Tajawal-Regular.ttf": fontBase64
+};
+
+pdfMake.fonts = {
+  Tajawal: {
+    normal: "Tajawal-Regular.ttf",
+    bold: "Tajawal-Regular.ttf"
+  }
+};
+
+// ===== التصميم النهائي =====
+const docDefinition = {
+  defaultStyle: {
+    font: "Tajawal"
+  },
+footer: function(currentPage, pageCount) {
+  return {
+    margin: [0, 0, 0, 20],
+    columns: [
+      {
+        text: fixArabicText("كشف رسمي صادر من شركة المُراد - نظام المراد"),
+        alignment: "center",
+        color: "#FF6B2D",
+        bold: true,
+        fontSize: 11
+      }
+    ]
+  };
+},
+  pageDirection: "rtl",
+
+  content: [
+
+    {
+  columns: [
+  { image: logoBase64, width: 80 },
+
+  {
+  text: fixArabicText("كشف حساب - سنتر المراد"),
+    alignment: "center",
+    fontSize: 18,
+    bold: true,
+    color: "#FF6B2D"
+  }
+]
+    },
+
+    {
+  text: fixArabicText(`الفترة: ${currentFrom || "الكل"} - ${currentTo || ""}`),
+      alignment: "right",
+      margin: [0,10,0,5]
+    },
+
+    {
+     text: fixArabicText(
+  `الكاشير: ${currentCashier === "all" ? "كل الكاشيرات" : currentCashier}`
+),
+      alignment: "right",
+      margin: [0,0,0,10]
+    },
+
+    {
+      table: {
+        headerRows: 1,
+        widths: ["*","*","*","*","*","*"],
+
+        body: body
+      },
+     layout: {
+  fillColor: function (rowIndex) {
+    return rowIndex === 0 ? "#043B64" : null;
+  }
+}
+    },
+
+  {
+  margin:[0,15,0,0],
+  table: {
+    widths: ["*","*","*"],
+    body: [
+      [
+        {text: fixArabicText("إجمالي المبيعات"), fillColor:"#043B64", color:"#fff", alignment:"center"},
+        {text: fixArabicText("المدفوع"), fillColor:"#043B64", color:"#fff", alignment:"center"},
+        {text: fixArabicText("الديون"), fillColor:"#043B64", color:"#fff", alignment:"center"}
+      ],
+      [
+        {
+  text: total.toLocaleString("en-US") + " د.ع",
+  color: total < 0 ? "red" : "#FF6B2D",
+  alignment:"center",
+  bold:true
+},
+        {text: paid.toLocaleString("en-US") + " د.ع", alignment:"center", bold:true},
+        {text: debt.toLocaleString("en-US") + " د.ع", alignment:"center", bold:true}
+      ]
+    ]
+  }
+}
+
+  ]
+};
+
+  pdfMake.createPdf(docDefinition).download("كشف_حساب_المراد.pdf");
+};
+
 </script>
 
 
