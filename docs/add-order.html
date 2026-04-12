@@ -739,22 +739,6 @@ function updateTotals() {
 }
 
 
-function fixArabicText(text) {
-  if (!text) return "";
-  return text
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/([\u0600-\u06FF]+)/)
-    .map(part => {
-      if (/[\u0600-\u06FF]+/.test(part)) {
-        return part.split(" ").reverse().join(" ");
-      }
-      return part;
-    })
-    .reverse()
-    .join(" ");
-}
-
 
     // 🔸 زر الإضافة
     document.getElementById("addProductBtn").addEventListener("click", () => {
