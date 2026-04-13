@@ -495,10 +495,16 @@ body {
     تحديد الطلبات
   </button>
 
-  <button id="deleteSelectedBtn"
-    style="display:none; margin-top:8px; background:#e74c3c; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
-    حذف المحدد
-  </button>
+<button id="selectAllBtn"
+style="margin-top:8px; background:#27ae60; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
+تحديد الكل
+</button>
+
+<button id="deleteSelectedBtn"
+style="display:none; margin-top:8px; background:#e74c3c; color:white; padding:10px 20px; border:none; border-radius:8px; font-size:15px;">
+حذف المحدد
+</button>
+
   <div id="selectedCount"
 style="
 text-align:center;
@@ -908,7 +914,9 @@ if (o.status === "قيد المعالجة") {
     }
 
     card.setAttribute("data-id", o.id);
-
+if (selectedOrders.has(o.id)) {
+  card.classList.add("selected");
+}
     card.innerHTML = `
    <div class="right-side">
   
@@ -963,12 +971,18 @@ card.onclick = () => {
 
     document.getElementById("selectedCount").style.display = "block";
 
-    card.classList.toggle("selected");
+    const id = o.id;
 
-    const count = document.querySelectorAll(".order-card.selected").length;
+    if (selectedOrders.has(id)) {
+      selectedOrders.delete(id);
+      card.classList.remove("selected");
+    } else {
+      selectedOrders.add(id);
+      card.classList.add("selected");
+    }
 
     document.getElementById("selectedCount").innerText =
-      "عدد المحدد: " + count;
+      "عدد المحدد: " + selectedOrders.size;
 
     return;
   }
@@ -1259,6 +1273,7 @@ document.getElementById("advSearch").oninput = () => {
   });
 };
 let searchType = "orderId";
+let selectedOrders = new Set();
 let loadingMore = false;
 
 window.addEventListener("scroll", () => {
@@ -1332,23 +1347,34 @@ document.getElementById("selectModeBtn").onclick = () => {
       .forEach(c => c.classList.remove("selected"));
   }
 };
+document.getElementById("selectAllBtn").onclick = () => {
 
+  if (selectedOrders.size === visibleOrders.length) {
+    selectedOrders.clear();
+  } else {
+    visibleOrders.forEach(o => selectedOrders.add(o.id));
+  }
+
+  renderOrders(visibleOrders);
+
+  document.getElementById("selectedCount").innerText =
+    "عدد المحدد: " + selectedOrders.size;
+
+  document.getElementById("selectedCount").style.display = "block";
+};
 
 // حذف الطلبات المحددة
 document.getElementById("deleteSelectedBtn").onclick = async () => {
-  const selected = document.querySelectorAll(".order-card.selected");
+if (selectedOrders.size === 0) {
+  alert("لم يتم اختيار أي طلب");
+  return;
+}
 
-  if (selected.length === 0) {
-    alert("لم يتم اختيار أي طلب");
-    return;
-  }
+if (!confirm("هل تريد حذف الطلبات المحددة؟")) return;
 
-  if (!confirm("هل تريد حذف الطلبات المحددة؟")) return;
-
-  for (const card of selected) {
-    const id = card.dataset.id;
-    await remove(ref(db2, "orders/" + id));
-  }
+for (const id of selectedOrders) {
+  await remove(ref(db2, "orders/" + id));
+}
 
   alert("تم حذف الطلبات المحددة");
 };
@@ -1363,28 +1389,24 @@ document.getElementById("bulkUpdateStatusBtn").onclick = async () => {
     return;
   }
 
-  const selected = document.querySelectorAll(".order-card.selected");
+if (selectedOrders.size === 0) {
+  alert("ما محدد أي طلب");
+  return;
+}
 
-  if (selected.length === 0) {
-    alert("ما محدد أي طلب");
-    return;
-  }
+if (!confirm(`تأكيد تغيير حالة ${selectedOrders.size} طلب؟`)) return;
 
-  if (!confirm(`تأكيد تغيير حالة ${selected.length} طلب؟`)) return;
+for (const id of selectedOrders) {
+  const now = new Date().toISOString();
 
-  for (const card of selected) {
-    const id = card.dataset.id;
-   const now = new Date().toISOString();
-
-await update(ref(db2, "orders/" + id), {
-  status: newStatus,
-  [`statusHistory/${newStatus}`]: {
-    time: now,
-by: localStorage.getItem("loggedInUserName") || "غير معروف"
-  }
-});
-
-  }
+  await update(ref(db2, "orders/" + id), {
+    status: newStatus,
+    [`statusHistory/${newStatus}`]: {
+      time: now,
+      by: localStorage.getItem("loggedInUserName") || "غير معروف"
+    }
+  });
+}
 
   alert("تم تحديث الحالات بنجاح");
 };
