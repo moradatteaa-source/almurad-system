@@ -459,21 +459,28 @@ cron.schedule("*/5 * * * *", async () => {
 
   isUpdating = true;
 
+  // ⛔ حماية من التعليق (Timeout)
+  const timeout = setTimeout(() => {
+    isUpdating = false;
+    console.log("⛔ Forced reset بسبب التعليق");
+  }, 60000); // 60 ثانية
+
   try {
 
-    // ❌ إيقاف الوسيط
-    // await autoUpdateStatuses();
-
-    // 🟣 تحديث برايم فقط
+    // 🔥 شغل الاثنين (وسيط + برايم)
+    await autoUpdateStatuses();
     await updatePrimeStatusesFromFirebase();
 
-    console.log("✅ Prime update completed");
+    console.log("✅ All updates completed");
 
   } catch (err) {
     console.error("❌ Error inside cron:", err);
-  }
+  } finally {
 
-  isUpdating = false;
+    clearTimeout(timeout); // 🧹 تنظيف التايمر
+    isUpdating = false;   // 🔥 أهم سطر
+
+  }
 
 });
 // =======================================================
