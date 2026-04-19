@@ -453,7 +453,9 @@ table {
 
   <div id="variantContainer" class="variants-container" style="margin-top:10px;"></div>
 </div>
-<button class="action" id="addOldVariantBtn" style="display:none;margin-top:8px;">➕ إضافة متغير جديد</button>
+<button class="action" id="addOldVariantBtn" onclick="addOldVariant()" style="margin-top:8px;">
+➕ إضافة متغير جديد
+</button>
 
 
       <!-- ✅ منتج جديد -->
@@ -774,39 +776,15 @@ window.filterProductOptions = function () {
   // ✅ نظهر المنسدلة إذا فيها نتائج
   select.style.display = filtered.length > 0 ? "block" : "none";
 
-select.onchange = async function () {
+select.onchange = function () {
   const selectedName = select.value;
+
   inputEl.value = selectedName;
   select.style.display = "none";
 
-  const variantContainer = document.getElementById("variantContainer");
-  variantContainer.innerHTML = "";
-  const prod = warehouseProducts[selectedName];
-
-  if (!prod) return;
-
-  // 🟢 إذا المنتج يحتوي متغيرات
-  if (prod.hasVariants && typeof prod.stock === "object") {
-    Object.keys(prod.stock).forEach((v) => {
-      variantContainer.innerHTML += `
-        <div class="variant-item">
-          <input type="text" value="${v}" disabled>
-          <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
-          <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
-        </div>`;
-    });
-  } 
-  // 🟢 إذا المنتج بدون متغيرات
-// 🟢 إذا المنتج بدون متغيرات
-else {
-  variantContainer.innerHTML = `
-    <div class="variant-item">
-      <input type="text" value="-" disabled>
-      <input type="number" placeholder="الكمية" class="variantQty" data-variant="-">
-      <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="-">
-    </div>`;
-}
+  loadProductVariants(selectedName);
 };
+
 };
 
 
@@ -896,7 +874,37 @@ function renderExistingProducts(names) {
     (n) => (existingProductSelect.innerHTML += `<option value="${n}">${n}</option>`)
   );
 }
+function loadProductVariants(selectedName) {
 
+  const variantContainer = document.getElementById("variantContainer");
+  variantContainer.innerHTML = "";
+
+  const prod = warehouseProducts[selectedName];
+  if (!prod) return;
+
+  // 🟢 إذا بي متغيرات
+if (typeof prod.stock === "object"){
+
+    Object.keys(prod.stock).forEach((v) => {
+      variantContainer.innerHTML += `
+        <div class="variant-item">
+          <input type="text" value="${v}" disabled>
+          <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
+          <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
+        </div>`;
+    });
+
+  } else {
+
+    // 🟢 بدون متغيرات
+    variantContainer.innerHTML = `
+      <div class="variant-item">
+        <input type="text" value="-" disabled>
+        <input type="number" placeholder="الكمية" class="variantQty" data-variant="-">
+        <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="-">
+      </div>`;
+  }
+}
 
 /* =========================
    ➕ إضافة متغير جديد
@@ -920,6 +928,21 @@ window.addNewVariant = function () {
   // ✅ إخفاء الحقول البسيطة للمنتج العادي (بدون متغيرات)
   const simpleFields = document.getElementById("simpleFields");
   if (simpleFields) simpleFields.style.display = "none";
+};
+window.addOldVariant = function () {
+  const container = document.getElementById("variantContainer");
+
+  const div = document.createElement("div");
+  div.className = "variant-item";
+
+  div.innerHTML = `
+    <input type="text" placeholder="مثلاً: لون | أخضر">
+    <input type="number" placeholder="الكمية" class="variantQty">
+    <input type="number" placeholder="سعر الشراء" class="variantPrice">
+    <button onclick="this.parentElement.remove()">🗑</button>
+  `;
+
+  container.appendChild(div);
 };
 window.addItemToInvoice = function () {
 
@@ -1071,6 +1094,8 @@ window.removeInvoiceItem = function(i) {
    💾 حفظ عملية شراء
 ========================= */
 window.savePurchase = async function () {
+  if (window.isSaving) return;
+window.isSaving = true;
   const supplierId = supplierSelect.value;
   const supplierNameText = suppliers[supplierId]?.name || "";
   const buyer = buyerName.value.trim();
@@ -1088,6 +1113,7 @@ if (type === "existing") {
 
   if (invoiceItems.length === 0) {
     return alert("⚠️ لم تضف أي منتج للفاتورة.");
+    window.isSaving = false;
   }
 
   for (let it of invoiceItems) {
@@ -1099,19 +1125,17 @@ const snap = await get(productRef);
 
   const productData = snap.val();
 
-  if (productData.hasVariants) {
-    productData.stock[it.variant] =
-      (productData.stock[it.variant] || 0) + it.quantity;
-  } else {
-if (!productData.stock || typeof productData.stock !== "object") {
-  productData.stock = { default: Number(productData.stock || 0) };
-}
+if (typeof productData.stock === "object") {
 
-const variant = it.variant === "-" ? "default" : it.variant;
+  const variant = it.variant;
 
-productData.stock[variant] =
-  (productData.stock[variant] || 0) + Number(it.quantity);
+  if (!productData.stock[variant]) {
+    productData.stock[variant] = 0; // 🔥 إنشاء متغير جديد
   }
+
+  productData.stock[variant] += Number(it.quantity);
+
+}
 productData.totalQty = Object.values(productData.stock)
   .reduce((a,b)=>a + Number(b || 0),0);
 await update(productRef, {
@@ -1122,9 +1146,11 @@ await update(productRef, {
 }
 }else if (type === "new") {
 
-  if (invoiceItems.length === 0) {
-    return alert("⚠️ لم تضف أي منتج للفاتورة.");
-  }
+if (invoiceItems.length === 0) {
+  alert("⚠️ لم تضف أي منتج للفاتورة.");
+  window.isSaving = false;
+  return;
+}
 
   for (let it of invoiceItems) {
 
@@ -1223,7 +1249,9 @@ if (type === "new") {
   items = [...invoiceItems];
 }
 if (items.length === 0) {
-  return alert("⚠️ لا توجد منتجات في الفاتورة.");
+  alert("⚠️ لا توجد منتجات في الفاتورة.");
+  window.isSaving = false;
+  return;
 }
 
 // ✅ حساب الإجماليات
@@ -1251,7 +1279,12 @@ await set(idRef, {
 document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
   closePurchasePopup();
   loadPurchases();
-
+document.getElementById("productSearchInput").addEventListener("blur", () => {
+  const name = document.getElementById("productSearchInput").value.trim();
+  if (name) {
+    loadProductVariants(name);
+  }
+});
 // ✅ توليد الفاتورة الجديدة بنفس تصميم printInvoice
 if (canShare()) {
   setTimeout(() => {
