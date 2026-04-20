@@ -523,7 +523,7 @@ display:none;
   <!-- 🔹 سكربت -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, child, set, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, child, set, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     
 
     const firebaseConfig = {
@@ -549,11 +549,7 @@ const user = JSON.parse(localStorage.getItem("loggedInUser"));
     // تحميل الإحصائيات السريعة
     async function loadStats() {
       const dbRef = ref(db);
-      const snapshot = await get(child(dbRef, "orders"));
-      if (!snapshot.exists()) return;
-
-      const ordersData = snapshot.val();
-      const orders = Object.values(ordersData);
+    
 const mainStatuses = [
   "",
   "مثبت",
@@ -567,9 +563,15 @@ const mainStatuses = [
   "رفض"
 ];
 
-// الإحصائيات
-const counts = {
-  "": 0, // جديد
+
+// ✅ إظهار الإحصائيات بعد اكتمال التحميل
+
+const snap = await get(ref(db, "stats/ordersCounts"));
+
+if (!snap.exists()) {
+
+const defaultCounts = {
+  "new": 0,
   "مثبت": 0,
   "قيد المعالجة": 0,
   "قيد التجهيز": 0,
@@ -579,34 +581,20 @@ const counts = {
   "راجع": 0,
   "تم استلام الراجع": 0,
   "رفض": 0,
-  "حالات أخرى": 0
+  "other": 0
 };
-// ✅ إظهار الإحصائيات بعد اكتمال التحميل
 
-orders.forEach(o => {
-  let st = (o.status || "").trim();
+  await set(ref(db, "stats/ordersCounts"), defaultCounts);
 
-  // 🟦 1) الفارغ = طلب جديد
-  if (st === "") {
-    counts[""]++;
-    return;
-  }
+  return;
+}
 
-  // 🟩 2) الحالة ضمن الحالات الرئيسية
-  if (mainStatuses.includes(st)) {
-    counts[st]++;
-    return;
-  }
-
-  // 🟧 3) أي حالة غير موجودة = حالات أخرى
-  counts["حالات أخرى"]++;
-});
+const counts = snap.val();
 
 
 
 
-
-      document.getElementById("newCount").textContent = counts[""];
+      document.getElementById("newCount").textContent = counts["new"] || 0;
       document.getElementById("fixedCount").textContent = counts["مثبت"];
       document.getElementById("processingCount").textContent = counts["قيد المعالجة"];
       document.getElementById("packingCount").textContent = counts["قيد التجهيز"];
@@ -617,7 +605,7 @@ orders.forEach(o => {
 
       document.getElementById("rejectedCount").textContent = counts["رفض"];
       document.getElementById("waitingCount").textContent = counts["بانتظار البضاعة"];
-document.getElementById("otherCount").textContent = counts["حالات أخرى"];
+document.getElementById("otherCount").textContent = counts["other"] || 0;
 // 🟢 حساب المجموع الكلي
 const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
 
@@ -632,7 +620,7 @@ const percent = value === 0 ? 0 : Math.max(5, Math.round((value / total) * 100))
   circle.style.setProperty("--percent", percent + "%");
 }
 
-updateCirclePercent("newCount", counts[""]);
+updateCirclePercent("newCount", counts["new"] || 0);
 updateCirclePercent("fixedCount", counts["مثبت"]);
 updateCirclePercent("processingCount", counts["قيد المعالجة"]);
 updateCirclePercent("packingCount", counts["قيد التجهيز"]);
@@ -642,8 +630,7 @@ updateCirclePercent("deliveredCount", counts["تم التسليم"]);
 updateCirclePercent("returnedCount", counts["راجع"]);
 updateCirclePercent("receivedReturnCount", counts["تم استلام الراجع"]);
 updateCirclePercent("rejectedCount", counts["رفض"]);
-updateCirclePercent("otherCount", counts["حالات أخرى"]);
-
+updateCirclePercent("otherCount", counts["other"] || 0);
 // ✅ هنا فقط تظهر
 document.getElementById("statsContainer").style.opacity = "1";
 
@@ -715,7 +702,7 @@ window.openAccountingProtected = openAccountingProtected
 
     document.addEventListener("DOMContentLoaded", () => {
       loadStats();
-
+setInterval(loadStats, 10000);
     });
 // ✅ استرجاع المستخدم الحالي
 const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));

@@ -562,7 +562,7 @@ font-weight:bold;
 <script type="module">
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getDatabase, ref, onValue }
+import { getDatabase, ref, get }
     from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -590,139 +590,49 @@ font-weight:bold;
     return full.split("T")[0];
   }
 
-  onValue(ordersRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      ordersList.innerHTML = "<p style='text-align:center'>لا توجد طلبات</p>";
-      return;
-    }
-allOrdersList = [];
-originalOrders = [];
-masterOrders = [];
-
-const data = snapshot.val();
-
-// ⭐ النسخة الأصلية من كل الطلبات → snapshot الكامل
-snapshotAllOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
 
 
-const filterStatus = localStorage.getItem("currentFilterStatus") || "";
 
-const orders = Object.entries(data)
-  .map(([id, o]) => ({ id, ...o }))
-  .filter(o => {
-    // ⭐ الحالة الجديدة (بدون حالة)
-    if (!filterStatus || filterStatus === "new") {
-      return !o.status || o.status === "";
-    }
+async function loadOrders() {
 
-    // ⭐ تطابق الحالة
-return (o.status || "").trim() === (filterStatus || "").trim();
-  })
-  .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+  const snapshot = await get(ordersRef);
 
-masterOrders = [...orders];     // الأصلية ثابتة دائماً
-// ⭐ تعبئة قائمة المنتجات
-const prodList = document.getElementById("prodList");
-prodList.innerHTML = "";
-
-const uniqueProducts = [...new Set(masterOrders.map(o => o.productName).filter(Boolean))];
-
-uniqueProducts.forEach(p => {
-  const lbl = document.createElement("label");
-  lbl.style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;";
-  lbl.innerHTML = `
-    <input type="checkbox" class="prodCheck" value="${p}">
-    <span>${p}</span>
-  `;
-  prodList.appendChild(lbl);
-});
-
-// ⭐ تعبئة قائمة المعلنين
-const advList = document.getElementById("advList");
-advList.innerHTML = "";
-
-const uniqueAdvertisers = [...new Set(masterOrders.map(o => o.advertiser).filter(Boolean))];
-
-uniqueAdvertisers.forEach(a => {
-  const lbl = document.createElement("label");
-  lbl.style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;";
-  lbl.innerHTML = `
-    <input type="checkbox" class="advCheck" value="${a}">
-    <span>${a}</span>
-  `;
-  advList.appendChild(lbl);
-});
-
-const savedFilterActive = localStorage.getItem("filterActive") === "1";
-const savedProducts = JSON.parse(localStorage.getItem("filterProducts") || "[]");
-const savedAdvertisers = JSON.parse(localStorage.getItem("filterAdvertisers") || "[]");
-
-let finalOrders = [...orders];
-
-if (savedFilterActive) {
-
-  // فلترة منتجات
-  if (savedProducts.length > 0) {
-    finalOrders = finalOrders.filter(o => savedProducts.includes(o.productName));
+  if (!snapshot.exists()) {
+    ordersList.innerHTML = "<p style='text-align:center'>لا توجد طلبات</p>";
+    return;
   }
 
-  // فلترة معلنين
-  if (savedAdvertisers.length > 0) {
-    finalOrders = finalOrders.filter(o => savedAdvertisers.includes(o.advertiser));
-  }
+  allOrdersList = [];
+  originalOrders = [];
+  masterOrders = [];
 
-  // لون الزر
-  document.getElementById("filterIcon").style.stroke = "#FF6B2D";
+  const data = snapshot.val();
 
-} else {
-  // إذا الفلترة مطفية → لازم نرجع اللون الطبيعي
-  document.getElementById("filterIcon").style.stroke = "#FF6B2D80";
+  snapshotAllOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+
+  const filterStatus = localStorage.getItem("currentFilterStatus") || "";
+
+  const orders = Object.entries(data)
+    .map(([id, o]) => ({ id, ...o }))
+    .filter(o => {
+      if (o.isDeleted) return false;
+
+      if (!filterStatus || filterStatus === "new") {
+        return !o.status || o.status === "";
+      }
+
+      return (o.status || "").trim() === (filterStatus || "").trim();
+    })
+    .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+
+  masterOrders = [...orders];
+
+  renderOrders(orders);
+
+  allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+  originalOrders = [...orders];
 }
-
-// بعد تحديد القائمة النهائية:
-renderOrders(finalOrders);
-allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
-originalOrders = [...finalOrders];
-
-
-
-    // ⭐ استعادة بحث محفوظ
-// ⭐ استعادة بحث محفوظ — النسخة الصحيحة
-const activeSearch = localStorage.getItem("activeSearch");
-const savedQuery = localStorage.getItem("searchQuery");
-const savedType = localStorage.getItem("searchType") || "orderId";
-
-if (activeSearch === "1" && savedQuery) {
-  const q = normalizeNumber(savedQuery.trim().toLowerCase());
-
-  // ⭐ البحث يجب أن يكون على كل الطلبات
-const filtered = snapshotAllOrders.filter(o => {
-    const id = normalizeNumber(String(o.id || "").toLowerCase());
-    const phone1 = normalizeNumber(String(o.phone1 || "").toLowerCase());
-    const phone2 = normalizeNumber(String(o.phone2 || "").toLowerCase());
-    const code = normalizeNumber(String(o.customerCode || "").toLowerCase());
-
-    if (savedType === "orderId") return id.includes(q);
-    if (savedType === "phone") return phone1.includes(q) || phone2.includes(q);
-if (savedType === "receiptNum")
-    return normalizeNumber(String(o.receiptNum || "").toLowerCase()).includes(q);
-
-    return false;
-  });
-
-  renderOrders(filtered);
-
-  document.getElementById("searchIcon").style.stroke = "#FF6B2D";
-  document.getElementById("searchIcon").dataset.activeSearch = "1";
-  document.getElementById("searchInput").value = savedQuery;
-
-  return;   // 🔥 يمنع Firebase من حذف نتائج البحث
-}
-
-
-
-  });
-  
+  loadOrders();
 </script>
 <script type="module">
 import {
@@ -1322,7 +1232,7 @@ document.getElementById("closeSearch").onclick = () => {
 
 </script>
 <script type="module">
-import { getDatabase, ref, remove }
+import { getDatabase, ref, update, set, get, remove }
   from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const db2 = getDatabase();
@@ -1371,15 +1281,42 @@ if (selectedOrders.size === 0) {
 }
 
 if (!confirm("هل تريد حذف الطلبات المحددة؟")) return;
-
 for (const id of selectedOrders) {
-  await remove(ref(db2, "orders/" + id));
+
+const userData = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+const user = userData.username || "unknown";
+
+  // جلب الطلب قبل الحذف
+  const snap = await get(ref(db2, "orders/" + id));
+const orderData = snap.val();
+
+if (!orderData) continue; // حماية
+
+  // بدل الحذف → تحويل لمحذوف
+// إضافة معلومات الحذف
+orderData.originalPath = "orders";
+orderData.deletedBy = user;
+orderData.deletedAt = new Date().toISOString();
+
+// 1️⃣ نقل الطلب إلى مسار المحذوفات
+await set(ref(db2, "deletedOrders/" + id), orderData);
+
+// 2️⃣ حذفه من orders
+await remove(ref(db2, "orders/" + id));
+
+  // تسجيل الحذف
+await set(ref(db2, "orderLogs/" + Date.now() + "_" + id), {
+    orderId: id,
+    action: "delete",
+    user: user,
+    time: new Date().toISOString(),
+    snapshot: orderData
+  });
 }
 
   alert("تم حذف الطلبات المحددة");
 };
-import { update }
-  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
 
 document.getElementById("bulkUpdateStatusBtn").onclick = async () => {
   const newStatus = document.getElementById("bulkStatusSelect").value;
