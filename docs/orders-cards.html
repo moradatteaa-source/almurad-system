@@ -624,9 +624,31 @@ async function loadOrders() {
       return (o.status || "").trim() === (filterStatus || "").trim();
     })
     .sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+masterOrders = [...orders];
 
-  masterOrders = [...orders];
+// 🔥 استرجاع الفلترة تلقائياً
+const isFilterActive = localStorage.getItem("filterActive") === "1";
 
+filterActive = isFilterActive; // ✅ بعد التعريف
+
+if (isFilterActive) {
+
+  const savedProducts = JSON.parse(localStorage.getItem("filterProducts") || "[]");
+  const savedAdvertisers = JSON.parse(localStorage.getItem("filterAdvertisers") || "[]");
+
+  let filtered = [...masterOrders];
+
+  if (savedProducts.length > 0) {
+    filtered = filtered.filter(o => savedProducts.includes(o.productName));
+  }
+
+  if (savedAdvertisers.length > 0) {
+    filtered = filtered.filter(o => savedAdvertisers.includes(o.advertiser));
+  }
+
+  renderOrders(filtered);
+  return;
+}
   renderOrders(orders);
 
   allOrdersList = Object.entries(data).map(([id, o]) => ({ id, ...o }));
@@ -1076,7 +1098,49 @@ document.getElementById("filterIcon").onclick = () => {
 
 
   box.style.display = "block";
+// 🔥 فلترة حسب الحالة قبل بناء القوائم
+const filterStatus = localStorage.getItem("currentFilterStatus") || "";
 
+let baseList = masterOrders;
+
+if (filterStatus) {
+  baseList = baseList.filter(o => {
+    if (filterStatus === "new") {
+      return !o.status || o.status === "";
+    }
+    return (o.status || "").trim() === filterStatus;
+  });
+}
+
+// 🔥 استخراج المنتجات
+const products = [...new Set(baseList.map(o => o.productName).filter(Boolean))];
+
+// 🔥 استخراج المعلنين
+const advertisers = [...new Set(baseList.map(o => o.advertiser).filter(Boolean))];
+
+// 🔥 تعبئة قائمة المنتجات
+const prodList = document.getElementById("prodList");
+prodList.innerHTML = "";
+products.forEach(p => {
+  prodList.innerHTML += `
+    <label style="display:flex; gap:6px;">
+      <input type="checkbox" class="prodCheck" value="${p}">
+      ${p}
+    </label>
+  `;
+});
+
+// 🔥 تعبئة قائمة المعلنين
+const advList = document.getElementById("advList");
+advList.innerHTML = "";
+advertisers.forEach(a => {
+  advList.innerHTML += `
+    <label style="display:flex; gap:6px;">
+      <input type="checkbox" class="advCheck" value="${a}">
+      ${a}
+    </label>
+  `;
+});
 };
 
 
@@ -1091,10 +1155,21 @@ document.getElementById("applyFilter").onclick = () => {
   const selectedAdvertisers = Array.from(
     document.querySelectorAll(".advCheck:checked")
   ).map(el => el.value);
+let filtered = snapshotAllOrders;
 
-  let filtered = masterOrders;
-  // ⭐ فلترة حسب التاريخ
-// ⭐ فلترة حسب التاريخ (دقيق)
+// 🔥 فلترة حسب الحالة (المهم)
+const filterStatus = localStorage.getItem("currentFilterStatus") || "";
+
+if (filterStatus) {
+  filtered = filtered.filter(o => {
+    if (filterStatus === "new") {
+      return !o.status || o.status === "";
+    }
+    return (o.status || "").trim() === filterStatus;
+  });
+}
+
+// 🔥 فلترة حسب التاريخ
 let dateFrom = null;
 let dateTo = null;
 
@@ -1109,40 +1184,51 @@ if (selectedDates.length === 2) {
 }
 
 if (dateFrom || dateTo) {
-
   filtered = filtered.filter(o => {
-
     const t = getCurrentStatusTime(o);
     if (!t) return false;
 
-    const orderDate = t.split("T")[0];   // نأخذ التاريخ فقط
+    const orderDate = t.split("T")[0];
 
     if (dateFrom && orderDate < dateFrom) return false;
     if (dateTo && orderDate > dateTo) return false;
 
     return true;
   });
-
 }
-// ⭐ حفظ الفلاتر
-localStorage.setItem("filterProducts", JSON.stringify(selectedProducts));
-localStorage.setItem("filterAdvertisers", JSON.stringify(selectedAdvertisers));
-localStorage.setItem("filterActive", "1");
 
-  // فلترة المنتجات
-  if (selectedProducts.length > 0) {
-    filtered = filtered.filter(o => selectedProducts.includes(o.productName));
-  }
+if (selectedProducts.length > 0) {
+  filtered = filtered.filter(o => {
 
-  // فلترة المعلنين
-  if (selectedAdvertisers.length > 0) {
-    filtered = filtered.filter(o => selectedAdvertisers.includes(o.advertiser));
-  }
+    const statusMatch = filterStatus === "new"
+      ? (!o.status || o.status === "")
+      : (o.status || "").trim() === filterStatus;
+
+    return statusMatch && selectedProducts.includes(o.productName);
+
+  });
+}
+
+// 🔥 فلترة المعلنين
+if (selectedAdvertisers.length > 0) {
+  filtered = filtered.filter(o => {
+
+    const statusMatch = filterStatus === "new"
+      ? (!o.status || o.status === "")
+      : (o.status || "").trim() === filterStatus;
+
+    return statusMatch && selectedAdvertisers.includes(o.advertiser);
+
+  });
+}
 
   // تفعيل الفلترة وتغيير لون الأيقونة
-  filterActive = true;
+filterActive = true;
+localStorage.setItem("filterActive", "1");
   document.getElementById("filterIcon").style.stroke = "#FF6B2D";
-
+localStorage.setItem("filterActive", "1");
+localStorage.setItem("filterProducts", JSON.stringify(selectedProducts));
+localStorage.setItem("filterAdvertisers", JSON.stringify(selectedAdvertisers));
   renderOrders(filtered);
   originalOrders = [...filtered];
   allOrdersList = [...filtered];
