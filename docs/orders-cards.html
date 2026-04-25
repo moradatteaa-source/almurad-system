@@ -1420,6 +1420,15 @@ if (selectedOrders.size === 0) {
 if (!confirm(`تأكيد تغيير حالة ${selectedOrders.size} طلب؟`)) return;
 
 for (const id of selectedOrders) {
+
+  const snap = await get(ref(db2, "orders/" + id));
+
+  // إذا الطلب مو موجود → تجاهله
+  if (!snap.exists()) {
+    console.log("NOT FOUND:", id);
+    continue;
+  }
+
   const now = new Date().toISOString();
 
   await update(ref(db2, "orders/" + id), {
@@ -1429,9 +1438,16 @@ for (const id of selectedOrders) {
       by: localStorage.getItem("loggedInUserName") || "غير معروف"
     }
   });
+
+  console.log("UPDATED:", id);
 }
 
-  alert("تم تحديث الحالات بنجاح");
+alert("تم تحديث الحالات بنجاح");
+
+// 🔥 هذا أهم شي
+selectedOrders.clear();
+await loadOrders();
+
 };
 
 </script>

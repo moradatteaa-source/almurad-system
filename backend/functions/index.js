@@ -35,6 +35,27 @@ exports.updateOrderCounts = onValueWritten("/orders/{orderId}", async (event) =>
 
   const db = admin.database();
 
+  // ✅ حالة إضافة طلب جديد
+  if (!before && after) {
+    const newStatus = normalizeStatus(after.status);
+
+    const snap = await db.ref("stats/ordersCounts/" + newStatus).get();
+    const val = snap.exists() ? snap.val() : 0;
+
+    return db.ref("stats/ordersCounts/" + newStatus).set(val + 1);
+  }
+
+  // ✅ حالة حذف طلب
+  if (before && !after) {
+    const oldStatus = normalizeStatus(before.status);
+
+    const snap = await db.ref("stats/ordersCounts/" + oldStatus).get();
+    const val = snap.exists() ? snap.val() : 0;
+
+    return db.ref("stats/ordersCounts/" + oldStatus).set(Math.max(0, val - 1));
+  }
+
+  // ✅ حالة تحديث الحالة
   const oldStatus = normalizeStatus(before?.status);
   const newStatus = normalizeStatus(after?.status);
 
