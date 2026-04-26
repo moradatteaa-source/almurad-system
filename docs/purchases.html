@@ -886,12 +886,17 @@ function loadProductVariants(selectedName) {
 if (typeof prod.stock === "object"){
 
     Object.keys(prod.stock).forEach((v) => {
-      variantContainer.innerHTML += `
-        <div class="variant-item">
-          <input type="text" value="${v}" disabled>
-          <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
-          <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
-        </div>`;
+const parts = v.split("|").map(x => x.trim());
+const dimension = parts[0] || "";
+const value = parts[1] || "";
+
+variantContainer.innerHTML += `
+  <div class="variant-item" data-dimension="${dimension}">
+    <input type="text" value="${dimension}" disabled>
+    <input type="text" value="${value}" disabled>
+    <input type="number" placeholder="الكمية" class="variantQty" data-variant="${v}">
+    <input type="number" placeholder="سعر الشراء" class="variantPrice" data-variant="${v}">
+  </div>`;
     });
 
   } else {
@@ -935,12 +940,17 @@ window.addOldVariant = function () {
   const div = document.createElement("div");
   div.className = "variant-item";
 
-  div.innerHTML = `
-    <input type="text" placeholder="مثلاً: لون | أخضر">
-    <input type="number" placeholder="الكمية" class="variantQty">
-    <input type="number" placeholder="سعر الشراء" class="variantPrice">
-    <button onclick="this.parentElement.remove()">🗑</button>
-  `;
+const productName = document.getElementById("productSearchInput").value;
+const firstVariant = Object.keys(warehouseProducts[productName]?.stock || {})[0] || "";
+const dimension = firstVariant.split("|")[0]?.trim() || "";
+
+div.innerHTML = `
+  <input type="text" value="${dimension}" disabled>
+  <input type="text" placeholder="اكتب فقط القيمة (مثلاً: أحمر)" class="variantValue">
+  <input type="number" placeholder="الكمية" class="variantQty">
+  <input type="number" placeholder="سعر الشراء" class="variantPrice">
+  <button onclick="this.parentElement.remove()">🗑</button>
+`;
 
   container.appendChild(div);
 };
@@ -960,10 +970,35 @@ window.addItemToInvoice = function () {
     qtyInputs.forEach((qInput, i) => {
 
       const qty = parseFloat(qInput.value) || 0;
-      const price = parseFloat(priceInputs[i].value) || 0;
-      const variant = qInput.dataset.variant || "-";
+    const inputPrice = priceInputs[i].value;
+let price;
 
-      if (qty > 0 && price > 0) {
+if (inputPrice !== "" && !isNaN(inputPrice)) {
+  price = parseFloat(inputPrice);
+} else {
+  // 🔥 نجيب السعر القديم من المنتج
+  const product = warehouseProducts[name];
+
+  if (product?.buyPrice) {
+    price = product.buyPrice;
+  } else {
+    price = 0;
+  }
+}
+const valueInput = qInput.parentElement.querySelector(".variantValue");
+const dimensionInput = qInput.parentElement.querySelector("input");
+
+let variant;
+
+if (valueInput && valueInput.value.trim()) {
+  const dimension = dimensionInput.value.trim();
+  const value = valueInput.value.trim();
+  variant = `${dimension} | ${value}`;
+} else {
+  variant = qInput.dataset.variant || "-";
+}
+
+  if (qty > 0){
 
         const subtotal = qty * price;
 
@@ -1030,7 +1065,7 @@ if (variantRows.length > 0) {
   const qty = parseFloat(document.getElementById("simpleQty").value) || 0;
   const price = parseFloat(document.getElementById("simpleBuyPrice").value) || 0;
 
-  if (!name || qty <= 0 || price <= 0) {
+if (!name || qty <= 0)   {
     alert("⚠️ أدخل اسم المنتج والكمية والسعر");
     return;
   }
@@ -1127,13 +1162,16 @@ const snap = await get(productRef);
 
 if (typeof productData.stock === "object") {
 
-  const variant = it.variant;
 
-  if (!productData.stock[variant]) {
-    productData.stock[variant] = 0; // 🔥 إنشاء متغير جديد
-  }
 
-  productData.stock[variant] += Number(it.quantity);
+ const variant = it.variant || "default";
+
+
+
+const oldQty = Number(productData.stock[variant] || 0);
+const newQty = Number(it.quantity || 0);
+
+productData.stock[variant] = oldQty + newQty;
 
 }
 productData.totalQty = Object.values(productData.stock)
