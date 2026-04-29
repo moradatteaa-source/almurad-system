@@ -463,7 +463,7 @@ cron.schedule("*/5 * * * *", async () => {
   const timeout = setTimeout(() => {
     isUpdating = false;
     console.log("⛔ Forced reset بسبب التعليق");
-  }, 60000); // 60 ثانية
+}, 300000); // 5 دقائق
 
   try {
 
