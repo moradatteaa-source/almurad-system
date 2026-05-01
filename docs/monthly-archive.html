@@ -197,9 +197,10 @@ function fixEnglishNumbers(text) {
   return text.toString().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 }
 
+import { getDatabase, ref, get, child, set, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, child, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -338,16 +339,24 @@ if (ordersSnap.exists()) {
 
 // حفظ الطلبات المؤرشفة
 await set(ref(db, `archive/${monthKey}/orders`), allOrders);
+const ids = Object.keys(allOrders);
+const batchSize = 100;
 
+for (let i = 0; i < ids.length; i += batchSize) {
+  let updates = {};
+  const batch = ids.slice(i, i + batchSize);
+
+  for (const id of batch) {
+    updates[`orders/${id}`] = null;
+  }
+
+  await update(ref(db), updates);
+}
+
+console.log("🧹 تم حذف الطلبات المؤرشفة فقط");
 // 🔥 حذف الطلبات المؤرشفة من المسار الأصلي (orders)
 if (Object.keys(allOrders).length > 0) {
-  const remainingOrders = {};
-  for (const [id, o] of Object.entries(ordersSnap.val() || {})) {
-    if (!["تم التسليم", "تم استلام الراجع", "رفض"].includes(o.status)) {
-      remainingOrders[id] = o; // نحتفظ فقط بالطلبات غير النهائية
-    }
-  }
-  await set(ref(db, "orders"), remainingOrders);
+
   console.log("🧹 تم حذف الطلبات المؤرشفة من orders بنجاح.");
 } else {
   console.log("⚠️ لا توجد طلبات بحاجة إلى الأرشفة هذه المرة.");

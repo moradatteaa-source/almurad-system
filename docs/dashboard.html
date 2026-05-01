@@ -522,8 +522,11 @@ display:none;
 
   <!-- 🔹 سكربت -->
   <script type="module">
+import { 
+  getDatabase, ref, get, child, set, update, query, orderByChild, equalTo,
+  onChildAdded, onChildChanged, onChildRemoved
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, child, set, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     
 
     const firebaseConfig = {
@@ -538,40 +541,14 @@ import { getDatabase, ref, get, child, set, update, query, orderByChild, equalTo
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-window.db = db;
-const user = JSON.parse(localStorage.getItem("loggedInUser"));
+    // ✅ نظام قراءة الطلبات + كاش ذكي
+
+const ordersRef = ref(db, "orders");
+// 🔥 نظام احترافي بدون تحميل كل الطلبات
 
 
-
-
-    if (!user) window.location.href = "index.html";
-
-    // تحميل الإحصائيات السريعة
-    async function loadStats() {
-      const dbRef = ref(db);
-    
-const mainStatuses = [
-  "",
-  "مثبت",
-  "قيد المعالجة",
-  "قيد التجهيز",
-  "بانتظار البضاعة",
-  "قيد التوصيل",
-  "تم التسليم",
-  "راجع",
-  "تم استلام الراجع",
-  "رفض"
-];
-
-
-// ✅ إظهار الإحصائيات بعد اكتمال التحميل
-
-const snap = await get(ref(db, "stats/ordersCounts"));
-
-if (!snap.exists()) {
-
-const defaultCounts = {
-  "new": 0,
+let counts = {
+  new: 0,
   "مثبت": 0,
   "قيد المعالجة": 0,
   "قيد التجهيز": 0,
@@ -581,61 +558,104 @@ const defaultCounts = {
   "راجع": 0,
   "تم استلام الراجع": 0,
   "رفض": 0,
-  "other": 0
+  other: 0
 };
+let ordersMap = JSON.parse(localStorage.getItem("ordersMap")) || {};
 
-  await set(ref(db, "stats/ordersCounts"), defaultCounts);
+updateUI(counts);
 
-  return;
+// 🟢 إضافة طلب
+onChildAdded(ordersRef, (snap) => {
+  const o = snap.val();
+  let s = o.status || "new";
+
+  if (s === "") s = "new";
+  if (!counts.hasOwnProperty(s)) s = "other";
+
+  counts[s]++;
+  ordersMap[snap.key] = s;
+
+  saveAll();
+});
+
+// 🟡 تعديل طلب
+onChildChanged(ordersRef, (snap) => {
+  const o = snap.val();
+
+  let newStatus = o.status || "new";
+  if (newStatus === "") newStatus = "new";
+  if (!counts.hasOwnProperty(newStatus)) newStatus = "other";
+
+  const oldStatus = ordersMap[snap.key];
+
+  if (oldStatus === newStatus) return; // 🔥 يمنع الأخطاء
+
+  if (oldStatus && counts[oldStatus] > 0) counts[oldStatus]--;
+
+  counts[newStatus]++;
+  ordersMap[snap.key] = newStatus;
+
+  saveAll();
+});
+
+// 🔴 حذف طلب
+onChildRemoved(ordersRef, (snap) => {
+  const oldStatus = ordersMap[snap.key];
+
+  if (oldStatus && counts[oldStatus] > 0) counts[oldStatus]--;
+
+  delete ordersMap[snap.key];
+
+  saveAll();
+});
+
+// 💾 حفظ + تحديث
+function saveAll() {
+  localStorage.setItem("ordersCounts", JSON.stringify(counts));
+  localStorage.setItem("ordersMap", JSON.stringify(ordersMap));
+  updateUI(counts);
+}
+// 🟡 أول تحميل من الكاش
+const cachedOrders = localStorage.getItem("ordersCounts");
+
+if (cachedOrders) {
+  updateUI(JSON.parse(cachedOrders));
 }
 
-const counts = snap.val();
+function updateUI(counts) {
 
+  const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
 
+  function setCircle(id, value){
+    const el = document.getElementById(id);
+    el.textContent = value;
+const circle = el.closest(".circle");
+    const percent = (value / total) * 100;
 
+    circle.style.setProperty("--percent", percent + "%");
+  }
 
-      document.getElementById("newCount").textContent = counts["new"] || 0;
-      document.getElementById("fixedCount").textContent = counts["مثبت"];
-      document.getElementById("processingCount").textContent = counts["قيد المعالجة"];
-      document.getElementById("packingCount").textContent = counts["قيد التجهيز"];
-      document.getElementById("deliveringCount").textContent = counts["قيد التوصيل"];
-      document.getElementById("deliveredCount").textContent = counts["تم التسليم"];
-      document.getElementById("returnedCount").textContent = counts["راجع"];
-      document.getElementById("receivedReturnCount").textContent = counts["تم استلام الراجع"];
-
-      document.getElementById("rejectedCount").textContent = counts["رفض"];
-      document.getElementById("waitingCount").textContent = counts["بانتظار البضاعة"];
-document.getElementById("otherCount").textContent = counts["other"] || 0;
-// 🟢 حساب المجموع الكلي
-const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-
-// 🔵 دالة تحديث النسبة
-function updateCirclePercent(spanId, value) {
-  const span = document.getElementById(spanId);
-  if (!span) return;
-  const circle = span.closest(".circle");
-  if (!circle) return;
-
-const percent = value === 0 ? 0 : Math.max(5, Math.round((value / total) * 100));
-  circle.style.setProperty("--percent", percent + "%");
+  setCircle("newCount", counts["new"]);
+  setCircle("fixedCount", counts["مثبت"]);
+  setCircle("processingCount", counts["قيد المعالجة"]);
+  setCircle("packingCount", counts["قيد التجهيز"]);
+  setCircle("waitingCount", counts["بانتظار البضاعة"]);
+  setCircle("deliveringCount", counts["قيد التوصيل"]);
+  setCircle("deliveredCount", counts["تم التسليم"]);
+  setCircle("returnedCount", counts["راجع"]);
+  setCircle("receivedReturnCount", counts["تم استلام الراجع"]);
+  setCircle("rejectedCount", counts["رفض"]);
+  setCircle("otherCount", counts["other"]);
 }
-
-updateCirclePercent("newCount", counts["new"] || 0);
-updateCirclePercent("fixedCount", counts["مثبت"]);
-updateCirclePercent("processingCount", counts["قيد المعالجة"]);
-updateCirclePercent("packingCount", counts["قيد التجهيز"]);
-updateCirclePercent("waitingCount", counts["بانتظار البضاعة"]);
-updateCirclePercent("deliveringCount", counts["قيد التوصيل"]);
-updateCirclePercent("deliveredCount", counts["تم التسليم"]);
-updateCirclePercent("returnedCount", counts["راجع"]);
-updateCirclePercent("receivedReturnCount", counts["تم استلام الراجع"]);
-updateCirclePercent("rejectedCount", counts["رفض"]);
-updateCirclePercent("otherCount", counts["other"] || 0);
-// ✅ هنا فقط تظهر
-document.getElementById("statsContainer").style.opacity = "1";
+window.db = db;
+const user = JSON.parse(localStorage.getItem("loggedInUser"));
 
 
-    }
+
+
+    if (!user) window.location.href = "index.html";
+
+
 function openOrders(status) {
   // ✅ إذا الحالة فارغة (طلبات جديدة) نمرر باراميتر فاضي
 window.location.href = `orders-cards.html?status=${encodeURIComponent(status || "")}`;
@@ -699,11 +719,6 @@ window.openAccountingProtected = openAccountingProtected
       localStorage.removeItem("loggedInUser");
       window.location.href = "index.html";
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      loadStats();
-setInterval(loadStats, 10000);
-    });
 // ✅ استرجاع المستخدم الحالي
 const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
 if (!loggedUser) window.location.href = "index.html";
@@ -1187,7 +1202,7 @@ setTimeout(()=>bar.remove(),500);
 }
 
 // 🔔 إشعارات المكافآت والخصومات
-import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
+("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
 .then(async ({ getDatabase, ref, onValue, set }) => {
 
 setTimeout(async () => {
