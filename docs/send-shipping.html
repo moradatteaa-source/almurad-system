@@ -4,85 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>إرسال الشحنة</title>
-
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Tajawal', sans-serif;
       background: #f6f6f6;
-      margin: 0; padding: 0;
+      padding-top: 70px;
     }
-    .container {
-      padding: 20px;
+    .header-fixed {
+      position: fixed; top: 0; right: 0; left: 0;
+      background: #043B64; color: #fff;
+      padding: 14px; text-align: center;
+      font-size: 18px; font-weight: 700;
+      z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
+    .back-arrow {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%); font-size: 22px; cursor: pointer;
+    }
+    .container { padding: 16px; max-width: 700px; margin: 0 auto; }
     .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+      background: #fff; padding: 18px; border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px;
     }
-    .title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 10px;
+    .card-title { font-size: 16px; font-weight: 700; color: #043B64; margin-bottom: 12px; }
+    label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px; }
+    select, input {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      border: 1.5px solid #ddd; font-size: 14px; background: #fafbfc;
+      outline: none; transition: border-color 0.2s;
     }
+    select:focus, input:focus { border-color: #043B64; }
+    .stats {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+    }
+    .stat-box {
+      flex: 1; min-width: 100px; background: #f0f7ff;
+      border-radius: 10px; padding: 12px; text-align: center;
+      border: 1px solid #d0e8f8;
+    }
+    .stat-num { font-size: 22px; font-weight: 800; color: #043B64; }
+    .stat-label { font-size: 12px; color: #666; margin-top: 2px; }
     .btn {
-      width: 100%;
-      padding: 14px;
-      text-align: center;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
+      width: 100%; padding: 14px; text-align: center;
+      border-radius: 12px; border: none; cursor: pointer;
+      font-size: 16px; font-weight: 700; margin-top: 10px;
+      transition: all 0.2s;
     }
-    .btn-primary {
-      background: #043B64;
-      color: #fff;
-    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #043B64; color: #fff; }
+    .btn-primary:hover { background: #085694; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-outline { background: #fff; color: #043B64; border: 2px solid #043B64; }
     .log-box {
-      background: #fff;
-      padding: 15px;
-      min-height: 200px;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      overflow-y: auto;
-      max-height: 350px;
+      background: #fff; padding: 14px; min-height: 200px;
+      border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow-y: auto; max-height: 400px; font-size: 13px;
     }
     .log-item {
-      padding: 6px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
+      padding: 7px 0; border-bottom: 1px solid #f0f0f0;
+      line-height: 1.5;
     }
-    .ok { color: green; font-weight: bold; }
-    .err { color: red; font-weight: bold; }
+    .log-item:last-child { border-bottom: none; }
+    .ok  { color: #27ae60; font-weight: 700; }
+    .err { color: #e74c3c; font-weight: 700; }
+    .info { color: #043B64; font-weight: 600; }
+    .warn { color: #e67e22; font-weight: 600; }
+
+    /* Progress bar */
+    .progress-wrap {
+      background: #ecf0f1; border-radius: 10px;
+      height: 10px; margin: 10px 0; overflow: hidden; display: none;
+    }
+    .progress-bar {
+      height: 100%; background: linear-gradient(90deg, #043B64, #2980b9);
+      transition: width 0.3s; border-radius: 10px;
+    }
   </style>
 </head>
-<!-- 🧾 نموذج الوصل للطباعة -->
+
+<body>
+
+<!-- HEADER -->
+<header class="header-fixed">
+  <span id="backArrow" class="back-arrow">❮</span>
+  <span>إرسال الشحنة</span>
+</header>
+
+<!-- نموذج الطباعة (مخفي) -->
 <div id="printArea" style="display:none; font-family: 'Tajawal', sans-serif;">
-
-  <div style="width: 100%; max-width: 380px; margin: auto; padding:20px; border:1px solid #000;">
-
+  <div style="width:100%; max-width:380px; margin:auto; padding:20px; border:1px solid #000;">
     <h3 style="text-align:center; margin:0 0 10px;">Shipping Label</h3>
-
     <div style="font-size:14px; line-height:1.6;">
       <b>Order Nr:</b> <span id="p_orderId"></span><br>
       <b>Tracking Nr:</b> <span id="p_tracking"></span><br>
       <b>Date:</b> <span id="p_date"></span><br><br>
-
       <b>Shipping Address:</b><br>
       <span id="p_name"></span><br>
       <span id="p_city"></span><br>
       <span id="p_region"></span><br>
       <span id="p_phone"></span><br><br>
-
-      <b>Sender:</b><br>
-      eng-murad-organization<br><br>
-
+      <b>Sender:</b><br>eng-murad-organization<br><br>
       <b>Total:</b> <span id="p_total"></span> د.ع<br>
       <b>Items Quantity:</b> <span id="p_qty"></span><br>
     </div>
-
     <table style="width:100%; margin-top:15px; border-collapse:collapse;">
       <thead>
         <tr>
@@ -93,98 +118,63 @@
       </thead>
       <tbody id="p_items"></tbody>
     </table>
-
   </div>
-
 </div>
-
-<body>
-<header class="header-fixed">
-  <span id="backArrow" class="back-arrow">❮</span>
-  <span>إرسال الشحنة</span>
-</header>
-
-<style>
-.header-fixed {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  background: #043B64;
-  color: #fff;
-  padding: 14px;
-  text-align: center;
-  font-size: 18px;
-  z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.back-arrow {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 22px;
-  cursor: pointer;
-}
-
-body {
-  padding-top: 70px !important; /* حتى لا تغطي الهيدر الصفحة */
-}
-</style>
 
 <div class="container">
-  
+
+  <!-- إعدادات الرفع -->
   <div class="card">
-    <div class="title">معالجة الطلبات</div>
-    <div style="margin-top:15px;">
-  <label style="font-weight:bold;">اختر شركة الشحن:</label>
-  <select id="shippingCompany" style="width:100%; padding:10px; margin-top:5px; border-radius:8px;">
-   <option value="prime" selected>برايم</option>
-<option value="waseet">الوسيط</option>
-  </select>
-</div>
-    <div>عدد الطلبات المهيئة للرفع: <span id="ordersCount">0</span></div>
+    <div class="card-title">⚙️ إعدادات الشحن</div>
+    <label>شركة الشحن:</label>
+    <select id="shippingCompany">
+      <option value="prime" selected>🚀 برايم</option>
+      <option value="waseet">🚚 الوسيط</option>
+    </select>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-num" id="ordersCount">-</div>
+        <div class="stat-label">طلب جاهز للرفع</div>
+      </div>
+      <div class="stat-box" style="background:#f0fff4; border-color:#c8e6c9;">
+        <div class="stat-num" id="successCount" style="color:#27ae60;">0</div>
+        <div class="stat-label">ناجح</div>
+      </div>
+      <div class="stat-box" style="background:#fff5f5; border-color:#ffcdd2;">
+        <div class="stat-num" id="failCount" style="color:#e74c3c;">0</div>
+        <div class="stat-label">فاشل</div>
+      </div>
+    </div>
   </div>
 
-  <button id="startUpload" class="btn btn-primary">
-    إرسال الشحنة
-  </button>
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
 
-  <button id="viewLogs" class="btn" style="border:1px solid #043B64;color:#043B64">
-    عرض سجلات الشحن
-  </button>
+  <button id="startUpload" class="btn btn-primary">🚀 إرسال الشحنة</button>
+  <button id="viewLogs" class="btn btn-outline" style="margin-top:8px;">📋 عرض سجلات الشحن</button>
 
-  <h3 style="margin-top:20px;">سجل النشاط</h3>
+  <!-- سجل النشاط -->
+  <h3 style="margin: 16px 0 8px; font-size:15px; color:#043B64;">📄 سجل النشاط</h3>
   <div id="logs" class="log-box">
-    لا توجد سجلات نشاط بعد
+    <div class="log-item info">في انتظار بدء العملية...</div>
   </div>
 
 </div>
+
 <script src="./waseetCities.js"></script>
 <script src="./waseetRegions.js"></script>
 
-
-
-
-<!-- سكربت الرفع والتقرير -->
 <script type="module">
+import { sendOrdersToWaseet, loginToWaseet } from "./deliveryService.js";
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-import { 
-  sendOrdersToWaseet,
-  loginToWaseet
-} from "./deliveryService.js";
-
-// 🔥 استدعاء Firebase
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-
-import {
-  getDatabase, ref, get
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-import { update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-
+// ============================================================
+// Firebase
+// ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
   authDomain: "almurad-system.firebaseapp.com",
@@ -194,142 +184,210 @@ const firebaseConfig = {
   messagingSenderId: "911755824405",
   appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 };
-
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const db  = getDatabase(app);
 
+// ============================================================
+// متغيرات
+// ============================================================
 let readyOrders = [];
+let successCount = 0;
+let failCount    = 0;
 
-// 🔥 تحميل الطلبات المثبتة
+// ============================================================
+// مساعدات
+// ============================================================
+function addLog(text, cls = "info") {
+  const box = document.getElementById("logs");
+  // امسح الرسالة الافتراضية
+  if (box.querySelector(".log-item.info")?.textContent.includes("انتظار")) box.innerHTML = "";
+  box.innerHTML += `<div class="log-item ${cls}">${text}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function updateStats() {
+  document.getElementById("successCount").textContent = successCount;
+  document.getElementById("failCount").textContent    = failCount;
+}
+
+function setProgress(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById("progressBar").style.width = pct + "%";
+}
+
+function setLoading(v) {
+  const btn = document.getElementById("startUpload");
+  btn.disabled    = v;
+  btn.textContent = v ? "⏳ جاري الرفع..." : "🚀 إرسال الشحنة";
+  document.getElementById("progressWrap").style.display = v ? "block" : "none";
+}
+
+// ============================================================
+// تحميل الطلبات من ordersTest/مثبت
+// ============================================================
 async function loadOrders() {
-  const snapshot = await get(ref(db, "orders"));
-  if (!snapshot.exists()) return;
+  addLog("🔄 جاري تحميل الطلبات المثبتة...");
+  try {
+    const snap = await get(ref(db, "ordersTest/مثبت"));
 
-  const data = snapshot.val();
-  readyOrders = Object.entries(data)
-    .map(([id, o]) => ({ id, ...o }))
-    .filter(o => o.status === "مثبت");
+    if (!snap.exists()) {
+      addLog("ℹ️ لا توجد طلبات في مسار ordersTest/مثبت", "warn");
+      document.getElementById("ordersCount").textContent = "0";
+      return;
+    }
 
-  document.getElementById("ordersCount").textContent = readyOrders.length;
+    const data = snap.val();
+
+    // فلترة: نأخذ فقط الطلبات الحقيقية (ليس _meta)
+    readyOrders = Object.entries(data)
+      .filter(([id]) => id !== "_meta")
+      .map(([id, o]) => ({ id, ...o }))
+      // تأكيد الحالة "مثبت" فقط
+      .filter(o => !o.status || o.status.trim() === "مثبت");
+
+    document.getElementById("ordersCount").textContent = readyOrders.length;
+
+    if (readyOrders.length > 0) {
+      addLog(`✅ تم تحميل ${readyOrders.length} طلب جاهز للرفع`, "ok");
+    } else {
+      addLog("ℹ️ لا توجد طلبات بحالة 'مثبت' جاهزة للرفع", "warn");
+    }
+
+  } catch (err) {
+    addLog(`❌ خطأ في تحميل الطلبات: ${err.message}`, "err");
+  }
 }
 
 loadOrders();
 
-// 🔥 دالة تسجيل النشاط
-function addLog(text, cls = "") {
-  const box = document.getElementById("logs");
-  if (box.innerHTML.includes("لا توجد")) box.innerHTML = "";
-  box.innerHTML += `<div class="log-item ${cls}">${text}</div>`;
-  box.scrollTop = box.scrollHeight;
-}
+// ============================================================
+// زر الرفع
+// ============================================================
 document.getElementById("startUpload").onclick = async () => {
-
   if (readyOrders.length === 0) {
-    alert("لا توجد طلبات مثبتة للرفع.");
+    addLog("⚠️ لا توجد طلبات مثبتة للرفع", "warn");
     return;
   }
+
+  successCount = 0;
+  failCount    = 0;
+  updateStats();
+  setLoading(true);
 
   const selectedCompany = document.getElementById("shippingCompany").value;
+  addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  addLog(`🚚 شركة الشحن: ${selectedCompany === "prime" ? "برايم" : "الوسيط"}`);
+  addLog(`📦 عدد الطلبات: ${readyOrders.length}`);
 
-  addLog(`🚚 شركة الشحن المختارة: ${selectedCompany}`);
+  try {
 
-  // ===============================
-  // 🟢 الوسيط
-  // ===============================
-  if (selectedCompany === "waseet") {
+    // ==========================
+    // 🟢 الوسيط
+    // ==========================
+    if (selectedCompany === "waseet") {
 
-    addLog("🔄 تسجيل الدخول للوسيط...");
-    const token = await loginToWaseet();
+      addLog("🔄 تسجيل الدخول للوسيط...");
+      const token = await loginToWaseet();
 
-    if (!token) {
-      addLog("❌ فشل تسجيل الدخول إلى الوسيط", "err");
-      return;
-    }
-
-    addLog("✔️ تم تسجيل الدخول — بدء رفع الطلبات");
-
-    const result = await sendOrdersToWaseet(
-      readyOrders,
-      window.waseetCities,
-      window.waseetRegions
-    );
-
-   for (const r of result.results) {
-  if (r.success) {
-    addLog(`✔ الطلب #${r.orderId} — رقم الوصل: ${r.receiptNum}`, "ok");
-  } else {
-    addLog(`✖ الطلب #${r.orderId} — فشل: ${r.reason || JSON.stringify(r.response)}`, "err");
-  }
-}
-
-addLog(`🟢 الناجح: ${result.success} | 🔴 الفاشل: ${result.failed}`);
-    return;
-  }
-
-  // ===============================
-  // 🟣 برايم
-  // ===============================
-  if (selectedCompany === "prime") {
-
-    addLog("🔄 بدء رفع الطلبات إلى برايم...");
-
-    let successCount = 0;
-    let failCount = 0;
-
-for (const order of readyOrders) {      try {
-
-
-const response = await fetch(
-  `https://almurad.onrender.com/api/create-order-prime/${order.id}`,
-  { method: "POST" }
-);
-
-        const data = await response.json();
-
-      if (data.success) {
-  addLog(`✔ الطلب #${order.id} — رقم الوصل: ${data.shipmentNo}`, "ok");
-  successCount++;
-} else {
-  const reason = data.msg || data.error || JSON.stringify(data);
-  addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
-  failCount++;
-}
-
-      } catch (err) {
-        addLog(`❌ خطأ في الطلب #${order.id}`, "err");
-        failCount++;
+      if (!token) {
+        addLog("❌ فشل تسجيل الدخول إلى الوسيط", "err");
+        setLoading(false);
+        return;
       }
+      addLog("✔️ تم تسجيل الدخول — بدء رفع الطلبات", "ok");
 
+      const result = await sendOrdersToWaseet(
+        readyOrders,
+        window.waseetCities,
+        window.waseetRegions
+      );
+
+      for (const r of result.results) {
+        if (r.success) {
+          successCount++;
+          addLog(`✔ الطلب #${r.orderId} — وصل: ${r.receiptNum}`, "ok");
+        } else {
+          failCount++;
+          const reason = r.reason || r.response?.message || r.response?.msg || JSON.stringify(r.response || r.error || "");
+          addLog(`✖ الطلب #${r.orderId} — فشل: ${reason}`, "err");
+        }
+        setProgress(successCount + failCount, readyOrders.length);
+        updateStats();
+      }
     }
 
-    addLog(`🟢 الناجح: ${successCount} | 🔴 الفاشل: ${failCount}`);
+    // ==========================
+    // 🟣 برايم
+    // ==========================
+    else if (selectedCompany === "prime") {
+
+      addLog("🔄 بدء رفع الطلبات إلى برايم...");
+
+      for (let i = 0; i < readyOrders.length; i++) {
+        const order = readyOrders[i];
+        addLog(`⏳ رفع الطلب #${order.id} (${i + 1}/${readyOrders.length})...`);
+
+        try {
+          const response = await fetch(
+            `https://almurad.onrender.com/api/create-order-prime/${order.id}`,
+            { method: "POST" }
+          );
+
+          // ✅ تحقق من أن الاستجابة JSON وليست خطأ HTML
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            const text = await response.text();
+            failCount++;
+            addLog(`✖ الطلب #${order.id} — استجابة غير صالحة من السيرفر: ${text.slice(0, 100)}`, "err");
+            setProgress(successCount + failCount, readyOrders.length);
+            updateStats();
+            continue;
+          }
+
+          const data = await response.json();
+
+          if (data.success) {
+            successCount++;
+            addLog(`✔ الطلب #${order.id} — وصل برايم: ${data.shipmentNo}`, "ok");
+          } else {
+            failCount++;
+            // ✅ عرض سبب الفشل بشكل واضح
+            const reason = data.msg || data.error || JSON.stringify(data);
+            addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+          }
+
+        } catch (err) {
+          failCount++;
+          addLog(`✖ الطلب #${order.id} — خطأ شبكة: ${err.message}`, "err");
+        }
+
+        setProgress(successCount + failCount, readyOrders.length);
+        updateStats();
+
+        // تأخير بسيط بين الطلبات لتجنب الحمل الزائد
+        if (i < readyOrders.length - 1) await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+  } catch (err) {
+    addLog(`❌ خطأ عام: ${err.message}`, "err");
+  } finally {
+    setLoading(false);
+    addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    addLog(`✅ الناجح: ${successCount} | ❌ الفاشل: ${failCount}`,
+      failCount === 0 ? "ok" : successCount === 0 ? "err" : "warn");
+
+    // أعد تحميل الطلبات المتبقية
+    if (successCount > 0) {
+      addLog("🔄 جاري تحديث قائمة الطلبات...");
+      await loadOrders();
+    }
   }
 };
 
-
-function extractReason(r) {
-
-  // 1 — أخطاء تحددها أنت داخل الكود
-  if (r.reason) return r.reason;
-
-  // 2 — أخطاء تأتي من الوسيط بصيغ مختلفة
-  if (r.response?.message) return r.response.message;
-  if (r.response?.msg) return r.response.msg;
-  if (r.response?.error) return r.response.error;
-  if (r.error?.message) return r.error.message;
-  if (r.error?.msg) return r.error.msg;
-
-  // 3 — إذا كانت مدينة أو منطقة غير صالحة
-  if (r.cityError) return r.cityError;
-  if (r.regionError) return r.regionError;
-
-  // 4 — أخطاء بسبب قيم ناقصة أو صفرية
-  if (r.missingField) return r.missingField;
-
-  // 5 — fallback
-  return JSON.stringify(r.response || r.error || r, null, 2);
-}
-
+// ============================================================
+// أزرار أخرى
+// ============================================================
 document.getElementById("viewLogs").onclick = () => {
   window.location.href = "shipping-logs.html";
 };
@@ -337,82 +395,7 @@ document.getElementById("viewLogs").onclick = () => {
 document.getElementById("backArrow").onclick = () => {
   window.location.href = "orders-cards.html?status=مثبت";
 };
-// ⭐ تجهيز طباعة وصل واحد
-function printSingleOrder(orderData) {
-
-  document.getElementById("p_orderId").textContent = orderData.orderId || "--";
-  document.getElementById("p_tracking").textContent = orderData.receiptNum || "--";
-  document.getElementById("p_date").textContent = new Date().toLocaleDateString();
-
-  document.getElementById("p_name").textContent = orderData.name || "";
-  document.getElementById("p_city").textContent = orderData.city || "";
-  document.getElementById("p_region").textContent = orderData.region || "";
-  document.getElementById("p_phone").textContent = orderData.phone || "";
-
-  document.getElementById("p_total").textContent = orderData.total || 0;
-  document.getElementById("p_qty").textContent = orderData.items?.length || 1;
-
-  // قائمة المنتجات
-  let html = "";
-  if (orderData.items) {
-    orderData.items.forEach(i => {
-      html += `
-        <tr>
-          <td style="border:1px solid #000; padding:5px;">${i.name}</td>
-          <td style="border:1px solid #000; padding:5px;">${i.qty}</td>
-          <td style="border:1px solid #000; padding:5px;">${i.price}</td>
-        </tr>
-      `;
-    });
-  }
-  document.getElementById("p_items").innerHTML = html;
-
-  printDiv();
-}
-
-
-// ⭐ تجهيز طباعة كل الطلبات داخل الفاتورة بالكامل
-function printAllOrders(ordersArray) {
-
-  document.getElementById("p_orderId").textContent = "Multiple";
-  document.getElementById("p_tracking").textContent = "--";
-  document.getElementById("p_date").textContent = new Date().toLocaleDateString();
-
-  document.getElementById("p_name").textContent = "";
-  document.getElementById("p_city").textContent = "";
-  document.getElementById("p_region").textContent = "";
-  document.getElementById("p_phone").textContent = "";
-
-  let html = "";
-  ordersArray.forEach(o => {
-    html += `
-      <tr>
-        <td style="border:1px solid #000; padding:5px;">طلب #${o.orderId}</td>
-        <td style="border:1px solid #000; padding:5px;">${o.items?.length || 1}</td>
-        <td style="border:1px solid #000; padding:5px;">${o.total || 0}</td>
-      </tr>
-    `;
-  });
-
-  document.getElementById("p_items").innerHTML = html;
-
-  printDiv();
-}
-
-
-// ⭐ دالة الطباعة
-function printDiv() {
-  const content = document.getElementById("printArea").innerHTML;
-  const original = document.body.innerHTML;
-
-  document.body.innerHTML = content;
-  window.print();
-  document.body.innerHTML = original;
-
-  location.reload();
-}
 
 </script>
-
 </body>
 </html>

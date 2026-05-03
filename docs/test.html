@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Copy Orders by Status</title>
+</head>
+
+<body style="font-family:Tajawal; text-align:center; margin-top:50px;">
+
+<h2>نسخ الطلبات حسب الحالة</h2>
+
+<button onclick="copyOrders()" style="padding:12px 20px; font-size:16px;">
+نسخ الطلبات
+</button>
+
+<p id="status"></p>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+// 🔥 إعداد Firebase (خليه مثل ما هو عندك)
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// 🔥 الدالة
+window.copyOrders = async function () {
+
+  document.getElementById("status").innerText = "جاري النسخ...";
+
+  try {
+
+    const snap = await get(ref(db, "orders"));
+
+    if (!snap.exists()) {
+      alert("ماكو طلبات");
+      return;
+    }
+
+    const data = snap.val();
+    const ids = Object.keys(data);
+
+    let count = 0;
+
+    for (const id of ids) {
+
+      const order = data[id];
+
+      // 🔥 إذا ماكو حالة نخليها "جديد"
+      const status = order.status && order.status.trim() !== "" 
+        ? order.status 
+        : "جديد";
+
+      const updatedOrder = {
+        ...order,
+        enterIndex: Date.now() + Math.random()
+      };
+
+      await set(
+        ref(db, `ordersTest/${status}/${id}`),
+        updatedOrder
+      );
+
+      count++;
+    }
+
+    document.getElementById("status").innerText =
+      `تم النسخ ✅ عدد الطلبات: ${count}`;
+
+  } catch (err) {
+
+    console.error(err);
+    document.getElementById("status").innerText = "❌ صار خطأ";
+
+  }
+
+};
+
+</script>
+
+</body>
+</html>

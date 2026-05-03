@@ -2,354 +2,282 @@ import { updatePrimeStatusesFromFirebase } from "./services/shipping/primeServic
 import * as primeService from "./services/shipping/primeService.js";
 import { db } from "./firebase.js";
 import { ref, get, update } from "firebase/database";
-// import * as primeService from "./services/shipping/primeService.js";
 import * as waseetService from "./services/shipping/waseetService.js";
 import express from "express";
 import fetch from "node-fetch";
 import FormData from "form-data";
 import cors from "cors";
 import cron from "node-cron";
-
-// ------------------------------
-// 🟦 Firebase
-// ------------------------------
-
-
-// ------------------------------
-// 🟦 وارد من deliveryService.js (اللازم فقط)
-// ------------------------------
-const waseetStatusMap = {
-  "تم التسليم للزبون": "تم التسليم",
-  "تم الاستلام من قبل المندوب": "قيد التوصيل",
-  "ارجاع الى التاجر": "راجع",
-  "تم الارجاع الى التاجر": "تم استلام الراجع",
-  "في موقع فرز بغداد": "قيد التوصيل"
-};
-
-// =======================================================
-// 🔥 Firebase Initialization
-// =======================================================
-
-
-
-
-// =======================================================
-// 🚀 Express App
-// =======================================================
-   
-const app = express();
-app.use(cors());
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-// يخدم مجلد docs الموجود بمستوى أعلى من backend
-app.use(express.static(path.join(__dirname, "../docs")));app.use(express.urlencoded({ extended: true }));
+// ============================================================
+// ثوابت
+// ============================================================
+const FINAL_STATUSES   = ["تم التسليم", "تم استلام الراجع"];
+const ALLOWED_FROM     = ["", "مثبت", "قيد التجهيز", "قيد التوصيل", "راجع"];
+
+// الحالات التي نتابع فيها طلبات الوسيط داخل ordersTest
+const WASEET_WATCH_STATUSES = ["قيد التجهيز", "قيد التوصيل", "راجع"];
+
+const TEST_STATUSES = [
+  "تم التسليم","قيد المعالجة","جديد","مثبت",
+  "قيد التجهيز","بانتظار البضاعة","قيد التوصيل",
+  "راجع","تم استلام الراجع","رفض"
+];
+
+const waseetStatusMap = {
+  "تم التسليم للزبون":            "تم التسليم",
+  "تم الاستلام من قبل المندوب":  "قيد التوصيل",
+  "ارجاع الى التاجر":            "راجع",
+  "تم الارجاع الى التاجر":       "تم استلام الراجع",
+  "في موقع فرز بغداد":           "قيد التوصيل"
+};
+
+// ============================================================
+// Express
+// ============================================================
+const app = express();
+app.use(cors());
+app.use(express.static(path.join(__dirname, "../docs")));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// ============================================================
+// مساعدات
+// ============================================================
+function chunk(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) chunks.push(array.slice(i, i + size));
+  return chunks;
+}
 
-// =======================================================
-// 🟢 الصفحة الرئيسية
-// =======================================================
-app.get("/", (req, res) => {
-  res.send("✅ AlMurad Server is running successfully!");
-});
+function normalizeArabicStatus(str = "") {
+  return str.toString().replace(/[^\u0600-\u06FF\s]/g, "").replace(/\s+/g, " ").trim();
+}
 
+/** حساب مسار Firebase للطلب بناءً على حالته */
+function getPathForStatus(status, id) {
+  if (!status || status === "جديد") return `orders/${id}`;
+  return TEST_STATUSES.includes(status) ? `ordersTest/${status}/${id}` : `orders/${id}`;
+}
 
-// =======================================================
-// 🟢 1) تسجيل الدخول → الوسيط
-// =======================================================
+// ============================================================
+// الصفحة الرئيسية
+// ============================================================
+app.get("/", (req, res) => res.send("✅ AlMurad Server is running successfully!"));
+
+// ============================================================
+// 1) تسجيل الدخول → الوسيط
+// ============================================================
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log("📩 Login request received:", { username, password });
-
     const formData = new FormData();
     formData.append("username", username);
     formData.append("password", password);
 
     const response = await fetch("https://api.alwaseet-iq.net/v1/merchant/login", {
-      method: "POST",
-      body: formData,
+      method: "POST", body: formData
     });
-
-    const data = await response.json();
-    console.log("📩 Login response:", data);
-    res.json(data);
+    res.json(await response.json());
   } catch (err) {
     console.error("❌ Login Error:", err);
     res.status(500).json({ status: false, msg: "Server Login Error" });
   }
 });
 
-
-
-// =======================================================
-// 🟢 رفع الطلب → الوسيط (من خلال service)
-// =======================================================
+// ============================================================
+// 2) رفع طلب → الوسيط
+// ============================================================
 app.post("/api/create-order", async (req, res) => {
   try {
-
     const { token, ...payload } = req.body;
-
-    const result = await waseetService.createOrder(payload, token);
-
-    res.json(result);
-
+    res.json(await waseetService.createOrder(payload, token));
   } catch (err) {
-    console.error("❌ Error creating order:", err);
+    console.error("❌ create-order:", err);
     res.status(500).json({ status: false, msg: "Server Error" });
   }
 });
 
-// =======================================================
-// 🟢 3) جلب الحالات → الوسيط
-// =======================================================
+// ============================================================
+// 3) جلب الحالات → الوسيط
+// ============================================================
 app.post("/api/get-orders-status", async (req, res) => {
   try {
     const { token, ids } = req.body;
-    console.log("🔄 Fetching order statuses:", ids);
-
     const response = await fetch(
       `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `ids=${ids}`,
-      }
+      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: `ids=${ids}` }
     );
-
-    const data = await response.json();
-    console.log("✅ Status response received");
-
-    res.json(data);
+    res.json(await response.json());
   } catch (err) {
-    console.error("❌ Error fetching statuses:", err);
-    res.status(500).json({ status: false, msg: "Server Error in get-orders-status" });
+    console.error("❌ get-orders-status:", err);
+    res.status(500).json({ status: false, msg: "Server Error" });
   }
 });
 
-
-// =======================================================
-// 🟢 4) معرفة IP السيرفر
-// =======================================================
+// ============================================================
+// 4) IP السيرفر
+// ============================================================
 app.get("/myip", async (req, res) => {
   try {
-    const response = await fetch("https://ifconfig.me");
-    const ip = await response.text();
-    res.send(`🌍 Server Public IP: ${ip}`);
+    const r = await fetch("https://ifconfig.me");
+    res.send(`🌍 Server Public IP: ${await r.text()}`);
   } catch (err) {
-    console.error("❌ Error fetching IP:", err);
     res.status(500).send("Error fetching IP");
   }
 });
 
-function chunk(array, size) {
-  const chunks = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
-
-// =======================================================
-// 🔄 5) الدالة الأساسية: التحديث التلقائي للحالات
-// =======================================================
+// ============================================================
+// 5) التحديث التلقائي للحالات → الوسيط
+//    يسحب من ordersTest/{حالة} بدل orders
+// ============================================================
 async function autoUpdateStatuses() {
-  console.log("🚀 AutoUpdate بدأ يشتغل الآن:", new Date().toLocaleString("en-US", { hour12: false }));
+  console.log("🚀 AutoUpdate بدأ:", new Date().toLocaleString("en-US", { hour12: false }));
 
   try {
-    console.log("⏳ Running Auto Status Update...");
+    // ✅ جلب الطلبات من المسارات التي نتابعها فقط (بدل كل orders)
+    let allOrders = [];
 
-    // 1) جلب كل الطلبات
-    const snap = await get(ref(db, "orders"));
-    if (!snap.exists()) return console.log("❌ No orders found");
+    for (const status of WASEET_WATCH_STATUSES) {
+      const snap = await get(ref(db, `ordersTest/${status}`));
+      if (!snap.exists()) continue;
 
-    const allOrders = Object.entries(snap.val()).map(([id, o]) => ({ id, ...o }));
+      Object.entries(snap.val()).forEach(([id, o]) => {
+        if (id === "_meta") return;
+        if (o.shippingCompany === "prime") return;  // برايم يتعامل معه primeService
+        if (!o.receiptNum) return;
+        if (FINAL_STATUSES.includes(o.status)) return;
 
-    // نأخذ فقط الطلبات اللي بيها receiptNum
-const FINAL_STATUSES = ["تم التسليم", "تم استلام الراجع"];
+        allOrders.push({
+          id,
+          ...o,
+          _currentPath: `ordersTest/${status}/${id}`
+        });
+      });
+    }
 
-const sent = allOrders.filter(o =>
-  o.receiptNum &&
-  !FINAL_STATUSES.includes(o.status)
-);
-    if (sent.length === 0) return console.log("❌ No sent orders");
+    if (allOrders.length === 0) {
+      console.log("ℹ️ لا يوجد طلبات وسيط للمتابعة");
+      return;
+    }
 
-    // 2) تسجيل الدخول
-const token = await waseetService.loginToWaseet();
-    if (!token) return console.log("❌ Login failed");
+    console.log(`📋 ${allOrders.length} طلب وسيط للمتابعة`);
+
+    // تسجيل الدخول
+    const token = await waseetService.loginToWaseet();
+    if (!token) { console.log("❌ Waseet login failed"); return; }
 
     // IDs
-const orderIds = sent
-  .map(o => String(o.receiptNum || "").trim())
-  .filter(id => id !== "" && /^[0-9]+$/.test(id));
+    const orderIds = allOrders
+      .map(o => String(o.receiptNum || "").trim())
+      .filter(id => id && /^[0-9]+$/.test(id));
 
-const batches = chunk(orderIds, 25);
+    const batches = chunk(orderIds, 25);
+    let allResults = [];
 
-let allResults = [];
-
-    // 3) جلب الحالات من الوسيط
-for (const batch of batches) {
-  const ids = batch.join(",");
-
- const response = await fetch(
-  `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `ids=${ids}`,
-  }
-);
-
-
-  const data = await response.json();
-
-  if (data.status && Array.isArray(data.data)) {
-    allResults = allResults.concat(data.data);
-  }
-}
-
-
-// 4) تحديث كل حالة داخل Firebase (مع التحقق الصحيح)
-let updateCount = 0;
-
-for (const item of allResults) {
-
-  // تنظيف الحالة القادمة من الوسيط
-function normalizeArabicStatus(str = "") {
-  return str
-    .toString()
-    .replace(/[^\u0600-\u06FF\s]/g, "") // حذف أي رموز خفية
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const cleanStatus = normalizeArabicStatus(item.status);
-
-  // إذا حالة غير موجودة بالمابنغ → تجاهل
-  if (!cleanStatus || !waseetStatusMap[cleanStatus]) {
-    console.log(`⏩ UNKNOWN | receiptNum: ${item.id} | status: ${cleanStatus}`); 
-    continue;
-  }
-
-  // الحالة المحوّلة داخل النظام
-const mapped = waseetStatusMap[cleanStatus];
-const waseetRawStatus = cleanStatus;
-
-  // 🔍 البحث داخل شجرة Firebase حسب receiptNum
-  let foundOrder = null;
-  let foundKey = null;
-
-  for (const o of allOrders) {
-    const fb = String(o.receiptNum || "").trim();
-    const ws = String(item.id || "").trim();
-
-    if (fb === ws) {
-      foundOrder = o;
-      foundKey = o.id;
-      break;
+    for (const batch of batches) {
+      const response = await fetch(
+        `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `ids=${batch.join(",")}`
+        }
+      );
+      const data = await response.json();
+      if (data.status && Array.isArray(data.data)) allResults = allResults.concat(data.data);
     }
-  }
 
-  if (!foundOrder) {
-    console.log("❌ Order NOT FOUND in Firebase:", item.id);
-    continue;
-  }
-  const isSameStatus = foundOrder.status === mapped;
-const fromWaseet = true; // لأن هذا التحديث جاي من الوسيط
+    const now = new Date().toISOString();
+    let updateCount = 0;
 
+    for (const item of allResults) {
+      const cleanStatus = normalizeArabicStatus(item.status);
+      const mapped      = waseetStatusMap[cleanStatus];
 
-  // الحالات اللي نسمح نتحرك منها
-  const allowedFromStatuses = ["", "مثبت", "قيد التجهيز", "قيد التوصيل", "راجع"];
+      if (!mapped) {
+        console.log(`⏩ UNKNOWN waseet status: ${cleanStatus}`);
+        continue;
+      }
 
-  // الحالات النهائية المقفلة
-  const lockedStatuses = ["تم التسليم", "تم استلام الراجع"];
+      // إيجاد الطلب بـ receiptNum
+      const foundOrder = allOrders.find(
+        o => String(o.receiptNum || "").trim() === String(item.id || "").trim()
+      );
+      if (!foundOrder) { console.log("❌ Order not found:", item.id); continue; }
 
-  // ❌ إذا حالة نهائية → لا تحدث
-  if (lockedStatuses.includes(foundOrder.status)) {
-    console.log("⛔ Ignored — locked final status:", foundOrder.status);
-    continue;
-  }
+      const currentStatus = (foundOrder.status || "").trim();
 
-  // ❌ إذا الحالة الحالية غير مسموح نتحرك منها → لا تحدث
-  if (!allowedFromStatuses.includes(foundOrder.status)) {
-    console.log("⚠️ Skip — not allowed from-status:", foundOrder.status);
-    continue;
-  }
+      // تحقق الحالات
+      if (FINAL_STATUSES.includes(currentStatus))      { console.log("⛔ نهائية:", foundOrder.id); continue; }
+      if (!ALLOWED_FROM.includes(currentStatus))       { console.log("⚠️ غير مسموح من:", currentStatus); continue; }
+      if (currentStatus === mapped)                    continue; // نفس الحالة
 
-  // ❌ إذا الحالة نفسها → لا تحدث
-if (isSameStatus) {
-  continue;
-}
+      // ✅ بناء البيانات المحدثة
+      const existingHistory = foundOrder.statusHistory || {};
 
+      // تنظيف المفاتيح الرقمية القديمة
+      const cleanedHistory = {};
+      Object.entries(existingHistory).forEach(([k, v]) => {
+        if (isNaN(Number(k))) cleanedHistory[k] = v;
+      });
+      cleanedHistory[encodeURIComponent(mapped)] = { time: now, by: "system-waseet" };
 
+      const updatedOrder = {
+        ...foundOrder,
+        status:       mapped,
+        waseetStatus: cleanStatus,
+        lastStatusAt: now,
+        lastUpdateBy: "system-waseet",
+        statusHistory: cleanedHistory,
+        _currentPath: undefined  // لا نحفظ هذا في Firebase
+      };
+      delete updatedOrder._currentPath;
 
-  // تحديث المخزون
-const now = new Date().toISOString();
+      // ✅ نقل ذري بين المسارات
+      const oldPath = foundOrder._currentPath;
+      const newPath = getPathForStatus(mapped, foundOrder.id);
 
+      const atomicUpdate = {
+        [newPath]: updatedOrder,
+        ...(newPath !== oldPath ? { [oldPath]: null } : {})
+      };
 
-const orderRef = ref(db, `orders/${foundKey}`);
-const orderSnap = await get(orderRef);
+      await update(ref(db), atomicUpdate);
 
-// تنظيف history القديمة (إزالة الأرقام)
-let cleanedHistory = {};
+      // تحديث meta
+      const metaTime = Date.now();
+      const oldBase  = oldPath.split("/").slice(0, 2).join("/");
+      const newBase  = newPath.split("/").slice(0, 2).join("/");
+      await update(ref(db), {
+        [`${oldBase}/_meta/lastModified`]: metaTime,
+        [`${newBase}/_meta/lastModified`]: metaTime
+      });
 
-if (orderSnap.exists() && orderSnap.val().statusHistory) {
-  for (const key in orderSnap.val().statusHistory) {
-    if (isNaN(Number(key))) {
-      cleanedHistory[key] = orderSnap.val().statusHistory[key];
+      console.log(`✅ ${foundOrder.id}: ${currentStatus} → ${mapped}`);
+      updateCount++;
     }
-  }
-}
 
-// إضافة الحالة الحالية باسمها
-cleanedHistory[mapped] = {
-  time: now,
-  by: "system-waseet"
-};
-
-await update(orderRef, {
-  status: mapped,
-  waseetStatus: waseetRawStatus,
-  lastStatusAt: now,
-  lastUpdateBy: "system-waseet",
-  statusHistory: cleanedHistory
-});
-
-
-// await adjustStock(foundKey, mapped);
-
-
-updateCount++;
-
-
-}
-
-if (updateCount === 0) {
-  console.log("ℹ️ لا توجد تحديثات جديدة.");
-} else {
-  console.log(`✅ Auto Updated: ${updateCount} orders`);
-}
-
-
-
+    console.log(updateCount > 0 ? `✅ تم تحديث ${updateCount} طلب` : "ℹ️ لا توجد تحديثات جديدة.");
 
   } catch (err) {
-    console.error("❌ Auto Update Error:", err);
+    console.error("❌ autoUpdateStatuses Error:", err);
   }
 }
-// =======================================================
-// 🟢 دالة تحديث المخزون عند تغيير الحالة
-// =======================================================
+
+// ============================================================
+// تعديل المخزون (بدون تغيير)
+// ============================================================
 async function adjustStock(orderId, newStatus) {
   try {
     const snap = await get(ref(db, `orders/${orderId}`));
     if (!snap.exists()) return;
     const order = snap.val();
-
     const products = [];
 
     function addProduct(name, qty, variants) {
@@ -360,264 +288,212 @@ async function adjustStock(orderId, newStatus) {
       products.push({ name, qty, variants, variantKey });
     }
 
-    // المنتج الرئيسي
     addProduct(order.productName, Number(order.quantity), order.selectedVariants || {});
-
-    // المنتجات الإضافية
-    if (Array.isArray(order.extraProducts)) {
-      order.extraProducts.forEach(p => {
-        addProduct(p.name, Number(p.qty), p.selectedVariants || {});
-      });
-    }
-
-    // المنتجات التفصيلية
-    if (Array.isArray(order.productsDetailed)) {
-      order.productsDetailed.forEach(p => {
-        addProduct(p.name, Number(p.qty), p.variants || {});
-      });
-    }
+    if (Array.isArray(order.extraProducts))    order.extraProducts.forEach(p => addProduct(p.name, Number(p.qty), p.selectedVariants || {}));
+    if (Array.isArray(order.productsDetailed)) order.productsDetailed.forEach(p => addProduct(p.name, Number(p.qty), p.variants || {}));
 
     for (const item of products) {
       const { name, qty, variants, variantKey } = item;
-
-      const warehouseRef = ref(db, `warehouse/${name}`);
+      const warehouseRef  = ref(db, `warehouse/${name}`);
       const warehouseSnap = await get(warehouseRef);
       if (!warehouseSnap.exists()) continue;
 
-      const w = warehouseSnap.val();
-      const stock = w.stock || {};
+      const w         = warehouseSnap.val();
+      const stock     = w.stock || {};
       const processed = w.processedOrders || {};
-
       const variantId = variantKey.replace(/\s+/g, "_");
-      const unique = `${orderId}_${name}_${variantId}`;
+      const unique    = `${orderId}_${name}_${variantId}`;
 
       let foundKey = null;
       const variantValues = Object.values(variants).map(v => v.trim().toLowerCase());
-
       for (const key of Object.keys(stock)) {
         const kNorm = key.toLowerCase();
-        const matches = variantValues.filter(v => kNorm.includes(v)).length;
-        if (matches === variantValues.length && matches > 0) {
-          foundKey = key;
-          break;
+        if (variantValues.filter(v => kNorm.includes(v)).length === variantValues.length && variantValues.length > 0) {
+          foundKey = key; break;
         }
       }
 
-      // 🔽 الخصم
       if (newStatus === "قيد التوصيل" && !processed[`deduct_${unique}`]) {
-        if (foundKey && stock[foundKey] !== undefined) {
-          stock[foundKey] -= qty;
-        } else if (stock["إجمالي الكمية"] !== undefined) {
-          stock["إجمالي الكمية"] -= qty;
-        }
+        if (foundKey && stock[foundKey] !== undefined) stock[foundKey] -= qty;
+        else if (stock["إجمالي الكمية"] !== undefined) stock["إجمالي الكمية"] -= qty;
         processed[`deduct_${unique}`] = true;
       }
 
-      // 🔼 الإرجاع
       if (newStatus === "تم استلام الراجع" && processed[`deduct_${unique}`] && !processed[`return_${unique}`]) {
-        if (foundKey && stock[foundKey] !== undefined) {
-          stock[foundKey] += qty;
-        } else if (stock["إجمالي الكمية"] !== undefined) {
-          stock["إجمالي الكمية"] += qty;
-        }
+        if (foundKey && stock[foundKey] !== undefined) stock[foundKey] += qty;
+        else if (stock["إجمالي الكمية"] !== undefined) stock["إجمالي الكمية"] += qty;
         processed[`return_${unique}`] = true;
       }
 
-      // إعادة الحساب
-      let totalQty = 0;
-      for (const val of Object.values(stock)) totalQty += Number(val) || 0;
-
-      await update(warehouseRef, {
-        stock,
-        totalQty,
-        processedOrders: processed,
-        lastUpdate: new Date().toISOString()
-      });
+      const totalQty = Object.values(stock).reduce((s, v) => s + (Number(v) || 0), 0);
+      await update(warehouseRef, { stock, totalQty, processedOrders: processed, lastUpdate: new Date().toISOString() });
     }
-
   } catch (err) {
-    console.error("❌ خطأ تعديل المخزون:", err);
+    console.error("❌ adjustStock:", err);
   }
 }
 
-
-
-// =======================================================
-// 🔁 6) Scheduler: تشغيل كل دقيقة بدون Overlapping
-// =======================================================
-
+// ============================================================
+// 6) Cron: كل 5 دقائق
+// ============================================================
 let isUpdating = false;
 
 cron.schedule("*/5 * * * *", async () => {
-
-  console.log("⏱ Cron running:", new Date().toISOString());
-
-  if (isUpdating) {
-    console.log("⚠️ Skipped — update still running...");
-    return;
-  }
+  console.log("⏱ Cron:", new Date().toISOString());
+  if (isUpdating) { console.log("⚠️ Skipped — still running"); return; }
 
   isUpdating = true;
-
-  // ⛔ حماية من التعليق (Timeout)
-  const timeout = setTimeout(() => {
-    isUpdating = false;
-    console.log("⛔ Forced reset بسبب التعليق");
-}, 300000); // 5 دقائق
+  const timeout = setTimeout(() => { isUpdating = false; console.log("⛔ Forced reset"); }, 300000);
 
   try {
-
-    // 🔥 شغل الاثنين (وسيط + برايم)
     await autoUpdateStatuses();
     await updatePrimeStatusesFromFirebase();
-
     console.log("✅ All updates completed");
-
   } catch (err) {
-    console.error("❌ Error inside cron:", err);
+    console.error("❌ Cron error:", err);
   } finally {
-
-    clearTimeout(timeout); // 🧹 تنظيف التايمر
-    isUpdating = false;   // 🔥 أهم سطر
-
+    clearTimeout(timeout);
+    isUpdating = false;
   }
+});
 
-});
-// =======================================================
-// 🟢 8) API خارجي لتحديث المخزن من صفحة التفاصيل
-// =======================================================
-app.post("/api/update-stock-on-status", async (req, res) => {
-  return res.json({ success: true });
-});
+// ============================================================
+// 7) APIs إضافية
+// ============================================================
+app.post("/api/update-stock-on-status", async (req, res) => res.json({ success: true }));
+
 app.get("/debug/order/:id", async (req, res) => {
-  const id = req.params.id;
-  const snap = await get(ref(db, `orders/${id}`));
-  if (!snap.exists()) return res.json({ exists: false });
-  res.json(snap.val());
+  const snap = await get(ref(db, `orders/${req.params.id}`));
+  res.json(snap.exists() ? snap.val() : { exists: false });
 });
-// 🟢 Debug: جلب حالة وصل واحد فقط من الوسيط
+
 app.get("/debug/waseet/:receipt", async (req, res) => {
   try {
-    const receipt = req.params.receipt;
-const token = await waseetService.loginToWaseet();
+    const token = await waseetService.loginToWaseet();
     if (!token) return res.json({ error: "Login failed" });
-
     const response = await fetch(
       `https://api.alwaseet-iq.net/v1/merchant/get-orders-by-ids-bulk?token=${token}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `ids=${receipt}`,
-      }
+      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: `ids=${req.params.receipt}` }
     );
-
-    const data = await response.json();
-    return res.json(data);
-
+    res.json(await response.json());
   } catch (err) {
-    return res.json({ error: err.message });
+    res.json({ error: err.message });
   }
 });
-// 🟢 Debug: تشغيل التحديث اليدوي للحالات
+
 app.get("/debug/run", async (req, res) => {
   try {
     await autoUpdateStatuses();
-    res.send("🔄 Manual update executed: AutoUpdateStatuses Done");
+    res.send("🔄 autoUpdateStatuses Done");
   } catch (err) {
-    res.send("❌ Error: " + err.message);
+    res.send("❌ " + err.message);
   }
 });
 
-// =======================================================
-// 🚀 7) تشغيل السيرفر
-// =======================================================
-app.listen(process.env.PORT || 3000, () =>
-  console.log(`✅ Server running on port ${process.env.PORT || 3000}`)
-);
-// =======================================================
-// 🟣 رفع الطلب → برايم
-// =======================================================
-
+// ============================================================
+// 8) رفع طلب → برايم (يعمل مع primeService المحدّث)
+// ============================================================
 app.post("/api/create-order-prime/:id", async (req, res) => {
   try {
-    const id = req.params.id;
-    const result = await primeService.createPrimeOrderFromFirebase(id);
-    res.json(result);
+    res.json(await primeService.createPrimeOrderFromFirebase(req.params.id));
   } catch (err) {
-    console.error("❌ Prime Error:", err);
+    console.error("❌ Prime:", err);
     res.status(500).json({ success: false });
   }
 });
 
-
-
 app.get("/api/test-prime", async (req, res) => {
   try {
+    const token = await primeService.loginToPrime();
+    if (!token) return res.json({ success: false, msg: "Prime login failed" });
 
-const token = await primeService.loginToPrime();    if (!token) {
-      return res.json({ success: false, msg: "Prime login failed" });
-    }
+    const shipmentData = [{
+      custReceiptNoOri: 0, district: 0, haveReturnItems: "N",
+      locationDetails: "Baghdad Test Address", merchantLoginId: "07808197448",
+      productInfo: "Test Product*1", qty: 1, receiptAmtIqd: 25000,
+      receiverHp1: "07800000000", receiverName: "Test Customer",
+      senderId: 43825, senderSystemCaseIdWithCharacters: "MRDTEST" + Date.now(), state: "BGD"
+    }];
 
-    const shipmentData = [
-      {
-        custReceiptNoOri: 0,
-        district: 0,
-        haveReturnItems: "N",
-        locationDetails: "Baghdad Test Address",
-        merchantLoginId: "07808197448",
-        productInfo: "Test Product*1",
-        qty: 1,
-        receiptAmtIqd: 25000,
-       receiverHp1: "07800000000",
-        receiverName: "Test Customer",
-        senderId: 43825,
-        senderSystemCaseIdWithCharacters: "MRDTEST" + Date.now(),
-        state: "BGD"
-      }
-    ];
-
-    console.log("🚀 TEST PAYLOAD:");
-    console.log(JSON.stringify(shipmentData, null, 2));
-
-    const response = await fetch(
-      "https://www.prime-iq.com/myp/webapi/external/create-shipments/",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
-        body: JSON.stringify(shipmentData)
-      }
-    );
-
-    const result = await response.json();
-
-    console.log("📦 PRIME RESPONSE:", result);
-
-    res.json(result);
-
+    const response = await fetch("https://www.prime-iq.com/myp/webapi/external/create-shipments/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(shipmentData)
+    });
+    res.json(await response.json());
   } catch (err) {
-    console.log("❌ ERROR:", err);
     res.json({ success: false, error: err.message });
   }
-
 });
+
 app.get("/cron-update", async (req, res) => {
-
-  console.log("🔄 External cron triggered");
-
   try {
-
     await autoUpdateStatuses();
     await updatePrimeStatusesFromFirebase();
-
-    res.send("Update done");
-
+    res.send("✅ Update done");
   } catch (err) {
-
-    res.send("Error: " + err.message);
-
+    res.send("❌ " + err.message);
   }
+});
 
+// ============================================================
+// 🔧 إصلاح الطلبات العالقة في مثبت (لها receiptNum لكن لم تنتقل)
+// ============================================================
+app.get("/debug/fix-waseet-stuck", async (req, res) => {
+  try {
+    const snap = await get(ref(db, "ordersTest/مثبت"));
+    if (!snap.exists()) return res.send("✅ لا يوجد طلبات عالقة");
+
+    const data = snap.val();
+    const updates = {};
+    let count = 0;
+    const now = new Date().toISOString();
+
+    for (const [id, o] of Object.entries(data)) {
+      if (id === "_meta") continue;
+      if (!o.receiptNum || String(o.receiptNum).trim() === "") continue;
+
+      const updatedOrder = {
+        ...o,
+        status: "قيد التجهيز",
+        lastUpdateBy: "fix-script",
+        lastStatusAt: now,
+        statusHistory: {
+          ...(o.statusHistory || {}),
+          [encodeURIComponent("قيد التجهيز")]: { time: now, by: "fix-script" }
+        }
+      };
+
+      updates[`ordersTest/قيد التجهيز/${id}`] = updatedOrder;
+      updates[`ordersTest/مثبت/${id}`] = null;
+      count++;
+    }
+
+    if (count > 0) {
+      await update(ref(db), updates);
+      await update(ref(db), {
+        "ordersTest/قيد التجهيز/_meta/lastModified": Date.now(),
+        "ordersTest/مثبت/_meta/lastModified": Date.now()
+      });
+    }
+
+    res.send(`✅ تم نقل ${count} طلب من مثبت → قيد التجهيز`);
+  } catch (err) {
+    res.send("❌ خطأ: " + err.message);
+  }
+});
+
+// ============================================================
+// تشغيل السيرفر
+// ============================================================
+app.listen(process.env.PORT || 3000, () =>
+  console.log(`✅ Server running on port ${process.env.PORT || 3000}`)
+);
+app.get("/test-prime/:id", async (req, res) => {
+  try {
+    const result = await primeService.createPrimeOrderFromFirebase(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
 });

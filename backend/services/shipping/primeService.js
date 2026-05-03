@@ -1,412 +1,340 @@
-import { ref, get, update } from "firebase/database";
+import { ref, get, update, set, remove } from "firebase/database";
 import { db } from "../../firebase.js";
 import fetch from "node-fetch";
 
+const PRIME_BASE_URL        = "https://www.prime-iq.com";
+const PRIME_LOGIN           = "al_murad";
+const PRIME_PASSWORD        = "dpK[ZOGo}HsbRG!84mWkLPoD$jn4qs";
+const PRIME_INITIAL_TOKEN   = "x6rQkVAg7PQAfBag23kNOvFFUW8XSd";
+const PRIME_SENDER_ID       = 43825;
+const PRIME_MERCHANT_LOGIN  = "07808197448";
 
-const PRIME_BASE_URL = "https://www.prime-iq.com";
-const PRIME_LOGIN = "al_murad";
-const PRIME_PASSWORD = "dpK[ZOGo}HsbRG!84mWkLPoD$jn4qs";
-const PRIME_INITIAL_TOKEN = "x6rQkVAg7PQAfBag23kNOvFFUW8XSd";
-const PRIME_SENDER_ID = 43825;
-const PRIME_MERCHANT_LOGIN = "07808197448";
-
-let primeToken = null;
+let primeToken     = null;
 let primeTokenTime = 0;
 
-// ======================
-// 🔵 Login
-// ======================
+// ============================================================
+// 🔵 تسجيل الدخول
+// ============================================================
 export async function loginToPrime() {
   const now = Date.now();
-  if (primeToken && (now - primeTokenTime < 5 * 60 * 1000)) {
-    return primeToken;
-  }
+  if (primeToken && now - primeTokenTime < 5 * 60 * 1000) return primeToken;
 
-  const response = await fetch(
-    PRIME_BASE_URL + "/myp/webapi/auth/external-system-login",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        login: PRIME_LOGIN,
-        password: PRIME_PASSWORD,
-        initialToken: PRIME_INITIAL_TOKEN
-      })
-    }
-  );
+  const res = await fetch(PRIME_BASE_URL + "/myp/webapi/auth/external-system-login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      login: PRIME_LOGIN,
+      password: PRIME_PASSWORD,
+      initialToken: PRIME_INITIAL_TOKEN
+    })
+  });
 
-  const data = await response.json();
+  const data = await res.json();
   if (!data.accessToken) return null;
 
-  primeToken = data.accessToken;
+  primeToken     = data.accessToken;
   primeTokenTime = now;
-
   return primeToken;
 }
 
-// ======================
-// 🔵 Helpers
-// ======================
+// ============================================================
+// 🛠️ مساعدات
+// ============================================================
 function cleanPhoneNumber(input) {
   if (!input) return null;
 
-  const arabicToEnglishMap = {
-    "٠": "0","١": "1","٢": "2","٣": "3","٤": "4",
-    "٥": "5","٦": "6","٧": "7","٨": "8","٩": "9"
-  };
+  const ar2en = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9" };
+  let number = input.toString()
+    .replace(/[٠-٩]/g, d => ar2en[d])
+    .replace(/\D/g, "");
 
-  let number = input.toString().replace(/[٠-٩]/g, d => arabicToEnglishMap[d]);
-  number = number.replace(/\D/g, "");
-
-  if (number.startsWith("964")) {
-    number = "0" + number.slice(3);
-  }
-
-  if (!number.startsWith("0")) {
-    number = "0" + number;
-  }
+  if (number.startsWith("964")) number = "0" + number.slice(3);
+  if (!number.startsWith("0"))  number = "0" + number;
 
   if (!/^07\d{9}$/.test(number)) {
-    console.log("❌ Invalid Iraqi phone format after cleaning:", number);
+    console.log("❌ رقم هاتف غير صالح:", number);
     return null;
   }
-
   return number;
 }
 
 function convertState(city) {
-
-  if (!city) {
-    console.log("❌ City is empty");
-    return null;
-  }
+  if (!city) { console.log("❌ المحافظة فارغة"); return null; }
 
   let c = city.trim();
 
-  const waseetToPrime = {
-    "الحلة - بابل": "بابل الحلة",
-    "الديوانية - القادسية": "الديوانية",
-    "العمارة - ميسان": "العمارة ميسان",
-    "السماوة - المثنى": "السماوة المثنى",
-    "الناصرية - ذي قار": "الناصرية ذي قار",
-    "الكوت - واسط": "الكوت واسط",
-    "نينوى": "موصل"
+  const aliases = {
+    "الحلة - بابل":          "بابل الحلة",
+    "الديوانية - القادسية":  "الديوانية",
+    "العمارة - ميسان":       "العمارة ميسان",
+    "السماوة - المثنى":      "السماوة المثنى",
+    "الناصرية - ذي قار":     "الناصرية ذي قار",
+    "الكوت - واسط":          "الكوت واسط",
+    "نينوى":                  "موصل"
+  };
+  if (aliases[c]) c = aliases[c];
+
+  const codes = {
+    "النجف":"NJF","كربلاء":"KRB","بابل الحلة":"BBL","الديوانية":"DWN",
+    "بغداد":"BGD","ديالى":"DYL","البصرة":"BAS","العمارة ميسان":"AMA",
+    "صلاح الدين":"SAH","الانبار":"ANB","الناصرية ذي قار":"NAS",
+    "الكوت واسط":"KOT","السماوة المثنى":"SAM","كركوك":"KRK",
+    "السليمانية":"SMH","السليمانيه":"SMH","اربيل":"ARB",
+    "دهوك":"DOH","موصل":"MOS"
   };
 
-  if (waseetToPrime[c]) {
-    c = waseetToPrime[c];
-  }
-
-  const states = {
-    "النجف": "NJF",
-    "كربلاء": "KRB",
-    "بابل الحلة": "BBL",
-    "الديوانية": "DWN",
-    "بغداد": "BGD",
-    "ديالى": "DYL",
-    "البصرة": "BAS",
-    "العمارة ميسان": "AMA",
-    "صلاح الدين": "SAH",
-    "الانبار": "ANB",
-    "الناصرية ذي قار": "NAS",
-    "الكوت واسط": "KOT",
-    "السماوة المثنى": "SAM",
-    "كركوك": "KRK",
-    "السليمانية": "SMH",
-    "السليمانيه": "SMH",
-    "اربيل": "ARB",
-    "دهوك": "DOH",
-    "موصل": "MOS"
-  };
-
-  const code = states[c];
-
-  if (!code) {
-    console.log("❌ Unknown city sent to Prime:", city);
-    return null;
-  }
-
+  const code = codes[c];
+  if (!code) { console.log("❌ محافظة غير معروفة:", city); return null; }
   return code;
 }
-// ======================
-// 🔵 Create Order From Firebase
-// ======================
+
+// ============================================================
+// 🔵 رفع طلب واحد → يسحب من ordersTest/مثبت
+// ============================================================
 export async function createPrimeOrderFromFirebase(orderId) {
 
-  const snap = await get(ref(db, `orders/${orderId}`));
-if (!snap.exists()) {
-  console.log("❌ Order not found in Firebase");
-  return { success: false, msg: "Order not found in Firebase" };
-}
+  // ✅ المسار الجديد: ordersTest/مثبت
+  const sourcePath = `ordersTest/مثبت/${orderId}`;
+  const snap = await get(ref(db, sourcePath));
+
+  if (!snap.exists()) {
+    console.log("❌ الطلب غير موجود في ordersTest/مثبت");
+    return { success: false, msg: "Order not found in ordersTest/مثبت" };
+  }
+
   const order = snap.val();
 
-if ((order.status || "").trim() !== "مثبت") {
-      console.log("❌ Order not eligible. Current status:", order.status);
-  return { success: false, msg: `Order not eligible (${order.status})` };
-}
+  if ((order.status || "").trim() !== "مثبت") {
+    console.log("❌ حالة الطلب غير مؤهلة:", order.status);
+    return { success: false, msg: `Order not eligible (${order.status})` };
+  }
 
   const token = await loginToPrime();
-if (!token) {
-  console.log("❌ Prime login failed");
-  return { success: false, msg: "Prime login failed" };
-}
- const caseId = "MRD" + Date.now();
+  if (!token) return { success: false, msg: "Prime login failed" };
 
-// 🔥 تنظيف رقم الهاتف
-const cleanedPhone =
-  cleanPhoneNumber(order.phone1) ||
-  cleanPhoneNumber(order.phone2);
+  const cleanedPhone = cleanPhoneNumber(order.phone1) || cleanPhoneNumber(order.phone2);
+  console.log("📞 phone1:", order.phone1, "| phone2:", order.phone2, "| used:", cleanedPhone);
 
-console.log("📞 PHONE1:", order.phone1);
-console.log("📞 PHONE2:", order.phone2);
-console.log("📞 FINAL USED:", cleanedPhone);console.log("📞 RAW PHONE:", order.phone1);
-console.log("📞 CLEANED PHONE:", cleanedPhone);
-if (!cleanedPhone) {
-  console.log("❌ Invalid phone format:", order.phone);
-  return { success: false, msg: "Invalid phone format" };
-}
+  if (!cleanedPhone) return { success: false, msg: "Invalid phone format" };
 
+  const stateCode = convertState(order.city);
+  if (!stateCode) return { success: false, msg: `Invalid city: ${order.city}` };
 
-// ===== نفس منطق الوسيط 100% =====
-const productInfoString = order.totalProducts || order.productName || "منتج";
-const totalQty = Number(order.totalQty) > 0 
-  ? Number(order.totalQty) 
-  : 1;
-const finalNotes = order.notes || "";
+  const caseId    = "MRD" + Date.now();
+  const totalQty  = Number(order.totalQty) > 0 ? Number(order.totalQty) : 1;
 
-// 🔴 فحص المحافظة قبل الإرسال
-console.log("📍 City from order:", order.city);
-
-const stateCode = convertState(order.city);
-
-if (!stateCode) {
-  console.log("❌ Order blocked. Invalid city:", order.city);
-  return { success:false, msg:"Invalid city name. Order not sent to Prime." };
-}
-
-const shipmentData = [
-  {
-    custReceiptNoOri: 0,
-    district: 0,
-    haveReturnItems: "N",
-    receiverHp2: order.phone2 || "",
-    rmk: finalNotes,
-    locationDetails: order.address || "",
-    merchantLoginId: PRIME_MERCHANT_LOGIN,
-    productInfo: productInfoString,
-    qty: totalQty,
-    receiptAmtIqd: Number(order.totalPrice) || 0,
-    receiverHp1: cleanedPhone,
-    receiverName: order.code || order.receiverName || order.customerName || "زبون",
-    senderId: PRIME_SENDER_ID,
+  const shipmentData = [{
+    custReceiptNoOri:                 0,
+    district:                         0,
+    haveReturnItems:                  "N",
+    receiverHp2:                      order.phone2 || "",
+    rmk:                              order.notes || "",
+    locationDetails:                  order.address || "",
+    merchantLoginId:                  PRIME_MERCHANT_LOGIN,
+    productInfo:                      order.totalProducts || order.productName || "منتج",
+    qty:                              totalQty,
+    receiptAmtIqd:                    Number(order.totalPrice) || 0,
+    receiverHp1:                      cleanedPhone,
+    receiverName:                     order.code || order.receiverName || order.customerName || "زبون",
+    senderId:                         PRIME_SENDER_ID,
     senderSystemCaseIdWithCharacters: caseId,
+    state:                            stateCode
+  }];
 
-    // 👇 هنا نستخدم الكود الصحيح
-    state: stateCode
+  console.log("📦 payload:", JSON.stringify(shipmentData, null, 2));
+
+  const response = await fetch(PRIME_BASE_URL + "/myp/webapi/external/create-shipments/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+    body: JSON.stringify(shipmentData)
+  });
+
+  const result = await response.json();
+  console.log("📦 Prime response:", result);
+
+  if (!response.ok) {
+    console.log("❌ Prime HTTP Error:", response.status, result);
+    return { success: false, error: result };
   }
-];
-console.log("📦 FINAL PAYLOAD SENT TO PRIME:");
-console.log(JSON.stringify(shipmentData, null, 2));
-  const response = await fetch(
-    PRIME_BASE_URL + "/myp/webapi/external/create-shipments/",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token
-      },
-      body: JSON.stringify(shipmentData)
+
+  const shipmentNo = result?.shipmentNo
+    || result?.data?.shipmentNo
+    || Object.keys(result || {})[0]
+    || null;
+
+  if (!shipmentNo) {
+    console.log("❌ لم يُرجع رقم شحنة:", result);
+    return { success: false, msg: "No shipment number returned", data: result };
+  }
+
+  console.log("✅ شحنة برايم:", shipmentNo);
+
+  // ============================================================
+  // ✅ نقل الطلب من ordersTest/مثبت → ordersTest/قيد التجهيز
+  //    (عملية ذرية واحدة لمنع التكرار)
+  // ============================================================
+  const now = new Date().toISOString();
+
+  const updatedOrder = {
+    ...order,
+    receiptNum:    shipmentNo,
+    status:        "قيد التجهيز",
+    shippingCompany: "prime",
+    lastUpdateBy:  "system-prime",
+    lastStatusAt:  now,
+    statusHistory: {
+      ...(order.statusHistory || {}),
+      [encodeURIComponent("قيد التجهيز")]: { time: now, by: "Prime" }
     }
-  );
+  };
 
-const result = await response.json();
+  const atomicUpdate = {
+    [`ordersTest/قيد التجهيز/${orderId}`]: updatedOrder,  // ✅ كتابة في المسار الجديد
+    [`ordersTest/مثبت/${orderId}`]:         null            // ✅ حذف من المسار القديم
+  };
 
-console.log("📦 Prime raw response:", result);
+  await update(ref(db), atomicUpdate);
 
+  // تحديث meta للمسارين
+  const metaTime = Date.now();
+  await update(ref(db), {
+    "ordersTest/قيد التجهيز/_meta/lastModified": metaTime,
+    "ordersTest/مثبت/_meta/lastModified":         metaTime
+  });
 
-if (!response.ok) {
-  console.log("❌ Prime HTTP Error:", response.status);
-  console.log("❌ Prime Error Body:", result);
-  return { success: false, error: result };
-}
-
-const shipmentNo = result?.shipmentNo
-  || result?.data?.shipmentNo
-  || Object.keys(result || {})[0]
-  || null;
-
-if (!shipmentNo) {
-  console.log("❌ Prime returned no shipment number:", result);
-  return { success: false, msg: "No shipment number returned", data: result };
-}
-
-console.log("✅ Prime shipment created:", shipmentNo);
-await update(ref(db, `orders/${orderId}`), {
-  receiptNum: shipmentNo,
-  status: "قيد التجهيز",
-  shippingCompany: "prime",
-  lastUpdateBy: "system-prime",
-  lastStatusAt: new Date().toISOString()
-});
-
-// ⭐ تسجيل تاريخ قيد التجهيز
-await update(ref(db, `orders/${orderId}/statusHistory/قيد التجهيز`), {
-  time: new Date().toISOString(),
-  by: "Prime"
-});
+  console.log(`✅ نُقل الطلب ${orderId}: مثبت → قيد التجهيز`);
 
   return { success: true, shipmentNo };
 }
 
-// ======================
-// 🔵 Update Prime Shipments Status
-// ======================
+// ============================================================
+// 🔵 تحديث حالات الشحن → يسحب من ordersTest/قيد التوصيل + قيد التجهيز
+// ============================================================
 export async function updatePrimeStatusesFromFirebase() {
 
   const token = await loginToPrime();
-  if (!token) {
-    console.log("❌ Prime login failed for status update");
+  if (!token) { console.log("❌ Prime login failed"); return; }
+
+  // ✅ المسارات التي نتابع فيها طلبات Prime
+  const pathsToWatch = ["قيد التجهيز", "قيد التوصيل"];
+  let primeOrders = [];
+
+  for (const status of pathsToWatch) {
+    const snap = await get(ref(db, `ordersTest/${status}`));
+    if (!snap.exists()) continue;
+
+    const entries = Object.entries(snap.val())
+      .filter(([id, o]) => o.shippingCompany === "prime" && o.receiptNum && id !== "_meta")
+      .map(([id, o]) => ({
+        id,
+        receiptNum:  o.receiptNum,
+        totalPrice:  o.totalPrice,
+        currentPath: `ordersTest/${status}/${id}`,
+        orderData:   o
+      }));
+
+    primeOrders = [...primeOrders, ...entries];
+  }
+
+  if (primeOrders.length === 0) {
+    console.log("ℹ️ لا يوجد طلبات Prime للمتابعة");
     return;
   }
 
-  // 🔎 جلب كل الطلبات المرتبطة بـ prime
-  const snap = await get(ref(db, "orders"));
-  if (!snap.exists()) return;
-
-  const allOrders = snap.val();
-
-  const primeOrders = Object.entries(allOrders)
-    .filter(([id, o]) =>
-      o.shippingCompany === "prime" &&
-      o.receiptNum
-    )
-    .map(([id, o]) => ({
-      id,
-      receiptNum: o.receiptNum,
-      totalPrice: o.totalPrice
-    }));
-
-  if (primeOrders.length === 0) return;
+  console.log(`📋 متابعة ${primeOrders.length} طلب Prime...`);
 
   const shipmentIds = primeOrders.map(o => Number(o.receiptNum));
-const response = await fetch(
-  PRIME_BASE_URL + "/myp/webapi/external/shipments-info",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify(shipmentIds)
-    }
-  );
+  const response = await fetch(PRIME_BASE_URL + "/myp/webapi/external/shipments-info", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+    body: JSON.stringify(shipmentIds)
+  });
 
   const result = await response.json();
+  if (!Array.isArray(result)) { console.log("❌ استجابة غير صالحة:", result); return; }
 
-  if (!Array.isArray(result)) {
-    console.log("❌ Prime status response invalid:", result);
-    return;
-  }
-for (const shipment of result) {
+  const now = new Date().toISOString();
 
-  const order = primeOrders.find(
-    o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
-  );
+  for (const shipment of result) {
+    const order = primeOrders.find(
+      o => String(o.receiptNum) === String(shipment.id || shipment.caseid)
+    );
+    if (!order) continue;
 
-  if (!order) continue;
+    const currentStatus = (order.orderData.status || "").trim();
+    const step          = shipment.stepCode;
+    let newStatus       = null;
 
-const currentStatus = (allOrders[order.id].status || "").trim();
-const step = shipment.stepCode;
+    // ✅ خريطة حالات Prime
+    if (["DLEIVERD","PART_SUCC","SUCC_CHANGEPRICE","FORCE_DLV","SUCCARCHV"].includes(step))
+      newStatus = "تم التسليم";
 
-let newStatus = null;
+    else if (["RTN_INSTORE","RETURNED_TO_CUSTOMER"].includes(step))
+      newStatus = "راجع";
 
-  // 🟢 تم التسليم
-  if ([
-    "DLEIVERD",
-    "PART_SUCC",
-    "SUCC_CHANGEPRICE",
-    "FORCE_DLV",
-    "SUCCARCHV"
-  ].includes(step)) {
-    newStatus = "تم التسليم";
-  }
+    else if (step === "RTNARCHV")
+      newStatus = "تم استلام الراجع";
 
-  // 🔴 راجع
-  else if ([
-    "RTN_INSTORE",
-    "RETURNED_TO_CUSTOMER"
-  ].includes(step)) {
-    newStatus = "راجع";
-  }
+    else if ([
+      "NEWINSTORE","PRINTMANIFEST","NEW_ONWAY","LIAISONAGT_NEWONWAY",
+      "ONWAY","POSTPONED","TRY_AGAIN","MANIFEST_BRANCHES","RESENEDSHIPMENTS"
+    ].includes(step))
+      newStatus = "قيد التوصيل";
 
-  // ✅ تم استلام الراجع
-  else if (step === "RTNARCHV") {
-    newStatus = "تم استلام الراجع";
-  }
+    else continue;
 
-  // 🔵 قيد التوصيل
-  else if ([
-    "NEWINSTORE",
-    "PRINTMANIFEST",
-    "NEW_ONWAY",
-    "LIAISONAGT_NEWONWAY",
-    "ONWAY",
-    "POSTPONED",
-    "TRY_AGAIN",
-    "MANIFEST_BRANCHES",
-    "RESENEDSHIPMENTS"
-  ].includes(step)) {
-    newStatus = "قيد التوصيل";
-  }
+    console.log(`Prime step: ${step} → ${newStatus} (كانت: ${currentStatus})`);
 
-  else {
-    continue;
-  }
+    // تجاهل نفس الحالة أو الحالات النهائية
+    if (currentStatus === newStatus) { console.log("⏩ نفس الحالة:", order.id); continue; }
+    if (["تم التسليم","تم استلام الراجع"].includes(currentStatus)) continue;
 
-console.log("Prime step:", step, "→", newStatus);
+    const updatedOrder = {
+      ...order.orderData,
+      status:         newStatus,
+      primeStepCode:  step,
+      lastUpdateBy:   "system-prime",
+      lastStatusAt:   now,
+      statusHistory:  {
+        ...(order.orderData.statusHistory || {}),
+        [encodeURIComponent(newStatus)]: { time: now, by: "Prime" }
+      }
+    };
 
-newStatus = (newStatus || "").trim();
-
-  // ⭐ أهم شرط — لا تحدث إذا الحالة نفسها
-  if (currentStatus === newStatus) {
-    console.log("⏩ Skip same status:", order.id, newStatus);
-    continue;
-  }
-
-  // 🔒 لا تغيّر إذا الحالة نهائية
-  if (["تم التسليم", "تم استلام الراجع"].includes(currentStatus)) {
-    continue;
-  }
-
-const updateData = {
-  status: newStatus,
-  primeStepCode: step,
-  lastUpdateBy: "system-prime",
-  lastStatusAt: new Date().toISOString()
-};
-
-    // ⭐ معالجة تغيير السعر
-if (
-  step === "SUCC_CHANGEPRICE" &&
-  shipment.receiptAmount &&
-  Number(shipment.receiptAmount) !== Number(order.totalPrice)
-) {
-
-      updateData.priceChanged = true;
-      updateData.oldPrice = order.totalPrice;
-      updateData.newPrice = shipment.receiptAmount;
-      updateData.totalPrice = shipment.receiptAmount;
+    // معالجة تغيير السعر
+    if (
+      step === "SUCC_CHANGEPRICE" &&
+      shipment.receiptAmount &&
+      Number(shipment.receiptAmount) !== Number(order.totalPrice)
+    ) {
+      updatedOrder.priceChanged = true;
+      updatedOrder.oldPrice     = order.totalPrice;
+      updatedOrder.newPrice     = shipment.receiptAmount;
+      updatedOrder.totalPrice   = shipment.receiptAmount;
     }
 
-    await update(ref(db, `orders/${order.id}`), updateData);
+    // ✅ نقل ذري بين المسارات
+    const newPath = `ordersTest/${newStatus}/${order.id}`;
+    const oldPath = order.currentPath;
 
-    await update(ref(db, `orders/${order.id}/statusHistory/${newStatus}`), {
-      time: new Date().toISOString(),
-      by: "Prime"
+    const atomicUpdate = {
+      [newPath]: updatedOrder,
+      [oldPath]: newPath !== oldPath ? null : updatedOrder  // حذف فقط إذا اختلف المسار
+    };
+
+    await update(ref(db), atomicUpdate);
+
+    // تحديث meta
+    const metaTime = Date.now();
+    const oldBase  = oldPath.split("/").slice(0, 2).join("/");
+    const newBase  = `ordersTest/${newStatus}`;
+    await update(ref(db), {
+      [`${oldBase}/_meta/lastModified`]: metaTime,
+      [`${newBase}/_meta/lastModified`]: metaTime
     });
 
-    console.log("✅ Updated order:", order.id, "→", newStatus);
+    console.log(`✅ نُقل ${order.id}: ${currentStatus} → ${newStatus}`);
   }
 
-  console.log("🔄 Prime status update completed.");
+  console.log("🔄 اكتمل تحديث حالات Prime.");
 }

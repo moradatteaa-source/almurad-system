@@ -2,612 +2,391 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#043B64">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>تفاصيل الطلب - نظام المراد</title>
   
   <style>
-    .history-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 15px;
-  margin-top: 20px;
-  border: 1px solid #ddd;
-  font-size: 14px;
-  line-height: 1.6;
-}
-.source-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
-.source-btn {
-  width: 45px;
-  height: 45px;
-  background: #eee;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.source-btn.active {
-  background: #FF6B2D;
-  color: white;
-}
-.history-title {
-  font-weight: bold;
-  color: #043B64;
-  margin-bottom: 10px;
-}
-
-.history-item {
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px dashed #ccc;
-}
-
-.status-name {
-  color: #FF6B2D;
-  font-weight: bold;
-}
-
-.user-name {
-  color: #043B64;
-  font-weight: bold;
-}
-
-    .input-error {
-  border: 2px solid #ff3b30 !important;
-  background: #ffecec !important;
-}
-
-    .add-small-btn {
-  background: rgba(4, 59, 100, 0.08);
-  color: #043B64;
-  border: 1px dashed #043B64;
-  border-radius: 8px;
-  padding: 6px 10px;
-  width: 55%;
-  font-size: 13px;
-  cursor: pointer;
-  margin: 8px auto;
-  display: block;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-.add-small-btn:hover {
-  background: #043B64;
-  color: #fff;
-  transform: scale(1.03);
-}
-
     :root {
       --main-blue: #043B64;
+      --main-blue-dark: #032a47;
       --accent-orange: #FF6B2D;
+      --accent-orange-dark: #e55a2b;
       --background-gray: #f2f3f5;
-      --border-radius: 12px;
+      --card-bg: #ffffff;
+      --text-primary: #1a1a2e;
+      --text-secondary: #666;
+      --border-color: #e0e0e0;
+      --border-radius: 14px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --success: #27ae60;
+      --warning: #f39c12;
+      --error: #e74c3c;
+      --info: #3498db;
     }
 
-    body {
-      font-family: Tahoma, Arial;
-      background: var(--background-gray);
-      margin: 0;
-      padding: 0;
-      color: #333;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
+      background: var(--background-gray); color: var(--text-primary);
+      line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden;
     }
 
     header {
-      background: var(--main-blue);
-      color: white;
-      text-align: center;
-      padding: 15px;
-      font-size: 18px;
-      letter-spacing: 0.5px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--main-blue-dark) 100%);
+      color: white; text-align: center; padding: 16px 20px; font-size: 18px;
+      font-weight: 700; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
     }
+    header::before { content: "📦"; font-size: 20px; }
 
-    .container {
-      max-width: 800px;
-      margin: 25px auto;
-      padding: 10px;
-    }
+    .container { max-width: 720px; margin: 0 auto; padding: 12px; padding-bottom: 100px; }
 
     .card {
-      background: var(--background-gray);
-      border-radius: var(--border-radius);
-      box-shadow: none;
-      padding: 15px 20px;
-      margin-bottom: 15px;
+      background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-sm);
+      padding: 18px 20px; margin-bottom: 14px; transition: var(--transition); border: 1px solid var(--border-color);
     }
+    .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 
-    .row {
-      display: flex;
-      justify-content: center;
-      gap: 25px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
+    .card-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color); color: var(--main-blue); font-weight: 700; font-size: 15px;
     }
+    .card-header::before { content: "•"; color: var(--accent-orange); font-size: 24px; line-height: 1; }
 
-    .field {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; margin: 0 -8px; }
+    .field { flex: 1; min-width: 140px; padding: 0 8px; display: flex; flex-direction: column; gap: 6px; }
+    .field.small { flex: 0 0 130px; }
+    .field.single { max-width: 100%; margin: 0 auto; }
 
-    .field.small {
-      flex: none;
-      width: 140px;
-    }
+    label { color: var(--main-blue); font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+    label::before { content: "📍"; font-size: 12px; opacity: 0.7; }
 
-    .field.single {
-      max-width: 280px;
-      margin: 0 auto 15px auto;
+    input, textarea, select {
+      border: 1px solid var(--border-color); border-radius: 10px; padding: 11px 14px;
+      font-size: 15px; width: 100%; background: #fff; transition: var(--transition); color: var(--text-primary);
     }
-
-    label {
-      color: var(--main-blue);
-      font-weight: 600;
-      margin-bottom: 5px;
-      font-size: 13px;
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px rgba(255, 107, 45, 0.15); background: #fffdfb;
     }
-
-    input, textarea {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 9px 10px;
-      font-size: 13px;
-      width: 100%;
-      background: #fff;
-      transition: all 0.2s;
-    }
-
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent-orange);
-      box-shadow: 0 0 4px rgba(255,107,45,0.3);
-    }
-
-    textarea {
-      resize: vertical;
-      height: 60px;
-    }
+    input[readonly], textarea[readonly] { background: #f8f9fa; color: var(--text-secondary); cursor: not-allowed; }
+    textarea { resize: vertical; min-height: 70px; max-height: 200px; line-height: 1.6; }
 
     button {
-      border: none;
-      border-radius: 8px;
-      padding: 12px 16px;
-      width: 100%;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 10px;
-      font-weight: bold;
-      transition: all 0.2s;
+      border: none; border-radius: 12px; padding: 13px 20px; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center;
+      justify-content: center; gap: 8px; width: 100%; margin-top: 8px;
+    }
+    button:active { transform: scale(0.98); }
+
+    #saveBtn { background: linear-gradient(135deg, var(--accent-orange), var(--accent-orange-dark)); color: white; box-shadow: 0 4px 14px rgba(255, 107, 45, 0.3); }
+    #saveBtn:hover { box-shadow: 0 6px 20px rgba(255, 107, 45, 0.4); transform: translateY(-2px); }
+
+    #backBtn { background: linear-gradient(135deg, var(--main-blue), var(--main-blue-dark)); color: white; }
+    #backBtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .add-small-btn {
+      background: rgba(4, 59, 100, 0.08); color: var(--main-blue); border: 2px dashed var(--main-blue);
+      border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+      margin: 12px auto; display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: var(--transition); width: auto; min-width: 180px;
+    }
+    .add-small-btn:hover { background: var(--main-blue); color: white; transform: scale(1.03); }
+
+    .source-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 8px 0; }
+    .source-btn {
+      width: 48px; height: 48px; background: #f1f3f5; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      cursor: pointer; transition: var(--transition); border: 2px solid transparent; color: var(--text-secondary);
+    }
+    .source-btn:hover { background: #e8ecef; transform: translateY(-2px); }
+    .source-btn.active {
+      background: linear-gradient(135deg, var(--accent-orange), var(--accent-orange-dark));
+      color: white; border-color: var(--accent-orange);
+      box-shadow: 0 4px 12px rgba(255, 107, 45, 0.3); transform: scale(1.05);
     }
 
-    #saveBtn {
-      background: var(--accent-orange);
-      color: white;
+    .history-card {
+      background: var(--card-bg); border-radius: var(--border-radius); padding: 16px 20px;
+      margin: 16px 0; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);
     }
-
-    #saveBtn:hover {
-      opacity: 0.9;
-      transform: scale(1.01);
+    .history-title {
+      font-weight: 700; color: var(--main-blue); margin-bottom: 12px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent-orange); display: flex; align-items: center; gap: 8px; font-size: 15px;
     }
-
-    #backBtn {
-      background: var(--main-blue);
-      color: white;
+    .history-title::before { content: "📋"; }
+    .history-item {
+      padding: 10px 0; border-bottom: 1px dashed var(--border-color);
+      display: flex; flex-direction: column; gap: 4px; animation: slideIn 0.3s ease;
     }
+    .history-item:last-child { border-bottom: none; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .status-name { color: var(--accent-orange); font-weight: 700; font-size: 14px; }
+    .user-name { color: var(--main-blue); font-weight: 600; }
+    .history-time { color: var(--text-secondary); font-size: 12px; }
 
-    #backBtn:hover {
-      opacity: 0.9;
-    }
-
-    .bottom-actions {
-      position: fixed;
-      bottom: 15px;
-      left: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 999;
-    }
-
-    .contact-btn {
-      background: var(--main-blue);
-      color: white;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      font-size: 22px;
-      text-align: center;
-      line-height: 50px;
-      text-decoration: none;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-      transition: all 0.2s;
-    }
-
-    .contact-btn:hover {
-      transform: scale(1.08);
-    }
-
-    .whatsapp {
-      background: #25D366;
-    }
-
-    @media (max-width: 600px) {
-      .container {
-        margin: 10px;
-      }
-      .card {
-        padding: 10px;
-      }
-      .field.small {
-        width: 130px;
-      }
-      .field.single {
-        max-width: 100%;
-      }
-    }
-
-    /* منع التقريب التلقائي بالموبايل */
-    input, select, textarea {
-      font-size: 16px !important;
-    }
-
-    /* تنسيق المنتجات الإضافية */
     .extra-product {
-  background: var(--background-gray);
-  border-radius: var(--border-radius);
-  padding: 15px 20px;
-  margin-top: 10px;
-  box-shadow: none;
-}
-
-.extra-product .row {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 25px;
-  margin-bottom: 10px;
-}
-
-.extra-product .field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-
-    .delete-btn {
-      color: red;
-      cursor: pointer;
-      font-size: 20px;
-      text-align: left;
+      background: #fff; border-radius: var(--border-radius); padding: 16px 18px;
+      margin-top: 14px; border: 2px solid var(--accent-orange); position: relative;
+      transition: var(--transition); box-shadow: var(--shadow-sm);
     }
-    /* ✅ منع التقريب التلقائي في الموبايل + ضبط العرض الكامل */
-@media (max-width: 768px) {
-  html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-    touch-action: manipulation;
-  }
-  input, select, textarea, button {
-    font-size: 16px !important;
-  }
-}
+    .extra-product::before {
+      content: "➕ منتج إضافي"; position: absolute; top: -11px; right: 16px;
+      background: var(--accent-orange); color: white; font-size: 11px;
+      padding: 3px 10px; border-radius: 20px; font-weight: 600;
+    }
+    .extra-product:hover { background: #fff9f6; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .delete-btn {
+      position: absolute; top: 8px; left: 12px; color: var(--error); cursor: pointer;
+      font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center;
+      justify-content: center; border-radius: 50%; transition: var(--transition); background: rgba(231, 76, 60, 0.1);
+    }
+    .delete-btn:hover { background: var(--error); color: white; transform: scale(1.1); }
 
-/* ✅ جعل الصفحة تغطي الشاشة بالكامل في كل الأجهزة */
-html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  background: var(--background-gray);
-}
-/* ✅ تمييز واضح للمنتجات الإضافية */
-.extra-product {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 15px 20px;
-  margin-top: 12px;
-  border: 2px dashed #FF6B2D; /* برتقالي من لون النظام */
-  position: relative;
-  transition: all 0.3s ease;
-}
+    .variant-group { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-color); }
+    .variant-group label::before { content: "⚙️"; }
 
-.extra-product::before {
-  content: "منتج إضافي";
-  position: absolute;
-  top: -10px;
-  right: 12px;
-  background: #FF6B2D;
-  color: white;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-weight: bold;
-}
+    #productTagsContainer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 8px 0; }
+    .product-tag {
+      background: linear-gradient(135deg, var(--main-blue), var(--main-blue-dark));
+      color: white; padding: 6px 14px; border-radius: 20px;
+      display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; animation: popIn 0.2s ease;
+    }
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .product-tag .remove { cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+    .product-tag .remove:hover { opacity: 1; }
 
-.extra-product:hover {
-  background: #fff7f3;
-  transform: scale(1.01);
-}
-/* ✅ إصلاح امتلاء الشاشة بدون فراغات */
-body, html {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  background: var(--background-gray);
-}
+    #totalsCard {
+      background: linear-gradient(135deg, #e8f4f8, #d6eaf8); border-radius: var(--border-radius);
+      padding: 16px; margin: 16px 0; border: 2px solid var(--main-blue);
+    }
+    #totalsCard .field label { color: var(--main-blue-dark); }
+    #totalsCard input { background: white; font-weight: 700; color: var(--main-blue); text-align: center; font-size: 16px; }
 
-.container {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 10px;
-}
-/* ✅ ضبط عرض العناصر في الموبايل */
-.card, .row, .field {
-  width: 100%;
-  box-sizing: border-box;
-}
+    .undo-redo-fixed { position: fixed; top: 16px; left: 16px; display: flex; gap: 8px; z-index: 1000; }
+    .undo-redo-fixed button {
+      width: 40px; height: 40px; padding: 0; border-radius: 50%;
+      background: var(--main-blue); color: white; font-size: 18px; font-weight: bold; box-shadow: var(--shadow-md); margin: 0;
+    }
+    .undo-redo-fixed button:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
 
-.container {
-  max-width: 600px;
-  width: 95%;
-  margin: auto;
-}
+    .top-contact-buttons { position: fixed; top: 80px; left: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 999; }
+    .contact-btn {
+      width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 24px; text-decoration: none; color: white;
+      box-shadow: var(--shadow-md); transition: var(--transition); animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .contact-btn:nth-child(2) { animation-delay: 0.5s; }
+    .contact-btn:hover { transform: scale(1.1) !important; box-shadow: var(--shadow-lg); }
+    .contact-btn.whatsapp { background: #25D366; }
+    .contact-btn:not(.whatsapp) { background: var(--main-blue); }
 
-.top-contact-buttons {
-  position: fixed;
-  top: 80px;
-  left: 15px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  z-index: 10000;
-}
+    #globalLoader {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95); display: none;
+      align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 9999;
+    }
+    #globalLoader.show { display: flex; }
+    .spinner { width: 48px; height: 48px; border: 4px solid var(--border-color); border-top-color: var(--accent-orange); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { color: var(--main-blue); font-weight: 600; font-size: 15px; }
 
-.top-contact-buttons .contact-btn {
-  width: 50px;
-  height: 50px;
-  line-height: 50px;
-  font-size: 24px;
-  border-radius: 50%;
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-  transition: transform 0.2s ease;
-}
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(30px);
+      background: var(--main-blue); color: white; padding: 12px 24px; border-radius: 30px;
+      font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10000;
+      box-shadow: var(--shadow-lg); max-width: 90%; text-align: center; display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { background: var(--success); }
+    #toast.error { background: var(--error); }
+    #toast.warning { background: var(--warning); color: #1a1a2e; }
 
-.top-contact-buttons .contact-btn:hover {
-  transform: scale(1.08);
-}
+    .input-error { border: 2px solid var(--error) !important; background: #fff5f5 !important; animation: shake 0.4s ease; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
-.top-contact-buttons .whatsapp {
-  background: #25D366;
-}
+    @media (max-width: 768px) {
+      .container { padding: 10px; padding-bottom: 90px; }
+      .card { padding: 16px 18px; }
+      .field.small { flex: 0 0 120px; }
+      .source-btn { width: 44px; height: 44px; font-size: 20px; }
+      .contact-btn { width: 48px; height: 48px; font-size: 22px; }
+      .undo-redo-fixed { top: 12px; left: 12px; }
+      .undo-redo-fixed button { width: 36px; height: 36px; font-size: 16px; }
+      header { padding: 14px 16px; font-size: 17px; }
+      input, textarea, select, button { font-size: 16px !important; touch-action: manipulation !important; }
+    }
+    @media (min-width: 769px) { .container { padding: 20px; } .card { padding: 22px 24px; } }
 
-.top-contact-buttons .contact-btn:not(.whatsapp) {
-  background: #043B64;
-}
-
-
-
-
-
-.contact-btn {
-  width: 55px;
-  height: 55px;
-  line-height: 55px;
-  font-size: 24px;
-}
-
-/* ✅ تصغير الحقول قليلاً للملاءمة */
-input, textarea {
-  font-size: 15px;
-}
-@media (max-width: 768px) {
-  .bottom-actions {
-    bottom: 80px; /* مخصص للموبايل */
-  }
-}
-.undo-redo-fixed {
-  position: fixed;
-  top: 15px;         /* 🔹 خليها بالأعلى بدل bottom */
-  left: 15px;
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  z-index: 10000;
-}
-
-.undo-redo-fixed button {
-  background: #043B64;
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
-.undo-redo-fixed button:hover {
-  opacity: 0.9;
-  transform: scale(1.05);
-}
-input, select, textarea {
-  font-size: 16px !important;
-  touch-action: manipulation !important;
-}
-
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--background-gray); }
+    ::-webkit-scrollbar-thumb { background: var(--main-blue); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--main-blue-dark); }
   </style>
 </head>
-
 <body>
 
-  <header>📦 تفاصيل الطلب - نظام المراد</header>
+  <header>
+    <span>تفاصيل الطلب</span>
+    <span id="orderIdDisplay" style="font-size: 13px; opacity: 0.9; font-weight: 400;"></span>
+  </header>
 
-<div class="undo-redo-fixed">
-  <button id="undoBtn">↩️</button>
-  <button id="redoBtn">↪️</button>
-</div>
-  <div class="container">
-<div class="card" id="receiptCard" style="display:none;">
-  <div class="field single">
-    <label>رقم الوصل (الوسيط):</label>
-<input id="receiptNum" type="text" placeholder="اكتب رقم الوصل">
+  <div class="undo-redo-fixed">
+    <button id="undoBtn" title="تراجع (Ctrl+Z)">↩️</button>
+    <button id="redoBtn" title="إعادة (Ctrl+Y)">↪️</button>
   </div>
-</div>
 
-    <div class="card">
+  <div class="top-contact-buttons">
+    <a id="callBtn" class="contact-btn" href="#" title="اتصال">📞</a>
+    <a id="whatsappBtn" class="contact-btn whatsapp" href="#" title="واتساب" target="_blank" rel="noopener">💬</a>
+  </div>
+
+  <div id="globalLoader">
+    <div class="spinner"></div>
+    <div class="loader-text">جاري التحميل...</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div class="container">
+    
+    <div class="card" id="receiptCard" style="display:none;">
+      <div class="card-header">🧾 رقم الوصل</div>
       <div class="field single">
-        <label>الكود:</label>
-        <input id="code" type="text">
+        <label>رقم الوصل (الوسيط)</label>
+        <input id="receiptNum" type="text" placeholder="اكتب رقم الوصل" autocomplete="off">
       </div>
     </div>
 
     <div class="card">
+      <div class="card-header">📋 المعلومات الأساسية</div>
+      <div class="field single" style="margin-bottom: 14px;">
+        <label>الكود</label>
+        <input id="code" type="text" placeholder="أدخل الكود" autocomplete="off">
+      </div>
       <div class="row">
         <div class="field small">
-          <label>رقم الهاتف الأول:</label>
-          <input id="phone1" type="text">
+          <label>📱 الهاتف الأول</label>
+          <input id="phone1" type="tel" placeholder="07xxxxxxxxx" inputmode="tel">
         </div>
         <div class="field small">
-          <label>الرقم الثاني:</label>
-          <input id="phone2" type="text">
+          <label>📱 الرقم الثاني</label>
+          <input id="phone2" type="tel" placeholder="اختياري" inputmode="tel">
         </div>
       </div>
     </div>
-<div class="field single">
-  <label>مصدر الطلب:</label>
 
-  <div id="sourceButtons" class="source-buttons"></div>
-</div>
     <div class="card">
+      <div class="card-header">🔗 مصدر الطلب</div>
+      <div class="field single">
+        <div id="sourceButtons" class="source-buttons"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📍 العنوان</div>
       <div class="row">
         <div class="field small">
-          <label>المحافظة:</label>
+          <label>المحافظة</label>
           <div id="city"></div>
         </div>
         <div class="field small">
-          <label>المنطقة:</label>
+          <label>المنطقة</label>
           <div id="area"></div>
         </div>
       </div>
-      <div class="field single">
-        <label>العنوان الكامل:</label>
-        <textarea id="address"></textarea>
+      <div class="field single" style="margin-top: 12px;">
+        <label>العنوان الكامل</label>
+        <textarea id="address" placeholder="اكتب العنوان بالتفصيل..." rows="3"></textarea>
       </div>
     </div>
 
     <div class="card">
-  <div class="field single">
-    <label>اسم المنتج:</label>
-    <div id="product"></div>
-  </div>
-  <div id="productTagsContainer" style="
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:10px;
-"></div>
-
-  <div class="row">
-    <div class="field small">
-      <label>السعر:</label>
-<input id="price" type="text" inputmode="numeric">    </div>
-    <div class="field small">
-      <label>عدد القطع:</label>
-<input id="quantity" type="text" inputmode="numeric">
+      <div class="card-header">🛍️ المنتج والتسعير</div>
+      <div class="field single">
+        <label>اسم المنتج</label>
+        <div id="product"></div>
+        <div id="productTagsContainer"></div>
+      </div>
+      <div class="row" style="margin-top: 14px;">
+        <div class="field small">
+          <label>💰 السعر</label>
+          <input id="price" type="text" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field small">
+          <label>🔢 الكمية</label>
+          <input id="quantity" type="text" inputmode="numeric" placeholder="1">
+        </div>
+      </div>
+      <div id="variantsContainer"></div>
     </div>
-  </div>
-</div>
-<div id="variantsContainer"></div>
 
-
-      <!-- المنتجات الإضافية -->
+    <div class="card">
+      <div class="card-header">🎁 منتجات إضافية</div>
       <div id="extraProducts"></div>
-
-      <!-- زر الإضافة -->
-<button id="addProductBtn" class="add-small-btn">➕ إضافة منتج آخر</button>
-
-      <!-- مجموع السعر والعدد (يظهر بعد إضافة منتج) -->
+      <button id="addProductBtn" class="add-small-btn">
+        <span style="font-size: 18px;">➕</span> إضافة منتج آخر
+      </button>
       <div id="totalsCard" style="display:none;">
         <div class="row">
           <div class="field small">
-            <label>إجمالي العدد:</label>
+            <label>📦 إجمالي العدد</label>
             <input id="totalQty" readonly>
           </div>
           <div class="field small">
-            <label>إجمالي السعر:</label>
+            <label>💵 إجمالي السعر</label>
             <input id="totalPrice" readonly>
           </div>
         </div>
       </div>
+    </div>
 
+    <div class="card">
+      <div class="card-header">📝 معلومات إضافية</div>
       <div class="field single">
-        <label>الملاحظات:</label>
-        <textarea id="notes"></textarea>
+        <label>الملاحظات</label>
+        <textarea id="notes" placeholder="أي ملاحظات إضافية..." rows="3"></textarea>
       </div>
-
-      <div class="field single">
-        <label>تاريخ الطلب:</label>
+      <div class="field single" style="margin-top: 12px;">
+        <label>📅 تاريخ الطلب</label>
         <input id="orderDate" readonly>
-    
+      </div>
+      <div class="field single" style="margin-top: 12px;">
+        <label>📢 المعلن</label>
+        <input id="advertiser" type="text" placeholder="اسم المعلن">
       </div>
     </div>
 
     <div class="card">
+      <div class="card-header">🔄 حالة الطلب</div>
       <div class="row">
         <div class="field small">
-          <label>الحالة:</label>
+          <label>الحالة الحالية</label>
           <div id="status"></div>
-        </div>
-        <div class="field small">
-          <label>المعلن:</label>
-          <input id="advertiser" type="text">
         </div>
       </div>
     </div>
-    <!-- ⭐ سجل الطلب (الهستوري) -->
-<div id="historyCard" class="history-card"></div>
 
-    <button id="saveBtn">💾 حفظ التعديلات</button>
-    <button id="backBtn">🔙 رجوع</button>
+    <div id="historyCard" class="history-card"></div>
 
+    <button id="saveBtn"><span>💾</span> حفظ التعديلات</button>
+    <button id="backBtn"><span>🔙</span> رجوع للقائمة</button>
   </div>
-  </div>
-    <!-- سكربت الفايربيس -->
+
   <script type="module">
-    let selectedStatus = null;
-
-    window.history.pushState(null, "", location.href);
-
-window.addEventListener("popstate", () => {
-  window.location.href = "dashboard.html"; 
-});
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-   import { getDatabase, ref, get, update, onValue, set }
-from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-
+    import { getDatabase, ref, get, update, onValue, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     import { citiesData, allCities } from "./citiesData.js";
 
     const firebaseConfig = {
@@ -621,1421 +400,806 @@ from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     };
 
     const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const orderId = localStorage.getItem("selectedOrder");
-const loggedUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
-const isAdmin =
-  loggedUser?.role === "admin" ||
-  loggedUser?.isAdmin === true ||
-  loggedUser?.username === "admin";
+    const db = getDatabase(app);
 
-if (!orderId) {
-  // نرجع إلى صفحة الكروت بدون إضافة للهستوري
-  window.location.replace("orders-cards.html");
-}
+    // ===== الحالات المدعومة =====
+    const TEST_STATUSES = [
+      'تم التسليم', 'قيد المعالجة', 'جديد', 'مثبت',
+      'قيد التجهيز', 'بانتظار البضاعة', 'قيد التوصيل',
+      'راجع', 'تم استلام الراجع', 'رفض'
+    ];
 
+    const state = {
+      orderId: null,
+      orderData: null,
+      currentPath: null,
+      isAdmin: false,
+      allProducts: [],
+      extraProducts: [],
+      isLoading: false,
+      historyStack: [],
+      redoStack: []
+    };
 
+    // ===== دوال مساعدة =====
+    function showToast(msg, type = 'info', duration = 2500) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `show ${type}`;
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
 
-    // 🔹 دالة إنشاء منسدلات (نفس الأصلية)
-    function createDropdown(options, selected, onChange) {
-      const wrapper = document.createElement("div");
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = selected || "";
-      input.placeholder = "اختر...";
-      input.style.cursor = "pointer";
+    function showLoader(show, text = 'جاري التحميل...') {
+      const loader = document.getElementById('globalLoader');
+      loader.querySelector('.loader-text').textContent = text;
+      loader.classList.toggle('show', show);
+      state.isLoading = show;
+    }
 
-      const dropdown = document.createElement("div");
-      Object.assign(dropdown.style, {
-        position: "absolute",
-        background: "#fff",
-        border: "1px solid #ccc",
-        borderRadius: "6px",
-        boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
-        maxHeight: "200px",
-        overflowY: "auto",
-        zIndex: "9999",
-        display: "none",
-        fontSize: "12px"
+    function formatIraqiDate(t) {
+      if (!t) return '';
+      const d = new Date(t);
+      let h = d.getHours(), m = d.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+      h = h % 12 || 12;
+      return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()} - ${h}:${m} ${ampm}`;
+    }
+
+    function normalizeNumber(str) {
+      if (!str) return '';
+      const arabic = '٠١٢٣٤٥٦٧٨٩', english = '0123456789';
+      return String(str).split('').map(ch => { const i = arabic.indexOf(ch); return i >= 0 ? english[i] : ch; }).join('').replace(/[^\d]/g, '');
+    }
+
+    function normalizeIraqiPhone(phone) {
+      let n = normalizeNumber(phone);
+      if (n.startsWith('00964')) n = '964' + n.slice(5);
+      else if (!n.startsWith('964')) {
+        if (n.startsWith('0')) n = '964' + n.slice(1);
+        else if (n.length === 10) n = '964' + n;
+      }
+      return n;
+    }
+
+    // ===== حساب مسار الطلب بناءً على الحالة =====
+    function getPathForStatus(status, orderId) {
+      if (TEST_STATUSES.includes(status)) {
+        return `ordersTest/${status}/${orderId}`;
+      }
+      return `orders/${orderId}`;
+    }
+
+    // ===== البحث عن الطلب في كل المسارات =====
+    async function findOrder(orderId) {
+      // ابدأ بالمسارات التي فيها حالات ordersTest
+      const pathsToCheck = TEST_STATUSES.map(s => `ordersTest/${s}/${orderId}`);
+      pathsToCheck.push(`orders/${orderId}`);
+
+      for (const path of pathsToCheck) {
+        try {
+          const snap = await get(ref(db, path));
+          if (snap.exists()) {
+            console.log(`✅ وُجد الطلب في: ${path}`);
+            return { data: snap.val(), path };
+          }
+        } catch (err) {
+          console.warn(`تعذّر التحقق من: ${path}`, err.message);
+        }
+      }
+      return null;
+    }
+
+    // ===== مراقب التغييرات =====
+    let changeUnsubscribe = null;
+    function setupAutoRefresh(dataPath) {
+      if (changeUnsubscribe) { changeUnsubscribe(); changeUnsubscribe = null; }
+      const metaPath = dataPath.split('/').slice(0, -1).join('/') + '/_meta/lastModified';
+      changeUnsubscribe = onValue(ref(db, metaPath), (snap) => {
+        if (!snap.exists()) return;
+        const serverTime = snap.val();
+        const cached = localStorage.getItem(`cacheTime_${state.orderId}`);
+        if (cached && serverTime > parseInt(cached)) {
+          loadOrder();
+          showToast('📦 تم تحديث البيانات', 'success');
+        }
+        localStorage.setItem(`cacheTime_${state.orderId}`, serverTime.toString());
+      });
+    }
+
+    // ===== تحميل الطلب =====
+    async function loadOrder() {
+      if (state.isLoading) return;
+      showLoader(true, 'جاري تحميل الطلب...');
+      try {
+        const result = await findOrder(state.orderId);
+        if (!result) {
+          showToast('❌ لم يتم العثور على الطلب', 'error');
+          setTimeout(() => window.location.replace('orders-cards.html'), 2000);
+          return;
+        }
+        state.orderData = result.data;
+        state.currentPath = result.path;
+        await renderOrderData(result.data);
+        setupAutoRefresh(result.path);
+      } catch (err) {
+        console.error('خطأ في تحميل الطلب:', err);
+        showToast('❌ فشل التحميل: ' + err.message, 'error');
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    // ===== عرض بيانات الطلب =====
+    async function renderOrderData(data) {
+      document.getElementById('orderIdDisplay').textContent = `#${state.orderId}`;
+
+      const receiptCard = document.getElementById('receiptCard');
+      const receiptInput = document.getElementById('receiptNum');
+      if (data.receiptNum && String(data.receiptNum).trim()) {
+        receiptInput.value = data.receiptNum;
+        receiptCard.style.display = 'block';
+      } else {
+        receiptCard.style.display = 'none';
+      }
+
+      ['code', 'phone1', 'phone2', 'address', 'notes', 'advertiser', 'price', 'quantity'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = data[id] || ''; el.dataset.oldValue = el.value; }
       });
 
-      function renderList(filter = "") {
-        dropdown.innerHTML = "";
-        options.filter(o => o.includes(filter)).forEach(o => {
-          const opt = document.createElement("div");
+      document.getElementById('orderDate').value = data.orderDate || new Date().toLocaleDateString('ar-IQ', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      renderHistoryCard(data.statusHistory);
+      renderSourceButtons(data.source || '');
+      await renderCityAreaDropdowns(data.city, data.area);
+      await renderProductDropdown(data.productName);
+      if (data.productName) await loadVariants(data.productName);
+      setupStatusDropdown(data.status || '');
+      await renderExtraProducts(data.extraProducts);
+      updateTotals();
+      setupContactButtons(data.phone1);
+    }
+
+    // ===== سجل التغييرات =====
+    function renderHistoryCard(statusHistory) {
+      const card = document.getElementById('historyCard');
+      if (!card) return;
+      let html = '<div class="history-title">سجل التغييرات</div>';
+      if (statusHistory && Object.keys(statusHistory).length > 0) {
+        const arr = Object.entries(statusHistory)
+          .map(([k, v]) => ({ status: decodeURIComponent(k), ...v }))
+          .sort((a, b) => new Date(a.time) - new Date(b.time));
+        arr.forEach(item => {
+          html += `<div class="history-item">
+            <span class="status-name">${item.status}</span>
+            <span>بواسطة: <span class="user-name">${item.by || 'غير معروف'}</span></span>
+            <span class="history-time">🕐 ${formatIraqiDate(item.time)}</span>
+          </div>`;
+        });
+      } else {
+        html += '<div style="color:var(--text-secondary);text-align:center;padding:10px;">لا يوجد سجل تغييرات</div>';
+      }
+      card.innerHTML = html;
+    }
+
+    // ===== أزرار المصدر =====
+    function renderSourceButtons(selected = '') {
+      const container = document.getElementById('sourceButtons');
+      if (!container) return;
+      const sources = [
+        { name: 'انستغرام', icon: 'ri-instagram-line' },
+        { name: 'فيسبوك', icon: 'ri-facebook-circle-fill' },
+        { name: 'تيك توك', icon: 'ri-tiktok-fill' },
+        { name: 'واتساب', icon: 'ri-whatsapp-line' },
+        { name: 'اتصال', icon: 'ri-phone-fill' }
+      ];
+      container.innerHTML = sources.map(s =>
+        `<div class="source-btn ${selected === s.name ? 'active' : ''}" data-value="${s.name}" title="${s.name}"><i class="${s.icon}"></i></div>`
+      ).join('');
+
+      if (!container.dataset.bound) {
+        container.addEventListener('click', async (e) => {
+          const btn = e.target.closest('.source-btn');
+          if (!btn) return;
+          container.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          try {
+            await update(ref(db, state.currentPath), { source: btn.dataset.value });
+            showToast('✅ تم حفظ المصدر', 'success');
+          } catch (err) {
+            showToast('❌ فشل الحفظ', 'error');
+          }
+        });
+        container.dataset.bound = 'true';
+      }
+    }
+
+    // ===== المدن والمناطق =====
+    async function renderCityAreaDropdowns(cityValue, areaValue) {
+      const cityDiv = document.getElementById('city'), areaDiv = document.getElementById('area');
+      if (!cityDiv || !areaDiv) return;
+      cityDiv.innerHTML = ''; areaDiv.innerHTML = '';
+
+      const cityDropdown = createDropdown(allCities, cityValue || '', async (val) => {
+        await update(ref(db, state.currentPath), { city: val, area: '' });
+        areaDiv.innerHTML = '';
+        const areas = citiesData[val] || [];
+        areaDiv.appendChild(createDropdown(areas, '', (a) => update(ref(db, state.currentPath), { area: a })));
+      });
+      cityDiv.appendChild(cityDropdown);
+
+      if (cityValue) {
+        const areas = citiesData[cityValue] || [];
+        areaDiv.appendChild(createDropdown(areas, areaValue || '', (a) => update(ref(db, state.currentPath), { area: a })));
+      }
+    }
+
+    // ===== المنتج الرئيسي =====
+    async function renderProductDropdown(selectedProduct = '') {
+      await waitForProducts();
+      const productDiv = document.getElementById('product');
+      if (!productDiv) return;
+      productDiv.innerHTML = '';
+      if (selectedProduct && !state.allProducts.includes(selectedProduct)) state.allProducts.unshift(selectedProduct);
+      productDiv.appendChild(createDropdown(state.allProducts, selectedProduct, async (val) => {
+        await update(ref(db, state.currentPath), { productName: val });
+        await set(ref(db, `${state.currentPath}/selectedVariants`), {});
+        document.getElementById('variantsContainer').innerHTML = '';
+        if (val) await loadVariants(val);
+        renderProductTags();
+        showToast('✅ تم تحديث المنتج', 'success');
+      }));
+    }
+
+    // ===== تاغات المنتجات =====
+    function renderProductTags() {
+      const container = document.getElementById('productTagsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      const mainName = document.querySelector('#product input')?.value?.trim();
+      if (mainName) container.appendChild(createTagChip(mainName, () => { document.querySelector('#product input').value = ''; renderProductTags(); }));
+      state.extraProducts.forEach((p, i) => {
+        if (p.name) container.appendChild(createTagChip(p.name, () => {
+          state.extraProducts.splice(i, 1);
+          document.querySelector(`[data-pid="${p.id}"]`)?.remove();
+          renderProductTags(); updateTotals();
+        }));
+      });
+    }
+
+    function createTagChip(name, onRemove) {
+      const chip = document.createElement('div');
+      chip.className = 'product-tag';
+      chip.innerHTML = `<span>${name}</span><span class="remove" title="إزالة">✖</span>`;
+      chip.querySelector('.remove').onclick = (e) => { e.stopPropagation(); onRemove(); };
+      return chip;
+    }
+
+    // ===== إنشاء القائمة المنسدلة =====
+    function createDropdown(options, selected, onChange) {
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = selected || '';
+      input.placeholder = 'اختر أو اكتب...';
+      input.style.cursor = 'pointer';
+      input.readOnly = true;
+
+      const dropdown = document.createElement('div');
+      Object.assign(dropdown.style, {
+        position: 'absolute', top: '100%', left: 0, right: 0,
+        background: '#fff', border: '1px solid var(--border-color)', borderRadius: '10px',
+        boxShadow: 'var(--shadow-lg)', maxHeight: '200px', overflowY: 'auto',
+        zIndex: '1000', display: 'none', fontSize: '14px', marginTop: '4px'
+      });
+
+      function renderList(filter = '') {
+        dropdown.innerHTML = '';
+        const filtered = options.filter(o => o.toLowerCase().includes(filter.toLowerCase()));
+        if (!filtered.length) {
+          dropdown.innerHTML = '<div style="padding:10px;color:var(--text-secondary);text-align:center">لا توجد نتائج</div>';
+          return;
+        }
+        filtered.slice(0, 50).forEach(o => {
+          const opt = document.createElement('div');
           opt.textContent = o;
-          opt.style.padding = "5px 8px";
-          opt.style.cursor = "pointer";
-          opt.addEventListener("click", () => {
-            input.value = o;
-            dropdown.style.display = "none";
-            onChange(o);
-          });
+          opt.style.cssText = 'padding:10px 14px;cursor:pointer;transition:background 0.15s;';
+          opt.onmouseenter = () => opt.style.background = '#f1f3f5';
+          opt.onmouseleave = () => opt.style.background = '';
+          opt.onclick = () => { input.value = o; dropdown.style.display = 'none'; input.readOnly = true; onChange(o); };
           dropdown.appendChild(opt);
         });
       }
 
-      input.addEventListener("focus", () => {
-        dropdown.style.display = "block";
-        renderList();
-      });
+      input.addEventListener('click', () => { input.readOnly = false; input.focus(); dropdown.style.display = 'block'; renderList(); });
+      input.addEventListener('input', (e) => renderList(e.target.value));
+      document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) { dropdown.style.display = 'none'; input.readOnly = true; } });
 
-      input.addEventListener("input", e => renderList(e.target.value.trim()));
-      document.addEventListener("click", e => { if (!wrapper.contains(e.target)) dropdown.style.display = "none"; });
-
-      wrapper.style.position = "relative";
       wrapper.appendChild(input);
       wrapper.appendChild(dropdown);
       return wrapper;
     }
-async function loadVariants(productName) {
-  const variantsContainer = document.getElementById("variantsContainer");
-  variantsContainer.innerHTML = "";
 
-  const snap = await get(ref(db, "warehouse"));
-  if (!snap.exists()) return;
+    // ===== متغيرات المنتج =====
+    async function loadVariants(productName) {
+      const container = document.getElementById('variantsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      try {
+        const snap = await get(ref(db, `warehouse/${productName}`));
+        if (!snap.exists()) return;
+        const stock = snap.val().stock || {};
+        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
+        if (!activeKeys.length) return;
 
-  const allProducts = snap.val();
-  const productData = allProducts[productName];
-  if (!productData || !productData.stock) return;
+        const savedSnap = await get(ref(db, `${state.currentPath}/selectedVariants`));
+        const savedVariants = savedSnap.exists() ? savedSnap.val() : {};
+        const variantsMap = {};
+        activeKeys.forEach(key => {
+          key.split('|').map(s => s.trim()).forEach((v, i, arr) => {
+            if (i % 2 === 0 && arr[i+1]) { if (!variantsMap[v]) variantsMap[v] = new Set(); variantsMap[v].add(arr[i+1]); }
+          });
+        });
 
-  const stock = productData.stock;
-const activeKeys = Object.keys(stock).filter(
-  k => k !== "إجمالي الكمية" && k !== "default" && stock[k] > 0
-);
-  if (activeKeys.length === 0) return;
+        const variantNames = Object.keys(variantsMap);
+        const selected = { ...savedVariants };
 
-  const savedVariantsSnap = await get(ref(db, `orders/${orderId}/selectedVariants`));
-  const savedVariants = savedVariantsSnap.exists() ? savedVariantsSnap.val() : {};
-
-  const variantsMap = {};
-  activeKeys.forEach(key => {
-    const parts = key.split("|").map(s => s.trim());
-    for (let i = 0; i < parts.length; i += 2) {
-      const name = parts[i];
-      const val = parts[i + 1];
-      if (!variantsMap[name]) variantsMap[name] = new Set();
-      variantsMap[name].add(val);
-    }
-  });
-
-  const variantNames = Object.keys(variantsMap);
-  let selected = { ...savedVariants };
-
-  function renderDropdown(level = 0) {
-    Array.from(variantsContainer.querySelectorAll(".variant-group"))
-      .slice(level)
-      .forEach(el => el.remove());
-
-    const name = variantNames[level];
-    if (!name) return;
-
-    const filteredKeys = activeKeys.filter(key =>
-      Object.entries(selected).every(([k, v]) => key.includes(`${k} | ${v}`))
-    );
-
-    const availableVals = new Set();
-    filteredKeys.forEach(key => {
-      const parts = key.split("|").map(s => s.trim());
-      for (let i = 0; i < parts.length; i += 2) {
-        const k = parts[i], val = parts[i + 1];
-        if (k === name) availableVals.add(val);
-      }
-    });
-
-    if (availableVals.size === 0) return;
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "variant-group field single";
-
-    const label = document.createElement("label");
-    label.textContent = `${name}:`;
-    wrapper.appendChild(label);
-
-    const dropdown = createDropdown(
-      [...availableVals],
-      selected[name] || "",
-      val => {
-        selected[name] = val;
-        update(ref(db, `orders/${orderId}/selectedVariants`), selected);
-        renderDropdown(level + 1);
-      }
-    );
-
-    wrapper.appendChild(dropdown);
-    variantsContainer.appendChild(wrapper);
-  }
-
-  renderDropdown(0);
-}
-
-
-
-// ✅ تحميل المتغيرات الديناميكية للمنتج الإضافي مع الاعتماد على المتغير الأول
-async function loadVariantsForExtra(container, productName, productObj) {
-  const existingVariants = container.querySelector(".variants-container");
-  if (existingVariants) existingVariants.remove();
-
-  const variantsDiv = document.createElement("div");
-  variantsDiv.className = "variants-container";
-  variantsDiv.style.marginTop = "10px";
-
-  const snap = await get(ref(db, "warehouse"));
-  if (!snap.exists()) return;
-
-  const allProducts = snap.val();
-  const productData = allProducts[productName];
-  if (!productData || !productData.stock) return;
-
-  const stock = productData.stock;
-const activeKeys = Object.keys(stock).filter(
-  k => k !== "إجمالي الكمية" && k !== "default" && stock[k] > 0
-);
-  if (activeKeys.length === 0) return;
-
-  const variantsMap = {};
-  activeKeys.forEach(key => {
-    const parts = key.split("|").map(s => s.trim());
-    for (let i = 0; i < parts.length; i += 2) {
-      const name = parts[i];
-      const val = parts[i + 1];
-      if (!variantsMap[name]) variantsMap[name] = new Set();
-      variantsMap[name].add(val);
-    }
-  });
-
-  const selected = {};
-  const variantNames = Object.keys(variantsMap);
-  if (variantNames.length === 0) return;
-
-  function renderDropdown(level = 0) {
-    // حذف القوائم بعد المستوى الحالي
-    const oldNext = Array.from(variantsDiv.querySelectorAll(".variant-group"))
-      .filter((_, idx) => idx >= level);
-    oldNext.forEach(el => el.remove());
-
-    const name = variantNames[level];
-    if (!name) return;
-
-    const filteredKeys = activeKeys.filter(key =>
-      Object.entries(selected).every(([k, v]) => key.includes(`${k} | ${v}`))
-    );
-
-    const availableVals = new Set();
-    filteredKeys.forEach(key => {
-      const parts = key.split("|").map(s => s.trim());
-      for (let i = 0; i < parts.length; i += 2) {
-        const k = parts[i], val = parts[i + 1];
-        if (k === name) availableVals.add(val);
-      }
-    });
-
-    if (availableVals.size === 0) return;
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "variant-group field single";
-
-    const label = document.createElement("label");
-    label.textContent = `${name}:`;
-    label.style.color = "#043B64";
-    label.style.fontWeight = "600";
-    label.style.marginTop = "8px";
-    wrapper.appendChild(label);
-
-    const dropdown = createDropdown([...availableVals], selected[name] || "", val => {
-      selected[name] = val;
-      productObj.selectedVariants = selected;
-      renderDropdown(level + 1);
-    });
-    wrapper.appendChild(dropdown);
-    variantsDiv.appendChild(wrapper);
-  }
-
-  renderDropdown(0);
-  container.appendChild(variantsDiv);
-}
-
-
-
-    // 🔹 تحميل قائمة المنتجات من الفايربيس
-    let allProducts = [];
-onValue(ref(db, "warehouse"), (snap) => {
-      if (snap.exists()) {
-        const data = snap.val();
-allProducts = Object.keys(snap.val());
-      }
-    });
-
-    // 🟠 منتجات إضافية
-    let extraProducts = [];
-
-function addExtraProduct(product = { id: Date.now() + Math.random(), name: "", price: 0, qty: 0 }) {
-  const card = document.createElement("div");
-  card.className = "extra-product";
-  card.dataset.pid = product.id; // ← إضافة المعرف الفريد هنا
-
-
-
-      const nameField = document.createElement("div");
-      nameField.className = "field single";
-      const nameLabel = document.createElement("label");
-      nameLabel.textContent = "اسم المنتج:";
-      const dropdownContainer = document.createElement("div");
-     const dropdown = createDropdown(allProducts, product.name, val => {
-  product.name = val;
-  loadVariantsForExtra(card, val, product); // تحميل المتغيرات الخاصة بهذا المنتج
-  renderProductTags();
-
-})
-
-      dropdownContainer.appendChild(dropdown);
-      nameField.appendChild(nameLabel);
-      nameField.appendChild(dropdownContainer);
-
-      const row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML = `
-        <div class="field small">
-          <label>السعر:</label>
-          <input type="number" class="price-input"value="${product.price ?? ""}">
-        </div>
-        <div class="field small">
-          <label>العدد:</label>
-          <input type="number" class="qty-input" value="${product.qty || ""}">
-        </div>
-      `;
-
-      const del = document.createElement("div");
-      del.className = "delete-btn";
-      del.textContent = "🗑";
-      del.onclick = () => {
-        card.remove();
-        extraProducts = extraProducts.filter(p => p !== product);
-        updateTotals();
-        if (extraProducts.length === 0) {
-          document.getElementById("totalsCard").style.display = "none";
+        function renderDropdown(level = 0) {
+          Array.from(container.querySelectorAll('.variant-group')).slice(level).forEach(el => el.remove());
+          const name = variantNames[level]; if (!name) return;
+          const filteredKeys = activeKeys.filter(key => Object.entries(selected).every(([k, v]) => key.includes(`${k} | ${v}`)));
+          const available = new Set();
+          filteredKeys.forEach(key => {
+            key.split('|').map(s => s.trim()).forEach((v, i, arr) => { if (v === name && arr[i+1]) available.add(arr[i+1]); });
+          });
+          if (!available.size) return;
+          const wrapper = document.createElement('div'); wrapper.className = 'variant-group field single';
+          const label = document.createElement('label'); label.textContent = name;
+          wrapper.appendChild(label);
+          wrapper.appendChild(createDropdown([...available], selected[name] || '', (val) => {
+            selected[name] = val;
+            update(ref(db, `${state.currentPath}/selectedVariants`), selected);
+            renderDropdown(level + 1);
+          }));
+          container.appendChild(wrapper);
         }
+        renderDropdown(0);
+      } catch (err) { console.warn('فشل تحميل المتغيرات:', err); }
+    }
+
+    // ===== المنتجات الإضافية =====
+    function addExtraProduct(product = null) {
+      const newProduct = product || { id: Date.now() + Math.random().toString(36).slice(2), name: '', price: 0, qty: 1, selectedVariants: {} };
+      const card = document.createElement('div');
+      card.className = 'extra-product fade-in';
+      card.dataset.pid = newProduct.id;
+
+      const nameField = document.createElement('div'); nameField.className = 'field single';
+      const nameLabel = document.createElement('label'); nameLabel.textContent = 'اسم المنتج';
+      const dropdownContainer = document.createElement('div');
+      dropdownContainer.appendChild(createDropdown(state.allProducts, newProduct.name, async (val) => {
+        newProduct.name = val;
+        await loadVariantsForExtra(card, val, newProduct);
+        renderProductTags();
+      }));
+      nameField.appendChild(nameLabel); nameField.appendChild(dropdownContainer);
+
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<div class="field small"><label>السعر</label><input type="number" class="price-input" value="${newProduct.price || ''}" min="0" step="0.01"></div><div class="field small"><label>العدد</label><input type="number" class="qty-input" value="${newProduct.qty || 1}" min="1"></div>`;
+
+      const delBtn = document.createElement('div'); delBtn.className = 'delete-btn'; delBtn.innerHTML = '×';
+      delBtn.onclick = () => {
+        card.style.opacity = '0'; card.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          card.remove();
+          state.extraProducts = state.extraProducts.filter(p => p.id !== newProduct.id);
+          updateTotals(); renderProductTags();
+          if (!state.extraProducts.length) document.getElementById('totalsCard').style.display = 'none';
+          showToast('🗑️ تم حذف المنتج', 'warning');
+        }, 200);
       };
 
-      card.appendChild(nameField);
-      card.appendChild(row);
-      card.appendChild(del);
-      document.getElementById("extraProducts").appendChild(card);
+      card.appendChild(nameField); card.appendChild(row); card.appendChild(delBtn);
+      document.getElementById('extraProducts').appendChild(card);
 
-      const priceInput = row.querySelector(".price-input");
-      const qtyInput = row.querySelector(".qty-input");
+      row.querySelector('.price-input')?.addEventListener('input', (e) => { newProduct.price = parseFloat(e.target.value) || 0; updateTotals(); });
+      row.querySelector('.qty-input')?.addEventListener('input', (e) => { newProduct.qty = parseInt(e.target.value) || 1; updateTotals(); });
 
-      priceInput.addEventListener("input", () => {
-     const val = priceInput.value.trim();
-product.price = val === "" ? "" : Number(val);
-        updateTotals();
-      });
-      qtyInput.addEventListener("input", () => {
-        product.qty = parseFloat(qtyInput.value) || 0;
-        updateTotals();
-      });
-
-      extraProducts.push(product);
+      state.extraProducts.push(newProduct);
       updateTotals();
-      document.getElementById("totalsCard").style.display = "block";
+      document.getElementById('totalsCard').style.display = 'block';
+      return newProduct;
     }
 
-  function updateTotals() {
-  // 🧮 نقرأ السعر والكمية بدون ضرب
-  const mainQty = parseFloat(document.getElementById("quantity").value.replace(/,/g, "")) || 0;
-  const mainPrice = parseFloat(document.getElementById("price").value.replace(/,/g, "")) || 0;
+    async function loadVariantsForExtra(container, productName, productObj) {
+      container.querySelector('.variants-container')?.remove();
+      const variantsDiv = document.createElement('div');
+      variantsDiv.className = 'variants-container';
+      variantsDiv.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-color)';
+      try {
+        const snap = await get(ref(db, `warehouse/${productName}`));
+        if (!snap.exists()) return;
+        const stock = snap.val().stock || {};
+        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
+        if (!activeKeys.length) return;
 
-  // 🔹 المنتجات الإضافية تُجمع أسعارها فقط بدون ضرب
-  const extraQty = extraProducts.reduce((sum, p) => sum + (p.qty || 0), 0);
-  const extraTotal = extraProducts.reduce((sum, p) => sum + (p.price || 0), 0);
+        const variantsMap = {};
+        activeKeys.forEach(key => {
+          key.split('|').map(s => s.trim()).forEach((v, i, arr) => {
+            if (i % 2 === 0 && arr[i+1]) { if (!variantsMap[v]) variantsMap[v] = new Set(); variantsMap[v].add(arr[i+1]); }
+          });
+        });
 
-  // ✅ السعر الكلي هو مجموع السعر الرئيسي + أسعار المنتجات الإضافية فقط
-  const totalQty = mainQty + extraQty;
-  const totalPrice = mainPrice + extraTotal;
+        const variantNames = Object.keys(variantsMap);
+        if (!variantNames.length) return;
+        const selected = {};
 
-  document.getElementById("totalQty").value = totalQty;
-  document.getElementById("totalPrice").value = totalPrice.toLocaleString("en-US");
-}
-
-
-
-    // 🔸 زر الإضافة
-    document.getElementById("addProductBtn").addEventListener("click", () => {
-      addExtraProduct();
-    });
-if (!localStorage.getItem("selectedOrder")) {
-  // نقرأ رقم الطلب من رابط الـ iframe لو نسى التخزين
-  const params = new URLSearchParams(window.location.search);
-  const fallbackId = params.get("id");
-  if (fallbackId) localStorage.setItem("selectedOrder", fallbackId);
-}
-// ⭐ البحث عن orderId الحقيقي من خلال receiptNum
-async function getOrderIdByReceiptNum(receiptNum) {
-  const snap = await get(ref(db, "orders"));
-  if (!snap.exists()) return null;
-
-  let found = null;
-
-  snap.forEach(child => {
-    const val = child.val();
-    if (String(val.receiptNum) === String(receiptNum)) {
-      found = child.key;
-    }
-  });
-
-  return found;
-}
-// 🔥 تحديث حالة الطلب بعد جلبها من الوسيط
-async function updateStatusFromWaseet(orderData) {
-  try {
-    const receipt = orderData.receiptNum;
-    if (!receipt) return;
-
-    // 1️⃣ جلب الحالة من الوسيط
-    const result = await updateOrdersStatusFromWaseet([orderData]);
-
-    if (!result || result.length === 0) {
-      console.warn("⚠️ الوسيط لم يرجع حالة");
-      return;
+        function renderDropdown(level = 0) {
+          Array.from(variantsDiv.querySelectorAll('.variant-group')).slice(level).forEach(el => el.remove());
+          const name = variantNames[level]; if (!name) return;
+          const filteredKeys = activeKeys.filter(key => Object.entries(selected).every(([k, v]) => key.includes(`${k} | ${v}`)));
+          const available = new Set();
+          filteredKeys.forEach(key => {
+            key.split('|').map(s => s.trim()).forEach((v, i, arr) => { if (v === name && arr[i+1]) available.add(arr[i+1]); });
+          });
+          if (!available.size) return;
+          const wrapper = document.createElement('div'); wrapper.className = 'variant-group field single';
+          const label = document.createElement('label'); label.textContent = name;
+          wrapper.appendChild(label);
+          wrapper.appendChild(createDropdown([...available], selected[name] || '', (val) => {
+            selected[name] = val; productObj.selectedVariants = { ...selected }; renderDropdown(level + 1);
+          }));
+          variantsDiv.appendChild(wrapper);
+        }
+        renderDropdown(0);
+        container.appendChild(variantsDiv);
+      } catch (err) { console.warn('فشل تحميل متغيرات المنتج الإضافي:', err); }
     }
 
-    const mapped = result[0].systemStatus;
-    if (!mapped) {
-      console.warn("⚠️ لا يوجد systemStatus");
-      return;
+    async function renderExtraProducts(products) {
+      const container = document.getElementById('extraProducts');
+      if (!container) return;
+      container.innerHTML = ''; state.extraProducts = [];
+      if (Array.isArray(products) && products.length > 0) {
+        for (const p of products) {
+          const np = addExtraProduct({ ...p });
+          if (p.name && p.selectedVariants) await loadVariantsForExtra(container.querySelector(`[data-pid="${np.id}"]`), p.name, np);
+        }
+        document.getElementById('totalsCard').style.display = 'block';
+      }
     }
 
-    // 2️⃣ البحث عن orderId الحقيقي عبر رقم الوصل
-    const realOrderId = await getOrderIdByReceiptNum(receipt);
-
-    if (!realOrderId) {
-      console.error("❌ لم يتم العثور على طلب يطابق رقم الوصل:", receipt);
-      return;
+    function updateTotals() {
+      const mainQty = parseFloat(normalizeNumber(document.getElementById('quantity').value)) || 0;
+      const mainPrice = parseFloat(document.getElementById('price').value.replace(/,/g, '')) || 0;
+      const extraQty = state.extraProducts.reduce((s, p) => s + (p.qty || 0), 0);
+      const extraPrice = state.extraProducts.reduce((s, p) => s + (p.price || 0), 0);
+      document.getElementById('totalQty').value = mainQty + extraQty;
+      document.getElementById('totalPrice').value = (mainPrice + extraPrice).toLocaleString('en-US');
     }
 
-    const userName =
-      loggedUser?.displayName ||
-      loggedUser?.name ||
-      loggedUser?.username ||
-      "غير معروف";
+    function setupStatusDropdown(currentValue) {
+      const statusDiv = document.getElementById('status');
+      if (!statusDiv) return;
+      const opts = state.isAdmin
+        ? ['مثبت','قيد المعالجة','قيد التجهيز','بانتظار البضاعة','قيد التوصيل','تم التسليم','راجع','تم استلام الراجع','رفض']
+        : ['مثبت','قيد المعالجة','بانتظار البضاعة','رفض'];
+      if (currentValue && !opts.includes(currentValue)) opts.push(currentValue);
+      statusDiv.innerHTML = '';
+      statusDiv.appendChild(createDropdown(opts, currentValue, (val) => { /* مجرد اختيار، الحفظ يتم عند الضغط على زر الحفظ */ }));
+    }
 
-    // 3️⃣ تحديث الحالة داخل الفايربيس
-    await update(ref(db, `orders/${realOrderId}`), {
-      status: mapped,
-      updatedBy: userName,
-      enterIndex: Date.now()
-    });
-    await update(ref(db, `orders/${realOrderId}/statusHistory/${mapped}`), {
-  time: new Date().toISOString(),
-  by: "الوسيط"
-});
+    // ===== التحقق قبل الحفظ =====
+    async function validateBeforeSave() {
+      const statusVal = document.querySelector('#status input')?.value.trim();
+      const requiredStatuses = ['مثبت', 'قيد التوصيل', 'تم التسليم', 'تم استلام الراجع'];
+      if (!requiredStatuses.includes(statusVal)) return true;
 
+      let valid = true;
+      document.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
 
-    console.log("🔥 تم تحديث الحالة داخل Firebase بنجاح:", mapped);
+      function markError(el, msg) {
+        if (el) { el.classList.add('input-error'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        showToast(msg, 'error'); valid = false;
+      }
 
-  } catch (err) {
-    console.error("❌ خطأ أثناء تحديث الحالة:", err);
-  }
-}
-function formatIraqiDate(t) {
-  if (!t) return "";
-  const d = new Date(t);
-  let h = d.getHours();
-  let m = d.getMinutes().toString().padStart(2, "0");
-  const ampm = h >= 12 ? "مساءً" : "صباحاً";
-  h = h % 12;
-  if (h === 0) h = 12;
+      if (!document.getElementById('code').value.trim()) markError(document.getElementById('code'), '⚠️ يرجى كتابة الكود');
+      if (normalizeNumber(document.getElementById('phone1').value).length !== 11) markError(document.getElementById('phone1'), '⚠️ رقم الهاتف يجب أن يكون 11 رقم');
+      if (!document.querySelector('#city input')?.value.trim()) markError(document.querySelector('#city input'), '⚠️ يرجى اختيار المحافظة');
+      if (!document.querySelector('#area input')?.value.trim()) markError(document.querySelector('#area input'), '⚠️ يرجى اختيار المنطقة');
+      if (!document.querySelector('#product input')?.value.trim()) markError(document.querySelector('#product input'), '⚠️ يرجى اختيار المنتج');
 
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
+      const price = document.getElementById('price').value.replace(/,/g, '').trim();
+      if (!price || isNaN(price) || Number(price) < 0) markError(document.getElementById('price'), '⚠️ يرجى كتابة سعر صحيح');
 
-  return `${day}/${month}/${year} - ${h}:${m} ${ampm}`;
-}
+      const qty = normalizeNumber(document.getElementById('quantity').value);
+      if (!qty || Number(qty) <= 0) markError(document.getElementById('quantity'), '⚠️ يرجى كتابة كمية صحيحة');
 
-    // 🔹 تحميل الطلب
-    async function loadOrder() {
-      const snapshot = await get(ref(db, `orders/${orderId}`));
-      if (!snapshot.exists()) return;
-      const data = snapshot.val();
-      renderSourceButtons(data.source || "");
-      const receiptCard = document.getElementById("receiptCard");
-const receiptInput = document.getElementById("receiptNum");
-
-if (data.receiptNum && String(data.receiptNum).trim() !== "") {
-  receiptInput.value = data.receiptNum;
-  receiptCard.style.display = "block";   // ✅ يظهر فقط إذا الوسيط رجّع رقم
-} else {
-  receiptCard.style.display = "none";    // ❌ مخفي إذا الطلب جديد/مثبت
-}
-
-// ⭐ إذا الطلب مثبّت وما مخزون له تاريخ تثبيت → نسجّله الآن
-if (data.fixedBy && (!data.statusHistory || !data.statusHistory["مثبت"])) {
-  await update(ref(db, `orders/${orderId}/statusHistory/مثبت`), {
-    time: new Date().toISOString(),
-    by: data.fixedBy
-  });
-}
-
-      document.getElementById("code").value = data.code || "";
-      document.getElementById("phone1").value = data.phone1 || "";
-      document.getElementById("phone2").value = data.phone2 || "";
-      document.getElementById("address").value = data.address || "";
-      document.getElementById("notes").value = data.notes || "";
-      document.getElementById("advertiser").value = data.advertiser || "";
-      document.getElementById("orderDate").value = data.orderDate || "-";
-      // ⭐ عرض سجل الطلب داخل البوكس
-const card = document.getElementById("historyCard");
-card.innerHTML = "";
-
-let html = `<div class="history-title">سجل الطلب</div>`;
-
-
-
-if (data.statusHistory) {
-
-  // 1️⃣ نحول الهستوري إلى Array
-  const historyArr = Object.entries(data.statusHistory).map(
-    ([status, info]) => ({
-      status,
-      time: info.time,
-      by: info.by
-    })
-  );
-
-  // 2️⃣ نرتب حسب الوقت (الأقدم فوق → الأحدث جوه)
-  historyArr.sort((a, b) => new Date(a.time) - new Date(b.time));
-
-  // 3️⃣ نعرض بعد الترتيب
-  historyArr.forEach(item => {
-    html += `
-      <div class="history-item">
-        <span class="status-name">${item.status}</span><br>
-        <span>حدّثه: <span class="user-name">${item.by || "غير معروف"}</span></span><br>
-        <span>الوقت: ${formatIraqiDate(item.time)}</span>
-      </div>
-    `;
-  });
-}
-
-
-card.innerHTML = html;
-
-      document.getElementById("price").value = data.price || "";
-      document.getElementById("quantity").value = data.quantity || "";
-
-// إعداد واتساب واتصال
-const phone = String(data.phone1 || "").trim();
-if (phone) {
-  const callBtn = document.getElementById("callBtn");
-  const waBtn = document.getElementById("whatsappBtn");
-  
-  callBtn.href = `tel:${phone}`;
-
-let normalizedPhone = phone.replace(/[^\d]/g, '');
-
-if (normalizedPhone.startsWith("00964")) {
-  normalizedPhone = normalizedPhone.replace("00964", "964");
-}
-else if (normalizedPhone.startsWith("964")) {
-  // يبقى كما هو
-}
-else if (normalizedPhone.startsWith("0")) {
-  normalizedPhone = "964" + normalizedPhone.substring(1);
-}
-else {
-  normalizedPhone = "964" + normalizedPhone;
-}
-
-waBtn.href = `https://api.whatsapp.com/send?phone=${normalizedPhone}`;
-
-waBtn.setAttribute("target", "_blank");
-waBtn.setAttribute("rel", "noopener noreferrer");
-
-}
-function renderSourceButtons(selected = "") {
-  document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".source-btn");
-  if (!btn) return;
-
-  // إزالة التحديد من الكل
-  document.querySelectorAll(".source-btn").forEach(b => b.classList.remove("active"));
-
-  // إضافة التحديد
-  btn.classList.add("active");
-
-  const value = btn.dataset.value;
-
-  // 🔥 حفظ في Firebase مباشرة
-  update(ref(db, `orders/${orderId}`), {
-    source: value
-  });
-});
-  const container = document.getElementById("sourceButtons");
-
-  const sources = [
-    { name: "انستغرام", icon: "ri-instagram-line" },
-    { name: "فيسبوك", icon: "ri-facebook-circle-fill" },
-    { name: "تيك توك", icon: "ri-tiktok-fill" },
-    { name: "واتساب", icon: "ri-whatsapp-line" },
-    { name: "اتصال", icon: "ri-phone-fill" }
-  ];
-
-  container.innerHTML = sources.map(s => `
-    <div class="source-btn ${selected === s.name ? "active" : ""}" data-value="${s.name}">
-      <i class="${s.icon}"></i>
-    </div>
-  `).join("");
-}
-
-      // المدينة والمنطقة
-      const cityDiv = document.getElementById("city");
-      const areaDiv = document.getElementById("area");
-      const cityDropdown = createDropdown(allCities, data.city || "", val => {
-        update(ref(db, `orders/${orderId}`), { city: val, area: "" });
-        areaDiv.innerHTML = "";
-        const newAreas = citiesData[val] || [];
-        const areaDropdown = createDropdown(newAreas, "", newA => update(ref(db, `orders/${orderId}`), { area: newA }));
-        areaDiv.appendChild(areaDropdown);
+      document.querySelectorAll('#variantsContainer .variant-group input').forEach(input => {
+        if (!input.value.trim()) {
+          input.classList.add('input-error');
+          const label = input.closest('.variant-group')?.querySelector('label')?.textContent;
+          showToast(`⚠️ يرجى اختيار: ${label}`, 'error');
+          valid = false;
+        }
       });
-      cityDiv.appendChild(cityDropdown);
 
-      const areas = citiesData[data.city] || [];
-      const areaDropdown = createDropdown(areas, data.area || "", val => update(ref(db, `orders/${orderId}`), { area: val }));
-      areaDiv.appendChild(areaDropdown);
-      // المنتج الرئيسي
-      const productDiv = document.getElementById("product");
-// ✅ لو المنتج مو موجود بالقائمة نضيفه مؤقتاً
-if (data.productName && !allProducts.includes(data.productName)) {
-  allProducts.unshift(data.productName);
-}
-const productDropdown = createDropdown(
-  allProducts,
-  data.productName || "",
-  async val => {
-
-    // 1) تحديث اسم المنتج
-    await update(ref(db, `orders/${orderId}`), { productName: val });
-
-    // 2) تصفير متغيرات المنتج القديم داخل الطلب (🔥 أهم نقطة)
-    await set(ref(db, `orders/${orderId}/selectedVariants`), {});
-
-    // 3) مسح المتغيرات من الواجهة
-    document.getElementById("variantsContainer").innerHTML = "";
-
-    // 4) تحميل متغيرات المنتج الجديد
-    loadVariants(val);
-  }
-);
-
-
-
-      productDiv.appendChild(productDropdown);
-if (data.productName) {
-  loadVariants(data.productName);  // ⬅️ عرض المتغيرات مباشرة عند تحميل الطلب
-}
-
-function setupStatusDropdown(currentValue, isAdminUser) {
-
-let statusOptions = isAdminUser
-  ? [
-      "مثبت",
-      "قيد المعالجة",
-      "قيد التجهيز",
-      "بانتظار البضاعة",
-      "قيد التوصيل",
-      "تم التسليم",
-      "راجع",
-      "تم استلام الراجع",
-      "رفض"
-    ]
-  : [
-      "مثبت",
-      "قيد المعالجة",
-      "بانتظار البضاعة",
-      "رفض"
-    ];
-
-
-  // حتى لو الحالة القديمة مو بالقائمة (طلب قديم)
-  if (currentValue && !statusOptions.includes(currentValue)) {
-    statusOptions.push(currentValue);
-  }
-
-  const statusDiv = document.getElementById("status");
-  statusDiv.innerHTML = "";
-
-  const dropdown = createDropdown(statusOptions, currentValue, (val) => {
-    selectedStatus = val;
-  });
-
-  statusDiv.appendChild(dropdown);
-
-
-  // 🔥 إضافة دعم الكتابة اليدوية (مرة واحدة فقط)
-  const statusInput = statusDiv.querySelector("input");
- statusInput.addEventListener("change", () => {
-  const val = statusInput.value.trim();
-  if (!val) return;
-
-  if (!statusOptions.includes(val)) {
-    statusOptions.push(val);
-  }
-
-  selectedStatus = val;  // ❗ فقط نخزنها بدون حفظ
-});
-
-}
-
-
-window.saveStatus = async function (val) {
-
-  const userName =
-    loggedUser?.displayName ||
-    loggedUser?.name ||
-    loggedUser?.username ||
-    "غير معروف";
-
-  const snap = await get(ref(db, `orders/${orderId}`));
-  const oldData = snap.exists() ? snap.val() : {};
-  const prevFixed = oldData.fixedBy || "";
-const now = new Date(); // ✅ مهم جداً
-
-let newFixedBy = prevFixed;
-
-// 1️⃣ رفض
-if (val === "رفض") {
-  newFixedBy = userName;
-}
-
-// 2️⃣ قيد المعالجة
-else if (val === "قيد المعالجة") {
-
-const oldTime = oldData?.statusHistory?.["قيد المعالجة"]?.time;
-  if (oldTime) {
-    const diffDays = Math.floor(
-      (now - new Date(oldTime)) / (1000 * 60 * 60 * 24)
-    );
-
-if (diffDays >= 3 && oldData.status === "قيد المعالجة") {
-      newFixedBy = userName;
+      for (const p of state.extraProducts) {
+        const card = document.querySelector(`[data-pid="${p.id}"]`);
+        if (!p.name?.trim()) { card?.querySelector('.field.single input')?.classList.add('input-error'); showToast('⚠️ يوجد منتج إضافي بدون اسم', 'error'); valid = false; }
+        if (!p.qty || p.qty <= 0) { card?.querySelector('.qty-input')?.classList.add('input-error'); showToast(`⚠️ كمية غير صحيحة: ${p.name}`, 'error'); valid = false; }
+        if (p.price < 0) { card?.querySelector('.price-input')?.classList.add('input-error'); showToast(`⚠️ سعر غير صحيح: ${p.name}`, 'error'); valid = false; }
+      }
+      return valid;
     }
-  }
-}
-if (val === "مثبت") {
 
-  // أول مرة
-  if (!prevFixed) {
-    newFixedBy = userName;
-  }
+    // ===== الحفظ الرئيسي (مع نقل ذري بدون تكرار) =====
+    async function handleSave() {
+      if (state.isLoading) return;
+      if (!(await validateBeforeSave())) return;
+      showLoader(true, 'جاري الحفظ...');
 
-  // 🔴 إذا كان قبلها رفض → يتغير فوراً
-  else if (oldData.status === "رفض") {
-    newFixedBy = userName;
-  }
+      try {
+        const userName = JSON.parse(localStorage.getItem('loggedInUser') || '{}')?.username || 'غير معروف';
+        const timeNow = new Date().toISOString();
 
-  // 🟡 إذا كان قيد المعالجة
-  else if (oldData.status === "قيد المعالجة") {
+        // --- جمع بيانات المنتجات ---
+        const mainProductName = document.querySelector('#product input')?.value.trim() || '';
+        const mainPrice = parseFloat(document.getElementById('price').value) || 0;
+        const mainQty = parseFloat(normalizeNumber(document.getElementById('quantity').value)) || 0;
 
-    const oldTime = oldData?.statusHistory?.["قيد المعالجة"]?.time;
+        const mainSnap = await get(ref(db, `${state.currentPath}/selectedVariants`));
+        const mainVariants = mainSnap.exists() ? mainSnap.val() : {};
 
-    if (oldTime) {
-      const diffDays = Math.floor(
-        (now - new Date(oldTime)) / (1000 * 60 * 60 * 24)
-      );
+        const productsDetailed = [];
+        const notesArray = [];
 
-      // 🔥 فقط بعد 3 أيام
-  if (diffDays >= 3 && oldData.status === "قيد المعالجة") {
-        newFixedBy = userName;
+        if (mainProductName) {
+          const variantsObj = {};
+          document.querySelectorAll('#variantsContainer .variant-group').forEach(group => {
+            const l = group.querySelector('label')?.textContent.trim();
+            const v = group.querySelector('input')?.value.trim();
+            if (l && v) variantsObj[l] = v;
+          });
+          const varsText = Object.keys(variantsObj).length
+            ? ` (${Object.entries(variantsObj).map(([k, v]) => `${k}: ${v}`).join(', ')})`
+            : '';
+          notesArray.push(`${mainProductName} ×${mainQty}${varsText}`);
+          productsDetailed.push({ name: mainProductName, qty: mainQty, price: mainPrice, variants: variantsObj });
+        }
+
+        state.extraProducts.forEach(p => {
+          const card = document.querySelector(`[data-pid="${p.id}"]`);
+          if (!card) return;
+          const varsObj = {};
+          card.querySelectorAll('.variant-group').forEach(group => {
+            const l = group.querySelector('label')?.textContent.trim();
+            const v = group.querySelector('input')?.value.trim();
+            if (l && v) varsObj[l] = v;
+          });
+          const varsText = Object.keys(varsObj).length ? ` (${Object.entries(varsObj).map(([k, v]) => `${k}: ${v}`).join(', ')})` : '';
+          notesArray.push(`${p.name} ×${p.qty}${varsText}`);
+          productsDetailed.push({ name: p.name, qty: p.qty, price: p.price, variants: varsObj });
+        });
+
+        const cleanedDetails = productsDetailed.filter(p => p.name?.trim());
+        const totalPrice = cleanedDetails.reduce((s, item) => s + (Number(item.price) || 0), 0);
+        const totalQty = cleanedDetails.reduce((s, item) => s + (Number(item.qty) || 0), 0);
+        const finalProductName = [...new Set(cleanedDetails.map(i => i.name.trim()))].join('، ');
+
+        const autoNotes = notesArray.join(' | ').trim();
+        let userNotes = document.getElementById('notes').value.trim();
+        if (userNotes.includes('||')) userNotes = userNotes.split('||').slice(1).join('||').trim();
+        userNotes = userNotes.split('||').map(p => p.trim()).filter(Boolean).join(' || ').trim();
+        const finalNotes = userNotes ? `${autoNotes} || ${userNotes}` : autoNotes;
+
+        // --- الحالة الجديدة ---
+        const newStatus = document.querySelector('#status input')?.value.trim();
+        const oldStatus = state.orderData?.status || '';
+        const statusChanged = newStatus && newStatus !== oldStatus;
+
+        // --- بناء كائن التاريخ المحدث ---
+        const existingHistory = state.orderData?.statusHistory || {};
+        const updatedHistory = statusChanged
+          ? { ...existingHistory, [encodeURIComponent(newStatus)]: { time: timeNow, by: userName } }
+          : existingHistory;
+
+        // --- البيانات الكاملة للطلب ---
+        const fullOrderData = {
+          ...state.orderData,
+          code: document.getElementById('code').value.trim(),
+          receiptNum: document.getElementById('receiptNum').value.trim(),
+          phone1: document.getElementById('phone1').value.trim(),
+          phone2: document.getElementById('phone2').value.trim(),
+          address: document.getElementById('address').value.trim(),
+          productName: mainProductName,
+          totalProducts: finalProductName,
+          totalPrice,
+          totalQty,
+          notes: finalNotes,
+          advertiser: document.getElementById('advertiser').value.trim(),
+          price: mainPrice,
+          quantity: mainQty,
+          extraProducts: state.extraProducts,
+          selectedVariants: mainVariants,
+          productsDetailed: cleanedDetails,
+          status: newStatus || oldStatus,
+          statusHistory: updatedHistory,
+          updatedBy: userName,
+          updatedAt: timeNow,
+          ...(statusChanged ? { enterIndex: Date.now() } : {})
+        };
+
+        const oldPath = state.currentPath;
+        const newPath = getPathForStatus(fullOrderData.status, state.orderId);
+
+        if (statusChanged && newPath !== oldPath) {
+          // ===== نقل ذري: اكتب الجديد + احذف القديم في عملية واحدة =====
+          const atomicUpdate = {};
+          atomicUpdate[newPath] = fullOrderData;
+          atomicUpdate[oldPath] = null; // حذف من المسار القديم
+
+          await update(ref(db), atomicUpdate);
+
+          // تحديث meta للمسارين
+          const oldBase = oldPath.split('/').slice(0, -1).join('/');
+          const newBase = newPath.split('/').slice(0, -1).join('/');
+          const metaTime = Date.now();
+          const metaUpdate = {};
+          metaUpdate[`${oldBase}/_meta/lastModified`] = metaTime;
+          metaUpdate[`${newBase}/_meta/lastModified`] = metaTime;
+          await update(ref(db), metaUpdate);
+
+          state.currentPath = newPath;
+          state.orderData = fullOrderData;
+          setupAutoRefresh(newPath);
+          showToast(`✅ تم الحفظ ونقل الطلب إلى "${newStatus}"`, 'success');
+        } else {
+          // ===== تحديث في المسار نفسه =====
+          await update(ref(db, oldPath), fullOrderData);
+
+          // تحديث meta
+          const base = oldPath.split('/').slice(0, -1).join('/');
+          await set(ref(db, `${base}/_meta/lastModified`), Date.now());
+
+          state.orderData = { ...state.orderData, ...fullOrderData };
+          showToast('✅ تم الحفظ بنجاح', 'success');
+        }
+
+        // تحديث الهستوري محلياً فوراً
+        renderHistoryCard(fullOrderData.statusHistory);
+
+        // العودة للقائمة
+        localStorage.setItem('forceListRefresh', 'true');
+        const lastStatus = localStorage.getItem('currentFilterStatus') || '';
+        setTimeout(() => {
+          window.location.href = `orders-cards.html${lastStatus ? `?status=${encodeURIComponent(lastStatus)}&t=${Date.now()}` : `?t=${Date.now()}`}`;
+        }, 400);
+
+      } catch (err) {
+        console.error('خطأ في الحفظ:', err);
+        showToast('❌ فشل الحفظ: ' + err.message, 'error');
+      } finally {
+        showLoader(false);
       }
     }
 
-  }
-
-}
-
-
-
-  // 🔥 التحديث الرئيسي
-  await update(ref(db, `orders/${orderId}`), {
-    status: val,
-    updatedBy: userName,
-    fixedBy: newFixedBy,
-    enterIndex: Date.now()
-  });
-
-  // ⭐ حفظ الهستوري هنا بالضبط
-const timeNow = new Date().toISOString();
-await update(ref(db, `orders/${orderId}/statusHistory/${val}`), {
-time: timeNow,
-  by: userName
-});
-
-
-  window.parent.postMessage(
-    { type: "statusChanged", orderId, newStatus: val },
-    "*"
-  );
-};
-
-
-
-
-
-
-setupStatusDropdown(data.status || "", isAdmin);
-
-
-   // 🛑 منع التكرار — تنظيف المصفوفة قبل التحميل
-extraProducts = [];
-document.getElementById("extraProducts").innerHTML = "";
-
-// 🟢 تحميل المنتجات الإضافية مرة واحدة فقط
-if (data.extraProducts && Array.isArray(data.extraProducts)) {
-  data.extraProducts.forEach(p => addExtraProduct(p));
-}
-
-    }
-  // ✅ حفظ القيم الأصلية لكل الحقول للمقارنة لاحقاً
-  ["code","phone1","phone2","address","price","quantity","notes","advertiser"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.dataset.oldValue = el.value;
-  });
-  // ⭐ دالة تحويل الأرقام العربية إلى إنجليزية للعدد
-function normalizeNumber(str) {
-  const arabic = "٠١٢٣٤٥٦٧٨٩";
-  const english = "0123456789";
-
-  return str
-    .split("")
-    .map(ch => {
-      const idx = arabic.indexOf(ch);
-      return idx >= 0 ? english[idx] : ch;
-    })
-    .join("")
-    .replace(/[^\d]/g, ""); // فقط أرقام
-}
-
-// ==========================
-//  🔥 فحص كل الحقول قبل الحفظ
-// ==========================
-async function validateBeforeSave() {
-  let valid = true;
-// إذا الحالة رفض — السماح بالحفظ بدون فحص
-// ⭐ السماح بالحفظ بدون فحص إذا لم تكن الحالة ضمن الحالات المطلوبة
-const statusVal = document.querySelector("#status input")?.value.trim();
-const requiredStatuses = ["مثبت", "قيد التوصيل", "تم التسليم", "تم استلام الراجع"];
-
-if (!requiredStatuses.includes(statusVal)) {
-  return true; // ⬅️ السماح بالحفظ بدون أي فحص
-}
-
-
-  // إزالة الأخطاء القديمة
-  document.querySelectorAll(".input-error")
-    .forEach(e => e.classList.remove("input-error"));
-
-  function errorField(selector, msg) {
-    const el = document.querySelector(selector);
-    if (el) el.classList.add("input-error");
-    showToast(msg);
-    valid = false;
-  }
-
-  // 1) الكود
-  if (!document.getElementById("code").value.trim()) {
-    errorField("#code", "⚠️ يرجى كتابة الكود");
-  }
-
- // ⭐ التحقق الجديد (يدعم العربي + الإنجليزي)
-function normalizePhone(str) {
-  const arabic = "٠١٢٣٤٥٦٧٨٩";
-  const english = "0123456789";
-
-  return str
-    .split("")
-    .map(ch => {
-      const idx = arabic.indexOf(ch);
-      return idx >= 0 ? english[idx] : ch;
-    })
-    .join("")
-    .replace(/[^\d]/g, ""); // يحذف غير الأرقام
-}
-
-let phone1 = normalizePhone(document.getElementById("phone1").value);
-if (phone1.length !== 11) {
-  errorField("#phone1", "⚠️ رقم الهاتف يجب أن يكون 11 رقم");
-}
-
-
-  // 3) المحافظة
-  if (!document.querySelector("#city input")?.value.trim()) {
-    errorField("#city input", "⚠️ يرجى اختيار المحافظة");
-  }
-
-  // 4) المنطقة
-  if (!document.querySelector("#area input")?.value.trim()) {
-    errorField("#area input", "⚠️ يرجى اختيار المنطقة");
-  }
-
-  // 5) اسم المنتج
-  if (!document.querySelector("#product input")?.value.trim()) {
-    errorField("#product input", "⚠️ يرجى اختيار اسم المنتج");
-  }
-
-  // 6) السعر
-  const price = document.getElementById("price").value.replace(/,/g, "").trim();
-if (price === "" || isNaN(price) || Number(price) < 0){
-    errorField("#price", "⚠️ يرجى كتابة السعر");
-  }
-
-  // ⭐ العدد (يدعم العربي والإنجليزي)
-let qtyRaw = document.getElementById("quantity").value;
-let qty = normalizeNumber(qtyRaw);
-
-if (!qty || Number(qty) <= 0) {
-  errorField("#quantity", "⚠️ يرجى كتابة عدد القطع");
-}
-
-  // 8) المتغيرات
-  document.querySelectorAll("#variantsContainer .variant-group").forEach(group => {
-    const label = group.querySelector("label")?.textContent.replace(":", "").trim();
-    const input = group.querySelector("input");
-    if (!input.value.trim()) {
-      input.classList.add("input-error");
-      showToast(`⚠️ يرجى اختيار متغير: ${label}`);
-      valid = false;
-    }
-  });
-
-  // 9) المنتجات الإضافية
-  for (const p of extraProducts) {
-    const card = document.querySelector(`.extra-product[data-pid="${p.id}"]`);
-
-    if (!p.name || !p.name.trim()) {
-      const input = card.querySelector(".field.single input");
-input.classList.add("input-error");
-showToast("⚠️ يوجد منتج إضافي بدون اسم");
-valid = false;
-    }
-    if (p.qty <= 0) {
-      const input = card.querySelector(".qty-input");
-      input.classList.add("input-error");
-      showToast(`⚠️ العدد غير صحيح للمنتج: ${p.name}`);
-      valid = false;
-    }
-if (p.price < 0) {
-      const input = card.querySelector(".price-input");
-      input.classList.add("input-error");
-      showToast(`⚠️ السعر غير صحيح للمنتج: ${p.name}`);
-      valid = false;
+    // ===== الرجوع =====
+    function handleBack() {
+      localStorage.setItem('restoreScrollAfterReturn', window.scrollY.toString());
+      window.location.replace('dashboard.html');
     }
 
-    // متغيرات المنتج الإضافي
-    const vGroups = card.querySelectorAll(".variant-group input");
-    vGroups.forEach(v => {
-      const title = v.parentElement.querySelector("label")?.textContent.replace(":", "");
-      if (!v.value.trim()) {
-        v.classList.add("input-error");
-        showToast(`⚠️ يرجى اختيار ${title} للمنتج: ${p.name}`);
-        valid = false;
+    // ===== التراجع والإعادة =====
+    function recordChange(field, oldVal, newVal) {
+      if (oldVal === newVal) return;
+      state.historyStack.push({ field, oldVal, newVal });
+      state.redoStack = [];
+    }
+
+    async function undoChange() {
+      const last = state.historyStack.pop();
+      if (!last) { showToast('⚠️ لا يوجد ما يمكن التراجع عنه', 'warning'); return; }
+      const input = document.getElementById(last.field);
+      if (input) {
+        input.value = last.oldVal;
+        await update(ref(db, state.currentPath), { [last.field]: last.oldVal });
+        state.redoStack.push(last);
+        showToast('↩️ تم التراجع', 'success');
       }
-    });
-  }
-
-  return valid;
-}
-
-
-    // 🔹 عند الحفظ
-document.getElementById("saveBtn").addEventListener("click", async () => {
-
-  const isValid = await validateBeforeSave();
-  if (!isValid) return; // 🛑 وقف الحفظ إذا أكو خطأ
-
-  // المنتج الرئيسي
-  const mainProduct = {
-    name: document.getElementById("product").querySelector("input").value.trim(),
-    price: parseFloat(document.getElementById("price").value) || 0,
-    qty: parseFloat(document.getElementById("quantity").value) || 0,
-  };
-
-  const mainSnap = await get(ref(db, `orders/${orderId}/selectedVariants`));
-  const mainVariants = mainSnap.exists() ? mainSnap.val() : {};
-
-  const notesArray = [];
-  const productsDetailed = [];
-
-  // المنتج الرئيسي — بناء النص والمتغيرات
-  if (mainProduct.name) {
-    const variantsContainer = document.getElementById("variantsContainer");
-    let variantsObj = {};
-
-    variantsContainer.querySelectorAll(".variant-group").forEach(group => {
-      const label = group.querySelector("label")?.textContent.replace(":", "").trim();
-      const input = group.querySelector("input")?.value.trim();
-      if (label && input) variantsObj[label] = input;
-    });
-
-    let varsText = "";
-    if (Object.keys(variantsObj).length > 0) {
-      const varsArr = Object.entries(variantsObj).map(([k, v]) => `${k}: ${v}`);
-      varsText = ` (${varsArr.join("، ")})`;
     }
 
-    notesArray.push(`${mainProduct.name} ×${mainProduct.qty}${varsText}`);
-productsDetailed.push({
-  name: mainProduct.name,
-  qty: mainProduct.qty,
-  price: mainProduct.price,  // 🔥 السعر مال المنتج الرئيسي
-  variants: variantsObj
-});
-  }
-
-  // المنتجات الإضافية
-  extraProducts.forEach(p => {
-    const card = document.querySelector(`.extra-product[data-pid="${p.id}"]`);
-    if (!card) return;
-
-    let varsObj = {};
-    card.querySelectorAll(".variant-group").forEach(group => {
-      const label = group.querySelector("label")?.textContent.replace(":", "").trim();
-      const input = group.querySelector("input")?.value.trim();
-      if (label && input) varsObj[label] = input;
-    });
-
-    let varsText = "";
-    if (Object.keys(varsObj).length > 0) {
-      const varsArr = Object.entries(varsObj).map(([k, v]) => `${k}: ${v}`);
-      varsText = ` (${varsArr.join("، ")})`;
+    async function redoChange() {
+      const last = state.redoStack.pop();
+      if (!last) { showToast('⚠️ لا يوجد ما يمكن إعادته', 'warning'); return; }
+      const input = document.getElementById(last.field);
+      if (input) {
+        input.value = last.newVal;
+        await update(ref(db, state.currentPath), { [last.field]: last.newVal });
+        state.historyStack.push(last);
+        showToast('↪️ تمت الإعادة', 'success');
+      }
     }
 
-    notesArray.push(`${p.name} ×${p.qty}${varsText}`);
-   productsDetailed.push({
-  name: p.name,
-  qty: p.qty,
-  price: p.price,  // 🔥 السعر مال كل منتج إضافي
-  variants: varsObj
-});
+    // ===== أزرار الاتصال =====
+    function setupContactButtons(phone) {
+      if (!phone) return;
+      const callBtn = document.getElementById('callBtn'), waBtn = document.getElementById('whatsappBtn');
+      if (callBtn) callBtn.href = `tel:${phone}`;
+      if (waBtn) waBtn.href = `https://wa.me/${normalizeIraqiPhone(phone)}`;
+    }
 
-  });
-  
-// 🔥 تنظيف المنتجات الفارغة
-const cleanedDetails = productsDetailed.filter(p => p.name && p.name.trim() !== "");
-
-// 🔥 جمع السعر الكلي (بدون ضرب)
-const totalPrice = cleanedDetails.reduce((sum, item) => {
-  return sum + (Number(item.price) || 0);
-}, 0);
-
-// 🔥 جمع أسماء المنتجات — فقط الرئيسية + الإضافية بدون تكرار
-const finalProductName = [
-  ...new Set(cleanedDetails.map(item => item.name.trim()))
-].join("، ");
-
-// 🔥 جمع الكمية الكلية
-const totalQty = cleanedDetails.reduce((sum, item) => {
-  return sum + (Number(item.qty) || 0);
-}, 0);
-
-
-// ⭐ 1 — الملاحظات التلقائية الجديدة
-const autoNotes = notesArray.join(" | ").trim();
-
-// ⭐ 2 — الملاحظات القديمة المكتوبة يدويًا فقط (نحذف أي ملاحظات تلقائية سابقة)
-let userNotes = document.getElementById("notes").value.trim();
-
-// 🔥 نحذف الجزء التلقائي القديم
-if (userNotes.includes("||")) {
-  userNotes = userNotes.split("||").slice(1).join("||").trim();
-}
-
-// نحذف أي سطر يحتوي (× أو : أو |) لأنها من الملاحظات التلقائية
-userNotes = userNotes
-  .split("||")
-  .map(p => p.trim())
-  .filter(p => p) // ❌ حذف شرط الفلترة
-  .join(" || ")
-  .trim();
-
-// ⭐ 3 — دمج التلقائي + اليدوي مرة واحدة فقط بدون تكرار
-let finalNotes = autoNotes;
-if (userNotes) {
-  finalNotes += " || " + userNotes;
-}
-
-
-
-const updates = {
-  code: document.getElementById("code").value.trim(),
-    receiptNum: document.getElementById("receiptNum").value.trim(), // ✅ جديد
-  phone1: document.getElementById("phone1").value.trim(),
-  phone2: document.getElementById("phone2").value.trim(),
-  address: document.getElementById("address").value.trim(),
-
-productName: mainProduct.name,   // فقط الرئيسي
-totalProducts: finalProductName, // المنتج الرئيسي + الإضافيين
-  totalPrice: totalPrice,
-  totalQty: totalQty,
-
-  notes: finalNotes,
-  advertiser: document.getElementById("advertiser").value.trim(),
-
-  price: mainProduct.price,
-  quantity: mainProduct.qty,
-
-  extraProducts: extraProducts,
-  selectedVariants: mainVariants,
-  productsDetailed: productsDetailed
-};
-
-
-  // 🔥 حفظ الطلب
-  await update(ref(db, `orders/${orderId}`), updates);
-  // ⭐ جلب الحالة من الانبوت دائماً
-selectedStatus = document.querySelector("#status input")?.value.trim();
-
-// 🔥 حفظ الحالة المختارة
-if (selectedStatus) {
-  await saveStatus(selectedStatus);
-}
-
-  // 🔥 تحديث المخزون (لو لازم)
-  const newStatusInput = document.getElementById("status").querySelector("input");
-  const newStatus = newStatusInput ? newStatusInput.value.trim() : "";
-
-  if (["قيد التوصيل", "تم استلام الراجع"].includes(newStatus)) {
-    console.log("🔥 تم استدعاء دالة تحديث المخزون من صفحة التفاصيل:", newStatus);
-await fetch("https://YOUR_SERVER/api/update-stock-on-status", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ orderId, status: newStatus })
-});
-  }
-
-  // ⭐ آخر خطوة — الرجوع للصفحة السابقة بنفس المكان
-  const lastStatus = localStorage.getItem("currentFilterStatus") || "";
-  const lastScroll = localStorage.getItem("previousScrollPosition") || "0";
-
-  localStorage.setItem("restoreScrollAfterReturn", lastScroll);
-
-  window.location.href =
-    "orders-cards.html" +
-    (lastStatus ? `?status=${encodeURIComponent(lastStatus)}` : "");
-});
-
-
-
-
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadOrder();
-document.getElementById("price").addEventListener("input", updateTotals);
-document.getElementById("quantity").addEventListener("input", updateTotals);
-  // ✅ مراقبة كل الحقول لتسجيل أي تعديل (نفس نظام الطلبات)
-  ["code","phone1","phone2","address","price","quantity","notes","advertiser"].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    // نخزن القيمة الأصلية
-    el.dataset.oldValue = el.value;
-
-    // عند التغيير نسجل التعديل بالتاريخ
-    el.addEventListener("change", () => {
-      const oldVal = el.dataset.oldValue || "";
-      const newVal = el.value.replace(/,/g, ""); // نحذف الفواصل من القيمة الجديدة قبل التسجيل
-      recordChange(orderId, id, oldVal, newVal);
-      el.dataset.oldValue = newVal;
-    });
-  });
-
-
-
-});
-
-    // 🟦 عرض أسماء المنتجات كفقاعات داخل حقل "اسم المنتج"
-function renderProductTags() {
-  const container = document.getElementById("productTagsContainer");
-  container.innerHTML = "";
-
-  // المنتج الرئيسي
-  const mainName = document.getElementById("product").querySelector("input").value.trim();
-  if (mainName) {
-    const chip = createTagChip(mainName, () => {
-      document.getElementById("product").querySelector("input").value = "";
-      renderProductTags();
-    });
-    container.appendChild(chip);
-  }
-
-  // المنتجات الإضافية
-  extraProducts.forEach((p, i) => {
-    if (p.name) {
-      const chip = createTagChip(p.name, () => {
-        extraProducts.splice(i, 1);
-        renderProductTags();
+    // ===== انتظار تحميل المنتجات =====
+    async function waitForProducts(timeout = 8000) {
+      if (state.allProducts.length > 0) return;
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const check = () => {
+          if (state.allProducts.length > 0) resolve();
+          else if (Date.now() - start > timeout) reject(new Error('Timeout waiting for products'));
+          else setTimeout(check, 100);
+        };
+        check();
       });
-      container.appendChild(chip);
     }
-  });
-}
 
-// 🟧 إنشاء فقاعة المنتج الواحدة
-function createTagChip(name, onRemove) {
-  const chip = document.createElement("div");
-  chip.textContent = name;
-  chip.style.cssText = `
-    background:#043B64;
-    color:white;
-    padding:5px 12px;
-    border-radius:20px;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    font-size:13px;
-  `;
+    // ===== التهيئة =====
+    async function init() {
+      state.orderId = localStorage.getItem('selectedOrder')
+        || new URLSearchParams(window.location.search).get('id')
+        || new URLSearchParams(window.location.search).get('orderId');
 
-  const removeBtn = document.createElement("span");
-  removeBtn.textContent = "✖";
-  removeBtn.style.cssText = "cursor:pointer;font-weight:bold;";
-  removeBtn.onclick = onRemove;
-  chip.appendChild(removeBtn);
-
-  return chip;
-}
-document.getElementById("backBtn").addEventListener("click", () => {
-  // حفظ مكان التمرير
-  localStorage.setItem("restoreScrollAfterReturn", window.scrollY.toString());
-
-  // استرجاع آخر فلترة
-  const status = localStorage.getItem("currentFilterStatus") || "";
-
-  // العودة إلى صفحة الكارت الصحيحة
-  const url = "orders-cards.html" + (status ? `?status=${encodeURIComponent(status)}` : "");
-
-window.location.replace(url);
-});
-
-
-
-
-
-
-window.adjustStockOnStatusChange = async function(orderId, newStatus) {
-  const db = getDatabase();
-  const orderRef = ref(db, `orders/${orderId}`);
-  const orderSnap = await get(orderRef);
-  if (!orderSnap.exists()) return;
-
-  const order = orderSnap.val();
-  console.log("🔥 تحديث المخزون (نسخة قديمة أصلية):", orderId, newStatus);
-
-  const products = [];
-
-  function addProduct(name, qty, variants) {
-    if (!name || qty <= 0) return;
-    const variantKey = variants && Object.keys(variants).length > 0
-      ? Object.entries(variants).map(([k, v]) => `${k} | ${v}`).join(" | ")
-      : "بدون متغير";
-    products.push({ name, qty, variantKey, variants });
-  }
-
-  // المنتج الرئيسي
-  if (order.productName && order.quantity)
-    addProduct(order.productName, Number(order.quantity), order.selectedVariants || {});
-
-  // المنتجات الإضافية
-  if (Array.isArray(order.extraProducts)) {
-    order.extraProducts.forEach(p => {
-      addProduct(p.name, Number(p.qty) || 1, p.selectedVariants || {});
-    });
-  }
-
-  // تفاصيل المنتجات الجديدة
-  if (Array.isArray(order.productsDetailed)) {
-    order.productsDetailed.forEach(p => {
-      addProduct(p.name, Number(p.qty) || 1, p.variants || {});
-    });
-  }
-
-  // تنفيذ الخصم أو الإرجاع
-  for (const item of products) {
-    const { name, qty, variants } = item;
-
-    const warehouseRef = ref(db, `warehouse/${name}`);
-    const warehouseSnap = await get(warehouseRef);
-    if (!warehouseSnap.exists()) continue;
-
-    const warehouse = warehouseSnap.val();
-    const stock = warehouse.stock || {};
-    const processed = warehouse.processedOrders || {};
-
-    // تطابق المتغيرات
-    const variantValues = Object.values(variants || {}).map(v => v.trim().toLowerCase());
-    let foundKey = null;
-
-    for (const key of Object.keys(stock)) {
-      const keyNorm = key.toLowerCase();
-      const matches = variantValues.filter(v => keyNorm.includes(v)).length;
-      if (matches === variantValues.length && matches > 0) {
-        foundKey = key;
-        break;
+      if (!state.orderId) {
+        showToast('❌ رقم الطلب غير موجود', 'error');
+        setTimeout(() => window.location.replace('orders-cards.html'), 2000);
+        return;
       }
+
+      const loggedUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+      state.isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
+
+      // تحميل المنتجات من المستودع
+      onValue(ref(db, 'warehouse'), (snap) => {
+        if (snap.exists()) state.allProducts = Object.keys(snap.val());
+      }, { onlyOnce: true });
+
+      // ربط الأحداث
+      document.getElementById('saveBtn')?.addEventListener('click', handleSave);
+      document.getElementById('backBtn')?.addEventListener('click', handleBack);
+      document.getElementById('addProductBtn')?.addEventListener('click', () => { addExtraProduct(); renderProductTags(); });
+      document.getElementById('undoBtn')?.addEventListener('click', undoChange);
+      document.getElementById('redoBtn')?.addEventListener('click', redoChange);
+
+      ['code', 'phone1', 'phone2', 'address', 'price', 'quantity', 'notes', 'advertiser'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.dataset.oldValue = el.value;
+        el.addEventListener('change', () => {
+          const oldVal = el.dataset.oldValue || '';
+          const newVal = el.value.replace(/,/g, '');
+          recordChange(id, oldVal, newVal);
+          el.dataset.oldValue = newVal;
+        });
+      });
+
+      document.getElementById('price')?.addEventListener('input', updateTotals);
+      document.getElementById('quantity')?.addEventListener('input', updateTotals);
+
+      window.history.pushState(null, '', location.href);
+      window.addEventListener('popstate', () => window.location.replace('orders-cards.html'));
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoChange(); }
+        if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redoChange(); }
+      });
+
+      await loadOrder();
     }
 
-    const variantId = item.variantKey.replace(/\s+/g, "_");
-    const uniqueKey = `${orderId}_${name}_${variantId}`;
-
-    // الخصم
-    if (newStatus === "قيد التوصيل" && !processed[`deduct_${uniqueKey}`]) {
-      if (foundKey && stock[foundKey] !== undefined) {
-        stock[foundKey] -= qty;
-      } else if (stock["إجمالي الكمية"] !== undefined) {
-        stock["إجمالي الكمية"] -= qty;
-      } else {
-        stock["إجمالي الكمية"] = -qty;
-      }
-      processed[`deduct_${uniqueKey}`] = true;
-    }
-
-    // الإرجاع
-    if (newStatus === "تم استلام الراجع" && processed[`deduct_${uniqueKey}`]) {
-      if (foundKey && stock[foundKey] !== undefined) {
-        stock[foundKey] += qty;
-      } else if (stock["إجمالي الكمية"] !== undefined) {
-        stock["إجمالي الكمية"] += qty;
-      } else {
-        stock["إجمالي الكمية"] = qty;
-      }
-      processed[`return_${uniqueKey}`] = true;
-    }
-
-    // إعادة حساب الإجمالي
-    let totalQty = 0;
-    for (const val of Object.values(stock)) {
-      totalQty += Number(val) || 0;
-    }
-
-    await update(warehouseRef, {
-      stock,
-      totalQty,
-      processedOrders: processed,
-      lastUpdate: new Date().toISOString(),
-    });
-  }
-};
-
-// 🧭 استرجاع موضع التمرير بعد العودة من التفاصيل
-document.addEventListener("DOMContentLoaded", () => {
-  const savedScroll = localStorage.getItem("restoreScrollAfterReturn");
-  if (savedScroll) {
-    window.scrollTo(0, parseInt(savedScroll));
-    localStorage.removeItem("restoreScrollAfterReturn");
-  }
-});
-
+    document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('beforeunload', () => { if (changeUnsubscribe) changeUnsubscribe(); });
   </script>
-  <!-- ✅ تفعيل إذن الصوت بدون أي صوت فعلي (صامت تمامًا) -->
-<script type="module">
-import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-window.orderId = localStorage.getItem("selectedOrder"); // ✅ تأكيد رقم الطلب
-
-// 🧠 سجل العمليات
-window.historyStack = [];
-window.redoStack = [];
-
-// ✅ تسجيل أي تعديل
-window.recordChange = function (orderId, field, oldVal, newVal) {
-  if (oldVal === newVal) return;
-  window.historyStack.push({ orderId, field, oldVal, newVal });
-  window.redoStack = [];
-  console.log(`🕘 تم حفظ تعديل ${field}: من "${oldVal}" إلى "${newVal}"`);
-};
-
-// ✅ تراجع
-window.undoChange = async function () {
-  const last = window.historyStack.pop();
-  if (!last) return showToast("⚠️ لا يوجد شيء للتراجع عنه");
-
-  const { orderId, field, oldVal } = last;
-
-  // 🔹 رجّع القيمة بالحقل مباشرة
-  const input = document.getElementById(field);
-  if (input) input.value = oldVal;
-
-  // 🔹 رجّع القيمة أيضًا بقاعدة البيانات
-  await update(ref(db, `orders/${orderId}`), { [field]: oldVal });
-
-  window.redoStack.push(last);
-  showToast(`↩️ تم التراجع عن تعديل ${field}`);
-};
-
-// ✅ إعادة
-window.redoChange = async function () {
-  const last = window.redoStack.pop();
-  if (!last) return showToast("⚠️ لا يوجد شيء لإعادته");
-
-  const { orderId, field, newVal } = last;
-
-  // 🔹 رجّع القيمة بالحقل مباشرة
-  const input = document.getElementById(field);
-  if (input) input.value = newVal;
-
-  // 🔹 رجّع القيمة أيضًا بقاعدة البيانات
-  await update(ref(db, `orders/${orderId}`), { [field]: newVal });
-
-  window.historyStack.push(last);
-  showToast(`↪️ تمت إعادة تعديل ${field}`);
-};
-
-
-// ✅ اختصارات الكيبورد
-document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.key === "z") undoChange();
-  if (e.ctrlKey && e.key === "y") redoChange();
-});
-
-// ✅ ننتظر تحميل الصفحة قبل الربط بالأزرار
-document.addEventListener("DOMContentLoaded", () => {
-  const undoBtn = document.getElementById("undoBtn");
-  const redoBtn = document.getElementById("redoBtn");
-  if (undoBtn) undoBtn.onclick = () => undoChange();
-  if (redoBtn) redoBtn.onclick = () => redoChange();
-});
-
-
-// ✅ إشعار بسيط بدل alert
-function showToast(msg) {
-  const toast = document.createElement("div");
-  toast.textContent = msg;
-  Object.assign(toast.style, {
-    position: "fixed",
-    bottom: "80px",
-    left: "15px",
-    background: "#043B64",
-    color: "#fff",
-    padding: "10px 15px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-    zIndex: 99999,
-    opacity: 0,
-    transition: "opacity 0.3s ease"
-  });
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => (toast.style.opacity = 1));
-  setTimeout(() => {
-    toast.style.opacity = 0;
-    setTimeout(() => toast.remove(), 500);
-  }, 1800);
-}
-</script>
-
-
-<!-- ✅ أزرار الاتصال والواتساب بالأعلى يسار -->
-<div class="top-contact-buttons">
-  <a id="callBtn" class="contact-btn" title="اتصال">📞</a>
-  <a id="whatsappBtn" class="contact-btn whatsapp" title="واتساب">💬</a>
-</div>
-
 </body>
 </html>
