@@ -1051,7 +1051,8 @@ area: selectedArea,
           statusHistory: updatedHistory,
           updatedBy: userName,
           updatedAt: timeNow,
-          ...(statusChanged ? { enterIndex: Date.now() } : {})
+          ...(statusChanged ? { enterIndex: Date.now() } : {}),
+          ...(newStatus === 'مثبت' ? { fixedBy: userName } : (state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : {}))
         };
 
         const oldPath = state.currentPath;
