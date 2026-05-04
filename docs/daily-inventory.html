@@ -269,15 +269,18 @@ async function getOrderByReceipt(shipmentId) {
   return null;
 }
 async function processBarcode(shipmentId) {
+
 if (isProcessing) return;
 isProcessing = true;
 
-const foundOrder = await getOrderByReceipt(shipmentId);
-
+// 🔥 حوّل الرقم أول شي
 shipmentId = String(shipmentId)
   .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-  .replace(/[^\d]/g, "") // يحذف أي شي غير رقم
+  .replace(/[^\d]/g, "")
   .trim();
+
+// 🔥 بعدين ابحث
+const foundOrder = await getOrderByReceipt(shipmentId);
 
   scanMsg.textContent = "⏳ جاري البحث...";
 
