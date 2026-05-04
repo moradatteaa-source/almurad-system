@@ -1168,13 +1168,25 @@ window.location.href = `orders-cards.html?status=${encodeURIComponent(lastStatus
       }
     }
 
-    // ===== أزرار الاتصال =====
-    function setupContactButtons(phone) {
-      if (!phone) return;
-      const callBtn = document.getElementById('callBtn'), waBtn = document.getElementById('whatsappBtn');
-      if (callBtn) callBtn.href = `tel:${phone}`;
-      if (waBtn) waBtn.href = `https://wa.me/${normalizeIraqiPhone(phone)}`;
-    }
+ function setupContactButtons(phone) {
+  if (!phone) return;
+
+  const callBtn = document.getElementById('callBtn');
+  const waBtn = document.getElementById('whatsappBtn');
+
+  if (callBtn) {
+    callBtn.href = `tel:${phone}`;
+  }
+
+  if (waBtn) {
+    const normalized = normalizeIraqiPhone(phone);
+
+    // تحويل إلى صيغة واتساب
+    const waNumber = normalized.replace(/^0/, '964');
+
+    waBtn.href = `https://wa.me/${waNumber}`;
+  }
+}
 
     // ===== انتظار تحميل المنتجات =====
     async function waitForProducts(timeout = 8000) {
