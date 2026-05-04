@@ -735,17 +735,17 @@
     });
 
     // 📱 تحويل الأرقام العربية لإنجليزية
-    function normalizeIraqiPhone(phone) {
-      if (!phone) return null;
-      const arabicToEnglish = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4", "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9" };
-      let cleaned = phone.replace(/[٠-٩]/g, d => arabicToEnglish[d]);
-      let raw = cleaned.replace(/\D/g, "");
-      if (raw.startsWith("00964")) raw = raw.slice(5);
-      else if (raw.startsWith("964")) raw = raw.slice(3);
-      else if (raw.startsWith("0")) raw = raw.slice(1);
-      if (!raw.startsWith("7") || raw.length !== 10) return null;
-      return "0" + raw;
-    }
+function normalizeIraqiPhone(phone) {
+  if (!phone) return null;
+  const arabicToEnglish = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4", "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9" };
+  let cleaned = phone.replace(/[٠-٩]/g, d => arabicToEnglish[d]);
+  let raw = cleaned.replace(/\D/g, "");
+  if (raw.startsWith("00964")) raw = raw.slice(5);
+  else if (raw.startsWith("964")) raw = raw.slice(3);
+  else if (raw.startsWith("0")) raw = raw.slice(1);
+  if (!raw.startsWith("7") || raw.length !== 10) return null;
+  return "0" + raw;
+}
 
     function convertArabicToEnglishNumbers(value) {
       const map = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4", "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9" };
@@ -801,7 +801,9 @@
         });
       }
 
-      input.addEventListener("focus", () => {
+ input.addEventListener("focus", () => {
+  input.select();
+        
         dropdown.classList.add("show");
         renderList(input.value.trim());
       });
@@ -1101,8 +1103,8 @@
       productDiv.appendChild(productDropdown);
 
       // ✅ الحالات مع "جديد" كافتراضي
-      const statusOptions = ["جديد", "مثبت", "قيد المعالجة", "بانتظار البضاعة", "رفض", "ملغي"];
-      const statusDropdown = createDropdown(statusOptions, "جديد", () => {});
+      const statusOptions = ["جديد", "مثبت", "قيد المعالجة", "بانتظار البضاعة", "رفض"];
+   const statusDropdown = createDropdown(statusOptions, "", () => {});
       statusDiv.appendChild(statusDropdown);
     }
 
@@ -1131,8 +1133,7 @@
           errors.push("❌ رقم الهاتف مطلوب");
         } else {
           const normalizedPhone1 = normalizeIraqiPhone(phone1);
-          if (!normalizedPhone1) errors.push("❌ رقم الهاتف غير صحيح (يجب أن يبدأ بـ 07 ويكون 10 أرقام)");
-        }
+if (!normalizedPhone1) errors.push("❌ رقم الهاتف غير صحيح (يجب أن يبدأ بـ 07 أو 964 ويكون رقم عراقي صحيح)");        }
         const phone2 = document.getElementById("phone2").value.trim();
         if (phone2) {
           const normalizedPhone2 = normalizeIraqiPhone(phone2);
@@ -1342,9 +1343,9 @@ const ordersPath = `ordersTest/${status}`;
       updateTotals();
       
       // تعيين "جديد" كحالة افتراضية
-      const statusInput = document.querySelector("#status input");
+  const statusInput = document.querySelector("#status input");
       if (statusInput && !statusInput.value) {
-        statusInput.value = "جديد";
+        statusInput.placeholder = "جديد (افتراضي)";
       }
     });
 

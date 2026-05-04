@@ -452,13 +452,19 @@
       return String(str).split('').map(ch => { const i = arabic.indexOf(ch); return i >= 0 ? english[i] : ch; }).join('').replace(/[^\d]/g, '');
     }
 
-    function normalizeIraqiPhone(phone) {
-      let n = normalizeNumber(phone);
-      if (n.startsWith('00964')) n = '964' + n.slice(5);
-      else if (!n.startsWith('964')) {
-        if (n.startsWith('0')) n = '964' + n.slice(1);
-        else if (n.length === 10) n = '964' + n;
-      }
+ function normalizeIraqiPhone(phone) {
+      if (!phone) return '';
+      // إزالة الفراغات والشرطات ورمز +
+      let n = String(phone).replace(/[\s\-\+\(\)]/g, '');
+      // تحويل الأرقام العربية لإنجليزية
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      n = n.split('').map(ch => { const i = arabic.indexOf(ch); return i >= 0 ? String(i) : ch; }).join('');
+      // إزالة أي رمز غير رقمي
+      n = n.replace(/[^\d]/g, '');
+      // تطبيع البادئة
+      if (n.startsWith('00964')) n = '0' + n.slice(5);
+      else if (n.startsWith('964')) n = '0' + n.slice(3);
+      else if (!n.startsWith('0')) n = '0' + n;
       return n;
     }
 
@@ -616,24 +622,30 @@
     }
 
     // ===== المدن والمناطق =====
-    async function renderCityAreaDropdowns(cityValue, areaValue) {
-      const cityDiv = document.getElementById('city'), areaDiv = document.getElementById('area');
-      if (!cityDiv || !areaDiv) return;
-      cityDiv.innerHTML = ''; areaDiv.innerHTML = '';
+async function renderCityAreaDropdowns(cityValue, areaValue) {
+  const cityDiv = document.getElementById('city'), areaDiv = document.getElementById('area');
+  if (!cityDiv || !areaDiv) return;
+  cityDiv.innerHTML = ''; areaDiv.innerHTML = '';
 
-      const cityDropdown = createDropdown(allCities, cityValue || '', async (val) => {
-        await update(ref(db, state.currentPath), { city: val, area: '' });
-        areaDiv.innerHTML = '';
-        const areas = citiesData[val] || [];
-        areaDiv.appendChild(createDropdown(areas, '', (a) => update(ref(db, state.currentPath), { area: a })));
-      });
-      cityDiv.appendChild(cityDropdown);
+  const cityDropdown = createDropdown(allCities, cityValue || '', async (val) => {
+    // ❌ أزلنا: update(ref(db, state.currentPath), { city: val, area: '' })
+    // لا نحفظ فوراً — نترك الحفظ لزر "حفظ التعديلات"
+    areaDiv.innerHTML = '';
+    const areas = citiesData[val] || [];
+    areaDiv.appendChild(createDropdown(areas, '', () => {}));
+    // نحدث state.orderData محلياً فقط
+    if (state.orderData) { state.orderData.city = val; state.orderData.area = ''; }
+  });
+  cityDiv.appendChild(cityDropdown);
 
-      if (cityValue) {
-        const areas = citiesData[cityValue] || [];
-        areaDiv.appendChild(createDropdown(areas, areaValue || '', (a) => update(ref(db, state.currentPath), { area: a })));
-      }
-    }
+  if (cityValue) {
+    const areas = citiesData[cityValue] || [];
+    areaDiv.appendChild(createDropdown(areas, areaValue || '', (a) => {
+      // نحدث state.orderData محلياً فقط
+      if (state.orderData) state.orderData.area = a;
+    }));
+  }
+}
 
     // ===== المنتج الرئيسي =====
     async function renderProductDropdown(selectedProduct = '') {
@@ -907,8 +919,14 @@
       }
 
       if (!document.getElementById('code').value.trim()) markError(document.getElementById('code'), '⚠️ يرجى كتابة الكود');
-      if (normalizeNumber(document.getElementById('phone1').value).length !== 11) markError(document.getElementById('phone1'), '⚠️ رقم الهاتف يجب أن يكون 11 رقم');
-      if (!document.querySelector('#city input')?.value.trim()) markError(document.querySelector('#city input'), '⚠️ يرجى اختيار المحافظة');
+const normalizedPhone = normalizeIraqiPhone(document.getElementById('phone1').value);
+      if (!normalizedPhone || normalizedPhone.length !== 11) markError(document.getElementById('phone1'), '⚠️ رقم الهاتف غير صحيح'); 
+      const phone2Val = document.getElementById('phone2').value.trim();
+      if (phone2Val) {
+        const normalizedPhone2 = normalizeIraqiPhone(phone2Val);
+        if (!normalizedPhone2 || normalizedPhone2.length !== 11) markError(document.getElementById('phone2'), '⚠️ الرقم الثاني غير صحيح');
+      }
+          if (!document.querySelector('#city input')?.value.trim()) markError(document.querySelector('#city input'), '⚠️ يرجى اختيار المحافظة');
       if (!document.querySelector('#area input')?.value.trim()) markError(document.querySelector('#area input'), '⚠️ يرجى اختيار المنطقة');
       if (!document.querySelector('#product input')?.value.trim()) markError(document.querySelector('#product input'), '⚠️ يرجى اختيار المنتج');
 
@@ -945,7 +963,8 @@
       try {
         const userName = JSON.parse(localStorage.getItem('loggedInUser') || '{}')?.username || 'غير معروف';
         const timeNow = new Date().toISOString();
-
+const selectedCity = document.querySelector('#city input')?.value.trim() || state.orderData?.city || '';
+const selectedArea = document.querySelector('#area input')?.value.trim() || state.orderData?.area || '';
         // --- جمع بيانات المنتجات ---
         const mainProductName = document.querySelector('#product input')?.value.trim() || '';
         const mainPrice = parseFloat(document.getElementById('price').value) || 0;
@@ -1011,6 +1030,8 @@
         const fullOrderData = {
           ...state.orderData,
           code: document.getElementById('code').value.trim(),
+          city: selectedCity,
+area: selectedArea,
           receiptNum: document.getElementById('receiptNum').value.trim(),
           phone1: document.getElementById('phone1').value.trim(),
           phone2: document.getElementById('phone2').value.trim(),
