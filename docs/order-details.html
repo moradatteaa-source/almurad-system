@@ -698,7 +698,6 @@ async function renderCityAreaDropdowns(cityValue, areaValue) {
       input.value = selected || '';
       input.placeholder = 'اختر أو اكتب...';
       input.style.cursor = 'pointer';
-      input.readOnly = true;
 
       const dropdown = document.createElement('div');
       Object.assign(dropdown.style, {

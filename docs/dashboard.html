@@ -577,6 +577,9 @@
       <div class="nav-item" id="usersNavItem" style="display:none" onclick="location.href='users.html'">
         <span>👥</span> إدارة المستخدمين
       </div>
+      <div class="nav-item" id="employeesNavItem" onclick="openEmployees()">
+        <span>👨‍💼</span> إدارة الموظفين
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -995,6 +998,7 @@ onValue(ref(db, "tasks"), snap => {
 // 🌐 الدوال العامة
 // ============================================================
 window.openOrders  = (s) => location.href = `orders-cards.html?status=${encodeURIComponent(s || "")}`;
+window.openEmployees = () => location.href = "users.html";
 window.openNewOrder = () => location.href = "add-order.html";
 window.openMyTasks = () => {
   const n = encodeURIComponent(displayName);
