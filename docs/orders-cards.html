@@ -226,11 +226,11 @@
     #scrollSentinel { height: 1px; }
 
     /* ====== OVERLAY PANELS ====== */
-    .overlay-panel {
+.overlay-panel {
       display: none; position: fixed; top: 60px; left: 12px; right: 12px;
       z-index: 890; background: var(--card); border-radius: var(--r);
       box-shadow: var(--shadow-lg); border: 1px solid var(--border);
-      max-height: 80vh; overflow-y: auto; animation: slideDown 0.2s ease;
+      max-height: 45vh; overflow-y: auto; animation: slideDown 0.2s ease;
     }
     @keyframes slideDown {
       from { opacity: 0; transform: translateY(-10px); }
@@ -835,7 +835,7 @@ async function globalSearch(queryText) {
 
   try {
     // جلب من كل المسارات بالتوازي
-    const pathsToSearch = ["orders", ...TEST_STATUSES.map(s => `ordersTest/${s}`)];
+const pathsToSearch = TEST_STATUSES.map(s => `ordersTest/${s}`);
     const snaps = await Promise.all(pathsToSearch.map(p => get(ref(db, p)).catch(() => null)));
 
     snaps.forEach(snap => {
@@ -881,7 +881,7 @@ async function globalSearch(queryText) {
       showEndMessage();
     }
     showToast(`🔍 ${results.length} نتيجة`, results.length > 0 ? "success" : "warning");
-
+localStorage.setItem("activeSearch", JSON.stringify({ type: S.searchType, query: queryText }));
   } catch (err) {
     console.error("globalSearch:", err);
     showToast("❌ فشل البحث", "error");
@@ -893,6 +893,7 @@ async function globalSearch(queryText) {
 function exitSearch() {
   S.isSearchMode = false;
   document.getElementById("searchInput").value = "";
+  localStorage.removeItem("activeSearch");
   document.getElementById("searchPanel").classList.remove("open");
   document.getElementById("searchBtn").classList.remove("active");
   applyAndRender();
@@ -925,6 +926,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (sc > 0) setTimeout(() => window.scrollTo({ top: sc, behavior: "smooth" }), 150);
 
   await loadOrders();
+const savedSearch = localStorage.getItem("activeSearch");
+if (savedSearch) {
+  const { type, query } = JSON.parse(savedSearch);
+  S.searchType = type;
+  document.querySelectorAll(".stype-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.type === type);
+  });
+  searchBtn.classList.add("active");
+  await globalSearch(query);
+} else if (localStorage.getItem("filterActive") === "true") {
+  S.filterActive = true;
+  filterBtn.classList.add("active");
+  applyAndRender();
+}
 });
 
 // ============================================================
@@ -957,12 +972,11 @@ document.getElementById("menuRefresh").addEventListener("click", async () => {
 // --- بحث ---
 const searchBtn   = document.getElementById("searchBtn");
 const searchPanel = document.getElementById("searchPanel");
-
 searchBtn.addEventListener("click", () => {
+  if (S.isSearchMode) { exitSearch(); return; }
   const open = searchPanel.classList.toggle("open");
-  searchBtn.classList.toggle("active", open);
-  if (!open) exitSearch();
-  else { document.getElementById("filterPanel").classList.remove("open"); document.getElementById("filterBtn").classList.remove("active"); }
+  if (open) searchBtn.classList.add("active");
+  else searchBtn.classList.remove("active");
   if (open) setTimeout(() => document.getElementById("searchInput").focus(), 100);
 });
 
@@ -980,7 +994,11 @@ document.getElementById("searchInput").addEventListener("keydown", e => {
 
 document.getElementById("doSearch").addEventListener("click", () => {
   const q = document.getElementById("searchInput").value.trim();
-  if (q) globalSearch(q);
+  if (q) {
+    searchPanel.classList.remove("open");
+    searchBtn.classList.remove("active");
+    globalSearch(q);
+  }
 });
 
 document.getElementById("cancelSearch").addEventListener("click", exitSearch);
@@ -990,6 +1008,10 @@ const filterBtn   = document.getElementById("filterBtn");
 const filterPanel = document.getElementById("filterPanel");
 
 filterBtn.addEventListener("click", () => {
+  if (S.filterActive) { 
+    document.getElementById("clearFilter").click(); 
+    return; 
+  }
   const open = filterPanel.classList.toggle("open");
   filterBtn.classList.toggle("active", open);
   if (open) {
@@ -1042,6 +1064,7 @@ document.getElementById("applyFilter").addEventListener("click", () => {
   localStorage.setItem("filterProducts",   JSON.stringify(fp));
   localStorage.setItem("filterAdvertisers", JSON.stringify(fa));
   S.filterActive = !!(fp.length || fa.length || S.selectedDates.length);
+  localStorage.setItem("filterActive", S.filterActive ? "true" : "false");
   filterBtn.classList.toggle("active", S.filterActive);
   filterPanel.classList.remove("open");
   applyAndRender();
@@ -1055,6 +1078,7 @@ document.getElementById("clearFilter").addEventListener("click", () => {
   document.getElementById("dateRange")._flatpickr?.clear();
   S.selectedDates = [];
   S.filterActive = false;
+  localStorage.removeItem("filterActive");
   localStorage.removeItem("filterProducts");
   localStorage.removeItem("filterAdvertisers");
   filterBtn.classList.remove("active");
@@ -1192,7 +1216,19 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
     showToast(`✅ تم تحديث ${S.selectedOrders.size} طلب`, "success");
     S.selectedOrders.clear();
     await loadOrders();
-
+const savedSearch = localStorage.getItem("activeSearch");
+if (savedSearch) {
+  const { type, query } = JSON.parse(savedSearch);
+  S.searchType = type;
+  document.querySelectorAll(".stype-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.type === type);
+  });
+  await globalSearch(query);
+} else if (localStorage.getItem("filterActive") === "true") {
+  S.filterActive = true;
+  filterBtn.classList.add("active");
+  applyAndRender();
+}
   } catch (err) {
     console.error("bulkUpdate:", err);
     showToast("❌ فشل التحديث", "error");

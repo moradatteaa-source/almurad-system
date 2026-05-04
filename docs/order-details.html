@@ -1121,8 +1121,7 @@ area: selectedArea,
         localStorage.setItem('forceListRefresh', 'true');
         const lastStatus = localStorage.getItem('currentFilterStatus') || '';
         setTimeout(() => {
-          window.location.href = `orders-cards.html${lastStatus ? `?status=${encodeURIComponent(lastStatus)}&t=${Date.now()}` : `?t=${Date.now()}`}`;
-        }, 400);
+window.location.href = `orders-cards.html?status=${encodeURIComponent(lastStatus || "جديد")}&t=${Date.now()}`;        }, 400);
 
       } catch (err) {
         console.error('خطأ في الحفظ:', err);
