@@ -539,13 +539,11 @@ S.dataPath = getDataPath(S.filterStatus);
 localStorage.setItem("currentFilterStatus", S.filterStatus);
 
 function getDataPath(status) {
-  if (!status || status === "جديد") return "orders";
-  return TEST_STATUSES.includes(status) ? `ordersTest/${status}` : "orders";
+  return `ordersTest/${status || "جديد"}`;
 }
 
 function getPathForStatus(status, id) {
-  if (!status || status === "جديد") return `orders/${id}`;
-  return TEST_STATUSES.includes(status) ? `ordersTest/${status}/${id}` : `orders/${id}`;
+  return `ordersTest/${status || "جديد"}/${id}`;
 }
 
 // ============================================================

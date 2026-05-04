@@ -2,1351 +2,1042 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>لوحة التحكم - نظام المراد</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#043B64">
+  <title>نظام المراد - لوحة التحكم</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <style>
-    .stats {
-  transition: opacity 0.4s ease;
-}
+    /* ====== CSS Variables ====== */
+    :root {
+      --navy: #043B64;
+      --navy-mid: #0a5a96;
+      --navy-light: #1273bb;
+      --orange: #FF6B2D;
+      --orange-dark: #d94f18;
+      --bg: #f0f3f8;
+      --card: #ffffff;
+      --text: #0d1b2a;
+      --text-muted: #6b7e92;
+      --border: rgba(4,59,100,0.1);
+      --sidebar-w: 270px;
+      --header-h: 62px;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(4,59,100,0.08);
+      --shadow-md: 0 8px 32px rgba(4,59,100,0.13);
+      --trans: all 0.22s cubic-bezier(0.4,0,0.2,1);
 
-body {
-  margin: 0;
-  font-family: 'Tajawal', sans-serif;
-  display: flex;
-  height: 100vh;
-  background: #f4f6fa; /* خلفية هادئة */
-  overflow: hidden;
-  color: #043B64;
-}
+      /* حالات الألوان */
+      --c-new:      #3b82f6;
+      --c-fixed:    #10b981;
+      --c-process:  #8b5cf6;
+      --c-prepare:  #f59e0b;
+      --c-wait:     #f97316;
+      --c-deliver:  #0ea5e9;
+      --c-done:     #22c55e;
+      --c-return:   #ef4444;
+      --c-retrecv:  #a855f7;
+      --c-reject:   #6b7280;
+    }
 
+    /* ====== Reset ====== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: manipulation;
+    }
 
+    /* منع تقريب الخطوط في الموبايل */
+    input, select, textarea, button { font-size: 16px !important; }
 
+    /* ====== Layout ====== */
+    .layout { display: flex; min-height: 100vh; }
 
-    /* الشريط الجانبي */
+    /* ====== Sidebar ====== */
     .sidebar {
-      width: 260px;
-      background-color: #043B64;
+      width: var(--sidebar-w);
+      background: linear-gradient(180deg, var(--navy) 0%, #021f38 100%);
       color: white;
       display: flex;
       flex-direction: column;
-      transition: transform 0.3s ease;
-      z-index: 1000;
-    }
-
-    .sidebar h2 {
-      text-align: center;
-      background-color: #FF6B2D;
-      padding: 15px;
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .menu-item {
-      padding: 15px 20px;
-      cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .menu-item:hover {
-      background-color: rgba(255,255,255,0.1);
-    }
-
-    .submenu {
-      background-color: #064b7a;
-      display: none;
-    }
-
-    .submenu div {
-      padding: 10px 40px;
-      font-size: 14px;
-      cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .submenu div:hover {
-      background-color: rgba(255,255,255,0.15);
-    }
-
-    /* المحتوى */
-    .content {
-      flex: 1;
-      padding: 20px;
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      z-index: 500;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
       overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    .sidebar-logo {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo .logo-icon {
+      width: 42px; height: 42px; background: var(--orange);
+      border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .sidebar-logo .logo-text { font-size: 17px; font-weight: 800; line-height: 1.2; }
+    .sidebar-logo .logo-sub { font-size: 11px; opacity: 0.6; font-weight: 400; }
+
+    .nav-section { padding: 8px 0; }
+    .nav-label {
+      padding: 8px 20px 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      opacity: 0.45; text-transform: uppercase;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: var(--trans); border-right: 3px solid transparent;
       position: relative;
     }
+    .nav-item:hover { background: rgba(255,255,255,0.07); }
+    .nav-item.active { background: rgba(255,107,45,0.15); border-right-color: var(--orange); color: var(--orange); }
+    .nav-item .nav-arrow {
+      margin-right: auto; font-size: 10px; opacity: 0.5;
+      transition: transform 0.25s; display: inline-block;
+    }
+    .nav-item.open .nav-arrow { transform: rotate(90deg); opacity: 1; }
 
-    .header {
-      font-size: 22px;
-      color: #043B64;
-      margin-bottom: 20px;
+    .nav-sub { background: rgba(0,0,0,0.2); overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+    .nav-sub.open { max-height: 600px; }
+    .nav-sub-item {
+      padding: 9px 20px 9px 16px; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; opacity: 0.8;
+      transition: var(--trans); border-right: 2px solid transparent;
+    }
+    .nav-sub-item:hover { background: rgba(255,255,255,0.07); opacity: 1; border-right-color: rgba(255,107,45,0.5); }
+    .nav-sub-item.highlight {
+      background: rgba(255,107,45,0.2); color: #ffb899; opacity: 1; font-weight: 600;
+    }
+
+    .sidebar-footer {
+      margin-top: auto; padding: 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .logout-btn {
+      width: 100%; padding: 11px; background: rgba(255,107,45,0.15);
+      border: 1px solid rgba(255,107,45,0.3); color: var(--orange);
+      border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
+      font-family: 'Tajawal', sans-serif; transition: var(--trans);
+    }
+    .logout-btn:hover { background: var(--orange); color: white; }
+
+    /* ====== Main Content ====== */
+    .main {
+      flex: 1;
+      margin-right: var(--sidebar-w);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      transition: margin-right 0.3s;
+    }
+
+    /* ====== Top Header ====== */
+    .topbar {
+      height: var(--header-h);
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 24px; gap: 16px;
+      position: sticky; top: 0; z-index: 400;
+      box-shadow: 0 1px 12px rgba(4,59,100,0.06);
+      flex-shrink: 0;
+    }
+    .menu-toggle {
+      display: none; background: none; border: none; cursor: pointer;
+      font-size: 22px; color: var(--navy); padding: 6px;
+      border-radius: 8px; transition: var(--trans);
+      min-width: 40px; min-height: 40px; display: flex; align-items: center; justify-content: center;
+    }
+    .menu-toggle:hover { background: var(--bg); }
+    .topbar-title { font-size: 18px; font-weight: 800; color: var(--navy); white-space: nowrap; }
+    .topbar-right { margin-right: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border-radius: 30px; padding: 6px 14px 6px 6px;
+      border: 1px solid var(--border);
+    }
+    .user-avatar {
+      width: 32px; height: 32px; background: var(--navy);
+      border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; color: white; font-size: 13px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 600; color: var(--navy); white-space: nowrap; }
+
+    /* Refresh indicator */
+    .refresh-chip {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted); padding: 5px 10px;
+      background: var(--bg); border-radius: 20px; border: 1px solid var(--border);
+      cursor: pointer; transition: var(--trans); white-space: nowrap;
+    }
+    .refresh-chip:hover { border-color: var(--navy); color: var(--navy); }
+    .refresh-chip.syncing .sync-icon { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ====== Page Content ====== */
+    .page { padding: 24px; flex: 1; overflow-x: hidden; }
+
+    /* ====== Quote Box ====== */
+    .quote-box {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      border-radius: var(--radius); padding: 18px 22px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 14px; color: white;
+      box-shadow: var(--shadow-md); position: relative; overflow: hidden;
+    }
+    .quote-box::before {
+      content: '❝';
+      position: absolute; left: 16px; top: 8px;
+      font-size: 60px; opacity: 0.08; line-height: 1; font-family: Georgia;
+    }
+    .quote-icon { font-size: 28px; flex-shrink: 0; }
+    .quote-text { font-size: 14px; font-weight: 500; line-height: 1.7; opacity: 0.95; }
+
+    /* ====== Section Header ====== */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+    }
+    .section-title {
+      font-size: 16px; font-weight: 800; color: var(--navy);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::before { content: ''; width: 4px; height: 20px; background: var(--orange); border-radius: 2px; display: block; }
+
+    .cache-badge {
+      font-size: 11px; color: var(--text-muted);
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    }
+    .cache-badge.live { color: #22c55e; border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
+
+    /* ====== Stats Grid ====== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+
+    /* ====== Stat Card ====== */
+    .stat-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 18px 16px; cursor: pointer; transition: var(--trans);
+      border: 1.5px solid var(--border); position: relative; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      box-shadow: var(--shadow);
+      min-height: 140px;
+    }
+    .stat-card::after {
+      content: ''; position: absolute; top: 0; right: 0;
+      width: 3px; height: 100%; background: var(--card-color);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--card-color); }
+    .stat-card:hover::after { opacity: 1; }
+    .stat-card:active { transform: translateY(-2px); }
+
+    /* Donut */
+    .donut-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .donut-svg { transform: rotate(-90deg); display: block; }
+    .donut-bg { fill: none; stroke: #eef2f7; stroke-width: 8; }
+    .donut-fill {
+      fill: none; stroke-width: 8; stroke-linecap: round;
+      stroke-dasharray: 0 100; transition: stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1);
+    }
+    .donut-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .donut-num {
+      font-size: 20px; font-weight: 900; line-height: 1;
+      color: var(--card-color);
+      text-align: center;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
     }
-
-    .menu-toggle {
-      display: none;
-      font-size: 24px;
-      background: none;
-      border: none;
-      color: #043B64;
-      cursor: pointer;
+    .donut-num.loading { color: var(--text-muted); font-size: 14px; }
+    .stat-label {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      text-align: center; line-height: 1.4;
+      width: 100%;
     }
-/* 🟢 شبكة الإحصائيات – موبايل 3 عناصر */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 15px;
-}
+    .stat-card.add-card {
+      border-style: dashed; background: transparent;
+      --card-color: var(--orange);
+    }
+    .stat-card.add-card:hover { background: rgba(255,107,45,0.04); }
+    .add-icon { font-size: 32px; color: var(--orange); opacity: 0.7; }
 
-@media (min-width: 768px) {
-  .stats {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-}
-
-/* 🔵 عنصر الحالة */
-.status-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-/* 🔘 الدائرة */
-.circle {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: conic-gradient(var(--color) var(--percent), #e6ecf2 0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background 0.7s ease;
-}
-
-
-/* ⚪ داخل الدائرة */
-.circle::after {
-  content: "";
-  width: 68px;
-  height: 68px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-}
-
-/* 🔢 الرقم */
-.circle span {
-  position: relative;
-  z-index: 1;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color);
-}
-.status-item h3 {
-  font-size: 13px;
-  text-align: center;
-  margin: 0;
-  color: #043B64; /* أزرق غامق */
-}
-
-
-
-
-    .logout {
-      background: #FF6B2D;
-      border: none;
-      padding: 10px;
-      color: white;
+    /* ====== Skeleton Loading ====== */
+    .skeleton {
+      background: linear-gradient(90deg, #e8edf2 25%, #f4f7fa 50%, #e8edf2 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
       border-radius: 6px;
-      margin: 15px;
-      cursor: pointer;
     }
+    @keyframes shimmer { to { background-position: -200% 0; } }
 
-    .logout:hover {
-      opacity: 0.9;
+    /* ====== Notification Bar ====== */
+    .notif-bar {
+      position: fixed; bottom: 24px; left: 24px; right: 24px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white; padding: 14px 20px; border-radius: 14px;
+      font-family: 'Tajawal', sans-serif;
+      box-shadow: 0 8px 30px rgba(34,197,94,0.35);
+      z-index: 99999; cursor: pointer;
+      display: flex; align-items: center; gap: 12px;
+      opacity: 0; transform: translateY(20px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      max-width: 400px;
+      margin: 0 auto;
     }
+    .notif-bar.show { opacity: 1; transform: translateY(0); }
+    .notif-bar .notif-icon {
+      width: 40px; height: 40px; background: rgba(255,255,255,0.2);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+      flex-shrink: 0;
+    }
+    .notif-bar .notif-text { flex: 1; min-width: 0; }
+    .notif-bar .notif-title { font-size: 14px; font-weight: 700; }
+    .notif-bar .notif-sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
 
+    /* ====== Overlay ====== */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(4,59,100,0.5); z-index: 490;
+      backdrop-filter: blur(2px);
+    }
+    .overlay.show { display: block; }
+
+    /* ====== Responsive - Mobile Fixes ====== */
     @media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    transform: translateX(100%);
-  }
+      .sidebar { transform: translateX(100%); width: 280px; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-right: 0; }
+      .menu-toggle { display: flex; }
+      .page { padding: 12px; }
+      
+      /* ✅ شبكة الإحصائيات للموبايل - 3 أعمدة */
+      .stats-grid { 
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 10px; 
+      }
+      
+      /* ✅ تحسين البطاقات للموبايل */
+      .stat-card { 
+        padding: 12px 8px; 
+        min-height: 130px;
+        gap: 10px;
+      }
+      
+      /* ✅ الدائرة والرقم - مركزين تماماً */
+      .donut-wrap { 
+        width: 64px; 
+        height: 64px; 
+        margin: 0 auto;
+      }
+      
+      .donut-svg { 
+        width: 64px; 
+        height: 64px; 
+        viewBox: "0 0 44 44";
+      }
+      
+      .donut-bg, .donut-fill { 
+        stroke-width: 7; 
+      }
+      
+      .donut-center { 
+        inset: 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+      }
+      
+      /* ✅ الرقم في منتصف الدائرة تماماً */
+      .donut-num { 
+        font-size: 17px; 
+        font-weight: 900; 
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      
+      .donut-num.loading { font-size: 13px; }
+      
+      /* ✅ النص تحت الدائرة - مركز ومضبوط */
+      .stat-label { 
+        font-size: 11px; 
+        font-weight: 700; 
+        text-align: center; 
+        line-height: 1.3;
+        margin-top: 2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        width: 100%;
+      }
+      
+      /* ✅ صندوق الاقتباس للموبايل */
+      .quote-box { 
+        padding: 12px 14px; 
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .quote-icon { font-size: 24px; }
+      .quote-text { font-size: 13px; line-height: 1.6; }
+      
+      /* ✅ الهيدر للموبايل */
+      .topbar { padding: 0 12px; height: 56px; }
+      .topbar-title { font-size: 16px; }
+      .user-chip { padding: 4px 10px 4px 4px; }
+      .user-avatar { width: 28px; height: 28px; font-size: 12px; }
+      .user-name { font-size: 12px; }
+      .refresh-chip { font-size: 11px; padding: 4px 8px; }
+      
+      /* ✅ عناوين الأقسام */
+      .section-header { margin-bottom: 14px; }
+      .section-title { font-size: 15px; }
+      .section-title::before { height: 18px; }
+      
+      /* ✅ الإشعارات للموبايل */
+      .notif-bar { 
+        bottom: 16px; left: 12px; right: 12px; 
+        padding: 12px 16px; 
+        max-width: none;
+      }
+      .notif-bar .notif-icon { width: 36px; height: 36px; font-size: 18px; }
+      .notif-bar .notif-title { font-size: 13px; }
+      .notif-bar .notif-sub { font-size: 11px; }
+    }
+    
+    /* ✅ شاشات صغيرة جداً */
+    @media (max-width: 380px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-card { min-height: 120px; padding: 10px 6px; }
+      .donut-wrap { width: 56px; height: 56px; }
+      .donut-svg { width: 56px; height: 56px; }
+      .donut-num { font-size: 15px; }
+      .stat-label { font-size: 10px; }
+      .sidebar-logo .logo-text { font-size: 15px; }
+      .sidebar-logo .logo-icon { width: 36px; height: 36px; font-size: 18px; }
+    }
+    
+    /* ✅ منع اللمس المزدوج من تكبير الصفحة */
+    @media (hover: none) and (pointer: coarse) {
+      .stat-card, .nav-item, .nav-sub-item, .logout-btn {
+        -webkit-tap-highlight-color: transparent;
+      }
+    }
 
-  .sidebar.active {
-    transform: translateX(0);
-  }
+    /* ====== Animations ====== */
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
-  .menu-toggle {
-    display: block;
-  }
-}
-
-/* ✅ الكود الجديد هنا */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-}
-
-p, div, span, button {
-  font-weight: 500;
-}
-/* 🎁 شاشة المفاجأة */
-#giftOverlay {
-  position: fixed;
-  inset: 0;
-  background: white;
-  z-index: 9999999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.8s ease;
-  text-align: center;
-}
-
-#giftOverlay.show {
-  opacity: 1;
-  pointer-events: all;
-}
-
-#giftOverlay h1 {
-  font-size: 28px;
-  color: #c4162c;
-  margin-bottom: 15px;
-}
-
-#giftOverlay p {
-  font-size: 18px;
-  color: #333;
-  line-height: 1.8;
-  max-width: 420px;
-}
-
-#giftOverlay .amount {
-  margin-top: 20px;
-  font-size: 26px;
-  font-weight: bold;
-  color: #27ae60;
-}
-
-#giftOverlay small {
-  margin-top: 25px;
-  color: #666;
-}
-/* 🏢 سنتر المراد */
-.center-box {
-  margin-top: 30px;
-  background: rgba(255,255,255,0.08);
-  padding: 18px;
-  border-radius: 16px;
-}
-
-.center-box h2 {
-  text-align: center;
-  margin: 0 0 15px 0;
-  color: #fff;
-  font-size: 20px;
-}
-
-.center-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.center-card {
-  background: white;
-  color: #043B64;
-  border-radius: 14px;
-  padding: 22px 10px;
-  text-align: center;
-  font-size: 26px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.center-card span {
-  display: block;
-  margin-top: 8px;
-  font-size: 14px;
-}
-
-.center-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-}
-
-/* ألوان */
-.center-card.cashier { background:#eafaf1; }
-.center-card.finance { background:#eef5ff; }
-.center-card.credit  { background:#fff6e6; }
-.center-card.profit  { background:#eaf7ea; }
-
-/* موبايل */
-@media (max-width: 600px) {
-  .center-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-</style>
-
-
-</style>
-
+    .stat-card { animation: fadeUp 0.4s ease both; }
+    .stat-card:nth-child(1)  { animation-delay: 0.05s; }
+    .stat-card:nth-child(2)  { animation-delay: 0.08s; }
+    .stat-card:nth-child(3)  { animation-delay: 0.11s; }
+    .stat-card:nth-child(4)  { animation-delay: 0.14s; }
+    .stat-card:nth-child(5)  { animation-delay: 0.17s; }
+    .stat-card:nth-child(6)  { animation-delay: 0.20s; }
+    .stat-card:nth-child(7)  { animation-delay: 0.23s; }
+    .stat-card:nth-child(8)  { animation-delay: 0.26s; }
+    .stat-card:nth-child(9)  { animation-delay: 0.29s; }
+    .stat-card:nth-child(10) { animation-delay: 0.32s; }
+    .stat-card:nth-child(11) { animation-delay: 0.35s; }
+    .stat-card:nth-child(12) { animation-delay: 0.38s; }
+  </style>
 </head>
 <body>
+<div class="layout">
 
-  <!-- الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-    <h2>نظام المراد ⚙️</h2>
+  <!-- ====== Overlay (mobile) ====== -->
+  <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-    <!-- 🟣 الطلبات -->
-    <div class="menu-item" onclick="toggleMenu('ordersMenu')">📦 الطلبات</div>
-    <div class="submenu" id="ordersMenu">
-      <div onclick="openOrders('')">الطلبات الجديدة</div>
-      <div onclick="openOrders('مثبت')">الطلبات المثبتة</div>
-      <div onclick="openOrders('قيد المعالجة')">قيد المعالجة</div>
-      <div onclick="openOrders('قيد التجهيز')">قيد التجهيز</div>
-      <div onclick="openOrders('قيد التوصيل')">قيد التوصيل</div>
-      <div onclick="openOrders('تم التسليم')">تم التسليم</div>
-      <div onclick="openOrders('راجع')">الطلبات الراجعة</div>
-      <div onclick="openOrders('رفض')">الطلبات المرفوضة</div>
-      <div onclick="openOrders('بانتظار البضاعة')">بانتظار البضاعة</div>
-      <div onclick="openOrders('حالات أخرى')">حالات أخرى</div>
-
-
-      <div style="background:#FF6B2D;color:white;font-weight:bold;text-align:center;cursor:pointer" onclick="openNewOrder()">➕ إضافة طلب جديد</div>
+  <!-- ====== Sidebar ====== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📦</div>
+      <div>
+        <div class="logo-text">نظام المراد</div>
+        <div class="logo-sub">لوحة التحكم الرئيسية</div>
+      </div>
     </div>
 
+    <nav class="nav-section">
+      <div class="nav-label">الطلبات</div>
+      <div class="nav-item" onclick="toggleNav('ordersNav', this)">
+        <span>📦</span> الطلبات
+        <span class="nav-arrow">›</span>
+      </div>
+      <div class="nav-sub" id="ordersNav">
+        <div class="nav-sub-item" onclick="openOrders('')">✨ الطلبات الجديدة</div>
+        <div class="nav-sub-item" onclick="openOrders('مثبت')">📌 المثبتة</div>
+        <div class="nav-sub-item" onclick="openOrders('قيد المعالجة')">⚙️ قيد المعالجة</div>
+        <div class="nav-sub-item" onclick="openOrders('قيد التجهيز')">📦 قيد التجهيز</div>
+        <div class="nav-sub-item" onclick="openOrders('قيد التوصيل')">🛵 قيد التوصيل</div>
+        <div class="nav-sub-item" onclick="openOrders('تم التسليم')">✅ تم التسليم</div>
+        <div class="nav-sub-item" onclick="openOrders('راجع')">↩️ الراجعة</div>
+        <div class="nav-sub-item" onclick="openOrders('رفض')">❌ المرفوضة</div>
+        <div class="nav-sub-item" onclick="openOrders('بانتظار البضاعة')">🚚 بانتظار البضاعة</div>
+        <div class="nav-sub-item highlight" onclick="openNewOrder()">➕ إضافة طلب جديد</div>
+      </div>
 
-    <!-- 💰 الحسابات -->
-<!-- 💰 المحاسبة -->
-<div class="menu-item" onclick="openAccountingProtected()">💰 المحاسبة</div>
+      <div class="nav-label" style="margin-top:8px">الإدارة</div>
+      <div class="nav-item" id="financeNavItem" onclick="openAccountingProtected()">
+        <span>💰</span> المحاسبة
+        <span class="nav-arrow">›</span>
+      </div>
+      <div class="nav-sub" id="accountingNav">
+        <div class="nav-sub-item" onclick="openAccounting('dashboard')">📊 لوحة الحسابات</div>
+        <div class="nav-sub-item" onclick="openAccounting('orders-profit')">🧾 أرباح الطلبات</div>
+        <div class="nav-sub-item" onclick="openAccounting('expenses')">💸 المصروفات</div>
+        <div class="nav-sub-item" onclick="openAccounting('salaries')">👨‍💼 الرواتب</div>
+        <div class="nav-sub-item" onclick="openAccounting('ads')">📢 الإعلانات</div>
+        <div class="nav-sub-item" onclick="openAccounting('suppliers')">🚚 الموردين</div>
+        <div class="nav-sub-item" onclick="openAccounting('reports')">📈 التقارير</div>
+      </div>
 
-<div class="submenu" id="accountingMenu">
+      <div class="nav-item" onclick="toggleNav('storeNav', this)">
+        <span>🏬</span> المخزن
+        <span class="nav-arrow">›</span>
+      </div>
+      <div class="nav-sub" id="storeNav">
+        <div class="nav-sub-item" onclick="location.href='warehouse.html'">🏬 إدارة المخزون</div>
+        <div class="nav-sub-item" onclick="location.href='warehouse-details.html'">📋 تفاصيل المنتجات</div>
+        <div class="nav-sub-item" onclick="openStore('purchases')">🛒 المشتريات</div>
+        <div class="nav-sub-item" onclick="openStore('daily')">📅 الجرد اليومي</div>
+        <div class="nav-sub-item" onclick="openStore('losses')">💔 التالف والخسائر</div>
+        <div class="nav-sub-item" onclick="openStore('summary')">📊 الجرد الشهري</div>
+      </div>
 
-  <div onclick="openAccounting('dashboard')">📊 لوحة الحسابات</div>
+      <div class="nav-item" onclick="toggleNav('statsNav', this)">
+        <span>📊</span> الإحصائيات
+        <span class="nav-arrow">›</span>
+      </div>
+      <div class="nav-sub" id="statsNav">
+        <div class="nav-sub-item" onclick="openStatistics('orders')">📦 إحصائيات الطلبات</div>
+        <div class="nav-sub-item" onclick="openStatistics('employees')">👥 إحصائيات الموظفين</div>
+        <div class="nav-sub-item" onclick="openStatistics('products')">🛍 إحصائيات المنتجات</div>
+        <div class="nav-sub-item" onclick="openStatistics('advertisers')">📢 إحصائيات المعلنين</div>
+      </div>
 
-  <div onclick="openAccounting('orders-profit')">🧾 أرباح الطلبات</div>
+      <div class="nav-item" id="centerNavItem" onclick="toggleNav('centerNav', this)">
+        <span>🏢</span> سنتر المراد
+        <span class="nav-arrow">›</span>
+      </div>
+      <div class="nav-sub" id="centerNav">
+        <div class="nav-sub-item" onclick="location.href='center-almurad/cashier.html'">🧾 الكاشير</div>
+        <div class="nav-sub-item" onclick="location.href='center-almurad/accounts.html'">💰 الحسابات</div>
+        <div class="nav-sub-item" onclick="location.href='center-almurad/debts.html'">📄 الديون</div>
+        <div class="nav-sub-item" onclick="location.href='center-almurad/profits.html'">📈 الأرباح</div>
+      </div>
 
-  <div onclick="openAccounting('expenses')">💸 المصروفات</div>
+      <div class="nav-item" id="archiveNavItem" onclick="location.href='monthly-archive.html'">
+        <span>🗂️</span> الأرشيف الشهري
+      </div>
 
-  <div onclick="openAccounting('salaries')">👨‍💼 الرواتب</div>
+      <div class="nav-item" onclick="openMyTasks()" style="position:relative">
+        <span>🎯</span> مهامي وأهدافي
+        <span id="taskBadge" style="display:none;position:absolute;top:8px;left:18px;
+          background:#e74c3c;color:white;font-size:10px;width:18px;height:18px;
+          border-radius:50%;display:none;align-items:center;justify-content:center;
+          font-weight:700">!</span>
+        <span class="nav-arrow" style="visibility:hidden">›</span>
+      </div>
 
-  <div onclick="openAccounting('ads')">📢 الإعلانات</div>
+      <div class="nav-item" id="usersNavItem" style="display:none" onclick="location.href='users.html'">
+        <span>👥</span> إدارة المستخدمين
+      </div>
+    </nav>
 
-  <div onclick="openAccounting('suppliers')">🚚 الموردين</div>
-
-  <div onclick="openAccounting('reports')">📈 التقارير المالية</div>
-
-</div>
-
-<!-- 🏬 المخزن -->
-<div class="menu-item" onclick="toggleMenu('storeMenu')">🏬 المخزن</div>
-<div class="submenu" id="storeMenu">
-<div onclick="window.location.href='warehouse.html'">🏬 إدارة المخزون</div>
-<div onclick="window.location.href='warehouse-details.html'">📋 تفاصيل المنتجات</div>
-  <div onclick="openStore('purchases')">المشتريات</div>
-  <div onclick="openStore('daily')">📅 الجرد اليومي</div>
-  <div onclick="openStore('losses')">التالف والخسائر</div>
-  <div onclick="openStore('summary')">الجرد الشهري</div>
-</div>
-
-<!-- 🛒 متجر المراد -->
-<div class="menu-item" onclick="toggleMenu('shopMenu')">🛒 متجر المراد</div>
-
-<div class="submenu" id="shopMenu">
-  <div onclick="openShop('orders')">📦 الطلبات</div>
-  <div onclick="openShop('products')">🛍 المنتجات</div>
-  <div onclick="openShop('settings')">⚙️ إعدادات المتجر</div>
-</div>
-<!-- 📊 الإحصائيات -->
-<div class="menu-item" onclick="toggleMenu('statsMenu')">📊 الإحصائيات</div>
-<div class="submenu" id="statsMenu">
-  <div onclick="openStatistics('orders')">إحصائيات الطلبات</div>
-  <div onclick="openStatistics('employees')">إحصائيات الموظفين</div>
-  <div onclick="openStatistics('products')">إحصائيات المنتجات</div>
-  <div onclick="openStatistics('advertisers')">إحصائيات المعلنين</div>
-  <div onclick="openStatistics('daily')">الإحصائيات اليومية</div>
-</div>
-<!-- 🏢 سنتر المراد -->
-<div class="menu-item" onclick="toggleMenu('centerMenu')">🏢 سنتر المراد</div>
-<div class="submenu" id="centerMenu">
-  <div onclick="openCashier()">🧾 الكاشير</div>
-<div onclick="openCenterAccounts()">💰 الحسابات</div>
-
-<div onclick="openCenterDebts()">📄 الديون</div>
-<div onclick="openCenterProfits()">📈 الأرباح</div>
-</div>
-
-
-<!-- 🗂️ الأرشيف الشهري -->
-<div class="menu-item" onclick="openArchive()">🗂️ الأرشيف الشهري</div>
-<div class="menu-item" onclick="openMyTasks()" style="position:relative">
-🎯 مهامي وأهدافي
-<span id="taskBadge" style="
-position:absolute;
-top:10px;
-left:15px;
-background:#e74c3c;
-color:white;
-font-size:12px;
-padding:2px 6px;
-border-radius:50%;
-display:none;
-">!</span>
-</div>
-    <!-- 👥 إدارة المستخدمين (تظهر فقط للأدمن) -->
-<div class="menu-item" id="usersMenu" style="display:none;" onclick="openUsers()">👥 إدارة المستخدمين</div>
-
-
-    <!-- 🚪 تسجيل الخروج -->
-    <button class="logout" onclick="logout()">🚪 تسجيل الخروج</button>
-  </div>
-
-  <!-- المحتوى -->
-  <div class="content">
-<div class="header">
-
-
-  <span id="sectionTitle">لوحة التحكم الرئيسية</span>
-  <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-</div>
-
-<span id="userDisplay" style="font-size:16px; color:#555;"></span>
-
-
-<div class="stats" id="statsContainer">
-
-  <div class="status-item" onclick="openOrders('')">
-    <div class="circle" style="--color:#3498db;--percent:0%">
-      <span id="newCount">—</span>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
     </div>
-    <h3>الطلبات الجديدة</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('مثبت')">
-    <div class="circle" style="--color:#1abc9c;--percent:0%">
-      <span id="fixedCount">—</span>
-    </div>
-    <h3>مثبت</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('قيد المعالجة')">
-    <div class="circle" style="--color:#9b59b6;--percent:0%">
-      <span id="processingCount">—</span>
-    </div>
-    <h3>قيد المعالجة</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('قيد التجهيز')">
-    <div class="circle" style="--color:#f39c12;--percent:0%">
-      <span id="packingCount">—</span>
-    </div>
-    <h3>قيد التجهيز</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('بانتظار البضاعة')">
-    <div class="circle" style="--color:#e67e22;--percent:0%">
-      <span id="waitingCount">—</span>
-    </div>
-    <h3>بانتظار البضاعة</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('قيد التوصيل')">
-    <div class="circle" style="--color:#2980b9;--percent:0%">
-      <span id="deliveringCount">—</span>
-    </div>
-    <h3>قيد التوصيل</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('تم التسليم')">
-    <div class="circle" style="--color:#27ae60;--percent:0%">
-      <span id="deliveredCount">—</span>
-    </div>
-    <h3>تم التسليم</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('راجع')">
-    <div class="circle" style="--color:#c0392b;--percent:0%">
-      <span id="returnedCount">—</span>
-    </div>
-    <h3>راجع</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('تم استلام الراجع')">
-    <div class="circle" style="--color:#8e44ad;--percent:0%">
-      <span id="receivedReturnCount">—</span>
-    </div>
-    <h3>تم استلام الراجع</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('رفض')">
-    <div class="circle" style="--color:#e74c3c;--percent:0%">
-      <span id="rejectedCount">—</span>
-    </div>
-    <h3>رفض</h3>
-  </div>
-
-  <div class="status-item" onclick="openOrders('حالات أخرى')">
-    <div class="circle" style="--color:#7f8c8d;--percent:0%">
-      <span id="otherCount">—</span>
-    </div>
-    <h3>حالات أخرى</h3>
-  </div>
-
-  <div class="status-item" onclick="openNewOrder()">
-    <div class="circle" style="--color:#34495e;--percent:0%">
-      <span>＋</span>
-    </div>
-    <h3>إضافة طلب</h3>
-  </div>
-
-
-
-</div>
-
-
-  <!-- 🔹 سكربت -->
-  <script type="module">
-import { 
-  getDatabase, ref, get, child, set, update, query, orderByChild, equalTo,
-  onChildAdded, onChildChanged, onChildRemoved
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-      authDomain: "almurad-system.firebaseapp.com",
-      databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-      projectId: "almurad-system",
-      storageBucket: "almurad-system.appspot.com",
-      messagingSenderId: "911755824405",
-      appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    // ✅ نظام قراءة الطلبات + كاش ذكي
-
-const ordersRef = ref(db, "orders");
-// 🔥 نظام احترافي بدون تحميل كل الطلبات
-
-
-let counts = {
-  new: 0,
-  "مثبت": 0,
-  "قيد المعالجة": 0,
-  "قيد التجهيز": 0,
-  "بانتظار البضاعة": 0,
-  "قيد التوصيل": 0,
-  "تم التسليم": 0,
-  "راجع": 0,
-  "تم استلام الراجع": 0,
-  "رفض": 0,
-  other: 0
-};
-let ordersMap = JSON.parse(localStorage.getItem("ordersMap")) || {};
-
-updateUI(counts);
-
-// 🟢 إضافة طلب
-onChildAdded(ordersRef, (snap) => {
-  const o = snap.val();
-  let s = o.status || "new";
-
-  if (s === "") s = "new";
-  if (!counts.hasOwnProperty(s)) s = "other";
-
-  counts[s]++;
-  ordersMap[snap.key] = s;
-
-  saveAll();
-});
-
-// 🟡 تعديل طلب
-onChildChanged(ordersRef, (snap) => {
-  const o = snap.val();
-
-  let newStatus = o.status || "new";
-  if (newStatus === "") newStatus = "new";
-  if (!counts.hasOwnProperty(newStatus)) newStatus = "other";
-
-  const oldStatus = ordersMap[snap.key];
-
-  if (oldStatus === newStatus) return; // 🔥 يمنع الأخطاء
-
-  if (oldStatus && counts[oldStatus] > 0) counts[oldStatus]--;
-
-  counts[newStatus]++;
-  ordersMap[snap.key] = newStatus;
-
-  saveAll();
-});
-
-// 🔴 حذف طلب
-onChildRemoved(ordersRef, (snap) => {
-  const oldStatus = ordersMap[snap.key];
-
-  if (oldStatus && counts[oldStatus] > 0) counts[oldStatus]--;
-
-  delete ordersMap[snap.key];
-
-  saveAll();
-});
-
-// 💾 حفظ + تحديث
-function saveAll() {
-  localStorage.setItem("ordersCounts", JSON.stringify(counts));
-  localStorage.setItem("ordersMap", JSON.stringify(ordersMap));
-  updateUI(counts);
-}
-// 🟡 أول تحميل من الكاش
-const cachedOrders = localStorage.getItem("ordersCounts");
-
-if (cachedOrders) {
-  updateUI(JSON.parse(cachedOrders));
-}
-
-function updateUI(counts) {
-
-  const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
-
-  function setCircle(id, value){
-    const el = document.getElementById(id);
-    el.textContent = value;
-const circle = el.closest(".circle");
-    const percent = (value / total) * 100;
-
-    circle.style.setProperty("--percent", percent + "%");
-  }
-
-  setCircle("newCount", counts["new"]);
-  setCircle("fixedCount", counts["مثبت"]);
-  setCircle("processingCount", counts["قيد المعالجة"]);
-  setCircle("packingCount", counts["قيد التجهيز"]);
-  setCircle("waitingCount", counts["بانتظار البضاعة"]);
-  setCircle("deliveringCount", counts["قيد التوصيل"]);
-  setCircle("deliveredCount", counts["تم التسليم"]);
-  setCircle("returnedCount", counts["راجع"]);
-  setCircle("receivedReturnCount", counts["تم استلام الراجع"]);
-  setCircle("rejectedCount", counts["رفض"]);
-  setCircle("otherCount", counts["other"]);
-}
-window.db = db;
-const user = JSON.parse(localStorage.getItem("loggedInUser"));
-
-
-
-
-    if (!user) window.location.href = "index.html";
-
-
-function openOrders(status) {
-  // ✅ إذا الحالة فارغة (طلبات جديدة) نمرر باراميتر فاضي
-window.location.href = `orders-cards.html?status=${encodeURIComponent(status || "")}`;
-}
-
-
-
-    function openNewOrder() {
-      window.location.href = "add-order.html";
-    }
-
-function openStatistics(tab) {
-  if (tab === "employees") {
-    window.location.href = "stats-employees.html";
-  } 
-  else if (tab === "advertisers") {
-    window.location.href = "stats-advertisers.html";
-  } 
-else if (tab === "products") {
-  window.location.href = "product-stats.html"; // ✅ اسم ملفك
-}
-  else {
-    window.location.href = `statistics.html?tab=${tab}`;
-  }
-}
-function openAccountingProtected(){
-
-if(localStorage.getItem("financeUnlocked") === "yes"){
-toggleMenu('accountingMenu')
-return
-}
-
-const code = prompt("🔒 أدخل رمز المحاسبة")
-
-if(code === "09870987"){
-
-localStorage.setItem("financeUnlocked","yes")
-toggleMenu('accountingMenu')
-
-}else{
-
-alert("❌ الرمز غير صحيح")
-
-}
-
-}
-
-window.openAccountingProtected = openAccountingProtected
-
-
-    function toggleMenu(id) {
-      const submenu = document.getElementById(id);
-      submenu.style.display = submenu.style.display === "block" ? "none" : "block";
-    }
-
-    function toggleSidebar() {
-      document.getElementById("sidebar").classList.toggle("active");
-    }
-
-    function logout() {
-      localStorage.removeItem("loggedInUser");
-      window.location.href = "index.html";
-    }
-// ✅ استرجاع المستخدم الحالي
-const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
-if (!loggedUser) window.location.href = "index.html";
-
-const displayName = loggedUser.name || loggedUser.username || loggedUser.user || "غير معروف";
-document.getElementById("userDisplay").textContent = `👋 مرحباً، ${displayName}`;
-console.log(`مرحباً ${displayName}! تم تسجيل الدخول بنجاح ✅`);
-
-
-// 🧩 الصلاحيات
-const roles = loggedUser.roles || [];
-
-// 🎯 عناصر القائمة
-const ordersMenu   = document.querySelector(".menu-item[onclick*='ordersMenu']");
-const financeMenu = document.querySelector(".menu-item[onclick*='openAccountingProtected']");
-const statsMenu    = document.querySelector(".menu-item[onclick*='openStatistics']");
-const usersMenu    = document.getElementById("usersMenu");
-const storeMenu    = document.querySelector(".menu-item[onclick*='openStore']");
-const settingsMenu = document.querySelector(".menu-item[onclick*='openSettings']");
-const centerMenu = document.querySelector(".menu-item[onclick*='centerMenu']");
-
-
-// إخفاء الكل بالبداية
-if (ordersMenu) ordersMenu.style.display = "none";
-if (financeMenu) financeMenu.style.display = "none";
-if (statsMenu) statsMenu.style.display = "none";
-if (usersMenu) usersMenu.style.display = "none";
-if (storeMenu) storeMenu.style.display = "none";
-if (settingsMenu) settingsMenu.style.display = "none";
-if (centerMenu) centerMenu.style.display = "none";
-
-// 🟢 الأقسام المفتوحة للجميع
-if (storeMenu) storeMenu.style.display = "block";      // إدارة المخزن
-if (settingsMenu) settingsMenu.style.display = "block"; // الإعدادات
-
-// 🟠 الأقسام حسب الصلاحيات
-
-// ✅ الأدمن: يشوف كل شيء
-if (roles.includes("admin")) {
-  if (ordersMenu) ordersMenu.style.display = "block";
-  if (financeMenu) financeMenu.style.display = "block";
-  if (statsMenu) statsMenu.style.display = "block";
-  if (usersMenu) usersMenu.style.display = "block";
-  if (storeMenu) storeMenu.style.display = "block";
-}
-// 🏢 سنتر المراد – فقط للأدمن وموظف السنتر
-if (roles.includes("admin") || roles.includes("center")) {
-  if (centerMenu) centerMenu.style.display = "block";
-}
-
-// ✅ المحاسب: الحسابات + الإحصائيات
-if (roles.includes("accountant")) {
-  if (financeMenu) financeMenu.style.display = "block";
-  if (statsMenu) statsMenu.style.display = "block";
-}
-
-// ✅ المثبّت
-if (roles.includes("stabilizer") && !roles.includes("admin")) {
-  if (ordersMenu) ordersMenu.style.display = "block";
-
-  const statsSubmenu = document.getElementById("statsMenu");
-  if (statsSubmenu) {
-    statsSubmenu.style.display = "block";
-    const items = statsSubmenu.querySelectorAll("div");
-    items.forEach(el => {
-      if (el.textContent.includes("الطلبات")) el.style.display = "block";
-      else el.style.display = "none";
-    });
-  }
-}
-
-// 🟣 المعلن: يشوف فقط إحصائيات المعلنين
-if (roles.includes("advertiser") && !roles.includes("admin")) {
-  if (statsMenu) statsMenu.style.display = "block";
-
-  const statsSubmenu = document.getElementById("statsMenu");
-  if (statsSubmenu) {
-    statsSubmenu.style.display = "block";
-    const items = statsSubmenu.querySelectorAll("div");
-    items.forEach(el => {
-      if (el.textContent.includes("المعلنين")) el.style.display = "block";
-      else el.style.display = "none";
-    });
-  }
-
-  // ❌ نخفي باقي الأقسام
-  if (ordersMenu) ordersMenu.style.display = "none";
-  if (financeMenu) financeMenu.style.display = "none";
-  if (storeMenu) storeMenu.style.display = "none";
-}
-
-// ✅ موظف المخزن
-if (roles.includes("store")) {
-  if (storeMenu) storeMenu.style.display = "block";
-}
-
-// ✅ المندوب: الطلبات فقط
-if (roles.includes("delivery")) {
-  if (ordersMenu) ordersMenu.style.display = "block";
-}
-
-// 🟣 صلاحيات المثبت (stabilizer) – عرض صفحة تفاصيل المنتجات فقط
-// 🟣 صلاحيات المثبت (stabilizer) – فقط إذا ما عنده store
-if (
-  roles.includes("stabilizer") &&
-  !roles.includes("store") &&
-  !roles.includes("admin")
-) {
-  const storeSubmenu = document.getElementById("storeMenu");
-  if (storeSubmenu) {
-    const items = storeSubmenu.querySelectorAll("div");
-    items.forEach(el => el.style.display = "none");
-
-    const detailsItem = Array.from(items)
-      .find(el => el.textContent.includes("تفاصيل المنتجات"));
-    if (detailsItem) detailsItem.style.display = "block";
-  }
-}
-function openAccounting(tab){
-
- if(tab === "dashboard"){
-   window.location.href = "accounting/dashboard.html"
- }
-
- if(tab === "orders-profit"){
-   window.location.href = "accounting/orders-profit.html"
- }
-
- if(tab === "expenses"){
-   window.location.href = "accounting/expenses.html"
- }
-
- if(tab === "salaries"){
-   window.location.href = "accounting/salaries.html"
- }
-
- if(tab === "ads"){
-   window.location.href = "accounting/ads.html"
- }
-
- if(tab === "suppliers"){
-   window.location.href = "accounting/suppliers.html"
- }
-
- if(tab === "reports"){
-   window.location.href = "accounting/reports.html"
- }
-
-}
-
-window.openAccounting = openAccounting
-
-
-
-
-    window.toggleMenu = toggleMenu;
-    window.toggleSidebar = toggleSidebar;
-    window.openOrders = openOrders;
-    window.openNewOrder = openNewOrder;
-    window.openStatistics = openStatistics;
-    window.logout = logout;
-function openCashier() {
-  window.location.href = "center-almurad/cashier.html";
-}
-window.openCashier = openCashier;
-
-
-window.openCashier = openCashier;
-
-    function openUsers() {
-  window.location.href = "users.html";
-}
-window.openUsers = function() {// 👋 عرض الاسم
-const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
-if (loggedUser && loggedUser.user) {
-  document.getElementById("userDisplay").textContent = `👋 أهلاً ${loggedUser.user}!`;
-}
-  window.location.href = "users.html";
-};
-
-
-// ⚡ نظام العبارات التحفيزية اليومية (بدون مكتبة خارجية)
-function loadMotivationalQuote() {
-  const quotes = [
-    "ابدأ يومك بإيمانك بنفسك، فكل خطوة صغيرة نحو هدفك تقربك من النجاح الكبير.",
-    "حين تظن أن الطريق انتهى، تذكّر أن الناجحين صنعوا طريقهم عندما لم يجدوا طريقًا أصلًا.",
-    "لا تنتظر الظروف لتتحسن، بل كن أنت السبب في تحسينها. فالفرص تُخلق لا تُنتظر.",
-    "العمل الجاد اليوم هو ما يجعل غدك مختلفًا عن البقية. اجعل كل يوم خطوة نحو أحلامك.",
-    "النجاح لا يُقاس بما وصلت إليه، بل بما تغلبت عليه لتصل إلى هناك.",
-    "لا تخف من البدايات الصغيرة، فكل إنجاز عظيم بدأ بخطوة متواضعة وشغف لا ينطفئ.",
-    "الإنجاز لا يحتاج معجزة، فقط قلب لا يعرف الاستسلام وعقل يؤمن بالحلول.",
-    "التحديات ليست عوائق، بل فرص لتُظهر قوتك وقدرتك على التميز.",
-    "كن مثل النخلة، تُرمى بالحجارة فتعطي أطيب الثمار. اجعل صعوباتك دافعًا لا حاجزًا.",
-    "ما تزرعه من جهد اليوم، ستحصده غدًا نجاحًا يملأ حياتك فخرًا وسعادة.",
-    "لا تستهين بأي إنجاز، فكل خطوة نحو الأفضل هي نصرٌ على التردد والكسل.",
-    "كل صباح هو فرصة جديدة لتثبت أنك قادر على أن تكون أفضل من الأمس.",
-    "الثقة بالنفس لا تعني أنك الأفضل، بل أنك لا تقارن نفسك بأحد.",
-    "الطموح هو الوقود الذي يجعل الأيام الصعبة مجرد مراحل في طريق النجاح.",
-    "لا تنظر للقمم من بعيد، اصعد بخطوات ثابتة، وستصل عاجلاً أم آجلاً.",
-    "الفشل ليس عدوك، بل معلمك الذي يدفعك لتتعلم كيف تصل بشكلٍ أقوى."
-  ];
-
-  // 🧠 اختيار حكمة عشوائية
-  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-
-  // 💾 حفظ آخر حكمة لعدم تكرارها مباشرة
-  localStorage.setItem("lastQuote", randomQuote);
-
-  // 🎨 إنشاء مربع العرض البرتقالي
-  const quoteBox = document.createElement("div");
-  quoteBox.innerHTML = `<strong>💬 ${randomQuote}</strong>`;
-  quoteBox.id = "quoteBox";
-  quoteBox.style.background = "#FF6B2D";
-  quoteBox.style.color = "white";
-  quoteBox.style.padding = "16px";
-  quoteBox.style.margin = "18px 0";
-  quoteBox.style.borderRadius = "10px";
-  quoteBox.style.textAlign = "center";
-  quoteBox.style.fontWeight = "bold";
-  quoteBox.style.fontSize = "16px";
-  quoteBox.style.lineHeight = "1.8";
-  quoteBox.style.direction = "rtl";
-  quoteBox.style.boxShadow = "0 3px 10px rgba(0,0,0,0.15)";
-  quoteBox.style.animation = "fadeIn 1.5s ease";
-  quoteBox.style.transition = "transform 0.8s ease";
-  quoteBox.style.transform = "translateY(10px)";
-  setTimeout(() => (quoteBox.style.transform = "translateY(0)"), 100);
-
-  const header = document.getElementById("userDisplay");
-  if (header) {
-    const old = document.getElementById("quoteBox");
-    if (old) old.remove();
-    header.after(quoteBox);
-  }
-}
-// 🚀 تنفيذ تلقائي عند الدخول للوحة التحكم
-loadMotivationalQuote();
-
-// ✅ فتح صفحات المخزن حسب القسم
-function openStore(tab) {
-  if (tab === "purchases") {
-    window.location.href = "purchases.html"; // صفحة المشتريات
-  } else if (tab === "daily") {
-    window.location.href = "daily-inventory.html"; // ✅ صفحة الجرد اليومي الجديدة
-  } else if (tab === "losses") {
-    window.location.href = "losses.html"; // صفحة التالف والخسائر
-  } else if (tab === "summary") {
-    window.location.href = "inventory-summary.html"; // صفحة الجرد الشهري
-  }
-}
-window.openStore = openStore;
-
-// 🔹 دالة التصفير الذكي
-async function monthlySmartReset() {
-  const dbRef = ref(db);
-  const monthKey = new Date().toISOString().slice(0,7); // مثال: 2025-11
-  const confirmReset = confirm("⚠️ هل أنت متأكد من تصفير بيانات الشهر؟ سيتم أرشفة الطلبات المنتهية والفواتير والحسابات.");
-
-  if (!confirmReset) return;
-
-  try {
-    // 🟠 جلب الطلبات
-    const ordersSnap = await get(child(dbRef, "orders"));
-    if (ordersSnap.exists()) {
-      const allOrders = ordersSnap.val();
-      const keepStatuses = ["مثبت", "قيد المعالجة", "قيد التجهيز", "قيد التوصيل", "راجع"];
-      const archiveStatuses = ["تم التسليم", "تم استلام الراجع", "رفض"];
-
-      const newOrders = {};
-      const archiveOrders = {};
-
-      for (const [id, o] of Object.entries(allOrders)) {
-        if (archiveStatuses.includes(o.status)) archiveOrders[id] = o;
-        else if (keepStatuses.includes(o.status)) newOrders[id] = o;
-      }
-
-      await set(ref(db, `archive/${monthKey}/orders`), archiveOrders);
-      await set(ref(db, "orders"), newOrders);
-    }
-
-    // 🟢 الفواتير والحسابات
-    const invoicesSnap = await get(child(dbRef, "invoices"));
-    const accountsSnap = await get(child(dbRef, "accounts"));
-    const invoices = invoicesSnap.exists() ? invoicesSnap.val() : {};
-    const accounts = accountsSnap.exists() ? accountsSnap.val() : {};
-
-    await set(ref(db, `archive/${monthKey}/invoices`), invoices);
-    await set(ref(db, `archive/${monthKey}/accounts`), accounts);
-
-    await set(ref(db, "invoices"), {});
-    await set(ref(db, "accounts"), {});
-
-    // 🟣 تنظيف سجل المعالجات بالمخزن
-    const warehouseSnap = await get(child(dbRef, "warehouse"));
-    if (warehouseSnap.exists()) {
-      const warehouse = warehouseSnap.val();
-      for (const name in warehouse) {
-        warehouse[name].processedOrders = {};
-      }
-      await update(ref(db, "warehouse"), warehouse);
-    }
-
-    alert("✅ تم تصفير بيانات الشهر وأرشفتها بنجاح!");
-  } catch (err) {
-    console.error("❌ خطأ أثناء تصفير البيانات:", err);
-    alert("حدث خطأ أثناء التصفير. تحقق من الاتصال بالإنترنت.");
-  }
-}
-// 🔒 إخفاء زر الأرشيف الشهري لغير الأدمن
-const archiveMenu = document.querySelector(".menu-item[onclick*='openArchive']");
-if (archiveMenu && (!roles.includes("admin"))) {
-  archiveMenu.style.display = "none";
-}
-
-// 🗂️ فتح صفحة الأرشيف الشهري
-function openArchive() {
-  window.location.href = "monthly-archive.html";
-}
-window.openArchive = openArchive;
-function openMyTasks(){
-  const u = JSON.parse(localStorage.getItem("loggedInUser"));
-  const name = encodeURIComponent(u?.user || u?.username || u?.name || "");
-  window.location.href = "my-tasks.html?user=" + name;
-}
-window.openMyTasks = openMyTasks;
-
-  </script>
-<!-- ✅ نظام إشعار الطلب الجديد (نفس كود صفحة الطلبات) -->
-<script>
-  function openCenterAccounts() {
-  window.location.href = "center-almurad/accounts.html";
-}
-window.openCenterAccounts = openCenterAccounts;
-function openCenterDebts() {
-  window.location.href = "center-almurad/debts.html";
-}
-window.openCenterDebts = openCenterDebts;
-
-function openCenterProfits() {
-  window.location.href = "center-almurad/profits.html";
-}
-window.openCenterProfits = openCenterProfits;
-
-function enableSoundOnce() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = ctx.createBufferSource();
-    source.connect(ctx.destination);
-  } catch (e) {
-    console.warn("⚠️ لم يتم تفعيل الصوت:", e);
-  }
-
-  window.soundAllowed = true;
-  console.log("🔊 تم تفعيل الصوت بنجاح");
-  
-  // إزالة المستمعين بعد التفعيل
-  document.removeEventListener("touchstart", enableSoundOnce);
-  document.removeEventListener("click", enableSoundOnce);
-}
-document.addEventListener("touchstart", enableSoundOnce, { once: true });
-document.addEventListener("click", enableSoundOnce, { once: true });
-
-  // ✅ دالة عرض الإشعار والصوت (نفس الموجود بصفحة الطلبات)
-  function showNewOrderNotification(count = 1) {
-    const oldBar = document.getElementById("newOrderBar");
-    if (oldBar) oldBar.remove();
-
-    const bar = document.createElement("div");
-    bar.id = "newOrderBar";
-    bar.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;animation:fadeInUp 0.4s ease">
-        <span style="font-size:28px;background:#fff;color:#28a745;border-radius:50%;
-        width:46px;height:46px;display:flex;align-items:center;justify-content:center;
-        box-shadow:0 0 10px rgba(255,255,255,0.3)">💵</span>
-        <div>
-          <div style="font-weight:bold;font-size:16px;">وصل ${count} طلب جديد${count>1?"ات":""}!</div>
-          <div style="font-size:13px;opacity:0.9;">تحقق الآن من الطلبات</div>
+  </aside>
+
+  <!-- ====== Main ====== -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">لوحة التحكم</div>
+      <div class="topbar-right">
+        <div class="refresh-chip" id="refreshChip" onclick="forceRefresh()" title="تحديث البيانات">
+          <span class="sync-icon">⟳</span>
+          <span id="lastSyncText">جاري التحميل...</span>
+        </div>
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatar">؟</div>
+          <div class="user-name" id="userName">...</div>
         </div>
       </div>
-    `;
-    Object.assign(bar.style, {
-      position: "fixed",
-      bottom: "25px",
-      right: "25px",
-      background: "linear-gradient(135deg,#28a745,#20c997)",
-      color: "white",
-      padding: "14px 22px",
-      borderRadius: "16px",
-      fontFamily: "Tajawal, sans-serif",
-      boxShadow: "0 8px 25px rgba(0,0,0,0.3)",
-      zIndex: "999999",
-      cursor: "pointer",
-      opacity: "1",
-      transition: "all 0.6s ease"
-    });
-    document.body.appendChild(bar);
+    </header>
 
-    if (window.soundAllowed) {
-const audio = new Audio("cash-register-kaching.mp3");
-      audio.volume = 1.0;
-      audio.play().catch(err => console.warn("🔇 فشل تشغيل الصوت:", err));
-    }
+    <div class="page">
 
-    bar.addEventListener("mouseenter",()=>bar.style.transform="scale(1.05)");
-    bar.addEventListener("mouseleave",()=>bar.style.transform="scale(1)");
+      <!-- Quote -->
+      <div class="quote-box fade-up" id="quoteBox">
+        <div class="quote-icon">💬</div>
+        <div class="quote-text" id="quoteText">جاري التحميل...</div>
+      </div>
 
-    setTimeout(()=>{
-      bar.style.opacity="0";
-      bar.style.transform="translateY(20px)";
-      setTimeout(()=>bar.remove(),600);
-},10000);
+      <!-- Stats Section -->
+      <div class="section-header">
+        <div class="section-title">إحصائيات الطلبات</div>
+        <div class="cache-badge" id="cacheBadge">⏳ تحميل...</div>
+      </div>
 
-    const style=document.createElement("style");
-    style.textContent=`
-      @keyframes fadeInUp {
-        from {opacity:0;transform:translateY(40px);}
-        to {opacity:1;transform:translateY(0);}
-      }`;
-    document.head.appendChild(style);
+      <div class="stats-grid" id="statsGrid">
+        <!-- يتم بناؤها بـ JavaScript -->
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Notification Bar -->
+<div class="notif-bar" id="notifBar" onclick="this.classList.remove('show')">
+  <div class="notif-icon" id="notifIcon">💵</div>
+  <div class="notif-text">
+    <div class="notif-title" id="notifTitle">إشعار</div>
+    <div class="notif-sub" id="notifSub"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, onValue, set, update }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+// ============================================================
+// Firebase
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+window.db = db;
+
+// ============================================================
+// ⚙️ إعدادات الكاش
+// ============================================================
+const CACHE_KEY      = "murad_counts_v3";
+const CACHE_META_KEY = "murad_counts_meta_v3";
+const CACHE_TTL      = 5 * 60 * 1000; // 5 دقائق
+
+// ============================================================
+// 📋 تعريف الحالات مع مساراتها - ✅ تم تصحيح مسار "جديد"
+// ============================================================
+const STATUS_CONFIG = [
+  { key: "new",              label: "جديد",              path: "ordersTest/جديد",           color: "var(--c-new)",     emoji: "✨", route: ""                },
+  { key: "مثبت",             label: "مثبت",              path: "ordersTest/مثبت",           color: "var(--c-fixed)",   emoji: "📌", route: "مثبت"             },
+  { key: "قيد المعالجة",    label: "قيد المعالجة",     path: "ordersTest/قيد المعالجة",   color: "var(--c-process)", emoji: "⚙️", route: "قيد المعالجة"    },
+  { key: "قيد التجهيز",     label: "قيد التجهيز",      path: "ordersTest/قيد التجهيز",    color: "var(--c-prepare)", emoji: "📦", route: "قيد التجهيز"     },
+  { key: "بانتظار البضاعة", label: "بانتظار البضاعة",  path: "ordersTest/بانتظار البضاعة",color: "var(--c-wait)",    emoji: "🚚", route: "بانتظار البضاعة" },
+  { key: "قيد التوصيل",     label: "قيد التوصيل",      path: "ordersTest/قيد التوصيل",    color: "var(--c-deliver)", emoji: "🛵", route: "قيد التوصيل"     },
+  { key: "تم التسليم",      label: "تم التسليم",        path: "ordersTest/تم التسليم",     color: "var(--c-done)",    emoji: "✅", route: "تم التسليم"      },
+  { key: "راجع",            label: "راجع",              path: "ordersTest/راجع",           color: "var(--c-return)",  emoji: "↩️", route: "راجع"            },
+  { key: "تم استلام الراجع",label: "استلام الراجع",    path: "ordersTest/تم استلام الراجع",color:"var(--c-retrecv)", emoji: "📥", route: "تم استلام الراجع"},
+  { key: "رفض",             label: "مرفوض",             path: "ordersTest/رفض",            color: "var(--c-reject)",  emoji: "❌", route: "رفض"             },
+];
+
+// ============================================================
+// 🧠 نظام الكاش الذكي
+// ============================================================
+let counts     = {};
+let isRefreshing = false;
+let listeners  = {};
+
+/** قراءة الكاش المحلي */
+function loadCache() {
+  try {
+    const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || "{}");
+    const data = JSON.parse(localStorage.getItem(CACHE_KEY)      || "{}");
+    return { meta, data };
+  } catch { return { meta: {}, data: {} }; }
+}
+
+/** حفظ في الكاش */
+function saveCache(data) {
+  const meta = { ts: Date.now(), version: 3 };
+  localStorage.setItem(CACHE_KEY,      JSON.stringify(data));
+  localStorage.setItem(CACHE_META_KEY, JSON.stringify(meta));
+}
+
+/** هل الكاش حديث؟ */
+function isCacheFresh() {
+  try {
+    const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || "{}");
+    return meta.ts && (Date.now() - meta.ts) < CACHE_TTL;
+  } catch { return false; }
+}
+
+// ============================================================
+// 🔢 حساب عدد الطلبات في مسار واحد
+// ============================================================
+async function fetchCount(path) {
+  try {
+    const snap = await get(ref(db, path));
+    if (!snap.exists()) return 0;
+    return Object.keys(snap.val()).filter(k => k !== "_meta").length;
+  } catch (err) {
+    console.warn("fetchCount error:", path, err.message);
+    return 0;
+  }
+}
+
+// ============================================================
+// 🚀 التحميل الرئيسي للأرقام
+// ============================================================
+async function loadAllCounts(force = false) {
+  if (isRefreshing) return;
+
+  const { data: cached } = loadCache();
+  if (!force && isCacheFresh() && Object.keys(cached).length > 0) {
+    counts = cached;
+    renderStats(counts);
+    updateCacheBadge("cached");
+    setupLightWatchers();
+    return;
   }
 
+  isRefreshing = true;
+  updateCacheBadge("loading");
+  setSyncing(true);
 
+  if (Object.keys(cached).length > 0) {
+    counts = { ...cached };
+    renderStats(counts, true);
+  } else {
+    renderStats({}, true);
+  }
 
+  try {
+    const results = await Promise.all(
+      STATUS_CONFIG.map(s => fetchCount(s.path))
+    );
 
-function showTaskNotification(message){
+    STATUS_CONFIG.forEach((s, i) => { counts[s.key] = results[i]; });
 
-const oldBar = document.getElementById("taskNotificationBar");
-if(oldBar) oldBar.remove();
+    saveCache(counts);
+    renderStats(counts);
+    updateCacheBadge("live");
+    setupLightWatchers();
 
-const bar = document.createElement("div");
-bar.id = "taskNotificationBar";
+  } catch (err) {
+    console.error("loadAllCounts:", err);
+    updateCacheBadge("error");
+  } finally {
+    isRefreshing = false;
+    setSyncing(false);
+  }
+}
 
-bar.innerHTML = `
-<div style="display:flex;align-items:center;gap:12px">
-<span style="
-font-size:28px;
-background:#fff;
-color:#e74c3c;
-border-radius:50%;
-width:46px;
-height:46px;
-display:flex;
-align-items:center;
-justify-content:center;
-">🎯</span>
+// ============================================================
+// 👁️ مراقبة خفيفة
+// ============================================================
+function setupLightWatchers() {
+  Object.values(listeners).forEach(unsub => { try { unsub(); } catch {} });
+  listeners = {};
 
-<div>
-<div style="font-weight:bold;font-size:16px">${message}</div>
-<div style="font-size:13px;opacity:0.9">افتح قسم المهام الآن</div>
-</div>
-</div>
-`;
+  STATUS_CONFIG.forEach(s => {
+    const metaPath = `${s.path}/_meta/lastModified`;
+    const unsubscribe = onValue(ref(db, metaPath), (snap) => {
+      if (!snap.exists()) return;
+      const serverTime = snap.val();
+      const cacheKey   = `watcher_ts_${s.key}`;
+      const lastSeen   = parseInt(localStorage.getItem(cacheKey) || "0");
 
-Object.assign(bar.style,{
-position:"fixed",
-bottom:"25px",
-right:"25px",
-background:"linear-gradient(135deg,#e74c3c,#ff6b2d)",
-color:"white",
-padding:"14px 22px",
-borderRadius:"16px",
-fontFamily:"Tajawal",
-boxShadow:"0 8px 25px rgba(0,0,0,0.3)",
-zIndex:"999999"
+      if (serverTime > lastSeen) {
+        localStorage.setItem(cacheKey, String(serverTime));
+        refreshSingleCount(s);
+      }
+    }, { onlyOnce: false });
+
+    listeners[s.key] = unsubscribe;
+  });
+}
+
+async function refreshSingleCount(statusConf) {
+  try {
+    const newCount = await fetchCount(statusConf.path);
+    if (counts[statusConf.key] !== newCount) {
+      counts[statusConf.key] = newCount;
+      saveCache(counts);
+      updateSingleCard(statusConf.key, newCount);
+      updateCacheBadge("live");
+    }
+  } catch {}
+}
+
+// ============================================================
+// 🎨 بناء البطاقات
+// ============================================================
+function renderStats(data, skeleton = false) {
+  const total  = Math.max(Object.values(data).reduce((a, b) => a + (Number(b) || 0), 0), 1);
+  const grid   = document.getElementById("statsGrid");
+  grid.innerHTML = "";
+
+  STATUS_CONFIG.forEach(s => {
+    const n    = data[s.key] ?? null;
+    const pct  = n !== null ? Math.min((n / total) * 100 * 3.14, 100) : 0;
+    const card = buildCard(s, n, pct, skeleton);
+    grid.appendChild(card);
+  });
+
+  const addCard = document.createElement("div");
+  addCard.className = "stat-card add-card";
+  addCard.onclick   = openNewOrder;
+  addCard.innerHTML = `<div class="add-icon">＋</div><div class="stat-label">إضافة طلب</div>`;
+  grid.appendChild(addCard);
+}
+
+function buildCard(s, n, pct, skeleton) {
+  const card = document.createElement("div");
+  card.className   = "stat-card";
+  card.id          = `card-${s.key}`;
+  card.style.setProperty("--card-color", s.color);
+  card.onclick     = () => openOrders(s.route);
+
+  const circumference = 2 * Math.PI * 18;
+  const dash = n !== null ? Math.min((n / Math.max(...Object.values(counts), 1)) * circumference * 0.9, circumference) : 0;
+
+  card.innerHTML = `
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="80" height="80" viewBox="0 0 44 44">
+        <circle class="donut-bg" cx="22" cy="22" r="18"/>
+        <circle class="donut-fill" id="donut-${s.key}"
+          cx="22" cy="22" r="18"
+          stroke="${s.color}"
+          stroke-dasharray="0 ${circumference}"
+        />
+      </svg>
+      <div class="donut-center">
+        <div class="donut-num ${skeleton || n === null ? 'loading' : ''}" id="num-${s.key}">
+          ${skeleton || n === null ? '...' : n}
+        </div>
+      </div>
+    </div>
+    <div class="stat-label">${s.emoji} ${s.label}</div>
+  `;
+
+  if (!skeleton && n !== null) {
+    setTimeout(() => {
+      const circle = document.getElementById(`donut-${s.key}`);
+      if (circle) circle.style.strokeDasharray = `${dash} ${circumference}`;
+    }, 100);
+  }
+
+  return card;
+}
+
+function updateSingleCard(key, n) {
+  const numEl    = document.getElementById(`num-${key}`);
+  const donutEl  = document.getElementById(`donut-${key}`);
+  if (!numEl) return;
+
+  numEl.textContent = n;
+  numEl.classList.remove("loading");
+
+  if (donutEl) {
+    const circumference = 2 * Math.PI * 18;
+    const maxVal = Math.max(...Object.values(counts), 1);
+    const dash   = Math.min((n / maxVal) * circumference * 0.9, circumference);
+    donutEl.style.strokeDasharray = `${dash} ${circumference}`;
+  }
+}
+
+// ============================================================
+// 🔄 تحديث UI
+// ============================================================
+function setSyncing(v) {
+  const chip = document.getElementById("refreshChip");
+  if (v) chip.classList.add("syncing");
+  else   chip.classList.remove("syncing");
+}
+
+function updateCacheBadge(state) {
+  const badge = document.getElementById("cacheBadge");
+  const now   = new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+  if (state === "live")    { badge.textContent = `🟢 محدث ${now}`; badge.className = "cache-badge live"; }
+  else if (state === "cached") { badge.textContent = `🔵 كاش · ${now}`; badge.className = "cache-badge"; }
+  else if (state === "loading") { badge.textContent = "⏳ جاري التحديث..."; badge.className = "cache-badge"; }
+  else { badge.textContent = "⚠️ خطأ في التحميل"; badge.className = "cache-badge"; }
+
+  document.getElementById("lastSyncText").textContent = state === "loading" ? "جاري..." : `آخر تحديث ${now}`;
+}
+
+// ============================================================
+// 💬 الجملة التحفيزية
+// ============================================================
+const quotes = [
+  "ابدأ يومك بإيمانك بنفسك، فكل خطوة صغيرة نحو هدفك تقربك من النجاح الكبير.",
+  "حين تظن أن الطريق انتهى، تذكّر أن الناجحين صنعوا طريقهم عندما لم يجدوا طريقًا.",
+  "لا تنتظر الظروف لتتحسن، بل كن أنت السبب في تحسينها. الفرص تُخلق لا تُنتظر.",
+  "العمل الجاد اليوم هو ما يجعل غدك مختلفًا. اجعل كل يوم خطوة نحو أحلامك.",
+  "النجاح لا يُقاس بما وصلت إليه، بل بما تغلبت عليه لتصل إلى هناك.",
+  "لا تخف من البدايات الصغيرة، فكل إنجاز عظيم بدأ بخطوة متواضعة وشغف لا ينطفئ.",
+  "التحديات ليست عوائق، بل فرص لتُظهر قوتك وقدرتك على التميز.",
+  "ما تزرعه من جهد اليوم، ستحصده غدًا نجاحًا يملأ حياتك فخرًا وسعادة.",
+  "كل صباح هو فرصة جديدة لتثبت أنك قادر على أن تكون أفضل من الأمس.",
+  "الطموح هو الوقود الذي يجعل الأيام الصعبة مجرد مراحل في طريق النجاح.",
+];
+document.getElementById("quoteText").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+// ============================================================
+// 👤 المستخدم والصلاحيات
+// ============================================================
+const user = JSON.parse(localStorage.getItem("loggedInUser") || "null");
+if (!user) { location.href = "index.html"; }
+
+const displayName  = user?.name || user?.username || user?.user || "مجهول";
+const roles        = user?.roles || [];
+const initials     = displayName.charAt(0) || "م";
+
+document.getElementById("userName").textContent  = displayName;
+document.getElementById("userAvatar").textContent = initials;
+
+if (!roles.includes("admin")) {
+  document.getElementById("usersNavItem").style.display  = "none";
+  document.getElementById("archiveNavItem").style.display = "none";
+}
+if (!roles.includes("admin") && !roles.includes("center")) {
+  document.getElementById("centerNavItem").style.display = "none";
+}
+if (!roles.includes("admin") && !roles.includes("accountant")) {
+  document.getElementById("financeNavItem").style.display = "none";
+}
+
+// ============================================================
+// 🔔 الإشعارات
+// ============================================================
+let soundAllowed = false;
+function enableSound() { soundAllowed = true; }
+document.addEventListener("click",      enableSound, { once: true });
+document.addEventListener("touchstart", enableSound, { once: true, passive: true });
+
+function showNotif(title, sub, icon = "💵", color = "#22c55e,#16a34a") {
+  const bar = document.getElementById("notifBar");
+  document.getElementById("notifTitle").textContent = title;
+  document.getElementById("notifSub").textContent   = sub;
+  document.getElementById("notifIcon").textContent  = icon;
+  bar.style.background = `linear-gradient(135deg, ${color})`;
+  bar.classList.add("show");
+  if (soundAllowed) {
+    new Audio("cash-register-kaching.mp3").play().catch(() => {});
+  }
+  setTimeout(() => bar.classList.remove("show"), 8000);
+}
+
+const username = displayName;
+let notifFirstLoad = true;
+onValue(ref(db, `notifications/${username}`), snap => {
+  if (!snap.exists() || notifFirstLoad) { notifFirstLoad = false; return; }
+  Object.entries(snap.val()).forEach(([id, n]) => {
+    if (n.read) return;
+    showNotif(n.title, n.note || "", "🎯", "#e74c3c,#ff6b2d");
+    setTimeout(() => set(ref(db, `notifications/${username}/${id}/read`), true), 1000);
+  });
 });
 
-document.body.appendChild(bar);
-
-// 🔊 نفس صوت الطلبات
-if(window.soundAllowed){
-const audio = new Audio("cash-register-kaching.mp3");
-audio.volume = 1;
-audio.play().catch(()=>{});
-}
-
-setTimeout(()=>{
-bar.style.opacity="0";
-setTimeout(()=>bar.remove(),500);
-},10000);
-
-}
-
-// 🔔 إشعارات المكافآت والخصومات
-import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
-.then(async ({ getDatabase, ref, onValue, set }) => {
-
-setTimeout(async () => {
-  if(!window.db){
-  console.warn("⏳ Firebase لسه ما جاهز...");
-  return;
-}
-const db = window.db;
-if(!db) return;
-
-const userData = JSON.parse(localStorage.getItem("loggedInUser"));
-const username = userData?.user || userData?.username || userData?.name;
-
-if(!username) return;
-let firstLoad = true;
-
-onValue(ref(db, "notifications/" + username), (snap)=>{
-
-if(!snap.exists()) return;
-
-const data = snap.val();
-const keys = Object.keys(data).reverse();
-
-// ❌ أول مرة لا تعرض إشعارات قديمة
-if(firstLoad){
-firstLoad = false;
-
-// نخلي تأخير بسيط حتى يتأكد أنه مو أول تحميل
-setTimeout(()=>{
-firstLoad = false;
-}, 1500);
-
-return;
-}
-keys.forEach(id => {
-
-const n = data[id];
-
-// فقط غير المقروء
-if(n.read) return;
-
-const message = n.title + (n.note ? " - " + n.note : "");
-
-// 🔔 عرض الإشعار
-showTaskNotification(message);
-
-// 🔊 صوت
-if(window.soundAllowed){
-const audio = new Audio("cash-register-kaching.mp3");
-audio.play().catch(()=>{});
-}
-
-// ⏳ تأخير بسيط قبل تحويل read
-setTimeout(()=>{
-set(ref(db, "notifications/" + username + "/" + id + "/read"), true);
-}, 1000);
-
+let taskFirstLoad = true;
+let prevTaskCount = 0;
+onValue(ref(db, "tasks"), snap => {
+  if (!snap.exists()) return;
+  const myTasks = Object.values(snap.val()).filter(t => t.employee === displayName);
+  const badge   = document.getElementById("taskBadge");
+  if (myTasks.length > 0) { badge.style.display = "flex"; } else { badge.style.display = "none"; }
+  if (!taskFirstLoad && myTasks.length > prevTaskCount) {
+    showNotif("مهمة جديدة!", "تم تلقي مهمة جديدة — افتح قسم المهام", "🎯", "#e74c3c,#ff6b2d");
+  }
+  taskFirstLoad  = false;
+  prevTaskCount  = myTasks.length;
 });
 
-});
+// ============================================================
+// 🌐 الدوال العامة
+// ============================================================
+window.openOrders  = (s) => location.href = `orders-cards.html?status=${encodeURIComponent(s || "")}`;
+window.openNewOrder = () => location.href = "add-order.html";
+window.openMyTasks = () => {
+  const n = encodeURIComponent(displayName);
+  location.href = `my-tasks.html?user=${n}`;
+};
+window.logout = () => { localStorage.removeItem("loggedInUser"); location.href = "index.html"; };
+window.openStore = (t) => {
+  const map = { purchases:"purchases.html", daily:"daily-inventory.html", losses:"losses.html", summary:"inventory-summary.html" };
+  if (map[t]) location.href = map[t];
+};
+window.openStatistics = (t) => {
+  const map = { employees:"stats-employees.html", advertisers:"stats-advertisers.html", products:"product-stats.html" };
+  location.href = map[t] || `statistics.html?tab=${t}`;
+};
+window.openAccounting = (t) => { location.href = `accounting/${t}.html`; };
+window.openAccountingProtected = () => {
+  if (localStorage.getItem("financeUnlocked") === "yes") { toggleNav("accountingNav"); return; }
+  const code = prompt("🔒 أدخل رمز المحاسبة");
+  if (code === "09870987") { localStorage.setItem("financeUnlocked", "yes"); toggleNav("accountingNav"); }
+  else alert("❌ الرمز غير صحيح");
+};
+window.forceRefresh = () => loadAllCounts(true);
 
-}, 500);
+window.toggleNav = (id, el) => {
+  const sub = document.getElementById(id);
+  if (!sub) return;
+  const isOpen = sub.classList.toggle("open");
+  if (el) el.classList.toggle("open", isOpen);
+};
 
-});
-;
-// 🔔 مراقبة المهام الجديدة
+window.toggleSidebar = () => {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("show");
+};
+window.closeSidebar = () => {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("overlay").classList.remove("show");
+};
 
-import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js")
-.then(async ({ getDatabase, ref, onValue }) => {
-
-setTimeout(() => {
-
-const db = window.db;
-if(!db) return;
-
-const tasksRef = ref(db,"tasks");
-
-let previousTaskCount = 0;
-
-onValue(tasksRef,(snapshot)=>{
-
-if(!snapshot.exists()) return;
-
-const data = snapshot.val();
-const allTasks = Object.values(data);
-
-// المستخدم الحالي
-const user = JSON.parse(localStorage.getItem("loggedInUser"));
-const displayName = user?.user || user?.username || user?.name;
-
-const myTasks = allTasks.filter(t => t.employee === displayName);
-
-// 🔴 إظهار النقطة الحمراء
-const badge = document.getElementById("taskBadge");
-
-if(myTasks.length > 0){
-badge.style.display = "block";
-}else{
-badge.style.display = "none";
-}
-
-// 🎯 مهمة جديدة
-if(previousTaskCount && myTasks.length > previousTaskCount){
-
-showTaskNotification("🎯 تم تلقي مهمة جديدة! يلا ننجزها");
-
-}
-
-previousTaskCount = myTasks.length;
-
-
-// ⚠️ فحص انتهاء المهام
-const today = new Date();
-
-myTasks.forEach(task=>{
-
-if(!task.endDate) return;
-
-const end = new Date(task.endDate);
-
-const diff = (end - today)/(1000*60*60*24);
-
-if(diff <= 0){
-
-showTaskNotification("⛔ انتهت فترة إحدى المهام");
-
-}
-
-else if(diff <= 1){
-
-showTaskNotification("⚠️ تبقى أقل من يوم لإنهاء هدفك");
-
-}
-});
-
-});
-
-}, 500);
-
-});
-
+// ============================================================
+// 🚀 تشغيل
+// ============================================================
+loadAllCounts();
 </script>
-
-
-
 </body>
-</html>  
+</html>
