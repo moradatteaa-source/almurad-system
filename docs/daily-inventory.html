@@ -235,10 +235,47 @@ let pendingOut = [];
 let pendingReturn = [];
 let scannedShipments = new Set();
 let isProcessing = false;
-async function processBarcode(shipmentId) {
+async function getOrderByReceipt(shipmentId) {
 
-  if (isProcessing) return; // 🔥 يمنع التكرار
-  isProcessing = true;
+  const paths = [
+    "ordersTest/قيد التجهيز",
+    "ordersTest/قيد التوصيل",
+    "ordersTest/تم التسليم",
+    "ordersTest/راجع",
+    "ordersTest/تم استلام الراجع"
+  ];
+
+  for (const path of paths) {
+
+    let q = query(
+      ref(db, path),
+      orderByChild("receiptNum"),
+      equalTo(shipmentId)
+    );
+
+    let snap = await get(q);
+
+    if (!snap.exists()) {
+      q = query(
+        ref(db, path),
+        orderByChild("receiptNum"),
+        equalTo(Number(shipmentId))
+      );
+      snap = await get(q);
+    }
+
+    if (snap.exists()) {
+      return Object.values(snap.val())[0];
+    }
+  }
+
+  return null;
+}
+async function processBarcode(shipmentId) {
+if (isProcessing) return;
+isProcessing = true;
+
+const foundOrder = await getOrderByReceipt(shipmentId);
 
 shipmentId = String(shipmentId)
   .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
@@ -247,34 +284,6 @@ shipmentId = String(shipmentId)
 
   scanMsg.textContent = "⏳ جاري البحث...";
 
-const ordersRef = ref(db, "orders");
-const q = query(
-  ordersRef,
-  orderByChild("receiptNum"),
-  equalTo(shipmentId)
-  
-);
-
-let snap = await get(q);
-
-// إذا لم يجد حاول البحث كرقم
-if (!snap.exists()) {
-  const q2 = query(
-    ordersRef,
-    orderByChild("receiptNum"),
-    equalTo(Number(shipmentId))
-  );
-  snap = await get(q2);
-}
-
-if (!snap.exists()) {
-  scanMsg.textContent = "❌ رقم الوصل غير موجود";
-  isProcessing = false; // 🔥 مهم جداً
-  return;
-}
-const data = snap.val();
-console.log("ORDER DATA:", data);
-const foundOrder = Object.values(data)[0] || null;
 console.log("ORDER:", foundOrder);
 if (!foundOrder) {
   scanMsg.textContent = "❌ رقم الوصل غير موجود";
