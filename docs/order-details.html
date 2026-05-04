@@ -737,10 +737,10 @@ function createDropdown(options, selected, onChange) {
   }
 
   // ✅ المهم هنا
-  input.addEventListener('focus', () => {
-    dropdown.style.display = 'block';
-    renderList(input.value);
-  });
+input.addEventListener('focus', () => {
+  dropdown.style.display = 'block';
+  renderList(''); // 🔥 يعرض كل الحالات حتى لو مكتوب شي
+});
 
   input.addEventListener('input', (e) => {
     renderList(e.target.value);
@@ -916,16 +916,24 @@ function createDropdown(options, selected, onChange) {
       document.getElementById('totalPrice').value = (mainPrice + extraPrice).toLocaleString('en-US');
     }
 
-    function setupStatusDropdown(currentValue) {
-      const statusDiv = document.getElementById('status');
-      if (!statusDiv) return;
-      const opts = state.isAdmin
-        ? ['مثبت','قيد المعالجة','قيد التجهيز','بانتظار البضاعة','قيد التوصيل','تم التسليم','راجع','تم استلام الراجع','رفض']
-        : ['مثبت','قيد المعالجة','بانتظار البضاعة','رفض'];
-      if (currentValue && !opts.includes(currentValue)) opts.push(currentValue);
-      statusDiv.innerHTML = '';
-      statusDiv.appendChild(createDropdown(opts, currentValue, (val) => { /* مجرد اختيار، الحفظ يتم عند الضغط على زر الحفظ */ }));
-    }
+ function setupStatusDropdown(currentValue) {
+  const statusDiv = document.getElementById('status');
+  if (!statusDiv) return;
+
+  const opts = ['رفض','مثبت','قيد المعالجة','بانتظار البضاعة'];
+
+  if (currentValue && !opts.includes(currentValue)) {
+    opts.unshift(currentValue);
+  }
+
+  statusDiv.innerHTML = '';
+
+  statusDiv.appendChild(
+    createDropdown(opts, currentValue, (val) => {
+      // فقط تغيير القيمة (الحفظ يصير بزر حفظ)
+    })
+  );
+}
 
     // ===== التحقق قبل الحفظ =====
     async function validateBeforeSave() {

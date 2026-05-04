@@ -801,12 +801,11 @@ function normalizeIraqiPhone(phone) {
         });
       }
 
- input.addEventListener("focus", () => {
+input.addEventListener("focus", () => {
   input.select();
-        
-        dropdown.classList.add("show");
-        renderList(input.value.trim());
-      });
+  dropdown.classList.add("show");
+  renderList(''); // 🔥 هذا المهم
+});
 
       input.addEventListener("input", () => {
         dropdown.classList.add("show");
