@@ -237,13 +237,10 @@ let scannedShipments = new Set();
 let isProcessing = false;
 async function getOrderByReceipt(shipmentId) {
 
-  const paths = [
-    "ordersTest/قيد التجهيز",
-    "ordersTest/قيد التوصيل",
-    "ordersTest/تم التسليم",
-    "ordersTest/راجع",
-    "ordersTest/تم استلام الراجع"
-  ];
+ const paths = [
+  "ordersTest/قيد التجهيز",
+  "ordersTest/راجع"
+];
 
   for (const path of paths) {
 
