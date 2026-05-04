@@ -689,50 +689,74 @@ async function renderCityAreaDropdowns(cityValue, areaValue) {
     }
 
     // ===== إنشاء القائمة المنسدلة =====
-    function createDropdown(options, selected, onChange) {
-      const wrapper = document.createElement('div');
-      wrapper.style.position = 'relative';
+function createDropdown(options, selected, onChange) {
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'relative';
 
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = selected || '';
-      input.placeholder = 'اختر أو اكتب...';
-      input.style.cursor = 'pointer';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = selected || '';
+  input.placeholder = 'اختر أو اكتب...';
 
-      const dropdown = document.createElement('div');
-      Object.assign(dropdown.style, {
-        position: 'absolute', top: '100%', left: 0, right: 0,
-        background: '#fff', border: '1px solid var(--border-color)', borderRadius: '10px',
-        boxShadow: 'var(--shadow-lg)', maxHeight: '200px', overflowY: 'auto',
-        zIndex: '1000', display: 'none', fontSize: '14px', marginTop: '4px'
-      });
+  const dropdown = document.createElement('div');
 
-      function renderList(filter = '') {
-        dropdown.innerHTML = '';
-        const filtered = options.filter(o => o.toLowerCase().includes(filter.toLowerCase()));
-        if (!filtered.length) {
-          dropdown.innerHTML = '<div style="padding:10px;color:var(--text-secondary);text-align:center">لا توجد نتائج</div>';
-          return;
-        }
-        filtered.slice(0, 50).forEach(o => {
-          const opt = document.createElement('div');
-          opt.textContent = o;
-          opt.style.cssText = 'padding:10px 14px;cursor:pointer;transition:background 0.15s;';
-          opt.onmouseenter = () => opt.style.background = '#f1f3f5';
-          opt.onmouseleave = () => opt.style.background = '';
-          opt.onclick = () => { input.value = o; dropdown.style.display = 'none'; input.readOnly = true; onChange(o); };
-          dropdown.appendChild(opt);
-        });
-      }
+  Object.assign(dropdown.style, {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    background: '#fff',
+    border: '1px solid #ddd',
+    borderRadius: '10px',
+    maxHeight: '200px',
+    overflowY: 'auto',
+    zIndex: '9999',
+    display: 'none'
+  });
 
-      input.addEventListener('click', () => { input.readOnly = false; input.focus(); dropdown.style.display = 'block'; renderList(); });
-      input.addEventListener('input', (e) => renderList(e.target.value));
-      document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) { dropdown.style.display = 'none'; input.readOnly = true; } });
+  function renderList(filter = '') {
+    dropdown.innerHTML = '';
+    const filtered = options.filter(o =>
+      o.toLowerCase().includes(filter.toLowerCase())
+    );
 
-      wrapper.appendChild(input);
-      wrapper.appendChild(dropdown);
-      return wrapper;
+    filtered.slice(0, 50).forEach(o => {
+      const item = document.createElement('div');
+      item.textContent = o;
+      item.style.padding = '10px';
+      item.style.cursor = 'pointer';
+
+      item.onclick = () => {
+        input.value = o;
+        dropdown.style.display = 'none';
+        onChange(o);
+      };
+
+      dropdown.appendChild(item);
+    });
+  }
+
+  // ✅ المهم هنا
+  input.addEventListener('focus', () => {
+    dropdown.style.display = 'block';
+    renderList(input.value);
+  });
+
+  input.addEventListener('input', (e) => {
+    renderList(e.target.value);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.style.display = 'none';
     }
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(dropdown);
+
+  return wrapper;
+}
 
     // ===== متغيرات المنتج =====
     async function loadVariants(productName) {
