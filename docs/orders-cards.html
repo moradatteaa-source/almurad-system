@@ -158,7 +158,7 @@
     .card-left { flex-shrink: 0; margin-right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
     .card-date { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px; }
     .card-id { font-size: 15px; color: var(--navy); font-weight: 800; }
-    .card-product { color: var(--orange); font-size: 13px; font-weight: 600; margin: 3px 0; }
+    .card-product { color: var(--orange); font-size: 13px; font-weight: 600; }
     .card-fixer { font-size: 11px; color: var(--green); font-weight: 600; }
     .card-qty { font-size: 12px; color: var(--text); font-weight: 600; background: #f0f2f5; padding: 3px 9px; border-radius: 12px; }
     .card-price { font-size: 14px; color: var(--text); font-weight: 700; }
@@ -213,7 +213,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── FULL SCREEN LOADER (when loading all for filter) ── */
+    /* ── FULL SCREEN LOADER ── */
     #fullLoader {
       display: none; position: fixed; inset: 0; z-index: 9998;
       background: rgba(4,59,100,0.85); flex-direction: column;
@@ -522,10 +522,7 @@ const db  = getDatabase(app);
 // ════════════════════════════════════════════════════════
 // 📦 Constants
 // ════════════════════════════════════════════════════════
-const PAGE_SIZE = 30;
-
-// TTL للكاش العادي (pagination) = 5 دقائق
-// TTL للكاش الكامل (للفلترة)   = 10 دقائق
+const PAGE_SIZE      = 30;
 const CACHE_TTL_PAGE = 5  * 60 * 1000;
 const CACHE_TTL_FULL = 10 * 60 * 1000;
 
@@ -563,28 +560,12 @@ const BADGE_CLASS = {
 
 // ════════════════════════════════════════════════════════
 // 🗄️ Cache Manager
-// يدير نوعين من الكاش:
-//   "page"  → أول PAGE_SIZE طلبات (للعرض العادي)
-//   "full"  → كل الطلبات (للفلترة)
 // ════════════════════════════════════════════════════════
 const Cache = (() => {
-  /*
-    pageCache[path] = {
-      data: Map<id, order>,
-      lastCursor: number|null,
-      allLoaded: bool,
-      ts: number
-    }
-    fullCache[path] = {
-      data: Map<id, order>,  ← كل الطلبات غير المحذوفة
-      ts: number
-    }
-  */
   const pageCache = new Map();
   const fullCache = new Map();
 
   return {
-    // ── PAGE cache ──
     pageValid(path) {
       const c = pageCache.get(path);
       return c && (Date.now() - c.ts) < CACHE_TTL_PAGE;
@@ -597,7 +578,6 @@ const Cache = (() => {
     },
     pageInvalidate(path) { pageCache.delete(path); },
 
-    // ── FULL cache ──
     fullValid(path) {
       const c = fullCache.get(path);
       return c && (Date.now() - c.ts) < CACHE_TTL_FULL;
@@ -608,8 +588,6 @@ const Cache = (() => {
     },
     fullInvalidate(path) { fullCache.delete(path); },
 
-    // ── Shared helpers ──
-    // حدّث أو احذف طلب في كلا الكاشين
     updateOrder(path, id, updatedOrder) {
       [pageCache, fullCache].forEach(c => {
         const entry = c.get(path);
@@ -618,7 +596,6 @@ const Cache = (() => {
         else entry.data.set(id, updatedOrder);
       });
     },
-    // انقل طلب من مسار لآخر في كلا الكاشين
     moveOrder(fromPath, toPath, id, orderData) {
       [pageCache, fullCache].forEach(c => {
         const from = c.get(fromPath);
@@ -627,7 +604,6 @@ const Cache = (() => {
         if (to) to.data.set(id, orderData);
       });
     },
-    // أبطل كل الكاش (عند refresh يدوي)
     invalidateAll() { pageCache.clear(); fullCache.clear(); },
     invalidatePath(path) { pageCache.delete(path); fullCache.delete(path); },
   };
@@ -652,18 +628,18 @@ const dataPath     = `ordersTest/${filterStatus}`;
 localStorage.setItem("currentFilterStatus", filterStatus);
 
 const S = {
-  masterOrders:   [],          // الطلبات المعروضة حالياً (pagination أو full)
-  allOrders:      [],          // كل الطلبات عند تفعيل الفلترة
-  visibleOrders:  [],          // بعد تطبيق الفلاتر
+  masterOrders:   [],
+  allOrders:      [],
+  visibleOrders:  [],
   selectedOrders: new Set(),
   selectionMode:  false,
   filterActive:   false,
-  fullLoaded:     false,       // هل تم جلب كل الطلبات للفلترة؟
+  fullLoaded:     false,
   selectedDates:  [],
   searchType:     "orderId",
   isLoading:      false,
   isLoadingMore:  false,
-  allPageLoaded:  false,       // هل انتهى pagination؟
+  allPageLoaded:  false,
   lastCursor:     null,
   isSearchMode:   false,
 };
@@ -695,10 +671,19 @@ function updateStats(n, filtered = false) {
   bar.textContent = filtered ? `🔍 ${n} طلب (نتائج الفلتر)` : `📊 ${n} طلب`;
 }
 
+// ✅ إصلاح: تطبيع الأرقام + حذف الفراغات والشرطات
 function normalizeNum(s) {
   if (!s) return "";
   const ar = "٠١٢٣٤٥٦٧٨٩", en = "0123456789";
-  return String(s).split("").map(c => { const i = ar.indexOf(c); return i >= 0 ? en[i] : c; }).join("");
+  return String(s)
+    .split("").map(c => { const i = ar.indexOf(c); return i >= 0 ? en[i] : c; }).join("")
+    .replace(/[\s\-_]/g, ""); // حذف الفراغات والشرطات
+}
+
+// ✅ إصلاح: تطبيع النص للبحث (يحذف الفراغات الزائدة)
+function normalizeText(s) {
+  if (!s) return "";
+  return String(s).toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function formatDate(t) {
@@ -856,7 +841,6 @@ async function loadOrders(forceRefresh = false) {
   document.getElementById("endMessage").style.display = "";
   showLoader(true);
 
-  // ── من الكاش أولاً ──
   if (!forceRefresh && Cache.pageValid(dataPath)) {
     const c      = Cache.pageGet(dataPath);
     const orders = Array.from(c.data.values())
@@ -870,7 +854,7 @@ async function loadOrders(forceRefresh = false) {
     showLoader(false);
 
     if (S.filterActive) {
-      await ensureAllLoaded();  // تأكد من وجود كل الطلبات للفلترة
+      await ensureAllLoaded();
     } else {
       renderOrders(orders);
       if (S.allPageLoaded) showEndMessage();
@@ -878,7 +862,6 @@ async function loadOrders(forceRefresh = false) {
     return;
   }
 
-  // ── من Firebase ──
   try {
     if (forceRefresh) Cache.invalidatePath(dataPath);
 
@@ -930,12 +913,9 @@ async function loadOrders(forceRefresh = false) {
 }
 
 // ════════════════════════════════════════════════════════
-// 📦 ensureAllLoaded
-// يجلب كل طلبات الحالة الحالية مرة واحدة من Firebase
-// ويخزنها في fullCache — لا يُعيد الجلب إذا كان الكاش صالحاً
+// 📦 ensureAllLoaded — جلب كل الطلبات للفلترة
 // ════════════════════════════════════════════════════════
 async function ensureAllLoaded() {
-  // إذا الكاش الكامل موجود وصالح → استخدمه مباشرة
   if (Cache.fullValid(dataPath)) {
     const c = Cache.fullGet(dataPath);
     S.allOrders  = Array.from(c.data.values())
@@ -946,7 +926,6 @@ async function ensureAllLoaded() {
     return;
   }
 
-  // لم يُجلب بعد → اجلب الكل من Firebase
   showFullLoader(true);
   try {
     const snap = await dedupGet(`full:${dataPath}`, () => get(ref(db, dataPath)));
@@ -959,8 +938,6 @@ async function ensureAllLoaded() {
     }
 
     Cache.fullSet(dataPath, ordersMap);
-
-    // حدّث أيضاً pageCache بكل البيانات حتى نوفر قراءات مستقبلية
     Cache.pageSet(dataPath, ordersMap, null, true);
 
     S.allOrders     = Array.from(ordersMap.values())
@@ -980,10 +957,9 @@ async function ensureAllLoaded() {
 }
 
 // ════════════════════════════════════════════════════════
-// ⬇️ Load More (Infinite Scroll — للوضع العادي فقط)
+// ⬇️ Load More (Infinite Scroll)
 // ════════════════════════════════════════════════════════
 async function loadMore() {
-  // لا تحمّل المزيد في حالة البحث أو الفلترة (لأننا نملك الكل بالفعل)
   if (S.isLoadingMore || S.allPageLoaded || S.lastCursor === null) return;
   if (S.isSearchMode || S.filterActive) return;
   S.isLoadingMore = true;
@@ -1036,15 +1012,14 @@ async function loadMore() {
 
 // ════════════════════════════════════════════════════════
 // 🎛️ Apply Filters & Render
-// يعمل على S.allOrders (كل الطلبات) عند الفلترة
 // ════════════════════════════════════════════════════════
 function applyFiltersAndRender() {
   if (S.isSearchMode) return;
 
-  // مصدر البيانات: كل الطلبات إذا فلتر نشط، وإلا masterOrders فقط
   let list = S.filterActive ? [...S.allOrders] : [...S.masterOrders];
 
   if (S.filterActive) {
+    // ✅ إصلاح: قراءة الفلاتر من localStorage في لحظة التطبيق
     const fp = JSON.parse(localStorage.getItem("filterProducts")    || "[]");
     const fa = JSON.parse(localStorage.getItem("filterAdvertisers") || "[]");
 
@@ -1064,18 +1039,20 @@ function applyFiltersAndRender() {
   renderOrders(list);
   updateFilterNotice();
 
-  // أظهر "تم عرض الكل" دائماً عند الفلترة (لأن الكل محمّل)
   if (S.filterActive || S.allPageLoaded) showEndMessage();
 }
 
-// للتوافق مع الاستدعاءات القديمة
 const applyAndRender = applyFiltersAndRender;
 
 // ════════════════════════════════════════════════════════
-// 🌐 Global Search (all statuses)
+// 🌐 Global Search — ✅ إصلاح كامل للـ iOS والفراغات
 // ════════════════════════════════════════════════════════
 async function globalSearch(queryText) {
-  if (!queryText) { showToast("⚠️ اكتب نصاً للبحث", "error"); return; }
+  // ✅ تطبيع نص البحث: حذف فراغات زائدة وتطبيع الأرقام
+  const rawQ        = String(queryText || "").trim();
+  const normalizedQ = normalizeNum(rawQ.toLowerCase()).replace(/\s+/g, "");
+
+  if (!normalizedQ) { showToast("⚠️ اكتب نصاً للبحث", "error"); return; }
 
   S.isSearchMode = true;
   showLoader(true);
@@ -1083,52 +1060,59 @@ async function globalSearch(queryText) {
   document.getElementById("endMessage").style.display = "";
   document.getElementById("emptyState").style.display = "";
 
-  const normalizedQ = normalizeNum(queryText.toLowerCase());
   let results = [];
 
   try {
-    const fetches = ALL_STATUSES.map(async status => {
+    // ✅ إصلاح iOS: تسلسلي بدل Promise.all لتجنب خنق الشبكة
+    const allOrders = [];
+    for (const status of ALL_STATUSES) {
       const path = `ordersTest/${status}`;
 
-      // fullCache أولاً، ثم pageCache، ثم Firebase
+      let orders = [];
+      // fullCache أولاً
       if (Cache.fullValid(path)) {
-        return Array.from(Cache.fullGet(path).data.values()).filter(o => !o.isDeleted);
+        orders = Array.from(Cache.fullGet(path).data.values()).filter(o => !o.isDeleted);
+      } else if (Cache.pageValid(path)) {
+        orders = Array.from(Cache.pageGet(path).data.values()).filter(o => !o.isDeleted);
+      } else {
+        try {
+          const snap = await dedupGet(`search:${path}`, () => get(ref(db, path)));
+          if (snap && snap.exists()) {
+            const ordersMap = new Map();
+            Object.entries(snap.val()).forEach(([id, o]) => {
+              if (!o.isDeleted) ordersMap.set(id, { id, ...o });
+            });
+            Cache.fullSet(path, ordersMap);
+            Cache.pageSet(path, ordersMap, null, true);
+            orders = Array.from(ordersMap.values());
+          }
+        } catch (e) {
+          console.warn(`فشل تحميل ${path}:`, e);
+          // تجاهل المسار الفاشل ومتابعة البقية
+        }
       }
-      if (Cache.pageValid(path)) {
-        return Array.from(Cache.pageGet(path).data.values()).filter(o => !o.isDeleted);
-      }
+      allOrders.push(...orders);
+    }
 
-      const snap = await dedupGet(`search:${path}`, () => get(ref(db, path)).catch(() => null));
-      if (!snap || !snap.exists()) return [];
-
-      const ordersMap = new Map();
-      Object.entries(snap.val()).forEach(([id, o]) => {
-        if (!o.isDeleted) ordersMap.set(id, { id, ...o });
-      });
-
-      // خزّن في fullCache (لأننا جلبنا الكل)
-      Cache.fullSet(path, ordersMap);
-      Cache.pageSet(path, ordersMap, null, true);
-
-      return Array.from(ordersMap.values());
-    });
-
-    const allBuckets = await Promise.all(fetches);
-    const seen       = new Set();
-
-    allBuckets.flat().forEach(order => {
+    const seen = new Set();
+    allOrders.forEach(order => {
       if (seen.has(order.id)) return;
       seen.add(order.id);
 
       let match = false;
       switch (S.searchType) {
         case "orderId":
-          match = normalizeNum(String(order.id)).includes(normalizedQ); break;
+          // ✅ بحث ذكي: يتجاهل الفراغات والشرطات في الرقم
+          match = normalizeNum(String(order.id || "")).includes(normalizedQ);
+          break;
         case "phone":
+          // ✅ بحث في كلا الرقمين مع تطبيع الفراغات
           match = normalizeNum(String(order.phone1 || "")).includes(normalizedQ) ||
-                  normalizeNum(String(order.phone2 || "")).includes(normalizedQ); break;
+                  normalizeNum(String(order.phone2 || "")).includes(normalizedQ);
+          break;
         case "receiptNum":
-          match = normalizeNum(String(order.receiptNum || "")).includes(normalizedQ); break;
+          match = normalizeNum(String(order.receiptNum || "")).includes(normalizedQ);
+          break;
       }
       if (match) results.push(order);
     });
@@ -1198,7 +1182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     Cache.invalidatePath(dataPath);
   }
 
-  // استعادة حالة الفلتر
+  // ✅ استعادة حالة الفلتر المحفوظة
   if (localStorage.getItem("filterActive") === "true") {
     S.filterActive = true;
     document.getElementById("filterBtn").classList.add("active");
@@ -1308,11 +1292,8 @@ document.getElementById("cancelSearch").addEventListener("click", exitSearch);
 const filterBtn   = document.getElementById("filterBtn");
 const filterPanel = document.getElementById("filterPanel");
 
-// دالة مساعدة: جهّز قوائم المنتجات والمعلنين
-// تجلب من fullCache إن وجد، وإلا من pageCache (أسرع من Firebase)
 async function populateFilterLists() {
   let source = [];
-
   if (Cache.fullValid(dataPath)) {
     source = Array.from(Cache.fullGet(dataPath).data.values());
   } else if (Cache.pageValid(dataPath)) {
@@ -1346,7 +1327,6 @@ async function populateFilterLists() {
 
 filterBtn.addEventListener("click", async () => {
   if (S.filterActive) {
-    // إذا الفلتر نشط → امسحه
     document.getElementById("clearFilter").click();
     return;
   }
@@ -1386,21 +1366,27 @@ document.getElementById("prodAll").addEventListener("change", e =>
 document.getElementById("advAll").addEventListener("change", e =>
   document.querySelectorAll(".aChk").forEach(c => c.checked = e.target.checked));
 
+// ════════════════════════════════════════════════════════
+// ✅ إصلاح رئيسي: applyFilter يحفظ localStorage أولاً ثم يفلتر
+// ════════════════════════════════════════════════════════
 document.getElementById("applyFilter").addEventListener("click", async () => {
   const fp = Array.from(document.querySelectorAll(".pChk:checked")).map(e => e.value);
   const fa = Array.from(document.querySelectorAll(".aChk:checked")).map(e => e.value);
 
+  // ✅ حفظ أولاً قبل أي عملية أخرى
   localStorage.setItem("filterProducts",    JSON.stringify(fp));
   localStorage.setItem("filterAdvertisers", JSON.stringify(fa));
 
-  S.filterActive = !!(fp.length || fa.length || S.selectedDates.length);
-  localStorage.setItem("filterActive", S.filterActive ? "true" : "false");
+  const hasFilter = !!(fp.length || fa.length || S.selectedDates.length);
+  S.filterActive  = hasFilter;
+  localStorage.setItem("filterActive", hasFilter ? "true" : "false");
 
-  filterBtn.classList.toggle("active", S.filterActive);
+  filterBtn.classList.toggle("active", hasFilter);
   filterPanel.classList.remove("open");
 
-  if (S.filterActive) {
-    // جلب كل الطلبات أولاً إن لم يتم بعد
+  if (hasFilter) {
+    // ensureAllLoaded ستستدعي applyFiltersAndRender بعد التحميل
+    // وستقرأ الفلاتر من localStorage (المحفوظة أعلاه)
     await ensureAllLoaded();
   } else {
     applyFiltersAndRender();
@@ -1421,7 +1407,6 @@ document.getElementById("clearFilter").addEventListener("click", () => {
   filterBtn.classList.remove("active");
   filterPanel.classList.remove("open");
   updateFilterNotice();
-  // العودة للعرض العادي بالـ masterOrders المحفوظة
   renderOrders(S.masterOrders);
   if (S.allPageLoaded) showEndMessage();
   showToast("🗑️ تم مسح الفلاتر", "success");
@@ -1487,7 +1472,6 @@ document.getElementById("deleteSelectedBtn").addEventListener("click", async () 
     const snapsNeeded  = [];
 
     for (const id of S.selectedOrders) {
-      // ابحث في fullCache ثم pageCache
       const cached = Cache.fullGet(dataPath)?.data.get(id)
                   || Cache.pageGet(dataPath)?.data.get(id);
       if (cached) {
@@ -1501,21 +1485,21 @@ document.getElementById("deleteSelectedBtn").addEventListener("click", async () 
     }
 
     if (snapsNeeded.length > 0) {
-      const snaps = await Promise.all(snapsNeeded.map(id => get(ref(db, `${dataPath}/${id}`))));
-      snaps.forEach((snap, i) => {
-        const id = snapsNeeded[i];
-        if (snap.exists()) {
-          atomicUpdate[`deletedOrders/${id}`] = {
-            ...snap.val(), deletedBy: userName, deletedAt: now, originalPath: dataPath
-          };
-        }
-        atomicUpdate[`${dataPath}/${id}`] = null;
-      });
+      for (const id of snapsNeeded) {
+        try {
+          const snap = await get(ref(db, `${dataPath}/${id}`));
+          if (snap.exists()) {
+            atomicUpdate[`deletedOrders/${id}`] = {
+              ...snap.val(), deletedBy: userName, deletedAt: now, originalPath: dataPath
+            };
+          }
+          atomicUpdate[`${dataPath}/${id}`] = null;
+        } catch(e) { console.warn("snap error", id, e); }
+      }
     }
 
     await update(ref(db), atomicUpdate);
 
-    // حدّث الكاش محلياً
     S.selectedOrders.forEach(id => Cache.updateOrder(dataPath, id, null));
 
     const deletedIds = new Set(S.selectedOrders);
@@ -1558,10 +1542,12 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
                || null;
 
       if (!order) {
-        const snap = await get(ref(db, oldPath));
-        if (!snap.exists()) continue;
-        order = snap.val();
+        try {
+          const snap = await get(ref(db, oldPath));
+          if (snap.exists()) order = snap.val();
+        } catch(e) { continue; }
       }
+      if (!order) continue;
 
       const updatedHistory = {
         ...(order.statusHistory || {}),
@@ -1574,15 +1560,13 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
         status: newStatus,
         updatedAt: now,
         updatedBy: userName,
-        // ✅ لا نغير enterIndex إذا الحالة نفسها — نغيره فقط عند تغيير المسار
-        enterIndex: newPath !== `${dataPath}` ? Date.now() : (order.enterIndex || Date.now()),
+        enterIndex: newPath !== dataPath ? Date.now() : (order.enterIndex || Date.now()),
         statusHistory: updatedHistory
       };
 
       atomicUpdate[`${newPath}/${id}`] = updatedOrder;
       if (newPath !== oldPath) atomicUpdate[oldPath] = null;
 
-      // حدّث الكاش
       Cache.moveOrder(dataPath, newPath, id, updatedOrder);
     }
 
@@ -1592,7 +1576,6 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
     showToast(`✅ تم تحديث ${updatedIds.size} طلب`, "success");
     S.selectedOrders.clear();
 
-    // أعد بناء القوائم من الكاش المحدّث
     const fullC = Cache.fullGet(dataPath);
     const pageC = Cache.pageGet(dataPath);
     const source = fullC || pageC;
