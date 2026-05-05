@@ -1,1262 +1,1265 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
 <meta charset="UTF-8">
-<title>إدارة الفريق</title>
-
-
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة الفريق — المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
-
-:root{
---blue:#043B64;
---orange:#FF6B2D;
---bg:#f4f6fa;
+:root {
+  --navy: #04122a;
+  --navy2: #071e3d;
+  --navy3: #0d2d5e;
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --gold: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text2: #64748b;
+  --text3: #94a3b8;
+  --shadow: 0 4px 24px rgba(4,18,42,0.08);
+  --shadow2: 0 8px 40px rgba(4,18,42,0.14);
 }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-body{
-font-family:Tajawal;
-margin:0;
-background:var(--bg);
+/* ── HEADER ── */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #0a2447 100%);
+  color: white;
+  padding: 0 28px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 999;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
+.brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 900; }
+.brand-icon { width: 38px; height: 38px; background: linear-gradient(135deg,var(--accent),#ea580c); border-radius: 10px; display:flex;align-items:center;justify-content:center; font-size:18px; box-shadow:0 3px 12px rgba(249,115,22,0.5); }
+.header-meta { display:flex; gap:12px; font-size:13px; }
+.meta-badge { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 14px; font-weight:600; }
 
-/* header */
-
-header{
-background:var(--blue);
-color:white;
-padding:16px;
-font-size:22px;
-text-align:center;
-font-weight:bold;
+/* ── NAV TABS ── */
+.nav-tabs {
+  background: white;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  padding: 0 28px;
+  gap: 4px;
+  overflow-x: auto;
 }
-
-/* navigation */
-
-.tabs{
-display:flex;
-background:white;
-border-bottom:2px solid #eee;
+.nav-tab {
+  padding: 16px 22px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text2);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex; align-items: center; gap: 7px;
 }
+.nav-tab:hover { color: var(--accent); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-.tab{
-flex:1;
-text-align:center;
-padding:14px;
-cursor:pointer;
-font-weight:bold;
+/* ── SECTIONS ── */
+.section { display: none; padding: 28px; max-width: 1400px; margin: 0 auto; }
+.section.active { display: block; }
+
+/* ── STAT CARDS ── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative; overflow: hidden;
 }
-
-.tab.active{
-background:var(--orange);
-color:white;
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  opacity: 0.08;
+  transform: translate(20px,-20px);
 }
+.stat-card.orange::before { background: var(--accent); }
+.stat-card.green::before { background: var(--green); }
+.stat-card.blue::before { background: var(--blue); }
+.stat-card.gold::before { background: var(--gold); }
+.stat-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 28px; font-weight: 900; color: var(--navy); }
+.stat-sub { font-size: 12px; color: var(--text3); }
+.stat-icon { position: absolute; top: 18px; left: 18px; font-size: 22px; opacity: 0.7; }
 
-/* sections */
-
-.section{
-display:none;
-padding:25px;
+/* ── CARD ── */
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
 }
+.card-title { font-size: 16px; font-weight: 800; color: var(--navy); margin-bottom: 18px; display:flex; align-items:center; gap:8px; }
 
-.section.active{
-display:block;
-}
-
-/* cards */
-
-.card{
-background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08);
-margin-bottom:20px;
-}
-
-/* inputs */
-
-input,select{
-padding:8px;
-border-radius:6px;
-border:1px solid #ccc;
-margin:4px;
-}
-
-/* buttons */
-
-button{
-background:var(--orange);
-border:none;
-color:white;
-padding:10px 14px;
-border-radius:8px;
-cursor:pointer;
-}
-
-/* table */
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #eee;
-text-align:center;
-}
-
-th{
-background:var(--blue);
-color:white;
-}
-
-/* progress */
-
-.progress{
-background:#ddd;
-border-radius:10px;
-height:10px;
-overflow:hidden;
-}
-
-.progress-bar{
-height:10px;
-background:#ff6b2d;
-transition:0.3s;
-}
-
-.progress-bar.complete{
-background:#28a745;
-}
-
-.totalBox{
-font-size:28px;
-font-weight:bold;
-color:var(--blue);
-}
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
 thead th {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--blue);
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: white;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+  position: sticky; top: 0;
 }
-.table-container{
-  max-height: 500px;
-  overflow-y: auto;
+thead th:first-child { border-radius: 0; text-align: right; padding-right: 20px; }
+tbody tr { transition: background 0.15s; border-bottom: 1px solid #f1f5f9; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #fafbff; }
+tbody td { padding: 12px 14px; font-size: 13px; text-align: center; }
+tbody td:first-child { text-align: right; padding-right: 20px; font-weight: 700; }
+
+/* ── EMPLOYEE ROW ── */
+.emp-name { display: flex; align-items: center; gap: 10px; }
+.emp-avatar { width: 36px; height: 36px; border-radius: 50%; display:flex;align-items:center;justify-content:center; font-size:14px; font-weight:800; color:white; flex-shrink:0; }
+.emp-level { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:800; }
+.level-bronze { background:#fef3c7; color:#92400e; }
+.level-silver { background:#f1f5f9; color:#475569; }
+.level-gold { background:#fef9c3; color:#854d0e; }
+.level-platinum { background:#ede9fe; color:#6d28d9; }
+
+/* ── SALARY INPUT ── */
+.salary-input {
+  width: 110px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+  font-weight: 700;
 }
+.salary-input:focus { border-color: var(--accent); }
+
+/* ── BADGES ── */
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
+.badge-green { background:#dcfce7; color:#166534; }
+.badge-orange { background:#fff7ed; color:#9a3412; }
+.badge-red { background:#fee2e2; color:#991b1b; }
+.badge-blue { background:#dbeafe; color:#1e40af; }
+.badge-gold { background:#fef9c3; color:#854d0e; }
+
+/* ── FORM GRID ── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.5px; }
+.form-input {
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Tajawal', sans-serif;
+  outline: none;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: linear-gradient(135deg,var(--accent),#ea580c); color:white; box-shadow:0 4px 14px rgba(249,115,22,0.35); }
+.btn-blue { background: linear-gradient(135deg,var(--blue),#2563eb); color:white; box-shadow:0 4px 14px rgba(59,130,246,0.35); }
+.btn-green { background: linear-gradient(135deg,var(--green),#059669); color:white; box-shadow:0 4px 14px rgba(16,185,129,0.35); }
+.btn-red { background: linear-gradient(135deg,var(--red),#b91c1c); color:white; }
+.btn-navy { background: linear-gradient(135deg,var(--navy),var(--navy2)); color:white; }
+.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── PROGRESS ── */
+.progress-wrap { background: #f1f5f9; border-radius: 20px; height: 8px; overflow: hidden; }
+.progress-fill { height: 8px; border-radius: 20px; transition: width 0.5s ease; }
+.progress-orange { background: linear-gradient(90deg,var(--accent),var(--accent2)); }
+.progress-green { background: linear-gradient(90deg,var(--green),#34d399); }
+.progress-gold { background: linear-gradient(90deg,var(--gold),#fbbf24); }
+
+/* ── TARGET CARD ── */
+.target-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+  position: relative;
+}
+.target-card:hover { box-shadow: var(--shadow); }
+.target-card.done { border-color: #bbf7d0; background: #f0fdf4; }
+.target-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.target-title { font-weight: 800; font-size: 14px; color: var(--navy); }
+.target-meta { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.target-progress-text { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
+
+/* ── LEADERBOARD ── */
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.leaderboard-item:hover { box-shadow: var(--shadow); transform: translateX(-2px); }
+.leaderboard-item.rank-1 { background: linear-gradient(135deg,#fef9c3,#fef3c7); border-color: #fcd34d; }
+.leaderboard-item.rank-2 { background: linear-gradient(135deg,#f8fafc,#f1f5f9); border-color: #cbd5e1; }
+.leaderboard-item.rank-3 { background: linear-gradient(135deg,#fff7ed,#fed7aa55); border-color: #fb923c55; }
+.rank-badge { width: 36px; height: 36px; border-radius: 50%; display:flex;align-items:center;justify-content:center; font-size:16px; font-weight:900; flex-shrink:0; }
+.rank-1 .rank-badge { background: var(--gold); color: white; }
+.rank-2 .rank-badge { background: #94a3b8; color: white; }
+.rank-3 .rank-badge { background: #fb923c; color: white; }
+.lb-info { flex: 1; }
+.lb-name { font-weight: 800; font-size: 14px; }
+.lb-stats { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.lb-score { font-size: 18px; font-weight: 900; color: var(--navy); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  padding: 12px 28px; border-radius: 14px; font-size: 14px; font-weight: 700; color: white;
+  z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap;
+  box-shadow: var(--shadow2);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+.toast.info { background: var(--navy); }
+
+/* ── MODAL ── */
+.modal-overlay { position:fixed;inset:0;background:rgba(4,18,42,0.6);backdrop-filter:blur(5px);z-index:2000;display:none;align-items:center;justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:white;border-radius:20px;padding:28px;width:520px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.3); }
+.modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:22px; }
+.modal-title { font-size:18px;font-weight:900;color:var(--navy); }
+.modal-close { background:var(--bg);border:none;border-radius:9px;width:36px;height:36px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center; }
+
+/* ── PERIOD TABS ── */
+.period-tabs { display:flex;gap:6px;margin-bottom:16px; }
+.period-tab { padding:6px 16px;border-radius:20px;border:1.5px solid var(--border);background:white;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Tajawal',sans-serif;color:var(--text2); }
+.period-tab.active { background:var(--accent);border-color:var(--accent);color:white; }
+
+/* ── LOADING ── */
+.loading { display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text3);font-size:14px;gap:10px; }
+.spinner { width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── SECTION HEADER ── */
+.section-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+.section-title { font-size:20px;font-weight:900;color:var(--navy); }
+
+/* colors */
+.colors { --c1:#f97316;--c2:#3b82f6;--c3:#10b981;--c4:#8b5cf6;--c5:#ef4444;--c6:#f59e0b;--c7:#06b6d4;--c8:#ec4899; }
 </style>
-
 </head>
+<body class="colors">
 
-<body>
-
-<header>
-إدارة الفريق والرواتب
-</header>
-
-
-<div class="tabs">
-
-<div class="tab active" onclick="openSection('salary')">
-الرواتب
+<div id="header">
+  <div class="brand">
+    <div class="brand-icon">👥</div>
+    <span>إدارة الفريق — المراد</span>
+  </div>
+  <div class="header-meta">
+    <div class="meta-badge" id="hMonth">جاري التحميل...</div>
+    <div class="meta-badge" id="hTime"></div>
+  </div>
 </div>
 
-<div class="tab" onclick="openSection('points')">
-المكافآت والخصومات
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="openTab('salary')">💰 الرواتب</div>
+  <div class="nav-tab" onclick="openTab('points')">⭐ المكافآت</div>
+  <div class="nav-tab" onclick="openTab('targets')">🎯 الأهداف</div>
+  <div class="nav-tab" onclick="openTab('leaderboard')">🏆 لوحة الشرف</div>
+  <div class="nav-tab" onclick="openTab('settings')">⚙️ الإعدادات</div>
 </div>
 
-<div class="tab" onclick="openSection('tasks')">
-إدارة الفريق
-</div>
+<div id="toastEl" class="toast"></div>
 
-</div>
-
-
-
-<!-- الرواتب -->
-
+<!-- ══════════════════════ SALARY ══════════════════════ -->
 <div id="salary" class="section active">
 
-<div style="display:flex;gap:20px;flex-wrap:wrap">
+  <div class="section-header">
+    <div class="section-title">💰 الرواتب الشهرية</div>
+    <div class="btn-group">
+      <button class="btn btn-blue btn-sm" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-green btn-sm" onclick="exportPDF()">📄 PDF</button>
+      <button class="btn btn-red btn-sm" onclick="archivePayroll()">📁 أرشفة الشهر</button>
+    </div>
+  </div>
 
-<div class="card">
-<h3>الرواتب الكلية</h3>
-<div class="totalBox" id="totalSalary">0</div>
+  <div class="stats-grid">
+    <div class="stat-card orange">
+      <div class="stat-icon">💰</div>
+      <div class="stat-label">الرواتب الكلية</div>
+      <div class="stat-value" id="statTotalSalary">0</div>
+      <div class="stat-sub">دينار عراقي</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">📦</div>
+      <div class="stat-label">طلبات مسلمة</div>
+      <div class="stat-value" id="statDelivered">0</div>
+      <div class="stat-sub">هذا الشهر</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">💎</div>
+      <div class="stat-label">إجمالي العمولات</div>
+      <div class="stat-value" id="statCommissions">0</div>
+      <div class="stat-sub">دينار عراقي</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-label">إجمالي المكافآت</div>
+      <div class="stat-value" id="statBonuses">0</div>
+      <div class="stat-sub">نقطة</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:right">الموظف</th>
+            <th>المستوى</th>
+            <th>الراتب الثابت</th>
+            <th>طلبات مسلمة</th>
+            <th>العمولة</th>
+            <th>مكافآت</th>
+            <th>خصومات</th>
+            <th>الراتب النهائي</th>
+          </tr>
+        </thead>
+        <tbody id="salaryTable">
+          <tr><td colspan="8"><div class="loading"><div class="spinner"></div> جاري تحميل البيانات...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <br>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="openAddEmployeeModal()">➕ إضافة موظف</button>
+      <button class="btn btn-red btn-sm" onclick="openRemoveEmployeeModal()">🗑️ إزالة موظف</button>
+    </div>
+  </div>
 </div>
 
-<div class="card">
-<h3>عدد الطلبات المسلمة</h3>
-<div class="totalBox" id="totalDelivered">0</div>
-</div>
-
-<div class="card">
-<h3>إجمالي العمولات</h3>
-<div class="totalBox" id="totalCommission">0</div>
-</div>
-
-</div>
-<div class="card table-container">
-
-<table>
-
-<thead>
-
-<tr>
-<th>الموظف</th>
-<th>الراتب الثابت</th>
-<th>العمولة</th>
-<th>المكافآت</th>
-<th>الخصومات</th>
-<th>قيمة النقاط</th>
-<th>الراتب النهائي</th>
-
-</tr>
-
-</thead>
-
-<tbody id="salaryTable"></tbody>
-
-</table>
-
-<br>
-
-<button onclick="addEmployeePrompt()">➕ إضافة موظف</button>
-<br><br>
-
-<button onclick="exportExcel()" style="background:#0d6efd">
-تصدير Excel
-</button>
-
-<button onclick="exportPDF()" style="background:#198754">
-تصدير PDF
-</button>
-<br><br>
-
-<div class="card">
-
-<h3>إزالة موظف من الرواتب</h3>
-
-<select id="removeEmpSelect">
-<option>اختر الموظف</option>
-</select>
-
-<button onclick="removeEmployeeSelected()">
-حذف من الرواتب
-</button>
-<br><br>
-
-<button onclick="archivePayroll()" style="background:#b00020">
-أرشفة الرواتب للشهر الحالي
-</button>
-</div>
-</div>
-
-</div>
-
-
-<!-- المكافآت -->
-
+<!-- ══════════════════════ POINTS ══════════════════════ -->
 <div id="points" class="section">
 
-<div class="card">
+  <div class="section-header">
+    <div class="section-title">⭐ المكافآت والخصومات</div>
+  </div>
 
-<h3>إضافة مكافأة أو خصم</h3>
+  <div class="card">
+    <div class="card-title">➕ إضافة مكافأة أو خصم</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">الموظف</label>
+        <select class="form-input" id="pEmp"><option value="">اختر الموظف</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">النوع</label>
+        <select class="form-input" id="pType">
+          <option value="bonus">🎉 مكافأة</option>
+          <option value="penalty">⚠️ خصم</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">النقاط</label>
+        <input type="number" class="form-input" id="pPoints" placeholder="عدد النقاط">
+      </div>
+      <div class="form-group">
+        <label class="form-label">سعر النقطة (د.ع)</label>
+        <input type="number" class="form-input" id="pPrice" placeholder="250">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">الملاحظة / السبب</label>
+        <input type="text" class="form-input" id="pNote" placeholder="سبب المكافأة أو الخصم...">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addPoint()">💾 حفظ</button>
+  </div>
 
-<select id="empSelect">
-<option>اختر الموظف</option>
-</select>
-
-<select id="typeSelect">
-<option value="bonus">مكافأة</option>
-<option value="penalty">خصم</option>
-</select>
-
-<input type="number" id="pointsInput" placeholder="النقاط">
-
-<input type="number" id="pointPrice" placeholder="سعر النقطة">
-
-<input type="text" id="noteInput" placeholder="الملاحظة">
-
-<button onclick="addPoint()">
-إضافة
-</button>
-
+  <div class="card">
+    <div class="card-title">📋 سجل المكافآت والخصومات</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:right">الموظف</th>
+            <th>النوع</th>
+            <th>النقاط</th>
+            <th>سعر النقطة</th>
+            <th>القيمة</th>
+            <th>السبب</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody id="pointsTable"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
+<!-- ══════════════════════ TARGETS ══════════════════════ -->
+<div id="targets" class="section">
 
-<div class="card">
+  <div class="section-header">
+    <div class="section-title">🎯 الأهداف والمهام</div>
+    <button class="btn btn-primary" onclick="openAddTargetModal()">➕ هدف جديد</button>
+  </div>
 
-<table>
+  <div class="period-tabs">
+    <button class="period-tab active" onclick="filterTargets('all',this)">الكل</button>
+    <button class="period-tab" onclick="filterTargets('daily',this)">يومي</button>
+    <button class="period-tab" onclick="filterTargets('weekly',this)">أسبوعي</button>
+    <button class="period-tab" onclick="filterTargets('monthly',this)">شهري</button>
+    <button class="period-tab" onclick="filterTargets('task',this)">مهام يدوية</button>
+  </div>
 
-<thead>
-<tr>
-<th>الموظف</th>
-<th>النوع</th>
-<th>النقاط</th>
-<th>سعر النقطة</th>
-<th>القيمة</th>
-<th>الملاحظة</th>
-<th>التاريخ</th>
-</tr>
-</thead>
-
-<tbody id="pointsTable">
-
-</tbody>
-
-</table>
-
+  <div id="targetsContainer">
+    <div class="loading"><div class="spinner"></div> جاري تحميل الأهداف...</div>
+  </div>
 </div>
 
+<!-- ══════════════════════ LEADERBOARD ══════════════════════ -->
+<div id="leaderboard" class="section">
+
+  <div class="section-header">
+    <div class="section-title">🏆 لوحة الشرف</div>
+    <div class="meta-badge" style="background:white;border:1px solid var(--border);padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;color:var(--text2)">📅 <span id="lbMonth"></span></div>
+  </div>
+
+  <div id="leaderboardContainer">
+    <div class="loading"><div class="spinner"></div> جاري التحميل...</div>
+  </div>
 </div>
 
+<!-- ══════════════════════ SETTINGS ══════════════════════ -->
+<div id="settings" class="section">
 
-<!-- المهام -->
+  <div class="section-title" style="margin-bottom:20px">⚙️ الإعدادات</div>
 
-<div id="tasks" class="section">
+  <div class="card">
+    <div class="card-title">💰 إعدادات الرواتب</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">سعر النقطة الافتراضي (د.ع)</label>
+        <input type="number" class="form-input" id="settingPointPrice" placeholder="250">
+      </div>
+      <div class="form-group">
+        <label class="form-label">عمولة الطلب الواحد (د.ع)</label>
+        <input type="number" class="form-input" id="settingCommissionRate" placeholder="250">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+  </div>
 
-<div class="card">
+  <div class="card">
+    <div class="card-title">📊 مسار الطلبات</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:14px">المسار الحالي لقراءة الطلبات المسلمة: <strong style="color:var(--accent)">orders Test → تم التسليم</strong></p>
+    <div class="form-group">
+      <label class="form-label">مسار Firebase للطلبات</label>
+      <input type="text" class="form-input" id="settingOrderPath" value="orders Test/تم التسليم" style="direction:ltr">
+    </div>
+    <br>
+    <button class="btn btn-primary" onclick="saveSettings()">💾 حفظ</button>
+  </div>
+</div>
 
-<h3>إضافة مهمة</h3>
-<select id="taskType">
-<option value="task">مهمة يدوية</option>
-<option value="target">هدف تلقائي</option>
+<!-- ══════════════════════ MODALS ══════════════════════ -->
+
+<!-- Add Employee -->
+<div class="modal-overlay" id="modalAddEmployee">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">➕ إضافة موظف جديد</div>
+      <button class="modal-close" onclick="closeModal('modalAddEmployee')">✕</button>
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">اسم الموظف</label>
+<select class="form-input" id="newEmpName">
+  <option value="">اختر الموظف...</option>
 </select>
-<select id="taskEmp">
-
-<option>اختر الموظف</option>
-
-</select>
-
-<input id="taskTitle" placeholder="عنوان المهمة">
-
-<select id="fromStatus">
-<option value="">الحالة السابقة</option>
-<option>رفض</option>
-<option>قيد المعالجة</option>
-<option>بانتظار البضاعة</option>
-<option>مثبت</option>
-</select>
-
-<select id="toStatus">
-<option value="">الحالة الجديدة</option>
-<option>تم التسليم</option>
-</select>
-
-<input id="taskDays" placeholder="عدد الأيام (اختياري)">
-<input type="date" id="taskStart">
-<input type="date" id="taskEnd">
-<input id="taskTarget" placeholder="عدد الطلبات (للأهداف)">
-<input id="taskReward" placeholder="المكافأة بالنقاط">
-<input id="taskPointPrice" placeholder="سعر النقطة (اختياري)">
-<button onclick="addTask()">
-إضافة مهمة
-</button>
-
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label class="form-label">الراتب الثابت (د.ع)</label>
+      <input type="number" class="form-input" id="newEmpSalary" placeholder="0">
+    </div>
+    <button class="btn btn-primary" onclick="addEmployee()">✅ إضافة</button>
+  </div>
 </div>
 
-
-<div class="card">
-
-<table>
-
-<thead>
-
-<tr>
-<th>النوع</th>
-<th>الموظف</th>
-<th>العنوان</th>
-<th>الهدف</th>
-<th>المكافأة</th>
-<th>التقدم</th>
-<th>تنفيذ</th>
-</tr>
-
-</thead>
-
-<tbody id="tasksTable">
-
-</tbody>
-
-</table>
-
+<!-- Remove Employee -->
+<div class="modal-overlay" id="modalRemoveEmployee">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🗑️ إزالة موظف</div>
+      <button class="modal-close" onclick="closeModal('modalRemoveEmployee')">✕</button>
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label class="form-label">اختر الموظف</label>
+      <select class="form-input" id="removeEmpSelect"><option value="">اختر...</option></select>
+    </div>
+    <button class="btn btn-red" onclick="removeEmployee()">🗑️ إزالة من الرواتب</button>
+  </div>
 </div>
 
+<!-- Add Target -->
+<div class="modal-overlay" id="modalAddTarget">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🎯 إضافة هدف / مهمة</div>
+      <button class="modal-close" onclick="closeModal('modalAddTarget')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">النوع</label>
+        <select class="form-input" id="tType" onchange="onTargetTypeChange()">
+          <option value="auto">🤖 هدف تلقائي (من الطلبات)</option>
+          <option value="task">✋ مهمة يدوية</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">الفترة</label>
+        <select class="form-input" id="tPeriod">
+          <option value="daily">يومي</option>
+          <option value="weekly">أسبوعي</option>
+          <option value="monthly">شهري</option>
+          <option value="custom">مخصص</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">الموظف</label>
+        <select class="form-input" id="tEmp"><option value="">اختر...</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">عنوان الهدف</label>
+        <input type="text" class="form-input" id="tTitle" placeholder="مثال: تسليم 50 طلب">
+      </div>
+      <div class="form-group" id="tTargetGroup">
+        <label class="form-label">عدد الطلبات المطلوبة</label>
+        <input type="number" class="form-input" id="tTarget" placeholder="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label">المكافأة (نقاط)</label>
+        <input type="number" class="form-input" id="tReward" placeholder="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">سعر النقطة</label>
+        <input type="number" class="form-input" id="tPointPrice" placeholder="250">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تاريخ البداية</label>
+        <input type="date" class="form-input" id="tStart">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تاريخ النهاية</label>
+        <input type="date" class="form-input" id="tEnd">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addTarget()">✅ إضافة الهدف</button>
+  </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set, onValue, push, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-authDomain: "almurad-system.firebaseapp.com",
-databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-projectId: "almurad-system",
-storageBucket: "almurad-system.appspot.com",
-messagingSenderId: "911755824405",
-appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-let employees = []
-let ordersLoaded = false
 
-onValue(ref(db,"orders"),snap=>{
+// ═══ STATE ═══
+let employees = [];
+let salaryData = {};   // { emp: { base, commission, delivered } }
+let pointsValueMap = {}; // { emp: net_points_value }
+let pointsData = {};   // { emp: { bonus, penalty } }
+let deliveredOrders = {}; // { emp: count } — from orders-test/تم التسليم
+let allTargets = {};
+let settings = { pointPrice: 250, commissionRate: 250 };
+let currentTargetFilter = 'all';
 
-if(!snap.exists()) return
+const AVATAR_COLORS = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ef4444','#f59e0b','#06b6d4','#ec4899'];
 
-orders = Object.values(snap.val())
-ordersLoaded = true
+// ═══ UTILS ═══
+const fmt = n => Number(n||0).toLocaleString('en-US');
+const toast = (msg, type='info') => {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = 'toast', 2500);
+};
 
-if(employees.length > 0){
-calculateCommissions()
-setTimeout(()=>{
-renderSalary()
-},500);
+// ═══ HEADER CLOCK ═══
+function updateClock() {
+  const now = new Date();
+  document.getElementById('hTime').textContent = now.toLocaleTimeString('ar-EG');
+  document.getElementById('hMonth').textContent = now.toLocaleDateString('ar-EG', { year:'numeric', month:'long' });
+  document.getElementById('lbMonth').textContent = now.toLocaleDateString('ar-EG', { year:'numeric', month:'long' });
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ═══ TABS ═══
+window.openTab = function(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`[onclick="openTab('${id}')"]`).classList.add('active');
+};
+
+// ═══ MODAL ═══
+
+window.closeModal = id => document.getElementById(id).classList.remove('show');
+window.openAddEmployeeModal = () => document.getElementById('modalAddEmployee').classList.add('show');
+window.openAddEmployeeModal = async function() {
+  const snap = await get(ref(db, 'users'));
+  const sel = document.getElementById('newEmpName');
+  sel.innerHTML = '<option value="">اختر الموظف...</option>';
+  if (snap.exists()) {
+    Object.keys(snap.val()).forEach(name => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      sel.appendChild(o);
+    });
+  }
+  document.getElementById('modalAddEmployee').classList.add('show');
+};
+window.openRemoveEmployeeModal = () => {
+  const sel = document.getElementById('removeEmpSelect');
+  sel.innerHTML = '<option value="">اختر...</option>';
+  employees.forEach(e => { const o = document.createElement('option'); o.value = e; o.textContent = e; sel.appendChild(o); });
+  document.getElementById('modalRemoveEmployee').classList.add('show');
+};
+window.openAddTargetModal = () => {
+  const sel = document.getElementById('tEmp');
+  sel.innerHTML = '<option value="">اختر...</option>';
+  employees.forEach(e => { const o = document.createElement('option'); o.value = e; o.textContent = e; sel.appendChild(o); });
+  document.getElementById('modalAddTarget').classList.add('show');
+};
+
+// ═══ LOAD SETTINGS ═══
+async function loadSettings() {
+  const snap = await get(ref(db, 'settings'));
+  if (snap.exists()) {
+    const d = snap.val();
+    settings.pointPrice = Number(d.pointPrice) || 250;
+    settings.commissionRate = Number(d.commissionRate) || 250;
+    document.getElementById('settingPointPrice').value = settings.pointPrice;
+    document.getElementById('settingCommissionRate').value = settings.commissionRate;
+  }
 }
 
-})
-function calculateCommissions(){
+window.saveSettings = async function() {
+  settings.pointPrice = Number(document.getElementById('settingPointPrice').value) || 250;
+  settings.commissionRate = Number(document.getElementById('settingCommissionRate').value) || 250;
+  await set(ref(db, 'settings/pointPrice'), settings.pointPrice);
+  await set(ref(db, 'settings/commissionRate'), settings.commissionRate);
+  toast('تم حفظ الإعدادات ✅', 'success');
+  renderSalary();
+};
 
-let totalDelivered = 0
-let totalCommission = 0
+// ═══ LOAD EMPLOYEES ═══
+async function loadEmployees() {
+  const [usersSnap, hiddenSnap, salariesSnap] = await Promise.all([
+    get(ref(db, 'users')),
+    get(ref(db, 'hiddenEmployees')),
+    get(ref(db, 'salaries'))
+  ]);
 
-employees.forEach(emp=>{
+  if (!usersSnap.exists()) return;
+  const hidden = hiddenSnap.exists() ? Object.keys(hiddenSnap.val()) : [];
+  employees = Object.keys(usersSnap.val()).filter(e => !hidden.includes(e));
 
-if(!salaryData[emp])
-salaryData[emp] = {base:0,commission:0}
+  // Load base salaries
+  if (salariesSnap.exists()) {
+    for (const [emp, data] of Object.entries(salariesSnap.val())) {
+      if (!salaryData[emp]) salaryData[emp] = { base: 0, commission: 0, delivered: 0 };
+      salaryData[emp].base = Number(data.base) || 0;
+    }
+  }
 
-let delivered = 0
+  employees.forEach(e => {
+    if (!salaryData[e]) salaryData[e] = { base: 0, commission: 0, delivered: 0 };
+    if (!pointsData[e]) pointsData[e] = { bonus: 0, penalty: 0 };
+  });
 
-orders.forEach(o=>{
-
-if(
-o.status === "تم التسليم" &&
-(o.fixedBy || "غير محدد") === emp
-){
-delivered++
+  updateSelects();
 }
 
-})
-
-const rate = 250
-
-const commission = delivered * rate
-
-salaryData[emp].commission = commission
-
-totalDelivered += delivered
-totalCommission += commission
-
-})
-
-document.getElementById("totalDelivered").innerText =
-totalDelivered.toLocaleString('en-US')
-
-document.getElementById("totalCommission").innerText =
-totalCommission.toLocaleString('en-US')
-
-renderSalary()
-
-}
-let orders = []
-let commissionRates = {}
-
-
-
-let hiddenEmployees = []
-onValue(ref(db,"salaries"),snap=>{
-
-if(!snap.exists()) return
-
-const data = snap.val()
-
-for(const emp in data){
-
-if(!salaryData[emp])
-salaryData[emp]={base:0,commission:0}
-
-salaryData[emp].base = Number(data[emp].base) || 0
-
+function updateSelects() {
+  ['pEmp', 'tEmp'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">اختر الموظف</option>';
+    employees.forEach(e => {
+      const o = document.createElement('option');
+      o.value = e; o.textContent = e; sel.appendChild(o);
+    });
+  });
 }
 
-renderSalary()
+// ═══ LOAD DELIVERED ORDERS (orders-test → تم التسليم) ═══
+// We use get() once + then onValue only for updates — avoids heavy download
+function listenDelivered() {
+  // Read only the "تم التسليم" sub-path — much lighter than reading all orders
+onValue(ref(db, 'ordersTest/تم التسليم'), snap => {
+    deliveredOrders = {};
+    let total = 0;
 
-})
-async function loadEmployees(){
+    if (snap.exists()) {
+      const data = snap.val();
+      for (const orderId in data) {
+        const order = data[orderId];
+        const emp = order.fixedBy || order.assignedTo || 'غير محدد';
+        if (!deliveredOrders[emp]) deliveredOrders[emp] = 0;
+        deliveredOrders[emp]++;
+        total++;
+      }
+    }
 
-const usersSnap = await get(ref(db,"users"))
+    // Update commissions
+    employees.forEach(emp => {
+      const count = deliveredOrders[emp] || 0;
+      if (!salaryData[emp]) salaryData[emp] = { base: 0, commission: 0, delivered: 0 };
+      salaryData[emp].delivered = count;
+      salaryData[emp].commission = count * settings.commissionRate;
+    });
 
-if(!usersSnap.exists()) return
+    document.getElementById('statDelivered').textContent = fmt(total);
+    const totalComm = employees.reduce((s, e) => s + (salaryData[e]?.commission || 0), 0);
+    document.getElementById('statCommissions').textContent = fmt(totalComm);
 
-const users = usersSnap.val()
-
-// جلب الموظفين المخفيين
-const hiddenSnap = await get(ref(db,"hiddenEmployees"))
-const hidden = hiddenSnap.exists() ? Object.keys(hiddenSnap.val()) : []
-
-employees = Object.keys(users)
-.filter(e => !hidden.includes(e))
-
-
-employees.forEach(e=>{
-
-if(!pointsData[e])
-pointsData[e]={bonus:0,penalty:0}
-
-if(!salaryData[e])
-salaryData[e]={base:0,commission:0}
-
-})
-calculateCommissions()
-loadPoints()
-onValue(ref(db,"pointsHistory"),snap=>{
-
-document.getElementById("pointsTable").innerHTML=""
-pointsValueMap = {}
-if(!snap.exists()) return
-
-const data = snap.val()
-
-for(const id in data){
-
-const p = data[id]
-const value = (p.points || 0) * (p.price || 250)
-
-if(!pointsValueMap[p.employee])
-pointsValueMap[p.employee] = 0
-
-if(p.type === "bonus"){
-pointsValueMap[p.employee] += value
-}else{
-pointsValueMap[p.employee] -= value
-}
-const row=document.createElement("tr")
-
-row.innerHTML=`
-<td>${p.employee}</td>
-<td>${p.type==="bonus"?"مكافأة":"خصم"}</td>
-<td>${p.points}</td>
-<td>${p.price || 250}</td>
-<td>${(p.points || 0)*(p.price || 250)}</td>
-<td>${p.note || ""}</td>
-<td>${p.date || ""}</td>
-`
-
-document.getElementById("pointsTable").appendChild(row)
-
-}
-renderSalary()
-})
-// تحديث القوائم المنسدلة
-const selects=["empSelect","taskEmp","removeEmpSelect"]
-
-selects.forEach(id=>{
-
-const s=document.getElementById(id)
-
-s.innerHTML='<option>اختر الموظف</option>'
-
-employees.forEach(e=>{
-
-const o=document.createElement("option")
-o.value=e
-o.textContent=e
-
-s.appendChild(o)
-
-})
-
-})
-
-
-}
-/* تخزين النقاط */
-
-let pointsData={}
-let pointsValueMap={}
-let salaryData={}
-let globalPointPrice = 250
-function loadPoints(){
-
-onValue(ref(db,"points"),snap=>{
-
-pointsData = {}
-
-
-
-if(snap.exists()){
-
-const data = snap.val()
-
-for(const emp in data){
-
-const bonus = Number(data[emp].bonus || data[emp].bonusPoints) || 0
-const penalty = Number(data[emp].penalty || data[emp].penaltyPoints) || 0
-
-pointsData[emp] = {
-bonus: bonus,
-penalty: penalty
+    renderSalary();
+    renderLeaderboard();
+    checkAutoTargets();
+  });
 }
 
+// ═══ LOAD POINTS ═══
+function listenPoints() {
+  onValue(ref(db, 'pointsHistory'), snap => {
+    pointsValueMap = {};
+    pointsData = {};
+    document.getElementById('pointsTable').innerHTML = '';
 
+    if (!snap.exists()) { renderSalary(); return; }
 
+    const rows = [];
+    for (const id in snap.val()) {
+      const p = snap.val()[id];
+      const value = (p.points || 0) * (p.price || settings.pointPrice);
+
+      if (!pointsValueMap[p.employee]) pointsValueMap[p.employee] = 0;
+      if (!pointsData[p.employee]) pointsData[p.employee] = { bonus: 0, penalty: 0 };
+
+      if (p.type === 'bonus') {
+        pointsValueMap[p.employee] += value;
+        pointsData[p.employee].bonus += (p.points || 0);
+      } else {
+        pointsValueMap[p.employee] -= value;
+        pointsData[p.employee].penalty += (p.points || 0);
+      }
+      rows.push(p);
+    }
+
+    // Sort newest first
+    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    rows.forEach(p => {
+      const value = (p.points || 0) * (p.price || settings.pointPrice);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:right;font-weight:700">${p.employee}</td>
+        <td><span class="badge ${p.type==='bonus'?'badge-green':'badge-red'}">${p.type==='bonus'?'🎉 مكافأة':'⚠️ خصم'}</span></td>
+        <td>${fmt(p.points)}</td>
+        <td>${fmt(p.price || settings.pointPrice)}</td>
+        <td><strong>${fmt(value)}</strong></td>
+        <td>${p.note || '—'}</td>
+        <td style="color:var(--text3);font-size:12px">${p.date || ''}</td>
+      `;
+      document.getElementById('pointsTable').appendChild(tr);
+    });
+
+    const totalBonus = employees.reduce((s, e) => s + (pointsData[e]?.bonus || 0), 0);
+    document.getElementById('statBonuses').textContent = fmt(totalBonus);
+    renderSalary();
+  });
 }
 
+// ═══ LISTEN TARGETS ═══
+function listenTargets() {
+  onValue(ref(db, 'tasks'), snap => {
+    allTargets = snap.exists() ? snap.val() : {};
+    renderTargets();
+    checkAutoTargets();
+  });
 }
 
-// تأكد وجود كل الموظفين
-employees.forEach(emp=>{
-
-if(!pointsData[emp])
-pointsData[emp]={bonus:0,penalty:0}
-
-})
-
-renderSalary()
-
-})
-
-}
-function formatNumber(n){
-return Number(n || 0).toLocaleString('en-US')
-}
-/* تهيئة البيانات */
-
-
-
-/* tabs */
-
-function openSection(id){
-
-document.querySelectorAll(".section")
-.forEach(s=>s.classList.remove("active"))
-
-document.querySelectorAll(".tab")
-.forEach(t=>t.classList.remove("active"))
-
-document.getElementById(id).classList.add("active")
-
-document.querySelector(`[onclick="openSection('${id}')"]`)
-.classList.add("active")
-
+// ═══ RENDER SALARY ═══
+function getLevel(totalPoints) {
+  if (totalPoints >= 100) return { label: '💎 بلاتينيوم', cls: 'level-platinum' };
+  if (totalPoints >= 50) return { label: '🥇 ذهبي', cls: 'level-gold' };
+  if (totalPoints >= 20) return { label: '🥈 فضي', cls: 'level-silver' };
+  return { label: '🥉 برونزي', cls: 'level-bronze' };
 }
 
-window.openSection = openSection
+function renderSalary() {
+  if (!employees.length) return;
+  const tbody = document.getElementById('salaryTable');
+  let totalSalary = 0;
+  let rows = '';
 
-async function addEmployeePrompt(){
+  employees.forEach((emp, idx) => {
+    const base = salaryData[emp]?.base || 0;
+    const commission = salaryData[emp]?.commission || 0;
+    const delivered = salaryData[emp]?.delivered || 0;
+    const pointsValue = pointsValueMap[emp] || 0;
+    const bonus = pointsData[emp]?.bonus || 0;
+    const penalty = pointsData[emp]?.penalty || 0;
+    const finalSalary = base + commission + pointsValue;
+    totalSalary += finalSalary;
 
-const name = prompt("اكتب اسم الموظف")
+    const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+    const initial = emp.charAt(0);
+    const level = getLevel(bonus);
 
-if(!name) return
+    rows += `
+      <tr>
+        <td>
+          <div class="emp-name">
+            <div class="emp-avatar" style="background:${color}">${initial}</div>
+            <div>
+              <div style="font-weight:800">${emp}</div>
+              <span class="emp-level ${level.cls}">${level.label}</span>
+            </div>
+          </div>
+        </td>
+        <td><span class="emp-level ${level.cls}">${level.label}</span></td>
+        <td>
+          <input class="salary-input" value="${fmt(base)}"
+            onchange="updateBase('${emp}',this.value.replace(/,/g,''))">
+        </td>
+        <td><span class="badge badge-blue">📦 ${delivered}</span></td>
+        <td><strong style="color:var(--green)">${fmt(commission)}</strong></td>
+        <td><span class="badge badge-green">+${bonus}</span></td>
+        <td><span class="badge badge-red">-${penalty}</span></td>
+        <td><strong style="color:var(--navy);font-size:15px">${fmt(finalSalary)}</strong></td>
+      </tr>
+    `;
+  });
 
-await set(ref(db,"users/"+name),{
-password:"",
-roles:["center"]
-})
-
-alert("تم إضافة الموظف")
-
-loadEmployees()
-
+  tbody.innerHTML = rows;
+  document.getElementById('statTotalSalary').textContent = fmt(totalSalary);
+  set(ref(db, 'stats/totalSalaries'), totalSalary);
 }
 
+// ═══ RENDER TARGETS ═══
+window.filterTargets = function(period, btn) {
+  currentTargetFilter = period;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTargets();
+};
 
-window.addEmployeePrompt = addEmployeePrompt
-function removeEmployee(name){
+function renderTargets() {
+  const container = document.getElementById('targetsContainer');
+  const keys = Object.keys(allTargets);
 
-if(!confirm("حذف الموظف من الرواتب؟")) return
+  if (!keys.length) {
+    container.innerHTML = '<div class="loading">لا توجد أهداف حالياً</div>';
+    return;
+  }
 
-hiddenEmployees.push(name)
+  const filtered = keys.filter(id => {
+    const t = allTargets[id];
+    if (currentTargetFilter === 'all') return true;
+    if (currentTargetFilter === 'task') return t.type === 'task';
+    return t.period === currentTargetFilter;
+  });
 
-employees = employees.filter(e => !hiddenEmployees.includes(e))
+  if (!filtered.length) {
+    container.innerHTML = '<div class="loading">لا توجد أهداف في هذه الفئة</div>';
+    return;
+  }
 
-loadEmployees()
+  // Group by employee
+  const byEmp = {};
+  filtered.forEach(id => {
+    const t = allTargets[id];
+    if (!byEmp[t.employee]) byEmp[t.employee] = [];
+    byEmp[t.employee].push({ id, ...t });
+  });
 
+  let html = '';
+  for (const emp in byEmp) {
+    const empTargets = byEmp[emp];
+    html += `<div class="card"><div class="card-title">👤 ${emp}</div>`;
+
+    empTargets.forEach(t => {
+      const delivered = deliveredOrders[emp] || 0;
+      const progress = t.type === 'auto' ? Math.min(delivered, t.target || 0) : (t.done ? (t.target||1) : 0);
+      const pct = t.target ? Math.min((progress / t.target) * 100, 100) : (t.done ? 100 : 0);
+      const isDone = t.done || (t.type === 'auto' && progress >= (t.target||1));
+      const periodLabel = { daily:'يومي', weekly:'أسبوعي', monthly:'شهري', custom:'مخصص', task:'مهمة' }[t.period||t.type] || '';
+
+      html += `
+        <div class="target-card ${isDone?'done':''}">
+          <div class="target-header">
+            <div>
+              <div class="target-title">${t.title}</div>
+              <div class="target-meta">
+                ${t.type==='auto'?'🤖 تلقائي':'✋ يدوي'} · 
+                <span class="badge badge-blue">${periodLabel}</span>
+                ${t.startDate?` · من ${t.startDate}`:''} ${t.endDate?`إلى ${t.endDate}`:''}
+              </div>
+            </div>
+            <div style="text-align:left;flex-shrink:0">
+              ${isDone ? '<span class="badge badge-green">✅ مكتمل</span>' : '<span class="badge badge-orange">🔄 جاري</span>'}
+              <br><small style="color:var(--text3)">${t.reward||0} نقطة</small>
+            </div>
+          </div>
+          ${t.type==='auto'?`
+            <div class="target-progress-text">${progress} / ${t.target||0} طلب</div>
+            <div class="progress-wrap">
+              <div class="progress-fill ${isDone?'progress-green':'progress-orange'}" style="width:${pct}%"></div>
+            </div>
+          `:''}
+          ${t.type==='task' && !t.done ? `
+            <br><button class="btn btn-green btn-sm" onclick="finishTask('${t.id}','${emp}',${t.reward||0},${t.pointPrice||settings.pointPrice})">✅ تم الإنجاز</button>
+          ` : ''}
+          <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;margin-top:8px" onclick="deleteTarget('${t.id}')">🗑️ حذف</button>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
 }
 
-async function removeEmployeeSelected(){
+// ═══ RENDER LEADERBOARD ═══
+function renderLeaderboard() {
+  const scores = employees.map(emp => {
+    const delivered = deliveredOrders[emp] || 0;
+    const bonus = pointsData[emp]?.bonus || 0;
+    const score = delivered * 10 + bonus * 5;
+    return { emp, delivered, bonus, score };
+  }).sort((a, b) => b.score - a.score);
 
-const name = document.getElementById("removeEmpSelect").value
+  const container = document.getElementById('leaderboardContainer');
+  if (!scores.length) { container.innerHTML = '<div class="loading">لا توجد بيانات</div>'; return; }
 
-if(!name || name==="اختر الموظف") return
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div>';
 
-if(!confirm("هل تريد إخفاء الموظف من الرواتب؟")) return
+  // Left: ranked list
+  html += '<div class="card"><div class="card-title">🏆 ترتيب الموظفين</div>';
+  scores.forEach((s, i) => {
+    const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+    const color = AVATAR_COLORS[employees.indexOf(s.emp) % AVATAR_COLORS.length];
+    const level = getLevel(s.bonus);
+    html += `
+      <div class="leaderboard-item ${rankClass}">
+        <div class="rank-badge">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
+        <div class="emp-avatar" style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;flex-shrink:0">${s.emp.charAt(0)}</div>
+        <div class="lb-info">
+          <div class="lb-name">${s.emp}</div>
+          <div class="lb-stats">📦 ${s.delivered} طلب · ⭐ ${s.bonus} نقطة · <span class="emp-level ${level.cls}">${level.label}</span></div>
+        </div>
+        <div class="lb-score">${fmt(s.score)}</div>
+      </div>
+    `;
+  });
+  html += '</div></div>';
 
-await set(ref(db,"hiddenEmployees/"+name),true)
+  // Right: stats
+  html += '<div>';
+  if (scores[0]) {
+    html += `
+      <div class="card" style="background:linear-gradient(135deg,#fef9c3,#fef3c7);border-color:#fcd34d">
+        <div class="card-title">👑 أفضل موظف هذا الشهر</div>
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:48px;margin-bottom:8px">🥇</div>
+          <div style="font-size:24px;font-weight:900;color:var(--navy)">${scores[0].emp}</div>
+          <div style="color:var(--text2);margin-top:8px">📦 ${scores[0].delivered} طلب · ⭐ ${scores[0].bonus} نقطة</div>
+          <div style="font-size:32px;font-weight:900;color:var(--gold);margin-top:8px">${fmt(scores[0].score)} نقطة</div>
+        </div>
+      </div>
+    `;
+  }
+  html += `
+    <div class="card">
+      <div class="card-title">📊 إحصائيات الفريق</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">عدد الموظفين</span><strong>${employees.length}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">إجمالي الطلبات</span><strong>${fmt(Object.values(deliveredOrders).reduce((s,v)=>s+v,0))}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">متوسط طلبات/موظف</span><strong>${employees.length?fmt(Math.round(Object.values(deliveredOrders).reduce((s,v)=>s+v,0)/employees.length)):0}</strong></div>
+      </div>
+    </div>
+  `;
+  html += '</div></div>';
 
-loadEmployees()
-
+  container.innerHTML = html;
 }
 
-window.removeEmployeeSelected = removeEmployeeSelected
-loadEmployees()
+// ═══ ADD POINT ═══
+window.addPoint = async function() {
+  const emp = document.getElementById('pEmp').value;
+  const type = document.getElementById('pType').value;
+  const points = Number(document.getElementById('pPoints').value) || 0;
+  const price = Number(document.getElementById('pPrice').value) || settings.pointPrice;
+  const note = document.getElementById('pNote').value;
+  if (!emp || !points) { toast('أكمل البيانات', 'error'); return; }
 
+  const id = Date.now();
+  await set(ref(db, 'pointsHistory/' + id), {
+    employee: emp, type, points, price, value: points * price,
+    note, date: new Date().toLocaleDateString('ar-EG'), ts: id
+  });
 
-/* رسم جدول الرواتب */
+  // Update totals
+  if (!pointsData[emp]) pointsData[emp] = { bonus: 0, penalty: 0 };
+  const field = type === 'bonus' ? 'bonus' : 'penalty';
+  pointsData[emp][field] = (pointsData[emp][field] || 0) + points;
+  await set(ref(db, 'points/' + emp + '/' + field), pointsData[emp][field]);
 
-function renderSalary(){
+  // Notification
+  await set(ref(db, 'notifications/' + emp + '/' + id), {
+    title: type === 'bonus' ? `🎉 مكافأة ${points} نقطة` : `⚠️ خصم ${points} نقطة`,
+    note: note || '', type, points, date: new Date().toLocaleString(), read: false
+  });
 
-let rows=""
-let total=0
+  document.getElementById('pPoints').value = '';
+  document.getElementById('pNote').value = '';
+  toast(type === 'bonus' ? '🎉 تمت إضافة المكافأة' : '⚠️ تم تسجيل الخصم', 'success');
+};
 
+// ═══ ADD TARGET ═══
+window.onTargetTypeChange = function() {
+  const isAuto = document.getElementById('tType').value === 'auto';
+  document.getElementById('tTargetGroup').style.display = isAuto ? '' : 'none';
+};
 
-const pointPrice = globalPointPrice
+window.addTarget = async function() {
+  const type = document.getElementById('tType').value;
+  const period = document.getElementById('tPeriod').value;
+  const emp = document.getElementById('tEmp').value;
+  const title = document.getElementById('tTitle').value;
+  const target = Number(document.getElementById('tTarget').value) || 0;
+  const reward = Number(document.getElementById('tReward').value) || 0;
+  const pointPrice = Number(document.getElementById('tPointPrice').value) || settings.pointPrice;
+  const startDate = document.getElementById('tStart').value;
+  const endDate = document.getElementById('tEnd').value;
 
-employees.forEach(emp=>{
+  if (!emp || !title) { toast('أكمل البيانات', 'error'); return; }
 
-const base = salaryData[emp]?.base || 0
-const commission = salaryData[emp]?.commission || 0
-const bonus = pointsData[emp]?.bonus || 0
-const penalty = pointsData[emp]?.penalty || 0
+  const id = Date.now();
+  await set(ref(db, 'tasks/' + id), {
+    type, period, employee: emp, title, target, reward, pointPrice,
+    startDate, endDate, createdAt: id, done: false
+  });
 
-const netPoints = (bonus || 0) - (penalty || 0)
-const pointsValue = pointsValueMap[emp] || 0
+  closeModal('modalAddTarget');
+  toast('✅ تم إضافة الهدف', 'success');
+};
 
-const finalSalary = base + commission + (netPoints * globalPointPrice)
+// ═══ FINISH TASK ═══
+window.finishTask = async function(id, emp, reward, price) {
+  const snap = await get(ref(db, 'tasks/' + id));
+  if (snap.exists() && snap.val().done) return;
 
-total += finalSalary
+  await set(ref(db, 'tasks/' + id + '/done'), true);
 
-rows+=`
+  if (reward > 0) {
+    const histId = Date.now();
+    await set(ref(db, 'pointsHistory/' + histId), {
+      employee: emp, type: 'bonus', points: reward, price: price || settings.pointPrice,
+      value: reward * (price || settings.pointPrice),
+      note: 'مكافأة إنجاز مهمة', date: new Date().toLocaleDateString('ar-EG'), ts: histId
+    });
+    if (!pointsData[emp]) pointsData[emp] = { bonus: 0, penalty: 0 };
+    pointsData[emp].bonus += reward;
+    await set(ref(db, 'points/' + emp + '/bonus'), pointsData[emp].bonus);
+  }
+  toast('✅ تم تسجيل الإنجاز', 'success');
+};
 
-<tr>
+window.deleteTarget = async function(id) {
+  if (!confirm('حذف هذا الهدف؟')) return;
+  await set(ref(db, 'tasks/' + id), null);
+  toast('تم الحذف', 'info');
+};
 
-<td>${emp}</td>
-
-<td>
-<input type="text"
-value="${formatNumber(base)}"
-onchange="updateBase('${emp}',this.value.replace(/,/g,''))">
-</td>
-
-<td>${formatNumber(commission)}</td>
-
-<td>${formatNumber(bonus)}</td>
-<td>${formatNumber(penalty)}</td>
-<td>${formatNumber(pointsValue)}</td>
-<td>${formatNumber(finalSalary)}</td>
-
-
-
-</tr>
-
-`
-
-})
-
-document.getElementById("salaryTable").innerHTML=rows
-
-document.getElementById("totalSalary").innerText = formatNumber(total)
-set(ref(db,"stats/totalSalaries"), total);
+// ═══ CHECK AUTO TARGETS ═══
+async function checkAutoTargets() {
+  for (const id in allTargets) {
+    const t = allTargets[id];
+    if (t.type !== 'auto' || t.done) continue;
+    const delivered = deliveredOrders[t.employee] || 0;
+    if (delivered >= (t.target || 0)) {
+      await finishTask(id, t.employee, t.reward, t.pointPrice);
+    }
+  }
 }
 
+// ═══ ADD EMPLOYEE ═══
+window.addEmployee = async function() {
+  const name = document.getElementById('newEmpName').value.trim();
+  const base = Number(document.getElementById('newEmpSalary').value) || 0;
+  if (!name) { toast('أدخل اسم الموظف', 'error'); return; }
 
-/* تحديث الراتب */
+  // إزالة من المخفيين إذا كان موجود
+  await set(ref(db, 'hiddenEmployees/' + name), null);
+  // إضافة للـ users إذا مو موجود
+  const snap = await get(ref(db, 'users/' + name));
+  if (!snap.exists()) {
+    await set(ref(db, 'users/' + name), { password: '', roles: ['center'] });
+  }
+  await set(ref(db, 'salaries/' + name + '/base'), base);
 
-window.updateBase = async function(emp,val){
+  closeModal('modalAddEmployee');
+  toast('✅ تم إضافة الموظف', 'success');
+  await loadEmployees();
+  listenDelivered();
+};
 
-salaryData[emp].base = Number(val) || 0
+// ═══ REMOVE EMPLOYEE ═══
+window.removeEmployee = async function() {
+  const name = document.getElementById('removeEmpSelect').value;
+  if (!name) { toast('اختر موظفاً', 'error'); return; }
+  if (!confirm(`إخفاء ${name} من الرواتب؟`)) return;
+  await set(ref(db, 'hiddenEmployees/' + name), true);
+  closeModal('modalRemoveEmployee');
+  toast('تم إخفاء الموظف', 'info');
+  await loadEmployees();
+  renderSalary();
+};
 
-await set(ref(db,"salaries/"+emp+"/base"),salaryData[emp].base)
+// ═══ UPDATE BASE SALARY ═══
+window.updateBase = async function(emp, val) {
+  const base = Number(val.replace(/,/g,'')) || 0;
+  salaryData[emp].base = base;
+  await set(ref(db, 'salaries/' + emp + '/base'), base);
+  renderSalary();
+};
 
-renderSalary()
+// ═══ ARCHIVE ═══
+window.archivePayroll = async function() {
+  if (!confirm('سيتم أرشفة الرواتب وتصفير المكافآت والمهام. متأكد؟')) return;
+  const now = new Date();
+  const month = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const [salSnap, ptSnap, histSnap, taskSnap] = await Promise.all([
+    get(ref(db,'salaries')), get(ref(db,'points')),
+    get(ref(db,'pointsHistory')), get(ref(db,'tasks'))
+  ]);
+  await set(ref(db, 'archive/payroll/' + month), {
+    date: now.toLocaleString(),
+    salaries: salSnap.exists() ? salSnap.val() : {},
+    points: ptSnap.exists() ? ptSnap.val() : {},
+    pointsHistory: histSnap.exists() ? histSnap.val() : {},
+    tasks: taskSnap.exists() ? taskSnap.val() : {}
+  });
+  await Promise.all([
+    set(ref(db,'points'), null),
+    set(ref(db,'pointsHistory'), null),
+    set(ref(db,'tasks'), null)
+  ]);
+  toast('✅ تمت الأرشفة بنجاح', 'success');
+};
 
+// ═══ EXPORT ═══
+window.exportExcel = function() {
+  const data = [['الموظف','الراتب الثابت','الطلبات','العمولة','المكافآت','الخصومات','الراتب النهائي']];
+  employees.forEach(emp => {
+    const base = salaryData[emp]?.base || 0;
+    const commission = salaryData[emp]?.commission || 0;
+    const delivered = salaryData[emp]?.delivered || 0;
+    const bonus = pointsData[emp]?.bonus || 0;
+    const penalty = pointsData[emp]?.penalty || 0;
+    const pointsValue = pointsValueMap[emp] || 0;
+    data.push([emp, base, delivered, commission, bonus, penalty, base + commission + pointsValue]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payroll');
+  XLSX.writeFile(wb, 'payroll_' + new Date().toLocaleDateString() + '.xlsx');
+};
+
+window.exportPDF = function() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text('ALMURAD TEAM PAYROLL', 14, 15);
+  doc.text('Date: ' + new Date().toLocaleDateString(), 14, 23);
+  const rows = employees.map(emp => {
+    const base = salaryData[emp]?.base || 0;
+    const commission = salaryData[emp]?.commission || 0;
+    const delivered = salaryData[emp]?.delivered || 0;
+    const pointsValue = pointsValueMap[emp] || 0;
+    return [emp, fmt(base), delivered, fmt(commission), fmt(base+commission+pointsValue)];
+  });
+  doc.autoTable({ startY: 30, head: [['Employee','Base','Delivered','Commission','Final']], body: rows });
+  doc.save('payroll.pdf');
+};
+
+// ═══ BOOT ═══
+async function init() {
+  await loadSettings();
+  await loadEmployees();
+  listenDelivered();
+  listenPoints();
+  listenTargets();
 }
 
-window.updateCommission = async function(emp,val){
-
-salaryData[emp].commission = Number(val)||0
-
-await set(ref(db,"salaries/"+emp+"/commission"),salaryData[emp].commission)
-
-renderSalary()
-
-}
-
-/* إضافة مكافأة أو خصم */
-window.addPoint = async function(){
-
-const emp = document.getElementById("empSelect").value
-const type = document.getElementById("typeSelect").value
-const points = Number(document.getElementById("pointsInput").value) || 0
-const price = Number(document.getElementById("pointPrice").value) || globalPointPrice
-globalPointPrice = price
-
-set(ref(db,"settings/pointPrice"),price)
-const note = document.getElementById("noteInput").value
-
-if(!emp || emp==="اختر الموظف" || !points) return
-
-// حفظ العملية في السجل
-const id = Date.now()
-
-await set(ref(db,"pointsHistory/"+id),{
-employee:emp,
-type:type,
-points:points,
-price:price,
-value:points * price,
-note:note,
-date:new Date().toLocaleDateString()
-})
-
-// تحديث المجموع
-if(!pointsData[emp])
-pointsData[emp]={bonus:0,penalty:0}
-
-if(type==="bonus"){
-
-const newBonus = (pointsData[emp].bonus || 0) + points
-pointsData[emp].bonus = newBonus
-
-await set(ref(db,"points/"+emp+"/bonus"), newBonus)
-
-}else{
-
-const newPenalty = (pointsData[emp].penalty || 0) + points
-pointsData[emp].penalty = newPenalty
-
-await set(ref(db,"points/"+emp+"/penalty"), newPenalty)
-
-}
-
-document.getElementById("pointsInput").value=""
-document.getElementById("noteInput").value=""
-
-renderSalary()
-
-// ===== إشعار الموظف =====
-const notifId = Date.now();
-
-let title = type === "bonus" 
-  ? `🎉 مبروك! حصلت على مكافأة ${points} نقطة`
-  : `⚠️ تم تسجيل خصم ${points} نقطة`;
-
-await set(ref(db, "notifications/" + emp + "/" + notifId), {
-  title: title,
-  note: note || "",
-  type: type,
-  points: points,
-  date: new Date().toLocaleString(),
-  read: false
-});
-
-}
-
-
-/* إضافة مهمة */
-
-window.addTask = async function(){
-
-const type = document.getElementById("taskType").value
-const emp = document.getElementById("taskEmp").value
-const title = document.getElementById("taskTitle").value
-const target = Number(document.getElementById("taskTarget").value) || 0
-const reward = Number(document.getElementById("taskReward").value) || 0
-const pointPrice =
-Number(document.getElementById("taskPointPrice").value)
-|| globalPointPrice
-const fromStatus = document.getElementById("fromStatus").value
-const toStatus = document.getElementById("toStatus").value
-const days = Number(document.getElementById("taskDays").value) || 0
-const startDate = document.getElementById("taskStart").value
-const endDate = document.getElementById("taskEnd").value
-if(!emp || !title) return
-
-const id = Date.now()
-
-await set(ref(db,"tasks/"+id),{
-
-type:type,
-employee:emp,
-title:title,
-target:target,
-reward:reward,
-pointPrice:pointPrice,
-fromStatus:fromStatus,
-toStatus:toStatus,
-days:days,
-startDate:startDate,
-endDate:endDate,
-createdAt:Date.now(),
-done:false
-
-})
-document.getElementById("taskTitle").value=""
-document.getElementById("taskTarget").value=""
-document.getElementById("taskPointPrice").value=""
-
-}
-
-
-/* إنهاء المهمة */
-
-window.finishTask = async function(id,emp,reward,price){
-
-// تأكد أن المهمة لم تنتهِ
-const snap = await get(ref(db,"tasks/"+id))
-if(snap.exists() && snap.val().done) return
-
-await set(ref(db,"tasks/"+id+"/done"),true)
-// إضافة النقاط للمجموع
-if(!pointsData[emp]){
-pointsData[emp] = {bonus:0,penalty:0}
-}
-
-pointsData[emp].bonus += reward
-
-await set(ref(db,"points/"+emp+"/bonus"),pointsData[emp].bonus)
-await loadPoints()
-// إضافة سجل في history حتى يظهر في الرواتب
-const historyId = Date.now()
-await set(ref(db,"pointsHistory/"+historyId),{
-employee:emp,
-type:"bonus",
-points:reward,
-price:(price || globalPointPrice),
-value:reward * (price || globalPointPrice),
-note:"مكافأة إنجاز مهمة",
-date:new Date().toLocaleDateString()
-})
-alert("تمت إضافة مكافأة "+reward+" نقطة")
-
-
-
-renderSalary()
-
-}
-onValue(ref(db,"tasks"),snap=>{
-
-document.getElementById("tasksTable").innerHTML=""
-
-if(!snap.exists()) return
-
-const data = snap.val()
-
-for(const id in data){
-
-const t = data[id]
-
-let delivered = 0
-
-if(!ordersLoaded) continue
-
-orders.forEach(o=>{
-
-
-// تجاهل الطلبات القديمة قبل إنشاء المهمة
-if(o.orderDate && new Date(o.orderDate).getTime() < t.createdAt) return
-// فحص تاريخ المهمة
-if(t.startDate){
-const start = new Date(t.startDate)
-const orderDate = new Date(o.orderDate || Date.now())
-if(orderDate < start) return
-}
-
-if(t.endDate){
-const end = new Date(t.endDate)
-const orderDate = new Date(o.orderDate || Date.now())
-if(orderDate > end) return
-}
-
-if(!o.fixedBy || o.fixedBy.trim() !== t.employee.trim()) return
-
-// يجب أن يكون الطلب وصل للحالة النهائية
-if(t.toStatus && o.status !== t.toStatus) return
-
-// فحص هل مر بالحالة السابقة
-if(t.fromStatus){
-
-let hadStatus = false
-let statusDate = null
-
-if(o.statusHistory && o.statusHistory[t.fromStatus]){
-hadStatus = true
-statusDate = new Date(o.statusHistory[t.fromStatus].time || o.orderDate || Date.now())
-}
-
-if(!hadStatus) return
-
-// فحص عدد الأيام
-if(t.days && statusDate){
-
-const now = new Date()
-
-const diffDays = Math.floor(
-(Math.abs(now - statusDate)) / (1000*60*60*24)
-)
-
-if(diffDays < t.days) return
-
-}
-
-}
-
-delivered++
-
-})
-
-let progress = ""
-
-if(t.type==="target"){
-
-progress = delivered+" / "+(t.target || 0)
-
-if(delivered >= (t.target || 0) && !t.done){
-
-finishTask(id,t.employee,t.reward,t.pointPrice)
-
-}
-
-}else{
-
-progress = t.done ? "مكتمل" : "بانتظار التنفيذ"
-
-}
-
-const row=document.createElement("tr")
-
-row.innerHTML=`
-
-<td>${t.type==="target" ? "هدف" : "مهمة"}</td>
-<td>${t.employee}</td>
-<td>${t.title}</td>
-<td>
-${t.target || "-"}
-<br>
-${t.fromStatus || ""} ➜ ${t.toStatus || ""}
-<br>
-${t.days ? t.days+" أيام" : ""}
-</td>
-<td>
-${t.reward} نقطة
-<br>
-سعر النقطة: ${t.pointPrice || globalPointPrice}
-</td>
-
-<td>
-<div class="progress">
-<div class="progress-bar ${(delivered>=t.target)?"complete":""}"
-style="width:${Math.min((delivered/(t.target||1))*100,100)}%">
-</div>
-</div>
-<br>
-${delivered} / ${t.target || 0}
-</td>
-
-<td>
-${t.type==="task" ? `
-<button onclick="finishTask('${id}','${t.employee}',${t.reward},${t.pointPrice})">
-تم الإنجاز
-</button>` : "-"}
-</td>
-
-`
-
-document.getElementById("tasksTable").appendChild(row)
-
-}
-
-})
-window.archivePayroll = async function(){
-
-if(!confirm("سيتم أرشفة الرواتب والعمولات والمكافآت ثم تصفيرها. هل أنت متأكد؟")) return
-
-// اسم الشهر
-const now = new Date()
-const month = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")
-
-// جلب البيانات الحالية
-const salariesSnap = await get(ref(db,"salaries"))
-
-const pointsSnap = await get(ref(db,"points"))
-const historySnap = await get(ref(db,"pointsHistory"))
-const tasksSnap = await get(ref(db,"tasks"))
-
-const archiveData = {
-date: new Date().toLocaleString('en-US'),
-salaries: salariesSnap.exists()?salariesSnap.val():{},
-
-points: pointsSnap.exists()?pointsSnap.val():{},
-pointsHistory: historySnap.exists()?historySnap.val():{},
-tasks: tasksSnap.exists()?tasksSnap.val():{}
-}
-
-// حفظ الأرشيف
-await set(ref(db,"archive/payroll/"+month),archiveData)
-
-// تصفير البيانات التشغيلية
-
-await set(ref(db,"points"),{})
-await set(ref(db,"pointsHistory"),{})
-await set(ref(db,"tasks"),{})
-
-alert("تمت أرشفة الرواتب بنجاح")
-
-}
-window.exportExcel = function(){
-
-const table = document.getElementById("salaryTable")
-let data = []
-
-let totalCommission = 0
-let totalDelivered = 0
-
-// حساب الطلبات المسلمة
-orders.forEach(o=>{
-if(o.status === "تم التسليم") totalDelivered++
-})
-
-// العناوين
-data.push([
-"Employee",
-"Base Salary",
-"Commission",
-"Bonus",
-"Penalty",
-"Points Value",
-"Final Salary"
-])
-
-// البيانات
-Array.from(table.rows).forEach(row=>{
-
-let cells = []
-
-row.querySelectorAll("td").forEach(td=>{
-
-const input = td.querySelector("input")
-
-if(input){
-cells.push(input.value)
-}else{
-cells.push(td.innerText)
-}
-
-})
-
-const commission = Number(cells[2].replace(/,/g,'')) || 0
-totalCommission += commission
-
-data.push(cells)
-
-})
-
-// صف فارغ
-data.push([])
-
-// الإجماليات
-data.push(["Total Delivered Orders", totalDelivered])
-data.push(["Total Commissions", totalCommission])
-data.push(["Total Salaries", document.getElementById("totalSalary").innerText])
-
-const ws = XLSX.utils.aoa_to_sheet(data)
-const wb = XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(wb, ws, "Payroll Report")
-
-XLSX.writeFile(wb,"payroll_report.xlsx")
-
-}
-window.exportPDF = function(){
-
-const { jsPDF } = window.jspdf
-const doc = new jsPDF()
-
-let rows = []
-
-let totalCommission = 0
-let totalDelivered = 0
-
-document.querySelectorAll("#salaryTable tr").forEach(tr=>{
-
-let row = []
-let cells = tr.querySelectorAll("td")
-
-cells.forEach((td,i)=>{
-
-let input = td.querySelector("input")
-
-let text = input ? input.value : td.innerText
-
-// تحويل اسم الموظف للإنكليزي
-if(i === 0){
-text = arabicToEnglish(text)
-}
-
-// جمع العمولات
-if(i === 2){
-const num = Number(text.replace(/,/g,'')) || 0
-totalCommission += num
-}
-
-row.push(text)
-
-})
-
-rows.push(row)
-
-})
-
-// حساب الطلبات المسلمة من الطلبات
-orders.forEach(o=>{
-if(o.status === "تم التسليم") totalDelivered++
-})
-
-const totalSalary = document.getElementById("totalSalary").innerText
-
-doc.text("ALMURAD TEAM PAYROLL REPORT",14,15)
-
-doc.text("Total Salaries: " + totalSalary,14,25)
-
-doc.text("Total Delivered Orders: " + totalDelivered,14,33)
-
-doc.text("Total Commissions: " + totalCommission.toLocaleString('en-US'),14,41)
-
-doc.autoTable({
-startY:50,
-head:[[
-"Employee",
-"Base Salary",
-"Commission",
-"Bonus",
-"Penalty",
-"Points Value",
-"Final Salary"
-]],
-body:rows
-})
-
-doc.save("payroll_report.pdf")
-
-}
-function arabicToEnglish(text){
-
-const map = {
-"ا":"a","أ":"a","إ":"e","آ":"a",
-"ب":"b","ت":"t","ث":"th","ج":"j",
-"ح":"h","خ":"kh","د":"d","ذ":"th",
-"ر":"r","ز":"z","س":"s","ش":"sh",
-"ص":"s","ض":"d","ط":"t","ظ":"z",
-"ع":"a","غ":"gh","ف":"f","ق":"q",
-"ك":"k","ل":"l","م":"m","ن":"n",
-"ه":"h","و":"w","ي":"y","ى":"a",
-"ة":"a"
-}
-
-return text.split("").map(c => map[c] || c).join("")
-
-}
+init();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>

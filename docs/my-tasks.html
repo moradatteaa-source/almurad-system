@@ -3,438 +3,580 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مهامي وأهدافي</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
-
+<title>مهامي وأهدافي — المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
+:root {
+  --navy: #04122a;
+  --navy2: #071e3d;
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --gold: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text2: #64748b;
+  --text3: #94a3b8;
+  --shadow: 0 4px 24px rgba(4,18,42,0.08);
+  --shadow2: 0 8px 40px rgba(4,18,42,0.14);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-body{
-font-family:Tajawal;
-background:#f4f6fa;
-margin:0;
-padding:20px;
-color:#043B64;
+/* ── HEADER ── */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #0a2447 100%);
+  color: white;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 999;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
 }
+.brand { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 900; }
+.brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg,var(--accent),#ea580c); border-radius: 10px; display:flex;align-items:center;justify-content:center; font-size:18px; box-shadow:0 3px 12px rgba(249,115,22,0.5); }
+.header-right { display:flex; align-items:center; gap:10px; }
+.emp-chip { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:6px 16px; font-size:14px; font-weight:700; display:flex;align-items:center;gap:8px; }
+.emp-dot { width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green); }
 
-.header{
-font-size:22px;
-font-weight:bold;
-margin-bottom:20px;
+/* ── MOTIVATIONAL BANNER ── */
+.banner {
+  margin: 20px 20px 0;
+  background: linear-gradient(135deg, var(--accent), #ea580c);
+  border-radius: 16px;
+  padding: 18px 24px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 6px 20px rgba(249,115,22,0.3);
 }
+.banner-icon { font-size: 36px; flex-shrink: 0; }
+.banner-text { flex: 1; }
+.banner-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.banner-sub { font-size: 13px; opacity: 0.85; }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-gap:12px;
-margin-bottom:20px;
-}
+/* ── MAIN ── */
+main { padding: 20px; max-width: 900px; margin: 0 auto; }
 
-.card{
-background:white;
-padding:16px;
-border-radius:12px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08);
-text-align:center;
+/* ── STAT CARDS ── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s;
 }
+.stat-card:hover { transform: translateY(-2px); }
+.stat-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 0 0 16px 16px;
+}
+.stat-card.orange::after { background: var(--accent); }
+.stat-card.green::after { background: var(--green); }
+.stat-card.blue::after { background: var(--blue); }
+.stat-card.gold::after { background: var(--gold); }
+.stat-card.purple::after { background: var(--purple); }
+.stat-card.red::after { background: var(--red); }
+.stat-emoji { font-size: 24px; margin-bottom: 8px; }
+.stat-value { font-size: 24px; font-weight: 900; color: var(--navy); margin-bottom: 4px; }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.3px; }
 
-.card h3{
-margin:5px 0;
-font-size:18px;
+/* ── LEVEL CARD ── */
+.level-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
+.level-badge { font-size: 48px; flex-shrink: 0; }
+.level-info { flex: 1; }
+.level-name { font-size: 20px; font-weight: 900; color: var(--navy); margin-bottom: 4px; }
+.level-desc { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.level-progress-wrap { background: #f1f5f9; border-radius: 20px; height: 10px; overflow: hidden; }
+.level-progress-fill { height: 10px; border-radius: 20px; transition: width 0.8s ease; }
+.level-progress-text { font-size: 12px; color: var(--text3); margin-top: 6px; }
 
-.card span{
-font-size:14px;
-color:#777;
+/* ── SECTION ── */
+.section-card {
+  background: white;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
 }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--bg);
+}
+.section-title { font-size: 16px; font-weight: 800; color: var(--navy); display:flex;align-items:center;gap:8px; }
+.section-count { background: var(--bg); border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 700; color: var(--text2); }
 
-.tasks-section{
-background:white;
-padding:18px;
-border-radius:12px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08);
-margin-bottom:20px;
+/* ── TASK ITEM ── */
+.task-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
+.task-item::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 0 12px 12px 0;
+}
+.task-item.active::before { background: var(--accent); }
+.task-item.done::before { background: var(--green); }
+.task-item.done { background: #f0fdf4; border-color: #bbf7d0; }
+.task-item:hover { box-shadow: var(--shadow); }
 
-.tasks-section h2{
-margin-bottom:10px;
-font-size:18px;
-}
+.task-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.task-title { font-size: 15px; font-weight: 800; color: var(--navy); }
+.task-meta { font-size: 12px; color: var(--text2); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+.task-meta span { display: flex; align-items: center; gap: 4px; }
+.task-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.badge-active { background: #fff7ed; color: #9a3412; }
+.badge-done { background: #dcfce7; color: #166534; }
+.badge-auto { background: #dbeafe; color: #1e40af; }
+.badge-manual { background: #ede9fe; color: #6d28d9; }
 
-.task{
-padding:12px;
-border-bottom:1px solid #eee;
-}
+.progress-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.progress-wrap { flex: 1; background: #f1f5f9; border-radius: 20px; height: 8px; overflow: hidden; }
+.progress-fill { height: 8px; border-radius: 20px; transition: width 0.6s ease; }
+.progress-orange { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.progress-green { background: linear-gradient(90deg, var(--green), #34d399); }
+.progress-text { font-size: 13px; font-weight: 700; color: var(--text2); white-space: nowrap; }
 
-.task:last-child{
-border-bottom:none;
-}
+.task-reward { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; color: var(--gold); font-weight: 700; }
 
-.progress{
-height:8px;
-background:#ddd;
-border-radius:10px;
-overflow:hidden;
-margin-top:6px;
-}
+.empty-state { text-align: center; padding: 30px; color: var(--text3); }
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 8px; }
+.empty-state p { font-size: 13px; }
 
-.bar{
-height:8px;
-background:#27ae60;
+/* ── NOTIFICATIONS ── */
+.notif-popup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: linear-gradient(135deg, var(--accent), #ea580c);
+  color: white;
+  padding: 18px 22px;
+  border-radius: 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(249,115,22,0.4);
+  z-index: 9999;
+  display: none;
+  max-width: 300px;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+@keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+.notif-title { font-size: 15px; margin-bottom: 6px; }
+.notif-note { font-size: 13px; opacity: 0.9; }
+.notif-close { position: absolute; top: 8px; left: 8px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
 
-.empty{
-padding:15px;
-color:#888;
-text-align:center;
-}
-.task{
-padding:14px;
-border-bottom:1px solid #eee;
-line-height:1.8;
-}
+/* ── LOADING ── */
+.loading { display: flex; align-items: center; justify-content: center; padding: 30px; color: var(--text3); gap: 10px; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.task:hover{
-background:#f8fafc;
-border-radius:8px;
+/* ── NO USER ── */
+#noUserScreen {
+  display: none;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  padding: 40px;
+  text-align: center;
 }
+#noUserScreen.show { display: flex; }
+#noUserScreen .big-icon { font-size: 64px; }
+#noUserScreen h2 { font-size: 22px; font-weight: 900; color: var(--navy); }
+#noUserScreen p { color: var(--text2); font-size: 14px; }
 </style>
 </head>
-
 <body>
 
-<div class="header">
-🎯 مهامي وأهدافي
-</div>
-<div style="
-background:#FF6B2D;
-color:white;
-padding:14px;
-border-radius:10px;
-margin-bottom:15px;
-text-align:center;
-font-weight:bold;
-line-height:1.8;
-">
-🚀 كل مهمة تنجزها اليوم تقربك خطوة من المستوى الذهبي. استمر!
-</div>
-<!-- معلومات الموظف -->
-
-<div class="grid">
-
-<div class="card">
-<h3 id="rating">-</h3>
-<span>تصنيف الموظف</span>
+<!-- No User Screen -->
+<div id="noUserScreen">
+  <div class="big-icon">🔒</div>
+  <h2>الوصول مرفوض</h2>
+  <p>يرجى فتح هذه الصفحة عبر الرابط الخاص بك</p>
+  <p style="font-size:12px;color:var(--text3)">مثال: employee.html?user=اسمك</p>
 </div>
 
-<div class="card">
-<h3 id="points">0</h3>
-<span>النقاط</span>
+<!-- Main App -->
+<div id="app" style="display:none">
+
+  <div id="header">
+    <div class="brand">
+      <div class="brand-icon">🎯</div>
+      <span>مهامي وأهدافي</span>
+    </div>
+    <div class="header-right">
+      <div class="emp-chip">
+        <div class="emp-dot"></div>
+        <span id="empNameHeader">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner">
+    <div class="banner-icon">🚀</div>
+    <div class="banner-text">
+      <div class="banner-title">استمر في الإنجاز!</div>
+      <div class="banner-sub" id="bannerText">كل طلب تسلمه يقربك من المستوى التالي وزيادة في العمولة</div>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card orange">
+        <div class="stat-emoji">📦</div>
+        <div class="stat-value" id="statDelivered">-</div>
+        <div class="stat-label">طلبات مسلّمة</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-emoji">💎</div>
+        <div class="stat-value" id="statCommission">-</div>
+        <div class="stat-label">العمولة (د.ع)</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-emoji">⭐</div>
+        <div class="stat-value" id="statBonus">0</div>
+        <div class="stat-label">نقاط المكافآت</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-emoji">⚠️</div>
+        <div class="stat-value" id="statPenalty">0</div>
+        <div class="stat-label">نقاط الخصم</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-emoji">💰</div>
+        <div class="stat-value" id="statPointsValue">0</div>
+        <div class="stat-label">قيمة النقاط (د.ع)</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-emoji">🏦</div>
+        <div class="stat-value" id="statFinalSalary">-</div>
+        <div class="stat-label">الراتب الكلي</div>
+      </div>
+    </div>
+
+    <!-- Level -->
+    <div class="level-card" id="levelCard">
+      <div class="level-badge" id="levelBadge">🥉</div>
+      <div class="level-info">
+        <div class="level-name" id="levelName">برونزي</div>
+        <div class="level-desc" id="levelDesc">أكمل 20 نقطة للوصول للمستوى الفضي</div>
+        <div class="level-progress-wrap">
+          <div class="level-progress-fill progress-orange" id="levelBar" style="width:0%"></div>
+        </div>
+        <div class="level-progress-text" id="levelProgressText">0 / 20 نقطة</div>
+      </div>
+    </div>
+
+    <!-- Today Tasks -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📅 مهام اليوم</div>
+        <div class="section-count" id="todayCount">0</div>
+      </div>
+      <div id="todayTasks"><div class="loading"><div class="spinner"></div> جاري التحميل...</div></div>
+    </div>
+
+    <!-- Week Tasks -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📊 مهام الأسبوع</div>
+        <div class="section-count" id="weekCount">0</div>
+      </div>
+      <div id="weekTasks"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Month Tasks -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">🗓 مهام الشهر</div>
+        <div class="section-count" id="monthCount">0</div>
+      </div>
+      <div id="monthTasks"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+  </main>
 </div>
 
-<div class="card">
-<h3 id="bonus">0</h3>
-<span>المكافآت</span>
-</div>
-
-<div class="card">
-<h3 id="penalty">0</h3>
-<span>الخصومات</span>
-</div>
-
-<div class="card">
-<h3 id="deliveredOrders">0</h3>
-<span>طلبات تم التسليم</span>
-</div>
-<div class="card">
-<h3 id="commissionTotal">0</h3>
-<span>العمولة</span>
-</div>
-<div class="card">
-<h3 id="pointPrice">250</h3>
-<span>قيمة النقاط</span>
-</div>
-
-<div class="card">
-<h3 id="salaryTotal">0</h3>
-<span>الراتب الكلي</span>
-</div>
-
-</div>
-
-<!-- مهام اليوم -->
-
-<div class="tasks-section">
-<h2>📅 مهام اليوم</h2>
-<div id="todayTasks"></div>
-</div>
-
-<!-- مهام الأسبوع -->
-
-<div class="tasks-section">
-<h2>📊 مهام الأسبوع</h2>
-<div id="weekTasks"></div>
-</div>
-
-<!-- مهام الشهر -->
-
-<div class="tasks-section">
-<h2>🗓 مهام الشهر</h2>
-<div id="monthTasks"></div>
+<!-- Notification Popup -->
+<div class="notif-popup" id="notifPopup">
+  <button class="notif-close" onclick="document.getElementById('notifPopup').style.display='none'">✕</button>
+  <div class="notif-title" id="notifTitle"></div>
+  <div class="notif-note" id="notifNote"></div>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from"https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-const firebaseConfig={
-apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-authDomain:"almurad-system.firebaseapp.com",
-databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
-projectId:"almurad-system"
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-const commissionRate = 250; // عمولة الطلب
-const url=new URL(window.location.href);
-const user=url.searchParams.get("user");
+// ═══ GET USER ═══
+const url = new URL(window.location.href);
+const user = url.searchParams.get("user");
 
-// ✅ هنا خلي كود الإشعارات
-onValue(ref(db, "notifications/" + user), snap => {
-
-if(!snap.exists()) return;
-
-const data = snap.val();
-const keys = Object.keys(data).reverse();
-
-keys.forEach(id => {
-
-  const n = data[id];
-
-  if(n.read) return;
-
-  const box = document.getElementById("taskNotification");
-
-  box.innerHTML = `
-    ${n.title}
-    <br>
-    <span style="font-size:13px;color:#fff">${n.note}</span>
-  `;
-
-  box.style.display = "block";
-
-clearTimeout(window.notifTimeout);
-
-window.notifTimeout = setTimeout(()=>{
-  box.style.display = "none";
-},10000);
-  // 🔥 مهم
-  set(ref(db, "notifications/" + user + "/" + id + "/read"), true);
-
-});
-
-});
-
-const todayBox=document.getElementById("todayTasks");
-const weekBox=document.getElementById("weekTasks");
-const monthBox=document.getElementById("monthTasks");
-
-const today=new Date();
-
-function renderTasks(tasks,container){
-
-if(tasks.length===0){
-container.innerHTML='<div class="empty">لا توجد مهام</div>';
-return;
+if (!user) {
+  document.getElementById('noUserScreen').classList.add('show');
+} else {
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('empNameHeader').textContent = user;
+  init();
 }
 
-container.innerHTML="";
+// ═══ STATE ═══
+let commissionRate = 250;
+let pointPrice = 250;
+let baseSalary = 0;
+let deliveredCount = 0;
+let bonusPoints = 0;
+let penaltyPoints = 0;
+let deliveredOrders = 0;
 
-tasks.forEach(t=>{
+const fmt = n => Number(n || 0).toLocaleString('en-US');
 
-const percent=t.target?Math.min((t.progress||0)/t.target*100,100):0;
-
-const div=document.createElement("div");
-div.className="task";
-
-div.innerHTML=`
-
-<strong style="font-size:16px">${t.title}</strong>
-
-<div style="font-size:13px;margin-top:6px;color:#555">
-
-🎯 الهدف: ${t.target || 0} طلب  
-<br>
-
-🔄 التحويل: ${t.fromStatus || "-"} ➜ ${t.toStatus || "-"}  
-<br>
-
-📅 البداية: ${t.startDate || "-"}  
-<br>
-
-⏳ النهاية: ${t.endDate || "-"}  
-
-</div>
-
-<div style="margin-top:6px;font-weight:bold;color:#043B64">
-${t.progress||0} / ${t.target||0}
-</div>
-
-<div class="progress">
-<div class="bar" style="width:${percent}%"></div>
-</div>
-
-<div style="font-size:12px;margin-top:6px;color:#27ae60;font-weight:bold">
-
-${t.target ? 
-`🚀 بقي ${Math.max((t.target - (t.progress||0)),0)} طلب للوصول للهدف`
-:
-``
+// ═══ LEVELS ═══
+function getLevel(points) {
+  if (points >= 100) return { name: 'بلاتينيوم', badge: '💎', color: '#8b5cf6', next: null, nextAt: 100, desc: 'وصلت للمستوى الأعلى! أنت نجم الفريق 🌟' };
+  if (points >= 50)  return { name: 'ذهبي', badge: '🥇', color: '#f59e0b', next: 'بلاتينيوم', nextAt: 100, desc: `أكمل ${100-points} نقطة للوصول للبلاتينيوم` };
+  if (points >= 20)  return { name: 'فضي', badge: '🥈', color: '#94a3b8', next: 'ذهبي', nextAt: 50, desc: `أكمل ${50-points} نقطة للوصول للذهبي` };
+  return { name: 'برونزي', badge: '🥉', color: '#fb923c', next: 'فضي', nextAt: 20, desc: `أكمل ${20-points} نقطة للوصول للفضي` };
 }
 
-</div>
-${t.target && (t.progress||0) >= t.target ? 
-`<div style="color:#28a745;font-weight:bold;margin-top:6px">
-🏆 أحسنت! لقد حققت الهدف
-</div>`
-:
-``
+function updateLevel(points) {
+  const lv = getLevel(points);
+  document.getElementById('levelBadge').textContent = lv.badge;
+  document.getElementById('levelName').textContent = lv.name;
+  document.getElementById('levelDesc').textContent = lv.desc;
+
+  const prevAt = lv.name === 'برونزي' ? 0 : lv.name === 'فضي' ? 20 : lv.name === 'ذهبي' ? 50 : 100;
+  const pct = lv.nextAt ? Math.min(((points - prevAt) / (lv.nextAt - prevAt)) * 100, 100) : 100;
+
+  const bar = document.getElementById('levelBar');
+  bar.style.width = pct + '%';
+  bar.style.background = lv.name === 'بلاتينيوم' ? 'linear-gradient(90deg,#8b5cf6,#a78bfa)' :
+                         lv.name === 'ذهبي' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' :
+                         lv.name === 'فضي' ? 'linear-gradient(90deg,#64748b,#94a3b8)' :
+                         'linear-gradient(90deg,var(--accent),var(--accent2))';
+
+  document.getElementById('levelProgressText').textContent =
+    lv.nextAt ? `${points} / ${lv.nextAt} نقطة` : `${points} نقطة — المستوى الأعلى ✅`;
+
+  // Update banner
+  const banners = [
+    'كل طلب تسلمه يقربك من المستوى التالي وزيادة في العمولة',
+    `أنت في المستوى ${lv.name} — استمر وصل للأعلى!`,
+    `${lv.desc} 💪`
+  ];
+  document.getElementById('bannerText').textContent = banners[Math.floor(Math.random() * banners.length)];
 }
 
-`;
+function updateSalaryDisplay() {
+  const netPoints = bonusPoints - penaltyPoints;
+  const pointsValue = netPoints * pointPrice;
+  const commission = deliveredCount * commissionRate;
+  const finalSalary = baseSalary + commission + pointsValue;
 
-container.appendChild(div);
+  document.getElementById('statDelivered').textContent = fmt(deliveredCount);
+  document.getElementById('statCommission').textContent = fmt(commission);
+  document.getElementById('statBonus').textContent = fmt(bonusPoints);
+  document.getElementById('statPenalty').textContent = fmt(penaltyPoints);
+  document.getElementById('statPointsValue').textContent = fmt(pointsValue);
+  document.getElementById('statFinalSalary').textContent = fmt(finalSalary);
 
-});
-
-}
-let previousTasksCount = 0;
-onValue(ref(db,"tasks"),snap=>{
-
-if(!snap.exists()) return;
-
-const tasks=Object.values(snap.val()).filter(t=>t.employee===user);
-
-const todayTasks=[];
-const weekTasks=[];
-const monthTasks=[];
-
-tasks.forEach(t=>{
-
-const start=new Date(t.startDate||t.createdAt);
-
-const diffDays=Math.floor((today-start)/(1000*60*60*24));
-
-if(diffDays<=1) todayTasks.push(t);
-else if(diffDays<=7) weekTasks.push(t);
-else monthTasks.push(t);
-
-});
-
-renderTasks(todayTasks,todayBox);
-renderTasks(weekTasks,weekBox);
-renderTasks(monthTasks,monthBox);
-
-});
-onValue(ref(db,"orders"),snap=>{
-
-if(!snap.exists()) return;
-
-const orders = Object.values(snap.val());
-
-let delivered = 0;
-
-orders.forEach(o=>{
-
-if(
-o.status === "تم التسليم" &&
-(o.fixedBy || "") === user
-){
-delivered++;
+  updateLevel(netPoints);
 }
 
-});
+// ═══ RENDER TASKS ═══
+function renderTasks(tasks, containerId, countId) {
+  const container = document.getElementById(containerId);
+  document.getElementById(countId).textContent = tasks.length;
 
-document.getElementById("deliveredOrders").innerText = delivered;
+  if (!tasks.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <p>لا توجد مهام في هذه الفترة</p>
+      </div>`;
+    return;
+  }
 
-});
+  container.innerHTML = '';
+  tasks.forEach(t => {
+    const isDone = t.done;
+    const isAuto = t.type === 'auto';
+    const progress = isAuto ? (deliveredCount || 0) : (t.done ? (t.target || 1) : 0);
+    const target = t.target || 0;
+    const pct = target ? Math.min((progress / target) * 100, 100) : (isDone ? 100 : 0);
 
-onValue(ref(db,"points/"+user),snap=>{
-
-const data = snap.exists() ? snap.val() : {};
-
-const bonus = data.bonus || 0;
-const penalty = data.penalty || 0;
-const points = bonus - penalty;
-
-
-
-const delivered = Number(document.getElementById("deliveredOrders").innerText) || 0;
-
-const commission = delivered * commissionRate;
-
-document.getElementById("commissionTotal").innerText = commission;
-
-onValue(ref(db,"salaries/"+user+"/base"),snap=>{
-
-const baseSalary = snap.exists() ? snap.val() : 0;
-
-const salaryTotal = baseSalary + commission + pointValue;
-
-document.getElementById("salaryTotal").innerText = salaryTotal;
-
-});
-
-const pointValue = points * 250;
-
-document.getElementById("pointPrice").innerText = pointValue;
-document.getElementById("bonus").innerText = bonus;
-document.getElementById("penalty").innerText = penalty;
-document.getElementById("points").innerText = points;
-let rating="برونزي";
-
-if(points>=50){
-rating="فضي";
+    const div = document.createElement('div');
+    div.className = `task-item ${isDone ? 'done' : 'active'}`;
+    div.innerHTML = `
+      <div class="task-top">
+        <div>
+          <div class="task-title">${t.title}</div>
+          <div class="task-meta">
+            ${t.startDate ? `<span>📅 ${t.startDate}</span>` : ''}
+            ${t.endDate ? `<span>⏳ ${t.endDate}</span>` : ''}
+            ${t.fromStatus && t.toStatus ? `<span>🔄 ${t.fromStatus} ← ${t.toStatus}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+          <span class="task-badge ${isDone ? 'badge-done' : 'badge-active'}">${isDone ? '✅ مكتمل' : '🔄 جاري'}</span>
+          <span class="task-badge ${isAuto ? 'badge-auto' : 'badge-manual'}">${isAuto ? '🤖 تلقائي' : '✋ يدوي'}</span>
+        </div>
+      </div>
+      ${isAuto || isDone ? `
+        <div class="progress-row">
+          <div class="progress-wrap">
+            <div class="progress-fill ${isDone ? 'progress-green' : 'progress-orange'}" style="width:${pct}%"></div>
+          </div>
+          <div class="progress-text">${progress} / ${target}</div>
+        </div>
+        ${!isDone && target > 0 ? `
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">
+            🎯 بقي <strong style="color:var(--accent)">${Math.max(target - progress, 0)}</strong> طلب للإنجاز
+          </div>` : ''}
+      ` : ''}
+      ${t.reward ? `
+        <div class="task-reward">
+          ⭐ مكافأة الإنجاز: ${t.reward} نقطة
+          ${t.pointPrice ? `<span style="color:var(--text3);font-weight:500">(${fmt(t.reward * t.pointPrice)} د.ع)</span>` : ''}
+        </div>` : ''}
+      ${isDone ? '<div style="color:var(--green);font-weight:700;font-size:13px;margin-top:8px">🏆 أحسنت! لقد حققت هذا الهدف</div>' : ''}
+    `;
+    container.appendChild(div);
+  });
 }
 
-if(points>=120){
-rating="ذهبي";
+// ═══ INIT ═══
+async function init() {
+  // Load settings
+  const settingsSnap = await get(ref(db, 'settings'));
+  if (settingsSnap.exists()) {
+    const s = settingsSnap.val();
+    commissionRate = Number(s.commissionRate) || 250;
+    pointPrice = Number(s.pointPrice) || 250;
+  }
+
+  // Load base salary
+  const salarySnap = await get(ref(db, 'salaries/' + user + '/base'));
+  baseSalary = salarySnap.exists() ? Number(salarySnap.val()) : 0;
+
+  // ── Listen: delivered orders (ordersTest/تم التسليم) ──
+  onValue(ref(db, 'ordersTest/تم التسليم'), snap => {
+    deliveredCount = 0;
+    if (snap.exists()) {
+      const orders = snap.val();
+      for (const id in orders) {
+        const o = orders[id];
+        const emp = o.fixedBy || o.assignedTo || o.employee || '';
+        if (emp === user) deliveredCount++;
+      }
+    }
+    updateSalaryDisplay();
+  });
+
+  // ── Listen: points ──
+  onValue(ref(db, 'points/' + user), snap => {
+    bonusPoints = 0; penaltyPoints = 0;
+    if (snap.exists()) {
+      bonusPoints = Number(snap.val().bonus) || 0;
+      penaltyPoints = Number(snap.val().penalty) || 0;
+    }
+    updateSalaryDisplay();
+  });
+
+  // ── Listen: tasks ──
+  onValue(ref(db, 'tasks'), snap => {
+    const today = [];
+    const week = [];
+    const month = [];
+    const now = new Date();
+
+    if (snap.exists()) {
+      const all = snap.val();
+      Object.values(all).filter(t => t.employee === user).forEach(t => {
+        const created = new Date(t.createdAt || t.startDate || Date.now());
+        const diffDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+        if (t.period === 'daily' || diffDays <= 1) today.push(t);
+        else if (t.period === 'weekly' || diffDays <= 7) week.push(t);
+        else month.push(t);
+      });
+    }
+
+    renderTasks(today, 'todayTasks', 'todayCount');
+    renderTasks(week, 'weekTasks', 'weekCount');
+    renderTasks(month, 'monthTasks', 'monthCount');
+  });
+
+  // ── Listen: notifications ──
+  onValue(ref(db, 'notifications/' + user), snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    const keys = Object.keys(data).sort((a, b) => b - a);
+    for (const id of keys) {
+      const n = data[id];
+      if (n.read) continue;
+      const popup = document.getElementById('notifPopup');
+      document.getElementById('notifTitle').textContent = n.title || '';
+      document.getElementById('notifNote').textContent = n.note || '';
+      popup.style.display = 'block';
+      clearTimeout(window._notifT);
+      window._notifT = setTimeout(() => { popup.style.display = 'none'; }, 8000);
+      set(ref(db, 'notifications/' + user + '/' + id + '/read'), true);
+      break;
+    }
+  });
 }
-
-document.getElementById("rating").innerText = rating;
-});
-
-
 </script>
-<div id="taskNotification" style="
-position:fixed;
-bottom:25px;
-right:25px;
-background:#FF6B2D;
-color:white;
-padding:16px 22px;
-border-radius:14px;
-font-family:Tajawal;
-font-weight:bold;
-box-shadow:0 10px 25px rgba(0,0,0,0.3);
-z-index:99999;
-display:none;
-animation:fadeInUp 0.5s ease;
-">
-
-🎯 تم تلقي مهمة جديدة! <br>
-🚀 يلا ننجزها
-
-</div>
-
-<style>
-@keyframes fadeInUp{
-from{opacity:0;transform:translateY(30px)}
-to{opacity:1;transform:translateY(0)}
-}
-</style>
 </body>
 </html>
