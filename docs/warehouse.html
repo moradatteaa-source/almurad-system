@@ -1496,6 +1496,31 @@ window.printBarcodes = async function(key) {
   const price = p.prices?.pos || "";
   const content = [];
 
+  // ── تحميل خط Tajawal من نفس المسار ──
+  let fontBase64 = "";
+  try {
+    const res = await fetch("Tajawal-Regular.ttf");
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    fontBase64 = btoa(binary);
+  } catch(e) {
+    toast("⚠️ تعذر تحميل الخط", "error");
+    return;
+  }
+
+  pdfMake.vfs = pdfMake.vfs || {};
+  pdfMake.vfs["Tajawal-Regular.ttf"] = fontBase64;
+  pdfMake.fonts = {
+    Tajawal: {
+      normal: "Tajawal-Regular.ttf",
+      bold: "Tajawal-Regular.ttf",
+      italics: "Tajawal-Regular.ttf",
+      bolditalics: "Tajawal-Regular.ttf"
+    }
+  };
+
   for (const [vk, code] of Object.entries(barcodes)) {
     const label = (vk === "default" || Object.keys(barcodes).length === 1)
       ? name
@@ -1503,16 +1528,42 @@ window.printBarcodes = async function(key) {
 
     const canvas = document.createElement("canvas");
     try {
-      JsBarcode(canvas, String(code), { format: "CODE128", width: 1, height: 18, margin: 0, displayValue: false });
+      JsBarcode(canvas, String(code), {
+        format: "CODE128", width: 1, height: 18, margin: 0, displayValue: false
+      });
     } catch (e) { continue; }
     const img = canvas.toDataURL("image/png");
 
-    content.push({
+content.push({
       stack: [
-        { text: label, fontSize: label.length > 40 ? 6 : 8, bold: true, alignment: "center", margin: [0,1,0,2] },
-        { text: String(price), fontSize: 22, bold: true, alignment: "center", margin: [0,2,0,3] },
-        { image: img, width: 70, alignment: "center", margin: [0,1,0,2] },
-        { text: "سنتر المراد", fontSize: 7, alignment: "center" }
+        {
+          text: label,
+          fontSize: label.length > 30 ? 7 : label.length > 20 ? 8 : 9,
+          bold: true,
+          alignment: "center",
+          margin: [0, 0, 0, 1],
+          lineHeight: 1
+        },
+        {
+          text: String(price),
+          fontSize: 20,
+          bold: true,
+          alignment: "center",
+          margin: [0, 0, 0, 1]
+        },
+        {
+          image: img,
+          width: 72,
+          alignment: "center",
+          margin: [0, 1, 0, 1]
+        },
+        {
+          text: "سنتر المراد",
+          fontSize: 9,
+          bold: true,
+          alignment: "center",
+          margin: [0, 1, 0, 0]
+        }
       ],
       pageBreak: "after"
     });
@@ -1521,11 +1572,12 @@ window.printBarcodes = async function(key) {
   if (content.length === 0) return toast("لا توجد باركودات لهذا المنتج", "error");
   delete content[content.length - 1].pageBreak;
 
-  pdfMake.createPdf({
-    pageSize: { width: 108, height: 71 },
-    pageMargins: [4, 4, 4, 4],
-    content,
-    pageDirection: "rtl"
+pdfMake.createPdf({
+    pageSize: { width: 108, height: 85 },   // ← من 71 إلى 85
+    pageMargins: [4, 3, 4, 3],              // ← هوامش أصغر
+    defaultStyle: { font: "Tajawal" },
+    pageDirection: "rtl",
+    content
   }).download(`${name}-barcodes.pdf`);
 
   toast("🖨 جارٍ تحميل ملف الباركود...", "info");
