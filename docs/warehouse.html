@@ -1520,7 +1520,25 @@ window.printBarcodes = async function(key) {
       bolditalics: "Tajawal-Regular.ttf"
     }
   };
+function fixArabicText(text) {
+  if (!text) return "";
 
+  // نحافظ على ترتيب الكلمات الطبيعي ونمنع تكرار المسافات
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/([\u0600-\u06FF]+)/)
+    .map(part => {
+      if (/[\u0600-\u06FF]+/.test(part)) {
+        // نقلب ترتيب الكلمات فقط (بدون قلب الحروف)
+        return part.split(" ").reverse().join(" ");
+      }
+      return part;
+    })
+    .reverse()
+    .join(" ")
+    .replace(/\s+/g, " ");
+}
   for (const [vk, code] of Object.entries(barcodes)) {
     const label = (vk === "default" || Object.keys(barcodes).length === 1)
       ? name
@@ -1537,7 +1555,7 @@ window.printBarcodes = async function(key) {
 content.push({
       stack: [
         {
-          text: label,
+         text: fixArabicText(label),
           fontSize: label.length > 30 ? 7 : label.length > 20 ? 8 : 9,
           bold: true,
           alignment: "center",
@@ -1558,7 +1576,7 @@ content.push({
           margin: [0, 1, 0, 1]
         },
         {
-          text: "سنتر المراد",
+         text: fixArabicText("سنتر المراد"),
           fontSize: 9,
           bold: true,
           alignment: "center",
