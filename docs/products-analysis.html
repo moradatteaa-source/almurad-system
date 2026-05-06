@@ -1,823 +1,836 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 إحصائيات المعلنين - نظام المراد</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --blue: #043B64;
-      --orange: #FF6B2D;
-      --bg: #f4f6fa;
-    }
-    body {
-      font-family: 'Tajawal', sans-serif;
-      background: var(--bg);
-      color: var(--blue);
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: var(--blue);
-      color: white;
-      text-align: center;
-      padding: 15px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    .container {
-      max-width: 1250px;
-      margin: 25px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    select, input[type=date], input[type=number], button {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-family: 'Tajawal';
-      font-size: 14px;
-    }
-    button {
-      background: var(--blue);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover { background: var(--orange); }
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-bottom: 25px;
-    }
-    .card {
-      background: var(--bg);
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .card h3 {
-      margin: 0;
-      font-size: 15px;
-      color: var(--blue);
-    }
-    .card p {
-      font-size: 20px;
-      font-weight: bold;
-      color: var(--orange);
-      margin: 5px 0 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      border-bottom: 1px solid #eee;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: var(--blue);
-      color: white;
-      position: sticky;
-      top: 0;
-    }
-    .section-title {
-      margin: 20px 0 10px;
-      color: var(--blue);
-      font-weight: bold;
-    }
-    @media(max-width:900px) {
-      .filters { flex-direction: column; align-items: flex-start; }
-    }
-    /* ✅ تصميم قائمة الحالات المنسدلة */
-.dropdown { position: relative; display: inline-block; }
-.dropbtn {
-  background: var(--blue);
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: 'Tajawal';
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الأرباح — المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #04122a;
+  --navy2: #071e3d;
+  --navy3: #0d2d5e;
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --green: #10b981;
+  --green2: #059669;
+  --red: #ef4444;
+  --gold: #f59e0b;
+  --blue: #3b82f6;
+  --bg: #f0f4f8;
+  --card: #fff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text2: #64748b;
+  --text3: #94a3b8;
+  --shadow: 0 4px 24px rgba(4,18,42,0.07);
+  --shadow2: 0 8px 40px rgba(4,18,42,0.13);
 }
-.dropdown-content {
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── HEADER ── */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #0a2447 100%);
+  color: white;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  position: sticky; top: 0; z-index: 900;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.brand { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 900; }
+.brand-dot { width: 38px; height: 38px; background: linear-gradient(135deg,var(--accent),#ea580c); border-radius: 10px; display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 3px 12px rgba(249,115,22,0.5); }
+.hbadge { background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 5px 14px; font-size: 13px; font-weight: 600; }
+
+/* ── FILTERS BAR ── */
+#filtersBar {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 2px 12px rgba(4,18,42,0.05);
+  position: sticky; top: 64px; z-index: 800;
+}
+
+.filter-group { display: flex; flex-direction: column; gap: 3px; }
+.filter-label { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+.filter-input {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  outline: none;
+  transition: all 0.2s;
+  font-weight: 500;
+  background: var(--bg);
+  min-width: 130px;
+}
+.filter-input:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+
+/* ── DROPDOWN FILTER ── */
+.dd-wrap { position: relative; }
+.dd-btn {
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.dd-btn:hover { border-color: var(--accent); background: white; }
+.dd-btn.has-selection { border-color: var(--accent); background: #fff7ed; color: var(--accent); }
+.dd-panel {
   display: none;
   position: absolute;
-  background-color: white;
-  min-width: 180px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  z-index: 5;
-}
-.dropdown-content label {
-  display: block;
-  margin: 4px 0;
-  cursor: pointer;
-}
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-#productDropdown {
-  max-height: 250px;
+  top: calc(100% + 6px);
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 200px;
+  max-height: 280px;
   overflow-y: auto;
+  box-shadow: var(--shadow2);
+  z-index: 9999;
 }
-#productSearch {
-  font-family: 'Tajawal';
-  font-size: 13px;
-}
+.dd-wrap:hover .dd-panel { display: block; }
+.dd-panel label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.12s; }
+.dd-panel label:hover { background: #fff7ed; }
+.dd-panel label input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+.dd-sep { height: 1px; background: var(--border); margin: 6px 0; }
+.dd-search { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 12px; font-family: 'Tajawal', sans-serif; margin-bottom: 8px; outline: none; }
+.dd-search:focus { border-color: var(--accent); }
 
-  </style>
+/* ── BUTTONS ── */
+.btn { padding: 9px 18px; border: none; border-radius: 9px; font-size: 13px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #ea580c); color: white; box-shadow: 0 4px 14px rgba(249,115,22,0.35); }
+.btn-navy { background: linear-gradient(135deg, var(--navy), var(--navy2)); color: white; }
+.btn-green { background: linear-gradient(135deg, var(--green), var(--green2)); color: white; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+
+/* ── MAIN ── */
+main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+/* ── STATS GRID ── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow2); }
+.stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0 0 16px 16px; }
+.sc-orange::after { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.sc-green::after { background: linear-gradient(90deg, var(--green), #34d399); }
+.sc-red::after { background: linear-gradient(90deg, var(--red), #f87171); }
+.sc-blue::after { background: linear-gradient(90deg, var(--blue), #60a5fa); }
+.sc-gold::after { background: linear-gradient(90deg, var(--gold), #fbbf24); }
+.sc-navy::after { background: linear-gradient(90deg, var(--navy), var(--navy3)); }
+.sc-teal::after { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
+.sc-purple::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+.stat-emoji { font-size: 22px; margin-bottom: 10px; }
+.stat-val { font-size: 22px; font-weight: 900; color: var(--navy); margin-bottom: 3px; line-height: 1; }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.3px; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ── PROFIT BAR ── */
+.profit-bar-wrap {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 20px;
+}
+.profit-bar-label { font-size: 13px; font-weight: 700; color: var(--text2); white-space: nowrap; }
+.profit-bar-track { flex: 1; background: #f1f5f9; border-radius: 20px; height: 12px; overflow: hidden; }
+.profit-bar-fill { height: 12px; border-radius: 20px; transition: width 0.8s ease; }
+.profit-bar-value { font-size: 16px; font-weight: 900; white-space: nowrap; }
+
+/* ── TABLE ── */
+.table-section { background: white; border-radius: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
+.table-header { padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg); }
+.table-title { font-size: 16px; font-weight: 800; color: var(--navy); }
+.table-wrap { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: white;
+  padding: 12px 14px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  position: sticky; top: 0; z-index: 10;
+  white-space: nowrap;
+}
+thead th:first-child { text-align: right; padding-right: 20px; border-radius: 0; }
+tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #fafbff; }
+tbody td { padding: 11px 14px; text-align: center; }
+tbody td:first-child { text-align: right; padding-right: 20px; font-weight: 700; }
+tfoot td { padding: 12px 14px; text-align: center; font-weight: 800; font-size: 14px; background: #f8fafc; border-top: 2px solid var(--border); }
+tfoot td:first-child { text-align: right; padding-right: 20px; }
+
+.profit-positive { color: var(--green); font-weight: 800; }
+.profit-negative { color: var(--red); font-weight: 800; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-gold { background: #fef9c3; color: #854d0e; }
+
+.ad-input {
+  width: 80px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: 'Tajawal', sans-serif;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+  font-weight: 600;
+}
+.ad-input:focus { border-color: var(--accent); }
+
+/* ── LOADING ── */
+#loadingOverlay {
+  position: fixed; inset: 0;
+  background: rgba(4,18,42,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; color: white;
+}
+.loading-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+.loading-text { font-size: 15px; font-weight: 700; opacity: 0.8; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); padding: 12px 28px; border-radius: 14px; font-size: 14px; font-weight: 700; color: white; z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none; box-shadow: var(--shadow2); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+.toast.info { background: var(--navy); }
+
+/* ── EMPTY ── */
+.empty-state { padding: 60px; text-align: center; color: var(--text3); }
+.empty-state .ei { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  #filtersBar { padding: 12px 16px; }
+  main { padding: 16px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
 </head>
 <body>
-  <header>📊 إحصائيات المعلنين - نظام المراد</header>
-  <div class="container">
 
-    <div class="filters">
-
-
-      <input type="number" id="deliveryPerOrder" placeholder="🚚 كلفة التوصيل للطلب" value="3500" style="width:180px">
-<div class="dropdown">
-  <button class="dropbtn">👤 المعلنين</button>
-  <div class="dropdown-content" id="advertiserDropdown">
-    <label><input type="checkbox" id="selectAllAdvertisers"> ✅ تحديد الكل</label>
-    <div id="advertiserCheckboxes"></div>
-  </div>
+<div id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">جاري تحميل البيانات...</div>
 </div>
-<div class="dropdown">
-  <button class="dropbtn">🧾 الحالات</button>
-  <div class="dropdown-content" id="statusCheckboxes">
-    <label><input type="checkbox" id="selectAllStatuses"> ✅ تحديد الكل</label>
-    <label><input type="checkbox" value="مثبت"> مثبت</label>
-    <label><input type="checkbox" value="قيد التوصيل"> قيد التوصيل</label>
-    <label><input type="checkbox" value="تم التسليم"> تم التسليم</label>
-    <label><input type="checkbox" value="راجع"> راجع</label>
-    <label><input type="checkbox" value="تم استلام الراجع"> تم استلام الراجع</label>
-    <label><input type="checkbox" value="رفض"> رفض</label>
+
+<div id="toastEl" class="toast"></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="brand">
+    <div class="brand-dot">📊</div>
+    <span>لوحة الأرباح — المراد</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <div class="hbadge" id="hOrderCount">0 طلب</div>
+    <div class="hbadge" id="hDate"></div>
   </div>
 </div>
 
+<!-- FILTERS -->
+<div id="filtersBar">
 
-<div class="dropdown">
-  <button class="dropbtn">📦 المنتجات</button>
-  <div class="dropdown-content" id="productDropdown">
-    <input type="text" id="productSearch" placeholder="🔍 بحث..." style="width:100%;padding:6px 8px;margin-bottom:8px;border:1px solid #ccc;border-radius:6px;">
-    <label><input type="checkbox" id="selectAllProducts"> ✅ تحديد الكل</label>
-    <div id="productCheckboxes"></div>
-  </div>
-</div>
-
-      <input type="date" id="fromDate">
-      <input type="date" id="toDate">
- <input type="number" id="exchangeRate" placeholder="💱 سعر الصرف" value="1400" style="width:140px">
- <input type="number" id="returnRate" placeholder="↩️ نسبة الراجع %" value="20" style="width:140px">
-      <button id="applyBtn">تطبيق</button>
-      <button id="exportExcel">📁 تصدير Excel</button>
-      <button id="exportPDF">📄 تحميل PDF</button>
+  <!-- المعلنين -->
+  <div class="filter-group">
+    <div class="filter-label">المعلنين</div>
+    <div class="dd-wrap">
+      <button class="dd-btn" id="btnAdvertisers">👤 الكل <span id="advCount"></span></button>
+      <div class="dd-panel" id="panelAdvertisers">
+        <label style="font-weight:700;color:var(--accent)">
+          <input type="checkbox" id="chkAllAdv"> تحديد الكل
+        </label>
+        <div class="dd-sep"></div>
+        <div id="advList"></div>
+      </div>
     </div>
+  </div>
 
-    <div class="cards">
-      <div class="card"><h3>📦 إجمالي الطلبات</h3><p id="totalOrders">0</p></div>
-      <div class="card"><h3>📦 إجمالي الكمية</h3><p id="totalQty">0</p></div>
-<div class="card"><h3>🏆 أفضل منتج</h3><p id="bestProduct">-</p></div>
-      <div class="card"><h3>✅ تم التسليم</h3><p id="deliveredCount">0</p></div>
-      <div class="card"><h3>↩️ الراجع</h3><p id="returnedCount">0</p></div>
-      <div class="card"><h3>💰 المبيعات الكلية</h3><p id="totalSales">0</p></div>
-      <div class="card"><h3>💵 كلفة الشراء</h3><p id="totalBuy">0</p></div>
-      <div class="card"><h3>🚚 كلفة التوصيل</h3><p id="deliveryCost">0</p></div>
-<div class="card"><h3>💱 سعر الصرف</h3><p id="exchangeDisplay">0</p></div>
-<div class="card"><h3>↩️ نسبة الراجع</h3><p id="returnDisplay">0%</p></div>
-      <div class="card"><h3>📈 الربح الصافي</h3><p id="profit">0</p></div>
+  <!-- الحالات -->
+  <div class="filter-group">
+    <div class="filter-label">الحالات</div>
+    <div class="dd-wrap">
+      <button class="dd-btn" id="btnStatuses">🧾 الكل <span id="statusCount"></span></button>
+      <div class="dd-panel" id="panelStatuses">
+        <label style="font-weight:700;color:var(--accent)">
+          <input type="checkbox" id="chkAllStatus"> تحديد الكل
+        </label>
+        <div class="dd-sep"></div>
+        <div id="statusList"></div>
+      </div>
     </div>
+  </div>
 
-<h3 class="section-title">📦 إحصائيات المنتجات</h3>
+  <!-- المنتجات -->
+  <div class="filter-group">
+    <div class="filter-label">المنتجات</div>
+    <div class="dd-wrap">
+      <button class="dd-btn" id="btnProducts">📦 الكل <span id="prodCount"></span></button>
+      <div class="dd-panel" id="panelProducts">
+        <input type="text" class="dd-search" id="prodSearch" placeholder="🔍 بحث عن منتج...">
+        <label style="font-weight:700;color:var(--accent)">
+          <input type="checkbox" id="chkAllProd"> تحديد الكل
+        </label>
+        <div class="dd-sep"></div>
+        <div id="prodList"></div>
+      </div>
+    </div>
+  </div>
 
-<table id="productsStats">
-<thead>
-<tr>
-<th>المنتج</th>
-<th>عدد الطلبات</th>
-<th>الكمية</th>
-<th>💰 المبيعات</th>
-<th>💵 الشراء</th>
-<th>🚚 التوصيل</th>
-<th>📣 الإعلان</th>
-<th>📈 الربح</th>
-</tr>
-</thead>
+  <!-- التواريخ -->
+  <div class="filter-group">
+    <div class="filter-label">من تاريخ</div>
+    <input type="date" class="filter-input" id="fromDate" style="min-width:140px">
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">إلى تاريخ</div>
+    <input type="date" class="filter-input" id="toDate" style="min-width:140px">
+  </div>
 
-<tbody id="productsStatsBody"></tbody>
-</table>
+  <!-- الإعدادات المالية -->
+  <div class="filter-group">
+    <div class="filter-label">كلفة التوصيل / طلب</div>
+    <input type="number" class="filter-input" id="deliveryCost" value="3500" style="min-width:130px">
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">سعر الصرف (د.ع/$)</div>
+    <input type="number" class="filter-input" id="exchangeRate" value="1400" style="min-width:120px">
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">نسبة الراجع %</div>
+    <input type="number" class="filter-input" id="returnRate" value="20" style="min-width:100px">
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="applyFilter()">⚡ تطبيق</button>
+    <button class="btn btn-navy btn-sm" onclick="exportExcel()">📊 Excel</button>
+    <button class="btn btn-green btn-sm" onclick="exportPDF()">📄 PDF</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card sc-navy">
+      <div class="stat-emoji">📦</div>
+      <div class="stat-val" id="sTotal">0</div>
+      <div class="stat-label">إجمالي الطلبات</div>
+    </div>
+    <div class="stat-card sc-blue">
+      <div class="stat-emoji">🔢</div>
+      <div class="stat-val" id="sQty">0</div>
+      <div class="stat-label">الكمية الكلية</div>
+    </div>
+    <div class="stat-card sc-green">
+      <div class="stat-emoji">✅</div>
+      <div class="stat-val" id="sDelivered">0</div>
+      <div class="stat-label">تم التسليم</div>
+      <div class="stat-sub" id="sDeliveredPct"></div>
+    </div>
+    <div class="stat-card sc-red">
+      <div class="stat-emoji">↩️</div>
+      <div class="stat-val" id="sReturned">0</div>
+      <div class="stat-label">الراجع</div>
+      <div class="stat-sub" id="sReturnedPct"></div>
+    </div>
+    <div class="stat-card sc-orange">
+      <div class="stat-emoji">💰</div>
+      <div class="stat-val" id="sSales">0</div>
+      <div class="stat-label">المبيعات الكلية</div>
+    </div>
+    <div class="stat-card sc-teal">
+      <div class="stat-emoji">🏪</div>
+      <div class="stat-val" id="sBuy">0</div>
+      <div class="stat-label">كلفة الشراء</div>
+    </div>
+    <div class="stat-card sc-purple">
+      <div class="stat-emoji">🚚</div>
+      <div class="stat-val" id="sDelivery">0</div>
+      <div class="stat-label">كلفة التوصيل</div>
+    </div>
+    <div class="stat-card sc-gold">
+      <div class="stat-emoji">📣</div>
+      <div class="stat-val" id="sAd">0</div>
+      <div class="stat-label">كلفة الإعلان</div>
+    </div>
+    <div class="stat-card sc-green">
+      <div class="stat-emoji">📈</div>
+      <div class="stat-val" id="sProfit">0</div>
+      <div class="stat-label">الربح الصافي</div>
+    </div>
+    <div class="stat-card sc-blue">
+      <div class="stat-emoji">🏆</div>
+      <div class="stat-val" id="sBest" style="font-size:14px">—</div>
+      <div class="stat-label">أفضل منتج</div>
+    </div>
+  </div>
+
+  <!-- PROFIT BAR -->
+  <div class="profit-bar-wrap" id="profitBarWrap">
+    <div class="profit-bar-label">نسبة الربح</div>
+    <div class="profit-bar-track">
+      <div class="profit-bar-fill" id="profitBar" style="width:0%"></div>
+    </div>
+    <div class="profit-bar-value" id="profitPct">0%</div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-section">
+    <div class="table-header">
+      <div class="table-title">📦 إحصائيات المنتجات التفصيلية</div>
+      <div style="font-size:12px;color:var(--text3)">
+        💡 أدخل كلفة الإعلان بالدولار لكل منتج ثم اضغط خارج الحقل لإعادة الحساب
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الطلبات</th>
+            <th>الكمية</th>
+            <th>✅ مسلّم</th>
+            <th>↩️ راجع</th>
+            <th>💰 مبيعات</th>
+            <th>🏪 شراء</th>
+            <th>🚚 توصيل</th>
+            <th>📣 إعلان ($)</th>
+            <th>📣 إعلان (د.ع)</th>
+            <th>📈 ربح</th>
+            <th>هامش %</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="12"><div class="empty-state"><div class="ei">⚡</div><p>اضغط "تطبيق" لعرض البيانات</p></div></td></tr>
+        </tbody>
+        <tfoot id="tableFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-    authDomain: "almurad-system.firebaseapp.com",
-    databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-    projectId: "almurad-system",
-    storageBucket: "almurad-system.appspot.com",
-    messagingSenderId: "911755824405",
-    appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
+// ═══ STATE ═══
+// allOrders = { status: { orderId: orderData } }
+let allOrders = {};
+let warehouse = {};
+// productAds = { productName: IQD_amount }
+let productAds = {};
 
-  const fromDate = document.getElementById("fromDate");
-  const toDate = document.getElementById("toDate");
-const statsBody = document.getElementById("productsStatsBody");
+// All statuses found in the DB
+const STATUS_KEYS = ['تم التسليم','مثبت','قيد التوصيل','قيد التجهيز','قيد المعالجة','راجع','تم استلام الراجع','رفض','جديد','new','بانتظار البضاعة'];
 
-  let allOrders = [], warehouse = {};
-// ✅ تحديد كل الحالات بضغطة واحدة
-document.addEventListener("change", (e) => {
-  if (e.target.id === "selectAllStatuses") {
-    const checkAll = e.target.checked;
-    document.querySelectorAll("#statusCheckboxes input[type='checkbox']").forEach(c => {
-      if (c.id !== "selectAllStatuses") c.checked = checkAll;
-    });
-    applyFilter();
-  }
-});
-// ✅ تحديد كل المعلنين بضغطة واحدة
-document.addEventListener("change", (e) => {
-  if (e.target.id === "selectAllAdvertisers") {
-    const checkAll = e.target.checked;
+const fmt = n => Number(n||0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const pct = (a, b) => b ? ((a/b)*100).toFixed(1) + '%' : '0%';
 
-    document
-      .querySelectorAll("#advertiserCheckboxes input[type='checkbox']")
-      .forEach(c => c.checked = checkAll);
-
-    applyFilter();
-  }
-});
- async function loadData() {
-  const ordersSnap = await get(ref(db, "orders"));
-  if (ordersSnap.exists()) allOrders = Object.values(ordersSnap.val());
-
-  const warehouseSnap = await get(ref(db, "warehouse"));
-  if (warehouseSnap.exists()) warehouse = warehouseSnap.val();
-
-  populateAdvertisers();
-  populateProductsForAdvertiser(); // 🔥 الحل — إضافة هذا السطر
-
-  applyFilter();
-
+// ═══ TOAST ═══
+function toast(msg, type='info') {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(t._t); t._t = setTimeout(() => t.className='toast', 2500);
 }
 
+// ═══ DATE HEADER ═══
+document.getElementById('hDate').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'short', year:'numeric', month:'long', day:'numeric' });
 
-function populateAdvertisers() {
-  const advs = [...new Set(allOrders.map(o => o.advertiser || "").filter(Boolean))];
+// ═══ LOAD DATA ═══
+async function loadData() {
+  try {
+    // Load ordersTest — each child is a STATUS, each grandchild is an order
+    const [ordersSnap, warehouseSnap] = await Promise.all([
+      get(ref(db, 'ordersTest')),
+      get(ref(db, 'warehouse'))
+    ]);
 
-  const container = document.getElementById("advertiserCheckboxes");
+    allOrders = {};
+    if (ordersSnap.exists()) {
+      const data = ordersSnap.val();
+      for (const status in data) {
+        allOrders[status] = data[status]; // { orderId: orderObj }
+      }
+    }
 
-  container.innerHTML = advs.map(a =>
-    `<label><input type="checkbox" value="${a}"> ${a}</label>`
+    warehouse = warehouseSnap.exists() ? warehouseSnap.val() : {};
+
+    const totalCount = Object.values(allOrders).reduce((s, bucket) => s + Object.keys(bucket||{}).length, 0);
+    document.getElementById('hOrderCount').textContent = fmt(totalCount) + ' طلب';
+
+    buildFilters();
+    applyFilter();
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في تحميل البيانات', 'error');
+  } finally {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+}
+
+// ═══ BUILD FILTER OPTIONS ═══
+function buildFilters() {
+  // Collect all advertisers and products from all orders
+  const advertisers = new Set();
+  const products = new Set();
+  const statuses = new Set(Object.keys(allOrders));
+
+  for (const status in allOrders) {
+    for (const id in allOrders[status]) {
+      const o = allOrders[status][id];
+      if (o.advertiser) advertisers.add(o.advertiser);
+      const prods = (o.productName || '').split('،').map(s => s.trim()).filter(Boolean);
+      prods.forEach(p => products.add(p));
+    }
+  }
+
+  buildCheckboxList('advList', [...advertisers].sort(), 'chkAllAdv', () => applyFilter());
+  buildCheckboxList('statusList', [...statuses].sort(), 'chkAllStatus', () => applyFilter());
+  buildCheckboxList('prodList', [...products].sort(), 'chkAllProd', () => applyFilter());
+
+  // Product search
+  document.getElementById('prodSearch').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#prodList label').forEach(label => {
+      label.style.display = label.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
+function buildCheckboxList(containerId, items, selectAllId, onChange) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = items.map(item =>
+    `<label><input type="checkbox" value="${item}" onchange="${onChange.name}()"> ${item}</label>`
   ).join('');
-}
 
-  document.getElementById("applyBtn").onclick = applyFilter;
-
-function populateProductsForAdvertiser() {
- const adv = Array.from(
-  document.querySelectorAll("#advertiserCheckboxes input:checked")
-).map(c => c.value);
-  const products = allOrders
-.filter(o => !adv.length || adv.includes(o.advertiser))
-    .flatMap(o => (o.productName || "").split("،").map(x => x.trim()))
-    .filter(Boolean);
-
-  const uniqueProducts = [...new Set(products)];
-
-  const productContainer = document.getElementById("productCheckboxes");
-  productContainer.innerHTML = uniqueProducts.length
-    ? uniqueProducts.map(p => `<label><input type="checkbox" value="${p}"> ${p}</label>`).join('')
-    : "<p style='font-size:13px;color:#777;text-align:center'>لا توجد منتجات</p>";
-
-  // زر تحديد الكل
-  document.getElementById("selectAllProducts").checked = false;
-}
-// ✅ تحديد كل المنتجات بضغطة واحدة
-document.addEventListener("change", (e) => {
-  if (e.target.id === "selectAllProducts") {
-    const checkAll = e.target.checked;
-    document.querySelectorAll("#productCheckboxes input[type='checkbox']").forEach(c => c.checked = checkAll);
-    applyFilter();
-  }
-});
-
-// ✅ بحث داخل قائمة المنتجات
-document.getElementById("productSearch").addEventListener("input", (e) => {
-  const search = e.target.value.trim();
-  document.querySelectorAll("#productCheckboxes label").forEach(label => {
-    const text = label.textContent.trim();
-    label.style.display = text.includes(search) ? "block" : "none";
-  });
-});
-window.goToProductsPage = function(){
-
-  const adv = Array.from(
-    document.querySelectorAll("#advertiserCheckboxes input:checked")
-  ).map(c=>c.value);
-
-  const status = Array.from(
-    document.querySelectorAll("#statusCheckboxes input:checked")
-  ).map(c=>c.value);
-
-  const products = Array.from(
-    document.querySelectorAll("#productCheckboxes input:checked")
-  ).map(c=>c.value);
-
-  const url = `products-analysis.html?adv=${encodeURIComponent(adv.join(","))}&status=${encodeURIComponent(status.join(","))}&products=${encodeURIComponent(products.join(","))}`;
-
-  window.open(url,"_blank");
-}
-
-
-  function applyFilter() {
-const adv = Array.from(
-  document.querySelectorAll("#advertiserCheckboxes input:checked")
-).map(c => c.value);
-const statusFilter = Array.from(document.querySelectorAll("#statusCheckboxes input:checked")).map(c => c.value);
-const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxes input:checked")).map(c => c.value);
-const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
-    const f = fromDate.value ? new Date(fromDate.value) : null;
-    const t = toDate.value ? new Date(toDate.value + "T23:59:59") : null;
-
-    let filtered = allOrders.filter(o => {
-if (adv.length && !adv.includes(o.advertiser)) return false;
-if (statusFilter.length) {
-
-  let matched = false;
-
-  // ✅ إذا عنده history
-  if (o.statusHistory && Object.keys(o.statusHistory).length) {
-
-const history = Object.entries(o.statusHistory);
-
-matched = history.some(([statusName, h]) => {
-
-  if (!statusFilter.includes(statusName)) return false;
-
-      // إذا ماكو وقت لا ترفضه مباشرة
-      if (!h.time) return true;
-
-   let d;
-
-if (typeof h.time === "number") {
-  d = new Date(h.time);
-} else {
-  d = new Date(h.time);
-}
-
-// إذا التاريخ غير صالح لا نرفضه مباشرة
-if (!isNaN(d)) {
-  if (f && d < f) return false;
-  if (t && d > t) return false;
-}
-
-      return true;
-    });
-
-  } else {
-    // ✅ fallback للحالة الحالية
-    if (statusFilter.includes(o.status)) {
-      matched = true;
-    }
-  }
-
-  if (!matched) return false;
-}
-  // ✅ فلترة المنتجات تطابق تام (ما تطلع إلا المنتجات المختارة فقط)
-  if (selectedProducts.length) {
-    const orderProducts = (o.productName || "").split("،").map(x => x.trim());
-    const match = orderProducts.some(prod => selectedProducts.includes(prod));
-    if (!match) return false;
-  }
-
-      return true;
-    });
-
-    if (!filtered.length) {
-statsBody.innerHTML = "<tr><td colspan='8'>لا توجد بيانات</td></tr>";
-      updateCards({});
-      return;
-    }
-
-const deliveryPerOrder = Number(document.getElementById("deliveryPerOrder").value) || 3500;
-    let totalSales = 0, totalBuy = 0, delivered = 0, returned = 0, totalOrders = filtered.length;
-    let totalQty = 0;
-let productStats = {};
-let stats = {};
-
-    filtered.forEach((order, i) => {
-  const status = order.status || "-";
-  if (status.includes("راجع")) returned++;
-  if (status === "تم التسليم") delivered++;
-
-  const names = (order.productName || "").split("،").map(s => s.trim()).filter(Boolean);
-  const unique = [...new Set(names)];
-
-  unique.forEach(p => {
-
-  // تفاصيل المنتج من الطلب (productsDetailed)
-  const detail = order.productsDetailed?.find(d => d.name === p);
-
-  const qty = detail?.qty || detail?.quantity || 1; // كمية المنتج
-  const sell = detail?.price || 0; // سعر البيع الصحيح من الطلب
-  const buy = warehouse[p]?.buyPrice || 0; // سعر الشراء من الـ warehouse
-// ✅ جمع الكمية
-totalQty += qty;
-
-// ✅ احصائيات المنتجات
-if (!productStats[p]) {
-  productStats[p] = { qty: 0, delivered: 0 };
-}
-
-productStats[p].qty += qty;
-
-if (status === "تم التسليم") {
-  productStats[p].delivered += qty;
-}
-  // حساب المبيعات فقط إذا الحالة ضمن الفلترة
-let saleVal = 0;
-
-if (statusFilter.length && order.statusHistory) {
-
-const history = Object.entries(order.statusHistory);
-
-const matched = history.some(([statusName, h]) => {
-
-  if (!statusFilter.includes(statusName)) return false;
-
-  if (!h.time) return true;
-
-  let d = typeof h.time === "number"
-    ? new Date(h.time)
-    : new Date(h.time);
-
-  if (!isNaN(d)) {
-    if (f && d < f) return false;
-    if (t && d > t) return false;
-  }
-
-  return true;
-});
-
-  if (matched) {
-    saleVal = sell;
-  }
-
-} else if (!statusFilter.length) {
-  // إذا ماكو فلترة حالات نحسب طبيعي
-  saleVal = sell;
-}
-
-  const buyVal = buy * qty;
-const deliveryVal = deliveryPerOrder;
-const adPerOrder = 0;
-  totalSales += saleVal;
-  totalBuy += buyVal;
-
-if (!stats[p]) {
-  stats[p] = {
-    orders: 0,
-    qty: 0,
-    sales: 0,
-    buy: 0,
-    delivery: 0,
-    ad: 0
-  };
-}
-
-if (!stats[p].orderIds) stats[p].orderIds = new Set();
-
-stats[p].orderIds.add(order.id || i);
-
-stats[p].orders = stats[p].orderIds.size;
-stats[p].qty += qty;
-stats[p].sales += sell;
-stats[p].buy += buyVal;
-stats[p].delivery += deliveryVal;
-stats[p].ad += adPerOrder;
-});
-
-
-});
-let bestProduct = "-";
-let bestScore = 0;
-
-Object.keys(productStats).forEach(p => {
-  const data = productStats[p];
-
-  const score = data.delivered * 2 + data.qty;
-
-  if (score > bestScore) {
-    bestScore = score;
-    bestProduct = p;
-  }
-});
-
-    const deliveryCost = totalOrders * deliveryPerOrder;
-let totalAd = 0;
-
-Object.values(window.productAds || {}).forEach(v => {
-  totalAd += v;
-});
-const returnRate = Number(document.getElementById("returnRate").value) || 0;
-
-const rawProfit = totalSales - totalBuy - deliveryCost - totalAd;
-
-const lossFromReturns = rawProfit * (returnRate / 100);
-
-const profit = rawProfit - lossFromReturns;
-let html = "";
-
-Object.entries(stats)
-.sort((a, b) => b[1].qty - a[1].qty)
-.forEach(([p, d]) => {
-
-  const adCostProduct = window.productAds[p] || 0;
-
-  const rawProfit = d.sales - d.buy - d.delivery - adCostProduct;
-  const lossFromReturns = rawProfit * (returnRate / 100);
-  const profit = rawProfit - lossFromReturns;
-
-  const rowColor = profit >= 0 ? "#d4edda" : "#f8d7da";
-  const textColor = profit >= 0 ? "#155724" : "#721c24";
-
-  html += `
-<tr style="background:${rowColor};color:${textColor};font-weight:bold;">
-  <td>${p}</td>
-  <td>${formatNumber(d.orders)}</td>
-  <td>${formatNumber(d.qty)}</td>
-  <td>${formatNumber(d.sales)}</td>
-  <td>${formatNumber(d.buy)}</td>
-  <td>${formatNumber(d.delivery)}</td>
-  <td>
-    <input type="number"
-    class="adInput"
-    data-product="${p}"
-    value="${exchangeRate ? (window.productAds[p] || 0) / exchangeRate : 0}"
-    style="width:70px">
-  </td>
-  <td>${formatNumber(profit)}</td>
-</tr>`;
-});
-
-statsBody.innerHTML = html;
-document.querySelectorAll(".adInput").forEach(input => {
-
-  input.addEventListener("input", (e) => {
-    const product = e.target.dataset.product;
-    const usd = e.target.value;
-
-    const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
-    const iqd = (Number(usd) || 0) * exchangeRate;
-
-    window.productAds[product] = iqd;
+  document.getElementById(selectAllId).addEventListener('change', e => {
+    container.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = e.target.checked);
+    onChange();
   });
 
-  // ✅ يحدث بعد ما تخلص كتابة
-  input.addEventListener("blur", () => {
-    applyFilter();
-  });
-
-});
-updateCards({
-  totalOrders,
-  delivered,
-  returned,
-  totalSales,
-  totalBuy,
-  deliveryCost,
-  totalQty,
-  bestProduct,
-  profit
-});
-  }
-// ✅ دالة لتنسيق الأرقام بالإنكليزي مع فواصل الألوف
-function formatNumber(num) {
-  return Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  container.querySelectorAll('input').forEach(c => c.addEventListener('change', onChange));
 }
 
-  function updateCards(v) {
-document.getElementById("exchangeDisplay").textContent =
-  formatNumber(Number(document.getElementById("exchangeRate").value) || 0);
-
-document.getElementById("returnDisplay").textContent =
-  (Number(document.getElementById("returnRate").value) || 0) + "%";
-document.getElementById("profit").textContent = formatNumber(v.profit || 0);
-  document.getElementById("totalOrders").textContent = formatNumber(v.totalOrders || 0);
-  document.getElementById("deliveredCount").textContent = formatNumber(v.delivered || 0);
-  document.getElementById("returnedCount").textContent = formatNumber(v.returned || 0);
-  document.getElementById("totalSales").textContent = formatNumber(v.totalSales || 0);
-  document.getElementById("totalBuy").textContent = formatNumber(v.totalBuy || 0);
-  document.getElementById("deliveryCost").textContent = formatNumber(v.deliveryCost || 0);
-  document.getElementById("totalQty").textContent = formatNumber(v.totalQty || 0);
-document.getElementById("bestProduct").textContent = v.bestProduct || "-";
+// ═══ GET SELECTED ═══
+function getSelected(listId) {
+  return [...document.querySelectorAll(`#${listId} input:checked`)].map(c => c.value);
 }
 
-document.getElementById("exportExcel").onclick = () => {
-  const table = document.getElementById("productsStats");
-  let html = '<table border="1">' + table.innerHTML + '</table>';
-  const blob = new Blob([`\uFEFF${html}`], { type: "application/vnd.ms-excel" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "advertisers_stats.xls";
-  a.click();
-};
-document.getElementById("exportPDF").onclick = () => {
+// ═══ APPLY FILTER ═══
+window.applyFilter = function() {
+  const selAdv = getSelected('advList');
+  const selStatus = getSelected('statusList');
+  const selProd = getSelected('prodList');
+  const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
+  const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value + 'T23:59:59') : null;
+  const deliveryCostPerOrder = Number(document.getElementById('deliveryCost').value) || 3500;
+  const exchangeRate = Number(document.getElementById('exchangeRate').value) || 1400;
+  const returnRatePct = Number(document.getElementById('returnRate').value) || 0;
 
-  const today = new Date().toISOString().split('T')[0];
+  // Update button states
+  updateFilterBtn('btnAdvertisers', selAdv, 'advCount', '👤');
+  updateFilterBtn('btnStatuses', selStatus, 'statusCount', '🧾');
+  updateFilterBtn('btnProducts', selProd, 'prodCount', '📦');
 
-  const element = document.createElement("div");
+  // ── Collect filtered orders ──
+  // productStats = { productName: { orders:Set, qty, sales, buy, delivered, returned } }
+  const productStats = {};
+  let totalOrders = 0, totalQty = 0, totalDelivered = 0, totalReturned = 0;
+  let totalSales = 0, totalBuy = 0;
 
-  element.innerHTML = `
-    <div style="font-family:Tajawal;padding:20px">
-      <h2 style="text-align:center;color:#043B64">
-        Al-Murad - Daily Profit Report
-      </h2>
-      <hr>
+  for (const status in allOrders) {
+    // Filter by selected statuses
+    if (selStatus.length && !selStatus.includes(status)) continue;
 
-     ${document.querySelector(".cards").outerHTML}
-<br><br>
-${document.getElementById("productsStats").outerHTML}
-    </div>
-  `;
+    const isDelivered = status === 'تم التسليم';
+    const isReturned = status === 'راجع' || status === 'تم استلام الراجع';
 
-  html2pdf()
-    .set({
-      margin: 10,
-      filename: `report-${today}.pdf`,
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4' }
-    })
-    .from(element)
-    .save();
-};
+    for (const orderId in allOrders[status]) {
+      const o = allOrders[status][orderId];
 
-// فتح المودال
-window.openProductsAnalysis = function() {
-  document.getElementById("productsModal").style.display = "block";
-  renderProductsModal();
-}
-window.productAds = {};
+      // Filter by advertiser
+      if (selAdv.length && !selAdv.includes(o.advertiser || '')) continue;
 
-window.updateAd = function(product, usd){
-  const exchangeRate = Number(document.getElementById("exchangeRate").value) || 0;
-  const returnRate = Number(document.getElementById("returnRate").value) || 0;
-  const iqd = (Number(usd) || 0) * exchangeRate;
-
-  window.productAds[product] = iqd;
-
-  applyFilter();
-}
-// اغلاق المودال
-window.closeProductsAnalysis = function() {
-  document.getElementById("productsModal").style.display = "none";
-}
-
-// حساب أرباح المنتجات
-function renderProductsModal() {
-
-  const tbody = document.getElementById("modalProductsTable");
-  tbody.innerHTML = "";
-
-  let map = {};
-
-  allOrders.forEach(order => {
-
-    const names = (order.productName || "")
-      .split("،")
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    names.forEach(p => {
-
-      const detail = order.productsDetailed?.find(d => d.name === p);
-
-      const qty = detail?.qty || detail?.quantity || 1;
-      const sell = detail?.price || 0;
-      const buy = warehouse[p]?.buyPrice || 0;
-
-      if (!map[p]) {
-        map[p] = { qty: 0, sales: 0, buy: 0 };
+      // Filter by date (use orderDate or createdAt)
+      if (fromDate || toDate) {
+        const orderDateRaw = o.orderDate || o.createdAt || null;
+        if (orderDateRaw) {
+          const orderDate = typeof orderDateRaw === 'number' ? new Date(orderDateRaw) : new Date(orderDateRaw);
+          if (!isNaN(orderDate)) {
+            if (fromDate && orderDate < fromDate) continue;
+            if (toDate && orderDate > toDate) continue;
+          }
+        }
       }
 
-      map[p].qty += qty;
-      map[p].sales += sell;
-      map[p].buy += buy * qty;
+      totalOrders++;
+      if (isDelivered) totalDelivered++;
+      if (isReturned) totalReturned++;
 
-    });
+      // Parse products
+      const prodNames = (o.productName || '').split('،').map(s => s.trim()).filter(Boolean);
 
-  });
+      prodNames.forEach(p => {
+        // Filter by product
+        if (selProd.length && !selProd.includes(p)) return;
 
-  const deliveryPerOrder =
-    Number(document.getElementById("deliveryPerOrder").value) || 3500;
+        const detail = (o.productsDetailed || []).find(d => d.name === p);
+        const qty = Number(detail?.qty || detail?.quantity || 1);
+        const sellPrice = Number(detail?.price || 0);
+        const buyPrice = Number(warehouse[p]?.buyPrice || 0);
 
-  let totalProfit = 0;
+        totalQty += qty;
+        if (isDelivered) totalSales += sellPrice * qty;
+        totalBuy += buyPrice * qty;
 
-  Object.keys(map).forEach(p => {
+        if (!productStats[p]) {
+          productStats[p] = { orderIds: new Set(), qty: 0, sales: 0, buy: 0, delivered: 0, returned: 0 };
+        }
+        productStats[p].orderIds.add(orderId + '_' + status);
+        productStats[p].qty += qty;
+        if (isDelivered) {
+          productStats[p].sales += sellPrice * qty;
+          productStats[p].delivered += qty;
+        }
+        if (isReturned) productStats[p].returned += qty;
+        productStats[p].buy += buyPrice * qty;
+      });
+    }
+  }
 
-    const d = map[p];
+  // ── Calculate totals ──
+  const totalDeliveryCost = totalOrders * deliveryCostPerOrder;
+  const totalAdCost = Object.keys(productStats).reduce((s, p) => s + (productAds[p] || 0), 0);
+  const rawProfit = totalSales - totalBuy - totalDeliveryCost - totalAdCost;
+  const returnLoss = rawProfit * (returnRatePct / 100);
+  const netProfit = rawProfit - returnLoss;
+  const profitMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
 
-    const delivery = d.qty * deliveryPerOrder;
+  // ── Update stat cards ──
+  document.getElementById('sTotal').textContent = fmt(totalOrders);
+  document.getElementById('sQty').textContent = fmt(totalQty);
+  document.getElementById('sDelivered').textContent = fmt(totalDelivered);
+  document.getElementById('sDeliveredPct').textContent = totalOrders ? pct(totalDelivered, totalOrders) : '';
+  document.getElementById('sReturned').textContent = fmt(totalReturned);
+  document.getElementById('sReturnedPct').textContent = totalOrders ? pct(totalReturned, totalOrders) : '';
+  document.getElementById('sSales').textContent = fmt(totalSales);
+  document.getElementById('sBuy').textContent = fmt(totalBuy);
+  document.getElementById('sDelivery').textContent = fmt(totalDeliveryCost);
+  document.getElementById('sAd').textContent = fmt(totalAdCost);
+  document.getElementById('sProfit').textContent = fmt(netProfit);
+  document.getElementById('sProfit').style.color = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
 
-    const adId = "ad_" + p;
-    const adCost = Number(document.getElementById(adId)?.value) || 0;
+  // Best product
+  let bestProd = '—', bestScore = 0;
+  for (const p in productStats) {
+    if (productStats[p].delivered > bestScore) { bestScore = productStats[p].delivered; bestProd = p; }
+  }
+  document.getElementById('sBest').textContent = bestProd;
 
-    const profit = d.sales - d.buy - delivery - adCost;
+  // Profit bar
+  const barPct = Math.max(0, Math.min(100, profitMargin));
+  const profitBar = document.getElementById('profitBar');
+  profitBar.style.width = barPct + '%';
+  profitBar.style.background = profitMargin >= 0
+    ? 'linear-gradient(90deg, var(--green), #34d399)'
+    : 'linear-gradient(90deg, var(--red), #f87171)';
+  document.getElementById('profitPct').textContent = profitMargin.toFixed(1) + '%';
+  document.getElementById('profitPct').style.color = profitMargin >= 0 ? 'var(--green)' : 'var(--red)';
 
-    totalProfit += profit;
+  document.getElementById('hOrderCount').textContent = fmt(totalOrders) + ' طلب';
 
-    tbody.innerHTML += `
+  // ── Render table ──
+  renderTable(productStats, deliveryCostPerOrder, exchangeRate, returnRatePct, totalSales, totalBuy, totalDeliveryCost, totalAdCost, netProfit);
+};
+
+function updateFilterBtn(btnId, selected, countId, emoji) {
+  const btn = document.getElementById(btnId);
+  const count = document.getElementById(countId);
+  if (selected.length) {
+    btn.classList.add('has-selection');
+    count.textContent = ` (${selected.length})`;
+  } else {
+    btn.classList.remove('has-selection');
+    count.textContent = '';
+  }
+}
+
+// ═══ RENDER TABLE ═══
+function renderTable(stats, deliveryCostPerOrder, exchangeRate, returnRatePct, totSales, totBuy, totDelivery, totAd, totProfit) {
+  const tbody = document.getElementById('tableBody');
+  const tfoot = document.getElementById('tableFoot');
+
+  const rows = Object.entries(stats).sort((a, b) => b[1].delivered - a[1].delivered);
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="ei">🔍</div><p>لا توجد بيانات تطابق الفلاتر المختارة</p></div></td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(([p, d]) => {
+    const orders = d.orderIds.size;
+    const deliveryCost = orders * deliveryCostPerOrder;
+    const adIQD = productAds[p] || 0;
+    const adUSD = exchangeRate ? (adIQD / exchangeRate) : 0;
+    const rawProfit = d.sales - d.buy - deliveryCost - adIQD;
+    const returnLoss = rawProfit * (returnRatePct / 100);
+    const netProfit = rawProfit - returnLoss;
+    const margin = d.sales > 0 ? ((netProfit / d.sales) * 100).toFixed(1) : 0;
+
+    const profitClass = netProfit >= 0 ? 'profit-positive' : 'profit-negative';
+    const marginBadge = netProfit >= 0 ? 'badge-green' : 'badge-red';
+
+    return `
       <tr>
         <td>${p}</td>
-        <td>${formatNumber(d.qty)}</td>
-        <td>${formatNumber(d.sales)}</td>
-        <td>${formatNumber(d.buy)}</td>
-        <td>${formatNumber(delivery)}</td>
+        <td>${fmt(orders)}</td>
+        <td>${fmt(d.qty)}</td>
+        <td><span class="badge badge-green">${fmt(d.delivered)}</span></td>
+        <td><span class="badge badge-red">${fmt(d.returned)}</span></td>
+        <td>${fmt(d.sales)}</td>
+        <td>${fmt(d.buy)}</td>
+        <td>${fmt(deliveryCost)}</td>
         <td>
-          <input type="number" id="${adId}" oninput="renderProductsModal()" style="width:80px">
+          <input type="number" class="ad-input" data-product="${p}"
+            value="${adUSD.toFixed(2)}"
+            onchange="updateAd('${p}', this.value)"
+            onblur="applyFilter()">
         </td>
-        <td>${formatNumber(profit)}</td>
+        <td>${fmt(adIQD)}</td>
+        <td class="${profitClass}">${fmt(netProfit)}</td>
+        <td><span class="badge ${marginBadge}">${margin}%</span></td>
       </tr>
     `;
-  });
+  }).join('');
 
-  document.getElementById("modalTotalProfit").textContent =
-    formatNumber(totalProfit);
+  // Footer totals
+  const totalDelivered = rows.reduce((s, [,d]) => s + d.delivered, 0);
+  const totalReturned = rows.reduce((s, [,d]) => s + d.returned, 0);
+  const totalQty = rows.reduce((s, [,d]) => s + d.qty, 0);
+  const totalOrders = rows.reduce((s, [,d]) => s + d.orderIds.size, 0);
+  const totalMargin = totSales > 0 ? ((totProfit / totSales) * 100).toFixed(1) : 0;
+
+  tfoot.innerHTML = `
+    <tr>
+      <td>📊 الإجمالي</td>
+      <td>${fmt(totalOrders)}</td>
+      <td>${fmt(totalQty)}</td>
+      <td>${fmt(totalDelivered)}</td>
+      <td>${fmt(totalReturned)}</td>
+      <td>${fmt(totSales)}</td>
+      <td>${fmt(totBuy)}</td>
+      <td>${fmt(totDelivery)}</td>
+      <td>—</td>
+      <td>${fmt(totAd)}</td>
+      <td class="${totProfit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmt(totProfit)}</td>
+      <td><span class="badge ${totProfit >= 0 ? 'badge-green' : 'badge-red'}">${totalMargin}%</span></td>
+    </tr>
+  `;
 }
-  loadData();
-  
+
+// ═══ UPDATE AD COST ═══
+window.updateAd = function(product, usdVal) {
+  const exchangeRate = Number(document.getElementById('exchangeRate').value) || 1400;
+  productAds[product] = (Number(usdVal) || 0) * exchangeRate;
+};
+
+// ═══ EXPORT EXCEL ═══
+window.exportExcel = function() {
+  const table = document.getElementById('mainTable');
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(table);
+  XLSX.utils.book_append_sheet(wb, ws, 'Profit Report');
+  XLSX.writeFile(wb, `almurad-profit-${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('تم تصدير Excel ✅', 'success');
+};
+
+// ═══ EXPORT PDF ═══
+window.exportPDF = function() {
+  const el = document.createElement('div');
+  el.style.fontFamily = 'Tajawal, sans-serif';
+  el.style.direction = 'rtl';
+  el.innerHTML = `
+    <h2 style="text-align:center;color:#04122a;margin-bottom:10px">AlMurad — Profit Report</h2>
+    <p style="text-align:center;color:#64748b;margin-bottom:16px">${new Date().toLocaleDateString('ar-EG')}</p>
+    ${document.querySelector('.stats-grid').outerHTML}
+    <br>
+    ${document.getElementById('mainTable').outerHTML}
+  `;
+  html2pdf().set({
+    margin: 8,
+    filename: `almurad-profit-${new Date().toISOString().split('T')[0]}.pdf`,
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  }).from(el).save();
+  toast('تم تصدير PDF ✅', 'success');
+};
+
+// ═══ BOOT ═══
+loadData();
 </script>
-<div id="productsModal" style="
-display:none;
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.6);
-z-index:999;
-">
-
-<div style="
-background:white;
-width:95%;
-max-width:1200px;
-margin:30px auto;
-padding:20px;
-border-radius:12px;
-max-height:90%;
-overflow:auto;
-">
-
-<h3 style="margin-bottom:15px">📊 أرباح المنتجات</h3>
-
-<button onclick="closeProductsAnalysis()" style="margin-bottom:10px;background:red">❌ إغلاق</button>
-
-<table style="width:100%;border-collapse:collapse">
-<thead>
-<tr>
-<th>المنتج</th>
-<th>الكمية</th>
-<th>البيع</th>
-<th>الشراء</th>
-<th>التوصيل</th>
-<th>الإعلان</th>
-<th>الربح</th>
-</tr>
-</thead>
-<tbody id="modalProductsTable"></tbody>
-</table>
-
-<div style="margin-top:15px;font-weight:bold">
-💰 الربح الكلي: <span id="modalTotalProfit">0</span>
-</div>
-
-</div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
