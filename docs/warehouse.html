@@ -828,10 +828,12 @@ body {
 //  FIREBASE SETUP
 // ════════════════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+// ✅ الصح — استبدل onValue بـ onChildAdded/Changed/Removed
 import {
-  getDatabase, ref, get, set, update, remove, onValue, runTransaction
+  getDatabase, ref, get, set, update, remove,
+  onChildAdded, onChildChanged, onChildRemoved,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-import * as XLSX from "https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -914,15 +916,21 @@ async function generateBarcode() {
   const result = await runTransaction(counterRef, (cur) => (cur || 100000) + 1);
   return String(result.snapshot.val());
 }
-
+// ── debounce: يجمع أحداث التحميل الأولي في render واحد ──
+let _renderTimer = null;
+function scheduleRender() {
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(() => renderAll(), 80);
+}
 // ════════════════════════════════════════════════════════
 //  LOAD WAREHOUSE  (onValue → real-time)
 // ════════════════════════════════════════════════════════
+// ✅ الصح — أضف سطرين في البداية
 function loadWarehouse() {
-  onValue(ref(db, "warehouse"), (snap) => {
-    warehouseData = snap.exists() ? snap.val() : {};
-    renderAll();
-  });
+  const wRef = ref(db, "warehouse");     // ← أضف هذا
+  onChildAdded(wRef, snap => { warehouseData[snap.key] = snap.val(); scheduleRender(); });
+  onChildChanged(wRef, snap => { warehouseData[snap.key] = snap.val(); scheduleRender(); });
+  onChildRemoved(wRef, snap => { delete warehouseData[snap.key]; scheduleRender(); });
 }
 
 // ════════════════════════════════════════════════════════
@@ -1690,6 +1698,7 @@ window.exportExcel = function() {
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
+
 loadWarehouse();
 </script>
 </body>
