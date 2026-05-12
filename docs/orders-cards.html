@@ -1176,11 +1176,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     `الطلبات - ${STATUS_LABELS[filterStatus] || filterStatus}`;
 
   const sc = parseInt(localStorage.getItem("previousScrollPosition") || "0");
-
-  if (localStorage.getItem("forceListRefresh") === "true") {
-    localStorage.removeItem("forceListRefresh");
-    Cache.invalidatePath(dataPath);
-  }
+if (localStorage.getItem("forceListRefresh") === "true") {
+  localStorage.removeItem("forceListRefresh");
+  Cache.invalidateAll(); // ← يمسح كاش كل الحالات مو بس الحالية
+}
 
   // ✅ استعادة حالة الفلتر المحفوظة
   if (localStorage.getItem("filterActive") === "true") {
@@ -1241,7 +1240,7 @@ document.getElementById("menuLogs").addEventListener("click", () => {
 document.getElementById("menuRefresh").addEventListener("click", async () => {
   menuPopup.classList.remove("open");
   showToast("🔄 جاري التحديث...", "info", 2000);
-  Cache.invalidatePath(dataPath);
+Cache.invalidateAll();
   S.fullLoaded   = false;
   S.allOrders    = [];
   await loadOrders(true);
