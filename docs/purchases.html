@@ -1137,8 +1137,7 @@ window.isSaving = true;
   const deliveryFee =
   parseFloat(document.getElementById("deliveryFee")?.value) || 0;
 
-  if (!supplierId || !buyer) return alert("⚠️ أكمل الحقول الأساسية.");
-
+if (!supplierId || !buyer) { alert("⚠️ أكمل الحقول الأساسية."); window.isSaving = false; return; }
   let items = [];
   let totalQty = 0;
   let totalAmount = 0;
@@ -1315,8 +1314,7 @@ await set(idRef, {
   alert("✅ تم حفظ العملية بنجاح!");
   invoiceItems = [];
 document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
-  closePurchasePopup();
-  loadPurchases();
+closePurchasePopup();
 document.getElementById("productSearchInput").addEventListener("blur", () => {
   const name = document.getElementById("productSearchInput").value.trim();
   if (name) {
@@ -1333,7 +1331,8 @@ if (canShare()) {
 
 
 
-}; // ← ← هذا القوس المهم مفقود عندك لإغلاق الدالة savePurchase
+window.isSaving = false;
+}; // إغلاق savePurchase
 
 /* =========================
    ⏳ الفلترة الزمنية
