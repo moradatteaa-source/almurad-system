@@ -1221,7 +1221,7 @@ for (const [key, p] of Object.entries(data)) {
       if (p.barcodes) {
         for (const [variantKey, code] of Object.entries(p.barcodes)) {
           barcodeIndex[String(code).trim()] = {
-            productName: name,
+          productName: p.name,
             variantKey,
             price: p.prices?.pos || 0
           };
