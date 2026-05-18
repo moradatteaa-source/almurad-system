@@ -1082,7 +1082,7 @@ area: selectedArea,
           statusHistory: updatedHistory,
           updatedBy: userName,
           updatedAt: timeNow,
-          ...(statusChanged ? { enterIndex: Date.now() } : {}),
+        enterIndex: Date.now(),
           ...(newStatus === 'مثبت' ? { fixedBy: userName } : (state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : {}))
         };
 
