@@ -1211,9 +1211,10 @@ async function loadProducts() {
     products = [];
     barcodeIndex = {};
 
-    for (const [name, p] of Object.entries(data)) {
+for (const [key, p] of Object.entries(data)) {
       products.push({
-        name,
+        name: p.name || key,
+        _key: key,
         price: p.prices?.pos || 0,
         totalQty: p.totalQty || 0
       });
@@ -1569,7 +1570,8 @@ async function loadVariants(row, productName) {
   const select = row.querySelector(".row-variant-select");
   const stockBadge = row.querySelector(".stock-badge");
 
-  const snap = await get(ref(rtdb, "warehouse/" + productName));
+ const prod = products.find(x => x.name === productName);
+const snap = await get(ref(rtdb, "warehouse/" + (prod?._key || productName)));
   if (!snap.exists()) return;
 
   const data = snap.val();
@@ -1902,8 +1904,8 @@ async function saveInvoice(printAfter = false) {
     if (!name) continue;
     const qty = Number(r.querySelector(".row-qty-input")?.value || 0);
     if (qty <= 0) { showToast("الكمية غير صحيحة", "error"); isSaving = false; return; }
-
-    const productRef = ref(rtdb, "warehouse/" + name);
+const prod = products.find(x => x.name === name);
+const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
     const snap = await get(productRef);
     if (!snap.exists()) { showToast("المنتج غير موجود: " + name, "error"); isSaving = false; return; }
 
