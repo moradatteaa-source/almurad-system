@@ -151,6 +151,7 @@ const table = document.getElementById("table");
 const netProfitEl = document.getElementById("netProfit");
 let invoices = [];
 let warehouse = {};
+let warehouseByName = {};
 const cashierFilter = document.getElementById("cashierFilter");
 loadData().then(() => calcProfit());
 
@@ -176,13 +177,17 @@ cashierFilter.innerHTML = `<option value="all">كل الكاشيرات</option>`
 // ✅ تحميل المخزن (سعر الشراء) من Realtime DB
 const whSnap = await get(ref(rtdb, "warehouse"));
 warehouse = whSnap.exists() ? whSnap.val() : {};
-
+// ✅ بناء فهرس بالاسم
+warehouseByName = {};
+Object.values(warehouse).forEach(p => {
+  if (p.name) warehouseByName[p.name] = p;
+});
 }
+// ✅ بعد
 function getBuyPrice(productName){
-  const p = warehouse[productName];
+  const p = warehouseByName[productName];
   return p && p.buyPrice ? Number(p.buyPrice) : 0;
 }
-
 
 
 

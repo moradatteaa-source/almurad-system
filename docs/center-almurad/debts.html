@@ -2,120 +2,420 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الديون</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>الديون — المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
 <style>
-:root{
-  --blue:#043B64;
-  --orange:#FF6B2D;
-  --bg:#f4f6fa;
-  --red:#c0392b;
+:root {
+  --navy:   #0a1628;
+  --navy2:  #112240;
+  --blue:   #1e3a5f;
+  --accent: #f97316;
+  --accent2:#fb923c;
+  --green:  #10b981;
+  --red:    #ef4444;
+  --yellow: #f59e0b;
+  --bg:     #f0f4f8;
+  --card:   #ffffff;
+  --border: #e2e8f0;
+  --text:   #1e293b;
+  --text2:  #64748b;
+  --text3:  #94a3b8;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  --shadow2:0 8px 32px rgba(0,0,0,0.12);
+  --radius: 14px;
 }
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Tajawal, Tahoma, sans-serif;
-  background:var(--bg);
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Tajawal', Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
 }
-header{
-  background:var(--blue);
-  color:white;
-  padding:16px;
-  text-align:center;
-  font-size:18px;
+
+/* ══ HEADER ══ */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 58px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.3);
 }
-.container{
-  max-width:1100px;
-  margin:auto;
-  padding:12px;
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
 }
-.customer{
-  background:white;
-  border-radius:14px;
-  padding:14px;
-  margin-bottom:16px;
-  border:1px solid #ddd;
+
+.logo-dot {
+  width: 34px; height: 34px;
+  background: var(--accent);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
 }
-.cHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+
+.header-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.name{
-  font-size:17px;
-  font-weight:bold;
-  color:var(--blue);
+
+.stat-badge {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
 }
-.phone{
-  font-size:13px;
-  color:#555;
+
+.stat-badge .val { color: var(--accent2); font-size: 15px; font-weight: 800; }
+
+/* ══ SEARCH BAR ══ */
+#searchBar {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
-.totalDebt{
-  color:var(--red);
-  font-weight:bold;
-  font-size:16px;
+
+#searchInput {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Tajawal', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--bg);
 }
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-  font-size:13px;
+#searchInput:focus { border-color: var(--accent); background: white; }
+
+/* ══ CONTAINER ══ */
+#container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
 }
-th,td{
-  border:1px solid #eee;
-  padding:6px;
-  text-align:center;
+
+/* ══ EMPTY ══ */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text3);
 }
-th{
-  background:#f1f4f7;
+.empty-state .icon { font-size: 64px; margin-bottom: 16px; }
+.empty-state p { font-size: 16px; font-weight: 600; }
+
+/* ══ CUSTOMER CARD ══ */
+.customer-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s;
 }
-.payBox{
-  margin-top:10px;
-  display:flex;
-  gap:10px;
+.customer-card:hover { box-shadow: var(--shadow2); }
+
+/* Customer Header */
+.cust-header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-.payBox input{
-  flex:1;
-  padding:8px;
-  border-radius:8px;
-  border:1px solid #ccc;
+
+.cust-info { display: flex; align-items: center; gap: 12px; }
+
+.cust-avatar {
+  width: 42px; height: 42px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
 }
-.payBox button{
-  padding:8px 16px;
-  border:none;
-  border-radius:8px;
-  background:var(--orange);
-  color:white;
-  font-size:14px;
-  cursor:pointer;
+
+.cust-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
 }
-.empty{
-  text-align:center;
-  margin-top:40px;
-  color:#777;
+.cust-phone {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  margin-top: 2px;
 }
+
+.cust-total { text-align: left; flex-shrink: 0; }
+.cust-total .label { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; }
+.cust-total .amount { font-size: 20px; font-weight: 800; color: #fca5a5; }
+
+/* Customer Body */
+.cust-body { padding: 16px 20px; }
+
+/* Invoice Block */
+.inv-block {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.inv-block:last-of-type { margin-bottom: 0; }
+
+.inv-header {
+  background: #f8fafc;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inv-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.inv-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+
+/* Items Table */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.items-table th {
+  background: #f1f5f9;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.items-table td {
+  padding: 8px 12px;
+  text-align: center;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text);
+}
+.items-table tr:last-child td { border-bottom: none; }
+.items-table td:first-child { text-align: right; font-weight: 500; }
+
+/* Invoice Footer */
+.inv-footer {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff9f9;
+  border-top: 1px solid #fee2e2;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remaining-badge {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--red);
+}
+
+.note-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #fff4f4;
+  border: 1px solid #fca5a5;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #991b1b;
+}
+
+/* Payment History */
+.pay-history {
+  margin: 10px 14px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+}
+.pay-history .ph-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+.pay-history .ph-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text2);
+  padding: 3px 0;
+  border-bottom: 1px solid #d1fae5;
+}
+.pay-history .ph-row:last-child { border-bottom: none; }
+.pay-history .ph-amount { font-weight: 700; color: var(--green); }
+
+/* ══ PAY SECTION ══ */
+.pay-section {
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+  border-top: 1.5px solid #fed7aa;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pay-section input {
+  flex: 1;
+  padding: 11px 16px;
+  border: 2px solid #fed7aa;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: 'Tajawal', sans-serif;
+  outline: none;
+  background: white;
+  transition: border-color 0.2s;
+  font-weight: 600;
+}
+.pay-section input:focus { border-color: var(--accent); }
+.pay-section input::placeholder { color: var(--text3); font-weight: 400; }
+
+.pay-btn {
+  padding: 11px 22px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+}
+.pay-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(249,115,22,0.4); }
+.pay-btn:active { transform: scale(0.97); }
+
+/* ══ TOAST ══ */
+.toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error   { background: var(--red); }
+
+/* ══ LOADING ══ */
+#loading {
+  text-align: center;
+  padding: 60px;
+  color: var(--text2);
+  font-size: 15px;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+input, select, textarea, button {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+}
+html, body { touch-action: manipulation; }
 </style>
 </head>
-
 <body>
 
-<header>📄 الديون (مجمّعة حسب الزبون)</header>
-<div class="container" id="list"></div>
+<!-- HEADER -->
+<div id="header">
+  <div class="header-brand">
+    <div class="logo-dot">📄</div>
+    <span>الديون — سنتر المراد</span>
+  </div>
+  <div class="header-stat">
+    <div class="stat-badge">👥 الزبائن: <span class="val" id="custCount">0</span></div>
+    <div class="stat-badge">💰 إجمالي: <span class="val" id="totalDebtDisplay">0 د.ع</span></div>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div id="searchBar">
+  <input id="searchInput" placeholder="🔍 ابحث باسم الزبون أو رقم الهاتف..." autocomplete="off">
+</div>
+
+<!-- TOAST -->
+<div id="toastEl" class="toast"></div>
+
+<!-- MAIN -->
+<div id="container">
+  <div id="loading">
+    <div class="spinner"></div>
+    جاري تحميل الديون...
+  </div>
+</div>
 
 <script type="module">
-/* ========= Firebase ========= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getDatabase,
-  ref,
-  onValue,
-  update
+  getDatabase, ref, onValue, update
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-
-
-
+/* ══ FIREBASE ══ */
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
   authDomain: "almurad-system.firebaseapp.com",
@@ -126,201 +426,239 @@ const firebaseConfig = {
   appId: "1:911755824405:web:c5520c00c11e336148ad1c"
 };
 
-
-const app = initializeApp(firebaseConfig);
+const app  = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
 
-
-/* ========= أدوات ========= */
+/* ══ UTILS ══ */
 const f = n => Number(n || 0).toLocaleString("en-US") + " د.ع";
-const list = document.getElementById("list");
-let invoices = [];
+const container = document.getElementById("container");
+let invoices  = [];
+let searchTerm = "";
 
-function loadDebts() {
-
-  const invoicesRef = ref(rtdb, "posInvoices");
-
-  onValue(invoicesRef, (snapshot) => {
-
-    invoices = [];
-    list.innerHTML = "";
-
-    if (!snapshot.exists()) {
-      renderDebts();
-      return;
-    }
-
-    const data = snapshot.val();
-
-    Object.entries(data).forEach(([id, inv]) => {
-
-      if (inv.type === "credit" && inv.rest > 0) {
-        invoices.push({ id, ...inv });
-      }
-
-    });
-
-    renderDebts();
-  });
-
+function showToast(msg, type = "success") {
+  const t = document.getElementById("toastEl");
+  t.textContent = msg;
+  t.className = "toast show " + type;
+  setTimeout(() => t.className = "toast", 2500);
 }
 
+function formatDate(createdAt) {
+  if (!createdAt) return "-";
+  const ts = createdAt?.seconds ? createdAt.seconds * 1000 : createdAt;
+  return new Date(ts).toLocaleString("ar-EG");
+}
 
+/* ══ LOAD ══ */
+function loadDebts() {
+  onValue(ref(rtdb, "posInvoices"), (snapshot) => {
+    invoices = [];
+    if (snapshot.exists()) {
+      Object.entries(snapshot.val()).forEach(([id, inv]) => {
+        if (inv.type === "credit" && inv.rest > 0) {
+          invoices.push({ id, ...inv });
+        }
+      });
+    }
+    renderDebts();
+  });
+}
 
-/* ========= عرض الديون ========= */
+/* ══ RENDER ══ */
 function renderDebts() {
-  if (!invoices.length) {
-    list.innerHTML = `<div class="empty">ماكو ديون مسجلة</div>`;
+  container.innerHTML = "";
+
+  // ── تجميع الزبائن بالاسم + الهاتف ──
+  const customers = {};
+  invoices.forEach(inv => {
+    const key = (inv.debtor?.name || "زبون") + "_" + (inv.debtor?.phone || "بدون");
+    if (!customers[key]) {
+      customers[key] = {
+        name:     inv.debtor?.name  || "زبون",
+        phone:    inv.debtor?.phone || "",
+        key,
+        invoices: [],
+        total:    0
+      };
+    }
+    customers[key].invoices.push(inv);
+    customers[key].total += inv.rest;
+  });
+
+  // ── فلترة البحث ──
+  let list = Object.values(customers);
+  if (searchTerm) {
+    list = list.filter(c =>
+      c.name.includes(searchTerm) || c.phone.includes(searchTerm)
+    );
+  }
+
+  // ── تحديث الإحصائيات ──
+  const grandTotal = Object.values(customers).reduce((s, c) => s + c.total, 0);
+  document.getElementById("custCount").textContent = Object.keys(customers).length;
+  document.getElementById("totalDebtDisplay").textContent = f(grandTotal);
+
+  // ── حالة فارغة ──
+  if (!list.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">${searchTerm ? "🔍" : "🎉"}</div>
+        <p>${searchTerm ? "لا توجد نتائج للبحث" : "ما اكو ديون مسجلة"}</p>
+      </div>`;
     return;
   }
 
-  const customers = {};
-
-  invoices.forEach(inv => {
-    const phone = inv.debtor?.phone || "بدون";
-    if (!customers[phone]) {
-      customers[phone] = {
-        name: inv.debtor?.name || "زبون",
-        phone,
-        invoices: [],
-        total: 0
-      };
-    }
-    customers[phone].invoices.push(inv);
-    customers[phone].total += inv.rest;
-  });
-
-  Object.values(customers).forEach(cust => {
-    const div = document.createElement("div");
-    div.className = "customer";
+  // ── رسم كروت الزبائن ──
+  list.forEach(cust => {
+    const card = document.createElement("div");
+    card.className = "customer-card";
 
     let invoicesHTML = "";
+
     cust.invoices.forEach(inv => {
-      let rows = "";
-      inv.items.forEach(it => {
-        rows += `
-          <tr>
-            <td>${it.product}</td>
-            <td>${it.qty}</td>
-            <td>${f(it.price)}</td>
-            <td>${f(it.total)}</td>
-          </tr>`;
-      });
+
+      // صفوف المنتجات
+      const rows = (inv.items || []).map(it => `
+        <tr>
+          <td>${it.product || "-"}</td>
+          <td>${it.qty}</td>
+          <td>${f(it.price)}</td>
+          <td>${f(it.total)}</td>
+        </tr>`).join("");
+
+      // سجل التسديدات
+      let payHistoryHTML = "";
+      if (inv.payments && inv.payments.length) {
+        const phRows = inv.payments.map(p => `
+          <div class="ph-row">
+            <span class="ph-amount">💵 ${f(p.amount)}</span>
+            <span>🕒 ${new Date(p.date).toLocaleString("ar-EG")}</span>
+          </div>`).join("");
+        payHistoryHTML = `
+          <div class="pay-history">
+            <div class="ph-title">📜 سجل التسديدات</div>
+            ${phRows}
+          </div>`;
+      }
+
+      // ملاحظة
+      const noteHTML = inv.debtor?.note
+        ? `<span class="note-tag">📝 ${inv.debtor.note}</span>`
+        : "";
 
       invoicesHTML += `
-        <div style="margin-top:10px;border-top:1px dashed #ccc;padding-top:10px">
-<b>🧾 فاتورة #${inv.invoiceNo}</b>
-<div style="font-size:12px;color:#555">
-👤 الكاشير: ${inv.cashierId || "غير معروف"}
-</div>
-<div style="font-size:12px;color:#777;margin-top:4px">
-📅 تاريخ الدين: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString("ar-EG") : "-"}
-</div>
+        <div class="inv-block">
 
+          <div class="inv-header">
+            <div class="inv-num">🧾 فاتورة #${inv.invoiceNo}</div>
+            <div class="inv-meta">
+              <span>👤 ${inv.cashierId || "غير معروف"}</span>
+              <span>📅 ${formatDate(inv.createdAt)}</span>
+            </div>
+          </div>
 
-
-
-          <table>
-            <tr>
-              <th>المنتج</th>
-              <th>الكمية</th>
-              <th>السعر</th>
-              <th>المجموع</th>
-            </tr>
-            ${rows}
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="text-align:right">المنتج</th>
+                <th>الكمية</th>
+                <th>السعر</th>
+                <th>المجموع</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
           </table>
-        <div style="margin-top:6px">
-  <div style="color:#c0392b;font-weight:bold">
-    المتبقي: ${f(inv.rest)}
-  </div>
-${inv.payments && inv.payments.length ? `
-<div style="margin-top:8px;font-size:12px;background:#f8f8f8;padding:6px;border-radius:6px">
-  <strong>📜 سجل التسديد:</strong>
-  ${inv.payments.map(p => `
-    <div style="margin-top:4px;color:#555">
-      💵 ${f(p.amount)} —
-      🕒 ${new Date(p.date).toLocaleString("ar-EG")}
-    </div>
-  `).join("")}
-</div>
-` : ""}
 
-  ${inv.debtor?.note ? `
-  <div style="
-    margin-top:6px;
-    padding:6px;
-    background:#fff4f4;
-    border-right:4px solid #c0392b;
-    font-size:12px;
-    color:#333;
-  ">
-    📝 ${inv.debtor.note}
-  </div>
-  ` : ""}
-</div>
+          ${payHistoryHTML}
+
+          <div class="inv-footer">
+            <div class="remaining-badge">⚠️ المتبقي: ${f(inv.rest)}</div>
+            ${noteHTML}
+          </div>
 
         </div>`;
     });
 
-    div.innerHTML = `
-      <div class="cHeader">
-        <div>
-          <div class="name">${cust.name}</div>
-          <div class="phone">${cust.phone}</div>
+    card.innerHTML = `
+      <div class="cust-header">
+        <div class="cust-info">
+          <div class="cust-avatar">${(cust.name || "ز").charAt(0)}</div>
+          <div>
+            <div class="cust-name">${cust.name}</div>
+            <div class="cust-phone">${cust.phone ? "📞 " + cust.phone : "📞 بدون رقم"}</div>
+          </div>
         </div>
-        <div class="totalDebt">${f(cust.total)}</div>
+        <div class="cust-total">
+          <div class="label">إجمالي الدين</div>
+          <div class="amount">${f(cust.total)}</div>
+        </div>
       </div>
 
-      ${invoicesHTML}
+      <div class="cust-body">${invoicesHTML}</div>
 
-      <div class="payBox">
-        <input type="number" placeholder="مبلغ التسديد" id="pay-${cust.phone}">
-        <button onclick="pay('${cust.phone}')">تسديد</button>
+      <div class="pay-section">
+        <input
+          type="number"
+          placeholder="أدخل مبلغ التسديد..."
+          id="pay-${cust.key}"
+          min="0"
+        >
+        <button class="pay-btn" onclick="pay('${cust.key}')">💵 تسديد</button>
       </div>
-
-
     `;
 
-    list.appendChild(div);
+    container.appendChild(card);
   });
 }
 
-/* ========= التسديد FIFO ========= */
-window.pay = async function(phone) {
-  const input = document.getElementById("pay-" + phone);
+/* ══ SEARCH ══ */
+document.getElementById("searchInput").addEventListener("input", e => {
+  searchTerm = e.target.value.trim();
+  renderDebts();
+});
+
+/* ══ PAY — FIFO ══ */
+window.pay = async function(key) {
+  const input = document.getElementById("pay-" + key);
   let amount = Number(input.value || 0);
-  if (amount <= 0) return alert("أدخل مبلغ صحيح");
+  if (amount <= 0) { showToast("أدخل مبلغ صحيح", "error"); return; }
 
   const invs = invoices
-    .filter(i => i.debtor?.phone === phone && i.rest > 0)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .filter(i => {
+      const k = (i.debtor?.name || "زبون") + "_" + (i.debtor?.phone || "بدون");
+      return k === key && i.rest > 0;
+    })
+    .sort((a, b) => {
+      const ta = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt || 0);
+      const tb = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt || 0);
+      return ta - tb;
+    });
 
-  for (let inv of invs) {
+  if (!invs.length) { showToast("لا توجد فواتير لهذا الزبون", "error"); return; }
+
+  let totalPaid = 0;
+
+  for (const inv of invs) {
     if (amount <= 0) break;
 
     const paidNow = Math.min(amount, inv.rest);
-    amount -= paidNow;
+    amount    -= paidNow;
+    totalPaid += paidNow;
 
-const paymentHistory = inv.payments || [];
+    const paymentHistory = Array.isArray(inv.payments) ? [...inv.payments] : [];
+    paymentHistory.push({ amount: paidNow, date: Date.now() });
 
-paymentHistory.push({
-  amount: paidNow,
-  date: Date.now()
-});
-
-await update(ref(rtdb, "posInvoices/" + inv.id), {
-  paid: (inv.paid || 0) + paidNow,
-  rest: inv.rest - paidNow,
-  payments: paymentHistory
-});
-
+    await update(ref(rtdb, "posInvoices/" + inv.id), {
+      paid:     (inv.paid || 0) + paidNow,
+      rest:     inv.rest - paidNow,
+      payments: paymentHistory
+    });
   }
 
-  alert("تم التسديد ✅");
+  input.value = "";
+  showToast("✅ تم تسديد " + f(totalPaid) + " بنجاح", "success");
 };
 
 loadDebts();
-
 </script>
 
 </body>
