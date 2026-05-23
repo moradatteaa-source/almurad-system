@@ -264,21 +264,44 @@ document.addEventListener("change", (e) => {
     applyFilter();
   }
 });
- async function loadData() {
-  const ordersSnap = await get(ref(db, "orders"));
-  if (ordersSnap.exists()) allOrders = Object.values(ordersSnap.val());
+async function loadData() {
+  const ordersSnap = await get(ref(db, "ordersTest"));
+  if (ordersSnap.exists()) {
+    allOrders = [];
+    const statusSet = new Set();
+
+    ordersSnap.forEach(statusSnap => {
+      const statusName = statusSnap.key;
+      statusSet.add(statusName);
+      const val = statusSnap.val();
+
+      if (typeof val === "object" && val !== null) {
+        Object.values(val).forEach(order => {
+          if (typeof order === "object" && order !== null) {
+            order.status = statusName;
+            allOrders.push(order);
+          }
+        });
+      }
+    });
+
+    // ✅ نبني قائمة الحالات تلقائياً من Firebase
+    const statusContainer = document.getElementById("statusCheckboxes");
+    statusContainer.innerHTML = `<label><input type="checkbox" id="selectAllStatuses"> ✅ تحديد الكل</label>`;
+    statusSet.forEach(s => {
+      statusContainer.innerHTML += `<label><input type="checkbox" value="${s}"> ${s}</label>`;
+    });
+  }
+
+  console.log("✅ عدد الطلبات:", allOrders.length);
 
   const warehouseSnap = await get(ref(db, "warehouse"));
   if (warehouseSnap.exists()) warehouse = warehouseSnap.val();
 
   populateAdvertisers();
-  populateProductsForAdvertiser(); // 🔥 الحل — إضافة هذا السطر
-
+  populateProductsForAdvertiser();
   applyFilter();
-
 }
-
-
 function populateAdvertisers() {
   const advs = [...new Set(allOrders.map(o => o.advertiser || "").filter(Boolean))];
 
@@ -360,38 +383,14 @@ const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxe
     let filtered = allOrders.filter(o => {
 if (adv.length && !adv.includes(o.advertiser)) return false;
 if (statusFilter.length) {
+  if (!statusFilter.includes(o.status)) return false;
+}
 
-  // إذا عنده history
-  if (o.statusHistory && Object.keys(o.statusHistory).length) {
-
-    const history = Object.entries(o.statusHistory);
-
-    const matched = history.some(([statusName, h]) => {
-
-      // لازم الحالة ضمن الفلترة
-      if (!statusFilter.includes(statusName)) return false;
-
-      // إذا ماكو وقت نعتبره مطابق
-      if (!h.time) return true;
-
-      let d = typeof h.time === "number"
-        ? new Date(h.time)
-        : new Date(h.time);
-
-      if (!isNaN(d)) {
-        if (f && d < f) return false;
-        if (t && d > t) return false;
-      }
-
-      return true;
-    });
-
-    if (!matched) return false;
-
-  } else {
-    // fallback للحالة الحالية إذا ماكو history
-    if (!statusFilter.includes(o.status)) return false;
-  }
+// ✅ فلترة التاريخ
+if (f || t) {
+  const orderDate = new Date(o.orderDate);
+  if (f && orderDate < f) return false;
+  if (t && orderDate > t) return false;
 }
   // ✅ فلترة المنتجات تطابق تام (ما تطلع إلا المنتجات المختارة فقط)
   if (selectedProducts.length) {
@@ -455,38 +454,7 @@ if (status === "تم التسليم") {
   productStats[p].delivered += qty;
 }
   // حساب المبيعات فقط إذا الحالة ضمن الفلترة
-let saleVal = 0;
-
-if (statusFilter.length && order.statusHistory) {
-
-const history = Object.entries(order.statusHistory);
-
-const matched = history.some(([statusName, h]) => {
-
-  if (!statusFilter.includes(statusName)) return false;
-
-  if (!h.time) return true;
-
-  let d = typeof h.time === "number"
-    ? new Date(h.time)
-    : new Date(h.time);
-
-  if (!isNaN(d)) {
-    if (f && d < f) return false;
-    if (t && d > t) return false;
-  }
-
-  return true;
-});
-
-  if (matched) {
-    saleVal = sell;
-  }
-
-} else if (!statusFilter.length) {
-  // إذا ماكو فلترة حالات نحسب طبيعي
-  saleVal = sell;
-}
+let saleVal = sell;
 
   const buyVal = buy * qty;
 
