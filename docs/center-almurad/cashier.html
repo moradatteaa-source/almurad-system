@@ -1008,10 +1008,24 @@ html, body { touch-action: manipulation; }
         </div>
 
         <div class="calc-row">
-          <div class="calc-field">
-            <label>الخصم (د.ع)</label>
-            <input type="number" id="discount" value="0" oninput="calc()">
-          </div>
+       <div class="calc-field">
+ <label id="discountLabel" style="font-size:13px;font-weight:700;color:var(--text2);">💵 خصم مبلغ</label>
+  <div style="display:flex;gap:6px;">
+    <input type="number" id="discount" value="0" oninput="calc()" style="flex:1;">
+    <button onclick="toggleDiscountMode()" id="discountModeBtn" style="
+      padding:6px 10px;
+      border-radius:8px;
+      border:1.5px solid var(--border);
+      background:white;
+      color:var(--text2);
+      font-size:12px;
+      font-family:'Tajawal',sans-serif;
+      font-weight:700;
+      cursor:pointer;
+      white-space:nowrap;
+    ">%</button>
+  </div>
+</div>
           <div class="calc-field">
             <label>المدفوع</label>
             <input type="number" id="paid" disabled id="paidInput">
@@ -1149,6 +1163,7 @@ let qtyBuffer = "";
 // Double-enter save
 let lastEnterTime = 0;
 
+let discountIsPercent = false;
 // ═══════════════════════════════
 // UTILS
 // ═══════════════════════════════
@@ -1639,7 +1654,33 @@ function updateRowNumbers() {
     if (idx) idx.textContent = i + 1;
   });
 }
+window.toggleDiscountMode = function() {
+  discountIsPercent = !discountIsPercent;
+  const btn = document.getElementById("discountModeBtn");
+  const label = document.getElementById("discountLabel");
+  const field = document.getElementById("discount");
 
+  if (discountIsPercent) {
+    btn.textContent = "💵 مبلغ";
+    btn.style.background = "#10b981";
+    btn.style.color = "white";
+    btn.style.borderColor = "#10b981";
+    label.textContent = "📊 خصم نسبة % — اكتب مثلاً: 10";
+    label.style.color = "#10b981";
+    field.placeholder = "مثال: 10";
+  } else {
+    btn.textContent = "📊 نسبة";
+    btn.style.background = "white";
+    btn.style.color = "var(--text2)";
+    btn.style.borderColor = "var(--border)";
+    label.textContent = "💵 خصم مبلغ — اكتب مثلاً: 5000";
+    label.style.color = "var(--text2)";
+    field.placeholder = "مثال: 5000";
+  }
+
+  field.value = 0;
+  calc();
+};
 // ═══════════════════════════════
 // CALC
 // ═══════════════════════════════
@@ -1658,8 +1699,13 @@ function calc() {
     if (name) { total += rowTotal; rowsData.push({ row: r, qty, rowTotal }); }
   }
 
-  const discountInput = Number(document.getElementById("discount").value || 0);
-  const fixedDiscount = Math.floor(discountInput / 250) * 250;
+const discountInput = Number(document.getElementById("discount").value || 0);
+let fixedDiscount;
+if (discountIsPercent) {
+  fixedDiscount = Math.floor((total * discountInput / 100) / 250) * 250;
+} else {
+  fixedDiscount = Math.floor(discountInput / 250) * 250;
+}
 
   // Distribute discount
   let distributed = 0;
