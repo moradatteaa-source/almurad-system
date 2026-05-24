@@ -392,7 +392,7 @@ tbody td:first-child { text-align: right; padding-right: 20px; font-weight: 700;
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">الموظف</label>
-        <select class="form-input" id="pEmp"><option value="">اختر الموظف</option></select>
+     <div id="pEmpList" style="border:1.5px solid var(--border);border-radius:10px;padding:10px;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
       </div>
       <div class="form-group">
         <label class="form-label">النوع</label>
@@ -568,7 +568,7 @@ tbody td:first-child { text-align: right; padding-right: 20px; font-weight: 700;
       </div>
       <div class="form-group">
         <label class="form-label">الموظف</label>
-        <select class="form-input" id="tEmp"><option value="">اختر...</option></select>
+<div id="tEmpList" style="border:1.5px solid var(--border);border-radius:10px;padding:10px;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
       </div>
       <div class="form-group">
         <label class="form-label">عنوان الهدف</label>
@@ -681,9 +681,7 @@ window.openRemoveEmployeeModal = () => {
   document.getElementById('modalRemoveEmployee').classList.add('show');
 };
 window.openAddTargetModal = () => {
-  const sel = document.getElementById('tEmp');
-  sel.innerHTML = '<option value="">اختر...</option>';
-  employees.forEach(e => { const o = document.createElement('option'); o.value = e; o.textContent = e; sel.appendChild(o); });
+  updateSelects();
   document.getElementById('modalAddTarget').classList.add('show');
 };
 
@@ -737,14 +735,14 @@ async function loadEmployees() {
 }
 
 function updateSelects() {
-  ['pEmp', 'tEmp'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    sel.innerHTML = '<option value="">اختر الموظف</option>';
-    employees.forEach(e => {
-      const o = document.createElement('option');
-      o.value = e; o.textContent = e; sel.appendChild(o);
-    });
+  ['pEmpList', 'tEmpList'].forEach(id => {
+    const div = document.getElementById(id);
+    if (!div) return;
+    div.innerHTML = employees.map(e => `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600">
+        <input type="checkbox" value="${e}" style="width:16px;height:16px;accent-color:var(--accent)"> ${e}
+      </label>
+    `).join('');
   });
 }
 
@@ -1053,34 +1051,24 @@ function renderLeaderboard() {
 
 // ═══ ADD POINT ═══
 window.addPoint = async function() {
-  const emp = document.getElementById('pEmp').value;
+const selectedEmps = Array.from(document.querySelectorAll('#pEmpList input:checked')).map(o => o.value);
   const type = document.getElementById('pType').value;
   const points = Number(document.getElementById('pPoints').value) || 0;
   const price = Number(document.getElementById('pPrice').value) || settings.pointPrice;
   const note = document.getElementById('pNote').value;
-  if (!emp || !points) { toast('أكمل البيانات', 'error'); return; }
+  if (!selectedEmps.length || !points) { toast('أكمل البيانات', 'error'); return; }
 
-  const id = Date.now();
-  await set(ref(db, 'pointsHistory/' + id), {
-    employee: emp, type, points, price, value: points * price,
-    note, date: new Date().toLocaleDateString('ar-EG'), ts: id
-  });
-
-  // Update totals
-  if (!pointsData[emp]) pointsData[emp] = { bonus: 0, penalty: 0 };
-  const field = type === 'bonus' ? 'bonus' : 'penalty';
-  pointsData[emp][field] = (pointsData[emp][field] || 0) + points;
-  await set(ref(db, 'points/' + emp + '/' + field), pointsData[emp][field]);
-
-  // Notification
-  await set(ref(db, 'notifications/' + emp + '/' + id), {
-    title: type === 'bonus' ? `🎉 مكافأة ${points} نقطة` : `⚠️ خصم ${points} نقطة`,
-    note: note || '', type, points, date: new Date().toLocaleString(), read: false
-  });
+  for (const emp of selectedEmps) {
+const id = Date.now() + '_' + Math.floor(Math.random() * 10000);
+    await set(ref(db, 'pointsHistory/' + id), {
+      employee: emp, type, points, price, value: points * price,
+      note, date: new Date().toLocaleDateString('ar-EG'), ts: Date.now()
+    });
+  }
 
   document.getElementById('pPoints').value = '';
   document.getElementById('pNote').value = '';
-  toast(type === 'bonus' ? '🎉 تمت إضافة المكافأة' : '⚠️ تم تسجيل الخصم', 'success');
+  toast(type === 'bonus' ? '🎉 تمت إضافة المكافأة للجميع' : '⚠️ تم تسجيل الخصم للجميع', 'success');
 };
 
 // ═══ ADD TARGET ═══
@@ -1090,9 +1078,9 @@ window.onTargetTypeChange = function() {
 };
 
 window.addTarget = async function() {
+const selectedEmps = Array.from(document.querySelectorAll('#tEmpList input:checked')).map(o => o.value);
   const type = document.getElementById('tType').value;
   const period = document.getElementById('tPeriod').value;
-  const emp = document.getElementById('tEmp').value;
   const title = document.getElementById('tTitle').value;
   const target = Number(document.getElementById('tTarget').value) || 0;
   const reward = Number(document.getElementById('tReward').value) || 0;
@@ -1100,16 +1088,18 @@ window.addTarget = async function() {
   const startDate = document.getElementById('tStart').value;
   const endDate = document.getElementById('tEnd').value;
 
-  if (!emp || !title) { toast('أكمل البيانات', 'error'); return; }
+  if (!selectedEmps.length || !title) { toast('أكمل البيانات', 'error'); return; }
 
-  const id = Date.now();
-  await set(ref(db, 'tasks/' + id), {
-    type, period, employee: emp, title, target, reward, pointPrice,
-    startDate, endDate, createdAt: id, done: false
-  });
+  for (const emp of selectedEmps) {
+const id = Date.now() + '_' + Math.floor(Math.random() * 10000);
+    await set(ref(db, 'tasks/' + id), {
+      type, period, employee: emp, title, target, reward, pointPrice,
+      startDate, endDate, createdAt: Date.now(), done: false
+    });
+  }
 
   closeModal('modalAddTarget');
-  toast('✅ تم إضافة الهدف', 'success');
+  toast('✅ تم إضافة الهدف للموظفين المختارين', 'success');
 };
 
 // ═══ FINISH TASK ═══
@@ -1126,9 +1116,6 @@ window.finishTask = async function(id, emp, reward, price) {
       value: reward * (price || settings.pointPrice),
       note: 'مكافأة إنجاز مهمة', date: new Date().toLocaleDateString('ar-EG'), ts: histId
     });
-    if (!pointsData[emp]) pointsData[emp] = { bonus: 0, penalty: 0 };
-    pointsData[emp].bonus += reward;
-    await set(ref(db, 'points/' + emp + '/bonus'), pointsData[emp].bonus);
   }
   toast('✅ تم تسجيل الإنجاز', 'success');
 };

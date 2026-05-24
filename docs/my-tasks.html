@@ -526,14 +526,17 @@ async function init() {
   });
 
   // ── Listen: points ──
-  onValue(ref(db, 'points/' + user), snap => {
-    bonusPoints = 0; penaltyPoints = 0;
-    if (snap.exists()) {
-      bonusPoints = Number(snap.val().bonus) || 0;
-      penaltyPoints = Number(snap.val().penalty) || 0;
-    }
-    updateSalaryDisplay();
-  });
+onValue(ref(db, 'pointsHistory'), snap => {
+  bonusPoints = 0; penaltyPoints = 0;
+  if (snap.exists()) {
+    Object.values(snap.val()).forEach(p => {
+      if (p.employee !== user) return;
+      if (p.type === 'bonus') bonusPoints += (p.points || 0);
+      else penaltyPoints += (p.points || 0);
+    });
+  }
+  updateSalaryDisplay();
+});
 
   // ── Listen: tasks ──
   onValue(ref(db, 'tasks'), snap => {
