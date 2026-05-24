@@ -505,10 +505,29 @@ const name = parts[0];
 const variantPart = parts.length > 1 ? parts[1] : null;
 
 // جلب المنتج مباشرة من المخزن
-const safeKey = (t) => String(t||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
-const productRef = ref(db, "warehouse/" + safeKey(name));
-const productSnap = await get(productRef);
+const safeKey1 = String(name||"").trim().replace(/\s+/g," ").replace(/[.#$[\]/]/g,"_");
+const safeKey2 = String(name||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
 
+let productRef = ref(db, "warehouse/" + safeKey1);
+let productSnap = await get(productRef);
+
+if (!productSnap.exists()) {
+  productRef = ref(db, "warehouse/" + safeKey2);
+  productSnap = await get(productRef);
+}
+
+if (!productSnap.exists()) {
+  const allSnap = await get(ref(db, "warehouse"));
+  if (allSnap.exists()) {
+    for (const [key, val] of Object.entries(allSnap.val())) {
+      if (val.name === name) {
+        productRef = ref(db, "warehouse/" + key);
+        productSnap = await get(productRef);
+        break;
+      }
+    }
+  }
+}
 if (!productSnap.exists()) {
 inventoryErrors.push({
 name:name,
@@ -667,9 +686,29 @@ const variantText = Object.entries(variants)
     const variantPart = parts.length > 1 ? parts[1] : null;
 
 // جلب المنتج مباشرة من المخزن
-const safeKey = (t) => String(t||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
-const productRef = ref(db, "warehouse/" + safeKey(name));
-const productSnap = await get(productRef);
+const safeKey1 = String(name||"").trim().replace(/\s+/g," ").replace(/[.#$[\]/]/g,"_");
+const safeKey2 = String(name||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
+
+let productRef = ref(db, "warehouse/" + safeKey1);
+let productSnap = await get(productRef);
+
+if (!productSnap.exists()) {
+  productRef = ref(db, "warehouse/" + safeKey2);
+  productSnap = await get(productRef);
+}
+
+if (!productSnap.exists()) {
+  const allSnap = await get(ref(db, "warehouse"));
+  if (allSnap.exists()) {
+    for (const [key, val] of Object.entries(allSnap.val())) {
+      if (val.name === name) {
+        productRef = ref(db, "warehouse/" + key);
+        productSnap = await get(productRef);
+        break;
+      }
+    }
+  }
+}
 
 if (!productSnap.exists()) {
 inventoryErrors.push({
