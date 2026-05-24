@@ -825,7 +825,7 @@ input.addEventListener("focus", () => {
     onValue(ref(db, "warehouse"), (snap) => {
       if (snap.exists()) {
         warehouseCache = snap.val();
-        allProducts = Object.keys(warehouseCache);
+   allProducts = Object.values(warehouseCache).map(p => p.name).filter(Boolean);
         setupDropdowns();
       }
     });

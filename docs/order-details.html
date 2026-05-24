@@ -1226,10 +1226,13 @@ window.location.href = `orders-cards.html?status=${encodeURIComponent(lastStatus
       state.isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
 
       // تحميل المنتجات من المستودع
-      onValue(ref(db, 'warehouse'), (snap) => {
-        if (snap.exists()) state.allProducts = Object.keys(snap.val());
-      }, { onlyOnce: true });
-
+    onValue(ref(db, 'warehouse'), (snap) => {
+  if (snap.exists()) {
+    state.allProducts = Object.values(snap.val())
+      .map(p => p.name)
+      .filter(Boolean);
+  }
+}, { onlyOnce: true });
       // ربط الأحداث
       document.getElementById('saveBtn')?.addEventListener('click', handleSave);
       document.getElementById('backBtn')?.addEventListener('click', handleBack);
