@@ -3,148 +3,580 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>الحسابات</title>
+<title>الحسابات — سنتر المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
 <style>
-:root{
-  --blue:#043B64;
-  --orange:#FF6B2D;
-  --bg:#f4f6fa;
-}
-body{
-  margin:0;
-  font-family:Tahoma;
-  background:var(--bg);
-}
-header{
-  background:var(--blue);
-  color:white;
-  padding:12px;
-  text-align:center;
-  font-size:18px;
-}
-.container{padding:10px;}
-.box{
-  background:white;
-  padding:10px;
-  margin-bottom:10px;
-  border-radius:8px;
-}
-h3{
-  margin:5px 0;
-  color:var(--blue);
-  font-size:15px;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-}
-th,td{
-  border:1px solid #ddd;
-  padding:6px;
-  text-align:center;
-}
-th{background:#eaf0f6;}
-.total{
-  font-weight:bold;
-  color:var(--orange);
-}
-button{
-  padding:6px 10px;
-  border:none;
-  border-radius:6px;
-  background:var(--orange);
-  color:white;
-  cursor:pointer;
-}
-button.gray{
-  background:#ccc;
-  color:#333;
-}
-/* منع التقريب التلقائي عند التركيز */
-input,
-select,
-textarea {
-  font-size: 16px !important;
-  -webkit-text-size-adjust: 100%;
+:root {
+  --navy:    #0d1b2e;
+  --navy2:   #162032;
+  --blue:    #1a3a5c;
+  --accent:  #f97316;
+  --accent2: #fb923c;
+  --green:   #10b981;
+  --red:     #ef4444;
+  --yellow:  #f59e0b;
+  --bg:      #f0f4f8;
+  --card:    #ffffff;
+  --border:  #e2e8f0;
+  --text:    #1e293b;
+  --text2:   #64748b;
+  --text3:   #94a3b8;
+  --shadow:  0 4px 24px rgba(0,0,0,0.07);
+  --shadow2: 0 8px 40px rgba(0,0,0,0.12);
+  --r:       14px;
+  --r2:      10px;
 }
 
-/* تحسين سلوك اللمس */
-html, body {
-  touch-action: manipulation;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Cairo', Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
 }
 
+/* ── HEADER ── */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 24px rgba(0,0,0,0.25);
+}
+.hd-brand {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 19px; font-weight: 900; color: white;
+}
+.hd-brand .dot {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), #ea580c);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.45);
+}
+.hd-right { display: flex; align-items: center; gap: 10px; }
+.hd-pill {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8);
+  display: flex; align-items: center; gap: 6px;
+}
+#liveClock { color: var(--accent2); font-weight: 700; }
+
+/* ── MAIN ── */
+.wrap { max-width: 1400px; margin: 0 auto; padding: 20px 18px; }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow2); }
+.stat-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.si-orange { background: #fff7ed; }
+.si-green  { background: #ecfdf5; }
+.si-red    { background: #fef2f2; }
+.stat-info { flex: 1; }
+.stat-label { font-size: 12px; color: var(--text2); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-val   { font-size: 20px; font-weight: 900; }
+.sv-orange { color: var(--accent); }
+.sv-green  { color: var(--green); }
+.sv-red    { color: var(--red); }
+
+/* ── FILTER CARD ── */
+.filter-card {
+  background: var(--card);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.filter-title {
+  font-size: 14px; font-weight: 800; color: var(--navy);
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.f-group { display: flex; flex-direction: column; gap: 4px; }
+.f-group label { font-size: 11px; color: var(--text2); font-weight: 700; letter-spacing: 0.5px; }
+.f-group input, .f-group select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r2);
+  font-size: 14px;
+  font-family: 'Cairo', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 140px;
+}
+.f-group input:focus, .f-group select:focus { border-color: var(--accent); background: white; }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.qbtn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.qbtn:hover { border-color: var(--accent); color: var(--accent); background: #fff7ed; }
+.qbtn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.qbtn.all-btn { background: var(--navy); border-color: var(--navy); color: white; }
+.qbtn.all-btn:hover { opacity: 0.85; }
+
+.apply-btn {
+  padding: 8px 20px;
+  border-radius: var(--r2);
+  border: none;
+  background: linear-gradient(135deg, var(--accent), #ea580c);
+  color: white;
+  font-size: 13px;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.35);
+  transition: all 0.2s;
+}
+.apply-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(249,115,22,0.45); }
+
+/* ── TABLE CARD ── */
+.table-card {
+  background: var(--card);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.table-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+}
+.table-header h3 { font-size: 15px; font-weight: 800; color: white; display: flex; align-items: center; gap: 8px; }
+.pdf-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, var(--accent), #ea580c);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.4);
+  transition: all 0.2s;
+}
+.pdf-btn:hover { transform: translateY(-1px); }
+
+/* TABLE */
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+thead tr {
+  background: #f8fafc;
+  border-bottom: 2px solid var(--border);
+}
+thead th {
+  padding: 11px 14px;
+  font-size: 11px; font-weight: 800;
+  color: var(--text2);
+  text-align: center;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+thead th:first-child { text-align: right; }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  cursor: pointer;
+}
+tbody tr:hover { background: #fafbff; }
+tbody tr.return-row { background: #fff5f5; }
+tbody tr.return-row:hover { background: #fee2e2; }
+
+tbody td {
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: center;
+  vertical-align: middle;
+}
+tbody td:first-child { text-align: right; }
+
+.inv-number {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  color: white;
+  border-radius: 8px;
+  font-size: 12px; font-weight: 800;
+}
+.inv-number.return-inv { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+.cashier-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+}
+
+.date-cell { font-size: 12px; color: var(--text2); }
+.time-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.time-cell .t-date { font-size: 12px; font-weight: 700; color: var(--text); }
+.time-cell .t-time { font-size: 11px; color: var(--text3); }
+
+.amount { font-weight: 800; font-size: 13px; }
+.amount.negative { color: var(--red); }
+.amount.positive { color: var(--text); }
+
+.paid-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+}
+.paid-full { background: #ecfdf5; color: var(--green); }
+.paid-part { background: #fff7ed; color: var(--accent); }
+.paid-debt { background: #fef2f2; color: var(--red); }
+
+.debt-cell { font-weight: 800; }
+.no-debt { color: var(--text3); }
+.has-debt { color: var(--red); }
+
+.type-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+}
+.type-cash   { background: #ecfdf5; color: #065f46; }
+.type-credit { background: #fff7ed; color: #92400e; }
+.type-return { background: #fef2f2; color: #991b1b; }
+
+/* Print single invoice button */
+.print-inv-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 7px;
+  background: #eef2ff;
+  color: #4f46e5;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.18s;
+}
+.print-inv-btn:hover { background: #4f46e5; color: white; border-color: #4f46e5; }
+
+/* DETAILS ROW */
+tr.detail-row td {
+  background: #f8fafc;
+  padding: 0;
+}
+.detail-inner {
+  padding: 10px 18px;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.detail-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px;
+  border-radius: var(--r2); overflow: hidden;
+}
+.detail-table th {
+  background: var(--navy);
+  color: white;
+  padding: 7px 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 11px;
+}
+.detail-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 7px 12px;
+  text-align: center;
+  background: white;
+}
+.detail-table tr:last-child td { background: #f0f9ff; font-weight: 800; }
+
+/* TOTALS ROW */
+tr.totals-row td {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  color: white;
+  font-size: 14px; font-weight: 900;
+  padding: 13px 14px;
+  border-bottom: none;
+}
+tr.totals-row td.t-label { color: rgba(255,255,255,0.7); font-weight: 600; }
+tr.totals-row td.t-val { color: var(--accent2); }
+
+/* EMPTY */
+.empty-row td {
+  padding: 60px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 14px;
+}
+.empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+/* PRINT STYLES for single invoice */
+/* ضع هذا بدله */
+#printArea { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea {
+    display: block !important;
+    position: fixed;
+    top: 0; right: 0;
+    width: 72mm;
+    padding: 6px;
+    font-family: 'Cairo', Tahoma, sans-serif;
+    direction: rtl;
+  }
+}
+@page { size: 72mm auto; margin: 0; }
+
+/* LOADING */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(13,27,46,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+}
+.spinner {
+  width: 48px; height: 48px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: white; font-size: 14px; font-weight: 700; }
+
+/* RESPONSIVE */
+@media (max-width: 680px) {
+  .stats-row { grid-template-columns: 1fr; }
+  .filter-row { flex-direction: column; }
+  .f-group input, .f-group select { min-width: 100%; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+input, select { font-size: 16px !important; -webkit-text-size-adjust: 100%; }
+html, body { touch-action: manipulation; }
 </style>
 </head>
-
 <body>
 
-<header>📊 الحسابات</header>
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">جاري تحميل البيانات...</div>
+</div>
 
-<div class="container">
-<h3>👤 اختيار الكاشير</h3>
+<!-- HEADER -->
+<div id="header">
+  <div class="hd-brand">
+    <div class="dot">📊</div>
+    <span>الحسابات</span>
+  </div>
+  <div class="hd-right">
+    <div class="hd-pill">🏪 سنتر المراد</div>
+    <div class="hd-pill">🕐 <span id="liveClock">--:--:--</span></div>
+  </div>
+</div>
 
-<select id="cashierSelect">
-  <option value="all">كل الكاشيرات</option>
-</select>
+<!-- MAIN -->
+<div class="wrap">
 
-  <div class="box">
-    <h3>📅 تصفية حسب التاريخ</h3>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      من:
-      <input type="date" id="fromDate">
-      إلى:
-      <input type="date" id="toDate">
-      <button onclick="filterByRange()">تطبيق</button>
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon si-orange">💰</div>
+      <div class="stat-info">
+        <div class="stat-label">إجمالي المبيعات</div>
+        <div class="stat-val sv-orange" id="statTotal">0 د.ع</div>
+      </div>
     </div>
-
-    <hr>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button onclick="quickFilter('today')">اليوم</button>
-      <button onclick="quickFilter('yesterday')">أمس</button>
-<button onclick="quickFilter('beforeYesterday')">أول أمس</button>
-      <button onclick="quickFilter('week')">هذا الأسبوع</button>
-      <button onclick="quickFilter('month')">هذا الشهر</button>
-      <button onclick="quickFilter('year')">هذه السنة</button>
-      <button class="gray" onclick="quickFilter('all')">الكل</button>
+    <div class="stat-card">
+      <div class="stat-icon si-green">✅</div>
+      <div class="stat-info">
+        <div class="stat-label">المبلغ المحصّل</div>
+        <div class="stat-val sv-green" id="statPaid">0 د.ع</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-red">⚠️</div>
+      <div class="stat-info">
+        <div class="stat-label">إجمالي الديون</div>
+        <div class="stat-val sv-red" id="statDebt">0 د.ع</div>
+      </div>
     </div>
   </div>
 
-  <div class="box">
-    <h3>🧾 كل الفواتير</h3>
-    <button onclick="exportPDF()" style="margin-bottom:10px">
-📄 تحميل كشف حساب PDF
-</button>
-    <table id="table">
-      <tr>
-   <th>الكاشير</th>
-<th>رقم الفاتورة</th>
-<th>التاريخ</th>
-<th>مجموع الفاتورة</th>
-<th>المدفوع</th>
-<th>الدين</th>
+  <!-- FILTERS -->
+  <div class="filter-card">
+    <div class="filter-title">🔍 تصفية البيانات</div>
+    <div class="filter-row">
+      <div class="f-group">
+        <label>الكاشير</label>
+        <select id="cashierSelect">
+          <option value="all">كل الكاشيرات</option>
+        </select>
+      </div>
+      <div class="f-group">
+        <label>من تاريخ</label>
+        <input type="date" id="fromDate">
+      </div>
+      <div class="f-group">
+        <label>إلى تاريخ</label>
+        <input type="date" id="toDate">
+      </div>
+      <div class="f-group" style="justify-content:flex-end">
+        <button class="apply-btn" onclick="filterByRange()">✅ تطبيق</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="qbtn" onclick="quickFilter('today')" data-q="today">اليوم</button>
+      <button class="qbtn" onclick="quickFilter('yesterday')" data-q="yesterday">أمس</button>
+      <button class="qbtn" onclick="quickFilter('beforeYesterday')" data-q="beforeYesterday">أول أمس</button>
+      <button class="qbtn" onclick="quickFilter('week')" data-q="week">هذا الأسبوع</button>
+      <button class="qbtn" onclick="quickFilter('month')" data-q="month">هذا الشهر</button>
+      <button class="qbtn" onclick="quickFilter('year')" data-q="year">هذه السنة</button>
+      <button class="qbtn all-btn" onclick="quickFilter('all')" data-q="all">عرض الكل</button>
+    </div>
+  </div>
 
-      </tr>
-    </table>
+  <!-- TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>🧾 سجل الفواتير</h3>
+      <button class="pdf-btn" onclick="exportPDF()">📄 تحميل PDF</button>
+    </div>
+    <div class="table-scroll">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th style="text-align:right; padding-right:20px;">الكاشير</th>
+            <th>#</th>
+            <th>التاريخ والوقت</th>
+            <th>مجموع الفاتورة</th>
+            <th>المدفوع</th>
+            <th>الدين</th>
+            <th>النوع</th>
+            <th>طباعة</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
 
+<!-- PRINT AREA FOR SINGLE INVOICE -->
+<div id="printArea">
+  <div style="padding:6px 10px; direction:rtl; font-family:'Cairo',Tahoma,sans-serif;">
+    <div style="text-align:center; font-size:17px; font-weight:900; margin-bottom:3px;">سنتر المراد</div>
+    <div style="text-align:center; font-size:11px; color:#666; margin-bottom:8px;">📞 07865393559</div>
+    <hr style="border-color:#ddd; margin:6px 0;">
+    <div style="font-size:11px; line-height:1.9;">
+      <div>👤 الكاشير: <strong id="pCashier"></strong></div>
+      <div>📅 التاريخ: <strong id="pDate"></strong></div>
+      <div>🕐 الوقت: <strong id="pTime"></strong></div>
+      <div>🧾 رقم الفاتورة: <strong id="pInvoice"></strong></div>
+    </div>
+    <hr style="border-color:#ddd; margin:6px 0;">
+    <table style="width:100%; font-size:11px; border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:1px solid #ddd;">
+          <th style="text-align:right; padding:3px 0;">المنتج</th>
+          <th style="text-align:center;">الكمية</th>
+          <th style="text-align:center;">السعر</th>
+          <th style="text-align:center;">المجموع</th>
+        </tr>
+      </thead>
+      <tbody id="pItems"></tbody>
+    </table>
+    <hr style="border-color:#ddd; margin:6px 0;">
+    <div style="display:flex; justify-content:space-between; font-weight:900; font-size:14px;">
+      <span>المجموع الإجمالي</span>
+      <span id="pTotal"></span>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
+      <span>المدفوع</span>
+      <span id="pPaid"></span>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:2px; color:#ef4444;" id="pDebtRow">
+      <span>الدين</span>
+      <span id="pDebt"></span>
+    </div>
+    <div style="text-align:center; margin-top:14px; font-size:11px; color:#888;">شكراً لتسوقكم 🌸</div>
+    <div style="text-align:center; font-size:10px; color:#aaa; margin-top:4px;">نظام المراد</div>
+  </div>
+</div>
+
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  onValue
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-
-/* ✅ Firebase INIT – أول شي */
+// ── Firebase ──
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
   authDomain: "almurad-system.firebaseapp.com",
@@ -154,481 +586,472 @@ const firebaseConfig = {
   messagingSenderId: "911755824405",
   appId: "1:911755824405:web:c5520c00c11e336148ad1c"
 };
-
 const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
 
-
-
-
-// ===== البيانات =====
-const table = document.getElementById("table");
-let invoices = []; // ← تعريف الفواتير (راح تجي من Firebase)
-let cashiersMap = {};
+// ── State ──
+let allInvoices = [];
 let currentCashier = "all";
 let currentFrom = null;
 let currentTo = null;
-const fromDate = document.getElementById("fromDate");
-const toDate   = document.getElementById("toDate");
+let openDetailKey = null;
 
-
-// ===== تنسيق إنكليزي =====
 const fmt = n => Number(n || 0).toLocaleString("en-US");
-const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
-// ===== تفاصيل الفاتورة =====
-function toggleDetails(row, inv){
+const today = () => new Date().toLocaleDateString("en-CA");
 
-  // إذا التفاصيل مفتوحة → سكّرها
-  if (row.nextSibling && row.nextSibling.classList?.contains("details")) {
-    row.nextSibling.remove();
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById("liveClock").textContent =
+    now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Load ──
+function loadInvoices() {
+  onValue(ref(rtdb, "posInvoices"), (snap) => {
+    allInvoices = [];
+    document.getElementById("loadingOverlay").style.display = "none";
+
+    if (!snap.exists()) { render([]); return; }
+
+    const data = snap.val();
+    Object.entries(data).forEach(([key, inv]) => {
+      let ts = inv.createdAt;
+      let dateStr, timeStr;
+
+      if (typeof ts === "number") {
+        const d = new Date(ts);
+        dateStr = d.toLocaleDateString("en-CA");
+        timeStr = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+      } else {
+        dateStr = today();
+        timeStr = inv.localTime || "--:--";
+      }
+
+      const isReturn = inv.type === "return";
+      const grand = isReturn ? -Math.abs(Number(inv.total || 0)) : Number(inv.total || 0);
+      const paid  = isReturn ? -Math.abs(Number(inv.paid || 0)) : Number(inv.paid || 0);
+
+      allInvoices.push({
+        _key: key,
+        invoiceNo: inv.invoiceNo || 0,
+        date: dateStr,
+        time: timeStr,
+        grand,
+        paid,
+        rest: grand - paid,
+        type: inv.type || "cash",
+        cashierId: inv.cashierId || "غير معروف",
+        items: inv.items || [],
+        debtor: inv.debtor || null
+      });
+    });
+
+    allInvoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
+
+    // Populate cashier select
+    const sel = document.getElementById("cashierSelect");
+    sel.innerHTML = `<option value="all">كل الكاشيرات</option>`;
+    [...new Set(allInvoices.map(i => i.cashierId))].forEach(id => {
+      sel.innerHTML += `<option value="${id}">${id}</option>`;
+    });
+
+    applyFilters();
+  });
+}
+
+// ── Filters ──
+function applyFilters() {
+  let filtered = allInvoices;
+  if (currentCashier !== "all") filtered = filtered.filter(i => i.cashierId === currentCashier);
+  if (currentFrom && currentTo)  filtered = filtered.filter(i => i.date >= currentFrom && i.date <= currentTo);
+  render(filtered);
+}
+
+window.filterByRange = function() {
+  const f = document.getElementById("fromDate").value;
+  const t = document.getElementById("toDate").value;
+  if (!f || !t) { alert("اختَر تاريخ البداية والنهاية"); return; }
+  currentFrom = f; currentTo = t;
+  setActiveQBtn(null);
+  applyFilters();
+};
+
+window.quickFilter = function(type) {
+  const n = new Date();
+  let s, e;
+
+  if (type === "today") { s = e = today(); }
+  else if (type === "yesterday") {
+    const d = new Date(); d.setDate(d.getDate() - 1); s = e = d.toLocaleDateString("en-CA");
+  }
+  else if (type === "beforeYesterday") {
+    const d = new Date(); d.setDate(d.getDate() - 2); s = e = d.toLocaleDateString("en-CA");
+  }
+  else if (type === "week") {
+    const d = new Date(); d.setDate(d.getDate() - d.getDay()); s = d.toLocaleDateString("en-CA"); e = today();
+  }
+  else if (type === "month") {
+    s = new Date(n.getFullYear(), n.getMonth(), 1).toLocaleDateString("en-CA"); e = today();
+  }
+  else if (type === "year") {
+    s = new Date(n.getFullYear(), 0, 1).toLocaleDateString("en-CA"); e = today();
+  }
+  else if (type === "all") {
+    currentFrom = null; currentTo = null;
+    document.getElementById("fromDate").value = "";
+    document.getElementById("toDate").value = "";
+    setActiveQBtn("all");
+    applyFilters(); return;
+  }
+
+  currentFrom = s; currentTo = e;
+  document.getElementById("fromDate").value = s;
+  document.getElementById("toDate").value = e;
+  setActiveQBtn(type);
+  applyFilters();
+};
+
+function setActiveQBtn(type) {
+  document.querySelectorAll(".qbtn").forEach(b => {
+    b.classList.remove("active");
+    if (type && b.dataset.q === type) b.classList.add("active");
+  });
+}
+
+document.getElementById("cashierSelect").addEventListener("change", e => {
+  currentCashier = e.target.value;
+  applyFilters();
+});
+
+// ── Render ──
+function render(data) {
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+  openDetailKey = null;
+
+  // Update stats
+  let total = 0, paid = 0, debt = 0;
+  data.forEach(inv => { total += inv.grand; paid += inv.paid; debt += inv.rest; });
+
+  document.getElementById("statTotal").textContent = fmt(total) + " د.ع";
+  document.getElementById("statPaid").textContent  = fmt(paid)  + " د.ع";
+  document.getElementById("statDebt").textContent  = fmt(debt)  + " د.ع";
+
+  // Color stats
+  document.getElementById("statTotal").className = "stat-val " + (total < 0 ? "sv-red" : "sv-orange");
+  document.getElementById("statPaid").className  = "stat-val " + (paid  < 0 ? "sv-red" : "sv-green");
+  document.getElementById("statDebt").className  = "stat-val " + (debt  > 0 ? "sv-red" : "sv-green");
+
+  if (!data.length) {
+    const tr = tbody.insertRow();
+    tr.className = "empty-row";
+    tr.innerHTML = `<td colspan="8">
+      <div class="empty-icon">📭</div>
+      <div>لا توجد فواتير في هذه الفترة</div>
+    </td>`;
     return;
   }
 
-  // سكّر أي تفاصيل ثانية مفتوحة
-  document.querySelectorAll(".details").forEach(d => d.remove());
+  data.forEach(inv => {
+    const isReturn = inv.type === "return";
+    const tr = document.createElement("tr");
+    if (isReturn) tr.className = "return-row";
 
-  const detailsRow = table.insertRow(row.rowIndex + 1);
-  detailsRow.className = "details";
+    const typeLabel = inv.type === "return" ? "مسترجع" : inv.type === "credit" ? "دين" : "نقد";
+    const typeClass = inv.type === "return" ? "type-return" : inv.type === "credit" ? "type-credit" : "type-cash";
+    const typeIcon  = inv.type === "return" ? "↩" : inv.type === "credit" ? "📄" : "💵";
 
-  let html = `
-    <table style="width:100%;font-size:12px;margin-top:6px">
-      <tr style="background:#f7f7f7">
-        <th>المنتج</th>
-        <th>الكمية</th>
-        <th>السعر</th>
-        <th>المجموع</th>
-      </tr>
+    const paidStatus = inv.rest <= 0 ? "paid-full" : inv.paid > 0 ? "paid-part" : "paid-debt";
+    const paidLabel  = inv.rest <= 0 ? "مسدّد" : inv.paid > 0 ? "جزئي" : "غير مسدّد";
+
+    tr.innerHTML = `
+      <td>
+        <div class="cashier-tag">👤 ${inv.cashierId}</div>
+      </td>
+      <td>
+        <div class="inv-number ${isReturn ? "return-inv" : ""}">${inv.invoiceNo}</div>
+      </td>
+      <td>
+        <div class="time-cell">
+          <span class="t-date">${inv.date}</span>
+          <span class="t-time">🕐 ${inv.time}</span>
+        </div>
+      </td>
+      <td>
+        <span class="amount ${inv.grand < 0 ? "negative" : "positive"}">${fmt(inv.grand)} د.ع</span>
+      </td>
+      <td>
+        <span class="paid-tag ${paidStatus}">${fmt(inv.paid)} د.ع</span>
+      </td>
+      <td>
+        <span class="debt-cell ${inv.rest > 0 ? "has-debt" : "no-debt"}">${inv.rest > 0 ? fmt(inv.rest) + " د.ع" : "—"}</span>
+      </td>
+      <td>
+        <span class="type-badge ${typeClass}">${typeIcon} ${typeLabel}</span>
+      </td>
+      <td>
+        <button class="print-inv-btn" onclick="event.stopPropagation(); printInvoice('${inv._key}')" title="طباعة الفاتورة">🖨️</button>
+      </td>
+    `;
+
+    tr.addEventListener("click", () => toggleDetail(tr, inv, tbody));
+    tbody.appendChild(tr);
+  });
+
+  // Totals row
+  const totTr = document.createElement("tr");
+  totTr.className = "totals-row";
+  totTr.innerHTML = `
+    <td class="t-label" colspan="3" style="text-align:right; padding-right:20px; font-size:14px;">📊 المجموع الإجمالي</td>
+    <td class="t-val">${fmt(total)} د.ع</td>
+    <td class="t-val">${fmt(paid)} د.ع</td>
+    <td class="t-val ${debt > 0 ? "" : ""}">${fmt(debt)} د.ع</td>
+    <td></td><td></td>
   `;
+  tbody.appendChild(totTr);
+}
 
-  (inv.items || []).forEach(it=>{
-    html += `
+// ── Toggle Detail ──
+function toggleDetail(row, inv, tbody) {
+  // Close existing
+  const existing = tbody.querySelector(".detail-row");
+  if (existing) {
+    const wasThisRow = existing.dataset.key === inv._key;
+    existing.remove();
+    if (wasThisRow) { openDetailKey = null; return; }
+  }
+
+  openDetailKey = inv._key;
+  const detRow = document.createElement("tr");
+  detRow.className = "detail-row";
+  detRow.dataset.key = inv._key;
+
+  let itemsHtml = "";
+  (inv.items || []).forEach(it => {
+    itemsHtml += `
       <tr>
-        <td>${it.product}</td>
-        <td>${it.qty}</td>
+        <td style="text-align:right;">${it.product}</td>
+        <td>${Math.abs(it.qty)}</td>
         <td>${fmt(it.price)} د.ع</td>
-        <td>${fmt(it.total)} د.ع</td>
+        <td>${fmt(Math.abs(it.total))} د.ع</td>
       </tr>
     `;
   });
 
-  html += `
-      <tr style="font-weight:bold;background:#eef3f7">
-        <td colspan="3">مجموع الفاتورة</td>
-  <td style="color:${inv.grand < 0 ? 'red' : 'black'}">
-  ${fmt(inv.grand)} د.ع
-</td>
-      </tr>
-    </table>
+  let debtorHtml = "";
+  if (inv.debtor?.name) {
+    debtorHtml = `<div style="margin-top:10px; padding:8px 12px; background:#fff7ed; border-radius:8px; font-size:12px; display:flex; gap:20px; flex-wrap:wrap;">
+      <span>👤 ${inv.debtor.name}</span>
+      ${inv.debtor.phone ? `<span>📞 ${inv.debtor.phone}</span>` : ""}
+      ${inv.debtor.note  ? `<span>📝 ${inv.debtor.note}</span>`  : ""}
+    </div>`;
+  }
+
+  detRow.innerHTML = `
+    <td colspan="8">
+      <div class="detail-inner">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th style="text-align:right;">المنتج</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>المجموع</th>
+            </tr>
+          </thead>
+          <tbody>${itemsHtml}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="font-weight:900; text-align:right;">مجموع الفاتورة</td>
+              <td style="font-weight:900; color:${inv.grand < 0 ? "#ef4444" : "#1e293b"}">${fmt(inv.grand)} د.ع</td>
+            </tr>
+          </tfoot>
+        </table>
+        ${debtorHtml}
+      </div>
+    </td>
   `;
-
-  detailsRow.innerHTML = `<td colspan="6">${html}</td>`;
-}
-function applyFilters(){
-
-  let filtered = invoices;
-
-  if(currentCashier !== "all"){
-    filtered = filtered.filter(inv => 
-      inv.cashierId === currentCashier
-    );
-  }
-
-  if(currentFrom && currentTo){
-    filtered = filtered.filter(inv =>
-      inv.date >= currentFrom &&
-      inv.date <= currentTo
-    );
-  }
-
-  render(filtered);
+  row.after(detRow);
 }
 
-// ===== عرض الجدول =====
-function render(data){
-  table.querySelectorAll("tr:not(:first-child)").forEach(r=>r.remove());
+// ── Print Single Invoice ──
+window.printInvoice = function(key) {
+  const inv = allInvoices.find(i => i._key === key);
+  if (!inv) return;
 
-  if(!data.length){
-    table.insertRow().innerHTML =
-      `<td colspan="6">لا توجد فواتير</td>
-`;
-    return;
-  }
-  
-
-  let total=0, paid=0, debt=0;
-
-  data.forEach(inv=>{
-    total += +inv.grand;
-    paid  += +inv.paid;
-    debt  += +inv.rest;
-
-const row = table.insertRow();
-row.style.cursor = "pointer";
-
-// 🔴 إذا الفاتورة سالب نخلي الصف كله أحمر
-if (inv.grand < 0) {
-  row.style.color = "red";
-}
-
-row.innerHTML = `
-<td>${inv.cashierId || "غير معروف"}</td>
-<td>${fmt(inv.invoiceNo)}</td>
-<td>${inv.date}</td>
-<td>${fmt(inv.grand)} د.ع</td>
-<td>${fmt(inv.paid)} د.ع</td>
-<td>${fmt(inv.rest)} د.ع</td>
-`;
-
-// عند الضغط → فتح التفاصيل
-row.onclick = () => toggleDetails(row, inv);
-
-
+  const tbody = document.getElementById("pItems");
+  tbody.innerHTML = "";
+  (inv.items || []).forEach(it => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="text-align:right; padding:3px 0; border-bottom:1px solid #f0f0f0;">${it.product}</td>
+      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">×${Math.abs(it.qty)}</td>
+      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">${fmt(it.price)}</td>
+      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">${fmt(Math.abs(it.total))}</td>
+    `;
+    tbody.appendChild(tr);
   });
 
-table.insertRow().innerHTML = `
-  <td></td>
-  <td></td>
-  <td><strong>المجموع</strong></td>
+  document.getElementById("pCashier").textContent = inv.cashierId;
+  document.getElementById("pDate").textContent    = inv.date;
+  document.getElementById("pTime").textContent    = inv.time;
+  document.getElementById("pInvoice").textContent = inv.invoiceNo;
+  document.getElementById("pTotal").textContent   = fmt(inv.grand) + " د.ع";
+  document.getElementById("pPaid").textContent    = fmt(inv.paid)  + " د.ع";
 
-  <td class="total" style="color:${total < 0 ? 'red' : '#FF6B2D'}">
-    ${fmt(total)} د.ع
-  </td>
-
-  <td class="total" style="color:${paid < 0 ? 'red' : '#FF6B2D'}">
-    ${fmt(paid)} د.ع
-  </td>
-
-  <td class="total" style="color:${debt < 0 ? 'red' : '#FF6B2D'}">
-    ${fmt(debt)} د.ع
-  </td>
-`;
-
-}
-
-// ===== فلترة من → إلى =====
-function filterByRange(){
-  if(!fromDate.value || !toDate.value){
-    alert("اختَر تاريخ من وإلى");
-    return;
+  const debtRow = document.getElementById("pDebtRow");
+  if (inv.rest > 0) {
+    debtRow.style.display = "flex";
+    document.getElementById("pDebt").textContent = fmt(inv.rest) + " د.ع";
+  } else {
+    debtRow.style.display = "none";
   }
 
-  currentFrom = fromDate.value;
-  currentTo   = toDate.value;
+  window.print();
+};
 
-  applyFilters();
-}
-
-// ===== فلاتر سريعة =====
-function quickFilter(type){
-
-  const n = new Date();
-  let s,e;
-
-  if(type==="today"){
-    s = e = today();
-  }
-if(type==="yesterday"){
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  s = e = d.toLocaleDateString("en-CA");
-}
-if(type==="beforeYesterday"){
-  const d = new Date();
-  d.setDate(d.getDate() - 2);
-  s = e = d.toLocaleDateString("en-CA");
-}
-  if(type==="week"){
-    const d = new Date();
-    d.setDate(d.getDate()-d.getDay());
-    s = d.toLocaleDateString("en-CA");
-    e = today();
-  }
-
-  if(type==="month"){
-    s = new Date(n.getFullYear(), n.getMonth(), 1)
-          .toLocaleDateString("en-CA");
-    e = today();
-  }
-
-  if(type==="year"){
-    s = new Date(n.getFullYear(), 0, 1)
-          .toLocaleDateString("en-CA");
-    e = today();
-  }
-
-  if(type==="all"){
-    currentFrom = null;
-    currentTo = null;
-    applyFilters();
-    return;
-  }
-
-  currentFrom = s;
-  currentTo   = e;
-
-  applyFilters();
-}
-
-
-function loadInvoices() {
-  onValue(ref(rtdb, "posInvoices"), (snap) => {
-    invoices = [];
-
-    if (!snap.exists()) {
-      render([]);
-      return;
-    }
-
-    const data = snap.val();
-
-    Object.values(data).forEach(inv => {
-      let ts = inv.createdAt;
-      let dateStr;
-
-      if (typeof ts === "number") {
-        dateStr = new Date(ts).toLocaleDateString("en-CA");
-      } else {
-        dateStr = today();
-      }
-
-invoices.push({
-  invoiceNo: inv.invoiceNo || 0,
-  date: dateStr,
-
-  // 🔴 إذا راجع نخليها سالب
-  grand: inv.type === "return"
-    ? -Math.abs(Number(inv.total || 0))
-    : Number(inv.total || 0),
-   paid: inv.type === "return"
-  ? -Math.abs(Number(inv.paid || 0))
-  : Number(inv.paid || 0),
-        rest: Number(inv.total || 0) - Number(inv.paid || 0),
-        cashierId: inv.cashierId || "غير معروف",
-        items: inv.items || []
-      });
-    });
-
-    invoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
-    // 🧑‍💼 تعبئة قائمة الكاشيرات (Real-Time)
-cashierSelect.innerHTML = `<option value="all">كل الكاشيرات</option>`;
-
-[...new Set(invoices.map(i => i.cashierId))].forEach(id => {
-  cashierSelect.innerHTML += `<option value="${id}">${id}</option>`;
-});
-
-  applyFilters();
-
-  });
-}
-
-// ربط الدوال بالـ HTML
-window.quickFilter = quickFilter;
-window.filterByRange = filterByRange;
-const cashierSelect = document.getElementById("cashierSelect");
-
-cashierSelect.addEventListener("change", () => {
-  currentCashier = cashierSelect.value;
-  applyFilters();
-});
-
-
-loadInvoices();
-function fixArabicText(text) {
-  if (!text) return "";
-  return text
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/([\u0600-\u06FF]+)/)
-    .map(part => {
-      if (/[\u0600-\u06FF]+/.test(part)) {
-        return part.split(" ").reverse().join(" ");
-      }
-      return part;
-    })
-    .reverse()
-    .join(" ")
-    .replace(/\s+/g, " ");
-}
+// ── PDF Export ──
 window.exportPDF = async function () {
 
+  // تحميل الشعار
   const logoBase64 = await fetch("almurad-logo.png")
     .then(r => r.blob())
-    .then(blob => new Promise(res=>{
+    .then(blob => new Promise(res => {
       const reader = new FileReader();
       reader.onload = () => res(reader.result);
       reader.readAsDataURL(blob);
     }));
 
-  let filtered = invoices;
+  let filtered = allInvoices;
+  if (currentCashier !== "all") filtered = filtered.filter(i => i.cashierId === currentCashier);
+  if (currentFrom && currentTo)  filtered = filtered.filter(i => i.date >= currentFrom && i.date <= currentTo);
 
-  if(currentCashier !== "all"){
-    filtered = filtered.filter(i => i.cashierId === currentCashier);
+  let total = 0, paid = 0, debt = 0;
+
+  // دالة إصلاح النص العربي — نفس القديم
+  function fixArabicText(text) {
+    if (!text) return "";
+    return text
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(/([\u0600-\u06FF]+)/)
+      .map(part => {
+        if (/[\u0600-\u06FF]+/.test(part)) {
+          return part.split(" ").reverse().join(" ");
+        }
+        return part;
+      })
+      .reverse()
+      .join(" ")
+      .replace(/\s+/g, " ");
   }
 
-  if(currentFrom && currentTo){
-    filtered = filtered.filter(i =>
-      i.date >= currentFrom && i.date <= currentTo
-    );
-  }
+  const body = [[
+    { text: fixArabicText("الدين"),         color: "#fff", alignment: "center" },
+    { text: fixArabicText("المدفوع"),       color: "#fff", alignment: "center" },
+    { text: fixArabicText("المجموع"),       color: "#fff", alignment: "center" },
+    { text: fixArabicText("الوقت"),         color: "#fff", alignment: "center" },
+    { text: fixArabicText("التاريخ"),       color: "#fff", alignment: "center" },
+    { text: fixArabicText("رقم الفاتورة"), color: "#fff", alignment: "center" },
+    { text: fixArabicText("الكاشير"),       color: "#fff", alignment: "center" }
+  ]];
 
-  let total=0, paid=0, debt=0;
+  filtered.forEach(inv => {
+    total += inv.grand;
+    paid  += inv.paid;
+    debt  += inv.rest;
 
-const body = [[
-  {text: fixArabicText("الدين"), color:"#fff", alignment:"center"},
-  {text: fixArabicText("المدفوع"), color:"#fff", alignment:"center"},
-  {text: fixArabicText("المجموع"), color:"#fff", alignment:"center"},
-  {text: fixArabicText("التاريخ"), color:"#fff", alignment:"center"},
-  {text: fixArabicText("رقم الفاتورة"), color:"#fff", alignment:"center"},
-  {text: fixArabicText("الكاشير"), color:"#fff", alignment:"center"}
-]];
-
-  filtered.forEach(inv=>{
-    total += +inv.grand;
-    paid  += +inv.paid;
-    debt  += +inv.rest;
-
-body.push([
-
-  {
-    text: inv.rest.toLocaleString("en-US"),
-    color: inv.rest < 0 ? "red" : "black",
-    alignment: "center"
-  },
-
-  {
-    text: inv.paid.toLocaleString("en-US"),
-    color: inv.paid < 0 ? "red" : "black",
-    alignment: "center"
-  },
-
-  {
-    text: inv.grand.toLocaleString("en-US"),
-    color: inv.grand < 0 ? "red" : "black",
-    alignment: "center"
-  },
-
-  { text: inv.date, alignment: "center" },
-  { text: inv.invoiceNo, alignment: "center" },
-  { text: fixArabicText(inv.cashierId), alignment: "center" }
-
-]);
+    body.push([
+      { text: inv.rest > 0 ? inv.rest.toLocaleString("en-US") : "—", color: inv.rest > 0 ? "red" : "black", alignment: "center" },
+      { text: inv.paid.toLocaleString("en-US"), color: inv.paid < 0 ? "red" : "black", alignment: "center" },
+      { text: inv.grand.toLocaleString("en-US"), color: inv.grand < 0 ? "red" : "black", alignment: "center" },
+      { text: inv.time || "—", alignment: "center" },
+      { text: inv.date, alignment: "center" },
+      { text: String(inv.invoiceNo), alignment: "center" },
+      { text: fixArabicText(inv.cashierId), alignment: "center" }
+    ]);
   });
 
-// ✅ تحميل خط Tajawal الحقيقي
-const res = await fetch("../Tajawal-Regular.ttf");
-const buffer = await res.arrayBuffer();
-const binary = Array.from(new Uint8Array(buffer))
-  .map(b => String.fromCharCode(b)).join("");
-const fontBase64 = btoa(binary);
+  // تحميل خط Tajawal — نفس القديم
+  const res = await fetch("../Tajawal-Regular.ttf");
+  const buffer = await res.arrayBuffer();
+  const binary = Array.from(new Uint8Array(buffer))
+    .map(b => String.fromCharCode(b)).join("");
+  const fontBase64 = btoa(binary);
 
-pdfMake.vfs = {
-  "Tajawal-Regular.ttf": fontBase64
-};
+  pdfMake.vfs = { "Tajawal-Regular.ttf": fontBase64 };
+  pdfMake.fonts = {
+    Tajawal: { normal: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf" }
+  };
 
-pdfMake.fonts = {
-  Tajawal: {
-    normal: "Tajawal-Regular.ttf",
-    bold: "Tajawal-Regular.ttf"
-  }
-};
+  const period = currentFrom ? `${currentFrom} - ${currentTo}` : "الكل";
+  const cashierLabel = currentCashier === "all" ? "كل الكاشيرات" : currentCashier;
 
-// ===== التصميم النهائي =====
-const docDefinition = {
-  defaultStyle: {
-    font: "Tajawal"
-  },
-footer: function(currentPage, pageCount) {
-  return {
-    margin: [0, 0, 0, 20],
-    columns: [
+  const docDefinition = {
+    defaultStyle: { font: "Tajawal" },
+    pageDirection: "rtl",
+    footer: function(currentPage, pageCount) {
+      return {
+        margin: [0, 0, 0, 20],
+        columns: [{
+          text: fixArabicText("كشف رسمي صادر من شركة المُراد - نظام المراد"),
+          alignment: "center", color: "#FF6B2D", bold: true, fontSize: 11
+        }]
+      };
+    },
+    content: [
       {
-        text: fixArabicText("كشف رسمي صادر من شركة المُراد - نظام المراد"),
-        alignment: "center",
-        color: "#FF6B2D",
-        bold: true,
-        fontSize: 11
+        columns: [
+          { image: logoBase64, width: 80 },
+          { text: fixArabicText("كشف حساب - سنتر المراد"), alignment: "center", fontSize: 18, bold: true, color: "#FF6B2D" }
+        ]
+      },
+      { text: fixArabicText(`الفترة: ${period}`), alignment: "right", margin: [0, 10, 0, 5] },
+      { text: fixArabicText(`الكاشير: ${cashierLabel}`), alignment: "right", margin: [0, 0, 0, 10] },
+      {
+        table: {
+          headerRows: 1,
+          widths: ["*", "*", "*", "*", "*", "*", "*"],
+          body: body
+        },
+        layout: {
+          fillColor: function(rowIndex) {
+            return rowIndex === 0 ? "#043B64" : null;
+          }
+        }
+      },
+      {
+        margin: [0, 15, 0, 0],
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              { text: fixArabicText("إجمالي المبيعات"), fillColor: "#043B64", color: "#fff", alignment: "center" },
+              { text: fixArabicText("المدفوع"),          fillColor: "#043B64", color: "#fff", alignment: "center" },
+              { text: fixArabicText("الديون"),           fillColor: "#043B64", color: "#fff", alignment: "center" }
+            ],
+            [
+              { text: total.toLocaleString("en-US") + " د.ع", color: total < 0 ? "red" : "#FF6B2D", alignment: "center", bold: true },
+              { text: paid.toLocaleString("en-US")  + " د.ع", alignment: "center", bold: true },
+              { text: debt.toLocaleString("en-US")  + " د.ع", alignment: "center", bold: true }
+            ]
+          ]
+        }
       }
     ]
   };
-},
-  pageDirection: "rtl",
-
-  content: [
-
-    {
-  columns: [
-  { image: logoBase64, width: 80 },
-
-  {
-  text: fixArabicText("كشف حساب - سنتر المراد"),
-    alignment: "center",
-    fontSize: 18,
-    bold: true,
-    color: "#FF6B2D"
-  }
-]
-    },
-
-    {
-  text: fixArabicText(`الفترة: ${currentFrom || "الكل"} - ${currentTo || ""}`),
-      alignment: "right",
-      margin: [0,10,0,5]
-    },
-
-    {
-     text: fixArabicText(
-  `الكاشير: ${currentCashier === "all" ? "كل الكاشيرات" : currentCashier}`
-),
-      alignment: "right",
-      margin: [0,0,0,10]
-    },
-
-    {
-      table: {
-        headerRows: 1,
-        widths: ["*","*","*","*","*","*"],
-
-        body: body
-      },
-     layout: {
-  fillColor: function (rowIndex) {
-    return rowIndex === 0 ? "#043B64" : null;
-  }
-}
-    },
-
-  {
-  margin:[0,15,0,0],
-  table: {
-    widths: ["*","*","*"],
-    body: [
-      [
-        {text: fixArabicText("إجمالي المبيعات"), fillColor:"#043B64", color:"#fff", alignment:"center"},
-        {text: fixArabicText("المدفوع"), fillColor:"#043B64", color:"#fff", alignment:"center"},
-        {text: fixArabicText("الديون"), fillColor:"#043B64", color:"#fff", alignment:"center"}
-      ],
-      [
-        {
-  text: total.toLocaleString("en-US") + " د.ع",
-  color: total < 0 ? "red" : "#FF6B2D",
-  alignment:"center",
-  bold:true
-},
-        {text: paid.toLocaleString("en-US") + " د.ع", alignment:"center", bold:true},
-        {text: debt.toLocaleString("en-US") + " د.ع", alignment:"center", bold:true}
-      ]
-    ]
-  }
-}
-
-  ]
-};
 
   pdfMake.createPdf(docDefinition).download("كشف_حساب_المراد.pdf");
 };
 
+// Expose
+window.applyFilters = applyFilters;
+
+// Start
+loadInvoices();
 </script>
-
-
 </body>
 </html>

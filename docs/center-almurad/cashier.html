@@ -2013,7 +2013,9 @@ const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
       type: isReturnMode ? "return" : (isCredit ? "credit" : "cash"),
       debtor,
       cashierId: localStorage.getItem("cashierUsername") || "unknown",
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+localTime: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
+      
     });
   } catch(e) {
     showToast("❌ خطأ في الحفظ", "error");
