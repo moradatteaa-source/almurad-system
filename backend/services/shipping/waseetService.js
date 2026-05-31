@@ -96,8 +96,8 @@ async function pushToWaseet(orderData, token, cityId, regionId, phone) {
   const fd = new FormData();
   const p  = {
     client_name:    orderData.code || "زبون",
-    client_mobile:  phone,
-    client_mobile2: orderData.phone2 ? normalizePhone(orderData.phone2) : "",
+client_mobile:  `+964${phone}`,
+client_mobile2: orderData.phone2 ? `+964${normalizePhone(orderData.phone2)}` : "",
     city_id:        cityId,
     region_id:      regionId,
     location:       orderData.address || "",
