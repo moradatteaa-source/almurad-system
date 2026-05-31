@@ -166,8 +166,9 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
       }
 
       // رفع الطلب
-      console.log(`⬆️  رفع ${order.id} | phone: ${phone}`);
+  console.log(`⬆️  رفع ${order.id} | phone: ${phone} | cityId: ${cityId} | regionId: ${regionId}`);
       const data = await pushToWaseet(od, token, cityId, regionId);
+      console.log(`📤 payload phone: ${normalizePhone(od.phone1 || od.phone || "")}`);
       console.log(`📦 waseet response ${order.id}:`, JSON.stringify(data));
 
       if (data.status === true && data.data?.qr_id) {
