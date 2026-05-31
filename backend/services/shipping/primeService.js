@@ -211,12 +211,11 @@ export async function createPrimeOrderFromFirebase(orderId) {
 // 🔵 تحديث حالات الشحن → يسحب من ordersTest/قيد التوصيل + قيد التجهيز
 // ============================================================
 export async function updatePrimeStatusesFromFirebase() {
-
   const token = await loginToPrime();
   if (!token) { console.log("❌ Prime login failed"); return; }
 
   // ✅ المسارات التي نتابع فيها طلبات Prime
-  const pathsToWatch = ["قيد التجهيز", "قيد التوصيل"];
+const pathsToWatch = ["قيد التجهيز", "قيد التوصيل", "راجع"];
   let primeOrders = [];
 
   for (const status of pathsToWatch) {
@@ -262,18 +261,21 @@ export async function updatePrimeStatusesFromFirebase() {
     if (!order) continue;
 
     const currentStatus = (order.orderData.status || "").trim();
-    const step          = shipment.stepCode;
+const step          = shipment.stepCode;
+    console.log(`🔍 ${shipment.id || shipment.caseid}: step="${step}" status="${shipment.status || shipment.statusName || ""}"`);
     let newStatus       = null;
 
     // ✅ خريطة حالات Prime
-    if (["DLEIVERD","PART_SUCC","SUCC_CHANGEPRICE","FORCE_DLV","SUCCARCHV"].includes(step))
+if (["DLEIVERD","PART_SUCC","SUCC_CHANGEPRICE","FORCE_DLV","SUCCARCHV"].includes(step))
       newStatus = "تم التسليم";
-
-    else if (["RTN_INSTORE","RETURNED_TO_CUSTOMER"].includes(step))
-      newStatus = "راجع";
 
     else if (step === "RTNARCHV")
       newStatus = "تم استلام الراجع";
+
+    else if (["RTN_INSTORE","RETURNED_TO_CUSTOMER","RTN_WITHAGENT",
+      "RTN_WITHLIAISONAGENT","RTN_INSTORE_WAITLIAISON",
+      "RTN_WITH_PICKUPAGENT","RTN_MANIFEST_LIAISON"].includes(step))
+      newStatus = "راجع";
 
     else if ([
       "NEWINSTORE","PRINTMANIFEST","NEW_ONWAY","LIAISONAGT_NEWONWAY",
@@ -317,11 +319,10 @@ export async function updatePrimeStatusesFromFirebase() {
     const newPath = `ordersTest/${newStatus}/${order.id}`;
     const oldPath = order.currentPath;
 
-    const atomicUpdate = {
-      [newPath]: updatedOrder,
-      [oldPath]: newPath !== oldPath ? null : updatedOrder  // حذف فقط إذا اختلف المسار
-    };
-
+ const atomicUpdate = {
+  [newPath]: updatedOrder,
+  ...(newPath !== oldPath ? { [oldPath]: null } : {})
+};
     await update(ref(db), atomicUpdate);
 
     // تحديث meta
