@@ -87,9 +87,9 @@ async function updateMeta(...paths) {
 // ============================================================
 async function pushToWaseet(orderData, token, cityId, regionId) {
   const fd = new FormData();
-  const p  = {
-    token,
-    client_name:    orderData.code || "زبون",
+const p  = {
+    client_name:
+      orderData.code || "زبون",
     client_mobile:  normalizePhone(orderData.phone1 || orderData.phone || ""),
     client_mobile2: orderData.phone2 ? normalizePhone(orderData.phone2) : "",
     city_id:        cityId,
