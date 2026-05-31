@@ -54,11 +54,18 @@ export async function loginToWaseet() {
 // ============================================================
 function normalizePhone(phone) {
   const map = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9" };
+  
+  // تحويل الأرقام العربية وحذف كل شي غير رقم
   let n = (phone + "").replace(/[^\d٠-٩]/g, "");
   n = n.split("").map(c => map[c] || c).join("");
-  if      (n.startsWith("9647")) n = "0" + n.slice(3);
-  else if (n.startsWith("964"))  n = "0" + n.slice(3);
-  else if (n.startsWith("7"))    n = "0" + n;
+
+  // إزالة أي بادئة دولية
+  if (n.startsWith("9647"))     n = n.slice(3); // 9647 → 7
+  else if (n.startsWith("964")) n = n.slice(3); // 964 → 7
+  else if (n.startsWith("07"))  n = n.slice(1); // 07 → 7
+  else if (n.startsWith("0"))   n = n.slice(1); // 0 → 7
+
+  // النتيجة النهائية: 7XXXXXXXXX (10 أرقام)
   return n;
 }
 
@@ -85,12 +92,11 @@ async function updateMeta(...paths) {
 // ============================================================
 // رفع طلب واحد لـ API الوسيط
 // ============================================================
-async function pushToWaseet(orderData, token, cityId, regionId) {
+async function pushToWaseet(orderData, token, cityId, regionId, phone) {
   const fd = new FormData();
-const p  = {
-    client_name:
-      orderData.code || "زبون",
-    client_mobile:  normalizePhone(orderData.phone1 || orderData.phone || ""),
+  const p  = {
+    client_name:    orderData.code || "زبون",
+    client_mobile:  phone,
     client_mobile2: orderData.phone2 ? normalizePhone(orderData.phone2) : "",
     city_id:        cityId,
     region_id:      regionId,
@@ -152,12 +158,17 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
         continue;
       }
 
-      const phone = normalizePhone(od.phone1 || od.phone || "");
-      if (phone.length !== 11) {
+// جرب phone1 أولاً، لو ما صلح جرب phone2
+      let phone = normalizePhone(od.phone1 || od.phone || "");
+      if (phone.length !== 10 || !phone.startsWith("7")) {
+        phone = normalizePhone(od.phone2 || "");
+      }
+      if (phone.length !== 10 || !phone.startsWith("7")) {
         failed++;
-        results.push({ orderId: order.id, success: false, reason: `هاتف غير صالح: ${od.phone1} → ${phone}` });
+        results.push({ orderId: order.id, success: false, reason: `هاتف غير صالح: ${od.phone1} | ${od.phone2} → ${phone}` });
         continue;
       }
+      console.log(`📱 phone final: ${phone}`);
 
       if (!od.totalPrice || od.totalPrice <= 0) {
         failed++;
@@ -167,7 +178,7 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
 
       // رفع الطلب
   console.log(`⬆️  رفع ${order.id} | phone: ${phone} | cityId: ${cityId} | regionId: ${regionId}`);
-      const data = await pushToWaseet(od, token, cityId, regionId);
+const data = await pushToWaseet(od, token, cityId, regionId, phone);
       console.log(`📤 payload phone: ${normalizePhone(od.phone1 || od.phone || "")}`);
       console.log(`📦 waseet response ${order.id}:`, JSON.stringify(data));
 
