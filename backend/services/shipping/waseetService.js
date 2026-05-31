@@ -73,7 +73,7 @@ function normalizePhone(phone) {
 // مساعدات
 // ============================================================
 export function getCityId(name, cities)   { return cities.find(c => c.city_name   === name)?.id || ""; }
-export function getRegionId(name, regions) { return regions.find(r => r.region_name === name)?.id || ""; }
+export function getRegionId(name, regions, cityId) { return regions.find(r => r.region_name === name && r.city_id === String(cityId))?.id || ""; }
 
 function addHistory(existing = {}, status, by) {
   const clean = {};
@@ -151,7 +151,8 @@ export async function sendOrdersToWaseet(orders, waseetCities, waseetRegions) {
         continue;
       }
 
-      const regionId = getRegionId(od.area, waseetRegions);
+const regionId = getRegionId(od.area, waseetRegions, cityId);
+
       if (!regionId) {
         failed++;
         results.push({ orderId: order.id, success: false, reason: `منطقة غير صحيحة: ${od.area}` });
