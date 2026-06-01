@@ -608,7 +608,8 @@ unique.forEach(name=>{
 const detail=order.productsDetailed?.find(d=>d.name===name);
 const qty=detail?.qty||detail?.quantity||1;
 const sell=detail?.price||0;
-const buy=warehouse[name]?.buyPrice||0;
+const wKey = name.replace(/\s+/g, '_');
+const buy = warehouse[wKey]?.buyPrice || warehouse[name]?.buyPrice || 0;
 orderSales+=sell;
 orderBuy+=buy*qty;
 });

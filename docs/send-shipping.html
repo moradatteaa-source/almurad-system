@@ -169,7 +169,7 @@
 
 <script type="module">
 import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 // ============================================================
 // Firebase
@@ -192,6 +192,7 @@ const db  = getDatabase(app);
 let readyOrders = [];
 let successCount = 0;
 let failCount    = 0;
+let orderResults = [];
 
 // ============================================================
 // مساعدات
@@ -267,9 +268,9 @@ document.getElementById("startUpload").onclick = async () => {
     addLog("⚠️ لا توجد طلبات مثبتة للرفع", "warn");
     return;
   }
-
-  successCount = 0;
+successCount = 0;
   failCount    = 0;
+  orderResults = [];
   updateStats();
   setLoading(true);
 
@@ -317,11 +318,13 @@ if (selectedCompany === "waseet") {
 
           if (r?.success) {
             successCount++;
-            addLog(`✔ الطلب #${order.id} — وصل: ${r.receiptNum}`, "ok");
+         addLog(`✔ الطلب #${order.id} — وصل: ${r.receiptNum}`, "ok");
+            orderResults.push({ orderId: order.id, receiptNum: r.receiptNum, status: "success" });
           } else {
             failCount++;
             const reason = r?.reason || r?.response?.message || JSON.stringify(r || data);
-            addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+   addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+            orderResults.push({ orderId: order.id, receiptNum: "", status: "fail", reason });
           }
 
         } catch (err) {
@@ -401,6 +404,25 @@ if (selectedCompany === "waseet") {
       failCount === 0 ? "ok" : successCount === 0 ? "err" : "warn");
 
     // أعد تحميل الطلبات المتبقية
+ // حفظ السجل في Firebase
+    try {
+  const logId = Date.now().toString();
+      const ordersObj = {};
+      orderResults.forEach((o, i) => { ordersObj[i] = o; });
+      await set(ref(db, `shippingLogs/${logId}`), {
+        provider: selectedCompany === "waseet" ? "الوسيط" : "برايم",
+        createdAt: Date.now(),
+        total: successCount + failCount,
+        successCount,
+        failCount,
+        uploadedBy: "admin",
+        orders: ordersObj
+      });
+      addLog("📝 تم حفظ السجل بنجاح", "ok");
+    } catch (e) {
+      addLog(`⚠️ فشل حفظ السجل: ${e.message}`, "err");
+    }
+
     if (successCount > 0) {
       addLog("🔄 جاري تحديث قائمة الطلبات...");
       await loadOrders();

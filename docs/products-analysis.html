@@ -640,7 +640,8 @@ window.applyFilter = function() {
         const detail = (o.productsDetailed || []).find(d => d.name === p);
         const qty = Number(detail?.qty || detail?.quantity || 1);
         const sellPrice = Number(detail?.price || 0);
-        const buyPrice = Number(warehouse[p]?.buyPrice || 0);
+const wKey = p.replace(/\s+/g, '_');
+const buyPrice = Number(warehouse[wKey]?.buyPrice || warehouse[p]?.buyPrice || 0);
 
         totalQty += qty;
         if (isDelivered) totalSales += sellPrice * qty;

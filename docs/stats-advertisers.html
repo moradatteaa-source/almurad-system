@@ -439,7 +439,8 @@ let productStats = {};
 
   const qty = detail?.qty || detail?.quantity || 1; // كمية المنتج
   const sell = detail?.price || 0; // سعر البيع الصحيح من الطلب
-  const buy = warehouse[p]?.buyPrice || 0; // سعر الشراء من الـ warehouse
+const wKey = p.replace(/\s+/g, '_');
+const buy = warehouse[wKey]?.buyPrice || warehouse[p]?.buyPrice || 0;
 // ✅ جمع الكمية
 totalQty += qty;
 
@@ -568,7 +569,8 @@ function renderProductsModal() {
 
       const qty = detail?.qty || detail?.quantity || 1;
       const sell = detail?.price || 0;
-      const buy = warehouse[p]?.buyPrice || 0;
+  const wKey = p.replace(/\s+/g, '_');
+const buy = warehouse[wKey]?.buyPrice || warehouse[p]?.buyPrice || 0;
 
       if (!map[p]) {
         map[p] = { qty: 0, sales: 0, buy: 0 };
