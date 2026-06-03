@@ -982,6 +982,8 @@ const normalizedPhone = normalizeIraqiPhone(document.getElementById('phone1').va
         if (!p.qty || p.qty <= 0) { card?.querySelector('.qty-input')?.classList.add('input-error'); showToast(`⚠️ كمية غير صحيحة: ${p.name}`, 'error'); valid = false; }
         if (p.price < 0) { card?.querySelector('.price-input')?.classList.add('input-error'); showToast(`⚠️ سعر غير صحيح: ${p.name}`, 'error'); valid = false; }
       }
+
+
       return valid;
     }
 async function _adjustStock(productsDetailed, mode) {
@@ -1175,7 +1177,54 @@ area: selectedArea,
           await update(ref(db), metaUpdate);
 
 state.currentPath = newPath;
-          if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+            const warehouseSnap = await get(ref(db, 'warehouse'));
+            if (warehouseSnap.exists()) {
+              const wh = warehouseSnap.val();
+              const nToK = new Map();
+              for (const [k, v] of Object.entries(wh)) {
+                const n = (v.name || '').trim().replace(/\s+/g, ' ');
+                if (n) nToK.set(n, k);
+              }
+              const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
+              let ok = true;
+              for (const item of cleanedDetails) {
+                if (!item.name) continue;
+                const name = item.name.trim().replace(/\s+/g, ' ');
+                const pKey = nToK.get(name);
+                if (!pKey) {
+                  showToast(`⚠️ المنتج غير موجود بالمخزن: ${name}`, 'error', 4000);
+                  ok = false; break;
+                }
+                const stock = wh[pKey]?.stock || {};
+                const hasV = Object.keys(stock).some(k => k.includes('|'));
+                if (!hasV) {
+                  const cur = Number(stock.default || 0);
+                  if (cur < item.qty) {
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    ok = false; break;
+                  }
+                } else {
+                  const vText = Object.entries(item.variants || {})
+                    .sort(([a],[b]) => a.localeCompare(b))
+                    .map(([k,v]) => `${k} | ${v}`).join(' | ');
+                  let mKey = null;
+                  for (const sk of Object.keys(stock)) {
+                    if (norm(sk) === norm(vText)) { mKey = sk; break; }
+                  }
+                  if (!mKey) {
+                    showToast(`⚠️ المتغير غير موجود: ${name}`, 'error', 4000);
+                    ok = false; break;
+                  }
+                  const cur = Number(stock[mKey] || 0);
+                  if (cur < item.qty) {
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    ok = false; break;
+                  }
+                }
+              }
+              if (!ok) { showLoader(false); return; }
+            }
             await deductStockForOrder(cleanedDetails);
           }
   if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
@@ -1196,6 +1245,53 @@ state.currentPath = newPath;
           await set(ref(db, `${base}/_meta/lastModified`), Date.now());
 
 if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+            const warehouseSnap = await get(ref(db, 'warehouse'));
+            if (warehouseSnap.exists()) {
+              const wh = warehouseSnap.val();
+              const nToK = new Map();
+              for (const [k, v] of Object.entries(wh)) {
+                const n = (v.name || '').trim().replace(/\s+/g, ' ');
+                if (n) nToK.set(n, k);
+              }
+              const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
+              let ok = true;
+              for (const item of cleanedDetails) {
+                if (!item.name) continue;
+                const name = item.name.trim().replace(/\s+/g, ' ');
+                const pKey = nToK.get(name);
+                if (!pKey) {
+                  showToast(`⚠️ المنتج غير موجود بالمخزن: ${name}`, 'error', 4000);
+                  ok = false; break;
+                }
+                const stock = wh[pKey]?.stock || {};
+                const hasV = Object.keys(stock).some(k => k.includes('|'));
+                if (!hasV) {
+                  const cur = Number(stock.default || 0);
+                  if (cur < item.qty) {
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    ok = false; break;
+                  }
+                } else {
+                  const vText = Object.entries(item.variants || {})
+                    .sort(([a],[b]) => a.localeCompare(b))
+                    .map(([k,v]) => `${k} | ${v}`).join(' | ');
+                  let mKey = null;
+                  for (const sk of Object.keys(stock)) {
+                    if (norm(sk) === norm(vText)) { mKey = sk; break; }
+                  }
+                  if (!mKey) {
+                    showToast(`⚠️ المتغير غير موجود: ${name}`, 'error', 4000);
+                    ok = false; break;
+                  }
+                  const cur = Number(stock[mKey] || 0);
+                  if (cur < item.qty) {
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    ok = false; break;
+                  }
+                }
+              }
+              if (!ok) { showLoader(false); return; }
+            }
             await deductStockForOrder(cleanedDetails);
           }
 if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
@@ -1312,9 +1408,10 @@ window.location.href = `orders-cards.html?status=${encodeURIComponent(lastStatus
       state.isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
 
       // تحميل المنتجات من المستودع
-    onValue(ref(db, 'warehouse'), (snap) => {
+onValue(ref(db, 'warehouse'), (snap) => {
   if (snap.exists()) {
     state.allProducts = Object.values(snap.val())
+      .filter(p => (p.totalQty || 0) > 0)
       .map(p => p.name)
       .filter(Boolean);
   }

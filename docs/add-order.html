@@ -1349,6 +1349,61 @@ async function deductStockForOrder(productsDetailed) {
         // إذا الحالة "مثبت" → testOrders/مثبت
         // وهكذا...
 const ordersPath = `ordersTest/${status}`;
+if (status === "مثبت") {
+          const warehouseSnap = await get(ref(db, 'warehouse'));
+          if (warehouseSnap.exists()) {
+            const wh = warehouseSnap.val();
+            const nToK = new Map();
+            for (const [k, v] of Object.entries(wh)) {
+              const n = (v.name || '').trim().replace(/\s+/g, ' ');
+              if (n) nToK.set(n, k);
+            }
+            const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
+            let ok = true;
+            for (const item of productsDetailed) {
+              if (!item.name) continue;
+              const name = item.name.trim().replace(/\s+/g, ' ');
+              const pKey = nToK.get(name);
+              if (!pKey) {
+                alert(`⚠️ المنتج غير موجود بالمخزن: ${name}`);
+                ok = false; break;
+              }
+              const stock = wh[pKey]?.stock || {};
+              const hasV = Object.keys(stock).some(k => k.includes('|'));
+              if (!hasV) {
+                const cur = Number(stock.default || 0);
+                if (cur < item.qty) {
+                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}`);
+                  ok = false; break;
+                }
+              } else {
+                const vText = Object.entries(item.variants || {})
+                  .sort(([a],[b]) => a.localeCompare(b))
+                  .map(([k,v]) => `${k} | ${v}`).join(' | ');
+                let mKey = null;
+                for (const sk of Object.keys(stock)) {
+                  if (norm(sk) === norm(vText)) { mKey = sk; break; }
+                }
+                if (!mKey) {
+                  alert(`⚠️ المتغير غير موجود: ${name}\n${vText}`);
+                  ok = false; break;
+                }
+                const cur = Number(stock[mKey] || 0);
+                if (cur < item.qty) {
+                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}`);
+                  ok = false; break;
+                }
+              }
+            }
+            if (!ok) {
+              isSaving = false;
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = originalBtnText;
+              return;
+            }
+          }
+        }
+
         await set(ref(db, `${ordersPath}/${orderNumber}`), order);
 if (status === "مثبت") {
   await deductStockForOrder(productsDetailed);
