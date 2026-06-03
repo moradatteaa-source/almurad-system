@@ -334,8 +334,76 @@ if (["DLEIVERD","PART_SUCC","SUCC_CHANGEPRICE","FORCE_DLV","SUCCARCHV"].includes
       [`${newBase}/_meta/lastModified`]: metaTime
     });
 
+// ✅ إرجاع المخزن عند تم استلام الراجع
+    if (newStatus === "تم استلام الراجع" && currentStatus !== "تم استلام الراجع") {
+      await restoreStockForOrder(order.orderData.productsDetailed || []);
+    }
+
     console.log(`✅ نُقل ${order.id}: ${currentStatus} → ${newStatus}`);
   }
 
   console.log("🔄 اكتمل تحديث حالات Prime.");
+}
+
+async function restoreStockForOrder(productsDetailed) {
+  if (!productsDetailed?.length) return;
+
+  const allSnap = await get(ref(db, "warehouse"));
+  if (!allSnap.exists()) return;
+  const warehouse = allSnap.val();
+
+  const nameToKey = new Map();
+  for (const [key, val] of Object.entries(warehouse)) {
+    const name = (val.name || "").trim().replace(/\s+/g, " ");
+    if (name) nameToKey.set(name, key);
+  }
+
+  const normalize = t => t.split("|").map(s => s.trim()).filter(Boolean).sort().join("|");
+
+  for (const item of productsDetailed) {
+    if (!item.name || !item.qty) continue;
+
+    const name = item.name.trim().replace(/\s+/g, " ");
+    const productKey = nameToKey.get(name);
+    if (!productKey) { console.warn(`⚠️ منتج غير موجود: ${name}`); continue; }
+
+    const stock = warehouse[productKey]?.stock || {};
+    const variants = item.variants || {};
+    const hasVariants = Object.keys(stock).some(k => k.includes("|"));
+
+    if (!hasVariants) {
+      const current = Number(stock.default || 0);
+      const newQty = current + item.qty;
+      await update(ref(db, `warehouse/${productKey}`), {
+        "stock/default": newQty,
+        totalQty: newQty,
+        lastUpdate: new Date().toISOString()
+      });
+    } else {
+      const variantText = Object.entries(variants)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k} | ${v}`).join(" | ");
+
+      let matchedKey = null;
+      for (const stockKey of Object.keys(stock)) {
+        if (normalize(stockKey) === normalize(variantText)) {
+          matchedKey = stockKey; break;
+        }
+      }
+      if (!matchedKey) { console.warn(`⚠️ متغير غير موجود: ${variantText}`); continue; }
+
+      const current = Number(stock[matchedKey] || 0);
+      const newQty = current + item.qty;
+      const updatedStock = { ...stock, [matchedKey]: newQty };
+      const newTotal = Object.values(updatedStock).reduce((s, v) => s + (Number(v) || 0), 0);
+
+      await update(ref(db, `warehouse/${productKey}`), {
+        [`stock/${matchedKey}`]: newQty,
+        totalQty: newTotal,
+        lastUpdate: new Date().toISOString()
+      });
+    }
+
+    console.log(`✅ رجع المخزن: ${name} +${item.qty}`);
+  }
 }

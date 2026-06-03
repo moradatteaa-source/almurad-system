@@ -386,7 +386,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, get, update, onValue, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, update, onValue, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     import { citiesData, allCities } from "./citiesData.js";
 
     const firebaseConfig = {
@@ -984,6 +984,74 @@ const normalizedPhone = normalizeIraqiPhone(document.getElementById('phone1').va
       }
       return valid;
     }
+async function _adjustStock(productsDetailed, mode) {
+  const needed = new Map();
+  for (const item of productsDetailed) {
+    if (!item.name || !item.qty) continue;
+    const name = item.name.trim().replace(/\s+/g, " ");
+    const variants = item.variants || {};
+    const variantText = Object.entries(variants)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k} | ${v}`).join(" | ");
+    const key = name + "||" + variantText;
+    needed.set(key, (needed.get(key) || 0) + item.qty);
+  }
+  if (!needed.size) return;
+
+  const allSnap = await get(ref(db, "warehouse"));
+  if (!allSnap.exists()) return;
+  const warehouse = allSnap.val();
+
+  const nameToKey = new Map();
+  for (const [key, val] of Object.entries(warehouse)) {
+    const name = (val.name || "").trim().replace(/\s+/g, " ");
+    if (name) nameToKey.set(name, key);
+  }
+
+  const normalize = t => t.split("|").map(s => s.trim()).filter(Boolean).sort().join("|");
+
+  for (const [compositeKey, qty] of needed.entries()) {
+    const [name, variantText] = compositeKey.split("||");
+    const productKey = nameToKey.get(name);
+    if (!productKey) continue;
+
+    const stock = warehouse[productKey]?.stock || {};
+    const hasVariants = Object.keys(stock).some(k => k.includes("|"));
+
+    if (!hasVariants) {
+      await runTransaction(ref(db, `warehouse/${productKey}/stock/default`), (current) => {
+        const cur = Number(current) || 0;
+        return mode === 'deduct' ? Math.max(0, cur - qty) : cur + qty;
+      });
+    } else {
+      let matchedKey = null;
+      for (const stockKey of Object.keys(stock)) {
+        if (normalize(stockKey) === normalize(variantText)) { matchedKey = stockKey; break; }
+      }
+      if (!matchedKey) continue;
+      await runTransaction(ref(db, `warehouse/${productKey}/stock/${matchedKey}`), (current) => {
+        const cur = Number(current) || 0;
+        return mode === 'deduct' ? Math.max(0, cur - qty) : cur + qty;
+      });
+    }
+
+    const updatedSnap = await get(ref(db, `warehouse/${productKey}/stock`));
+    const newTotal = Object.values(updatedSnap.val() || {})
+      .reduce((s, v) => s + (Number(v) || 0), 0);
+    await update(ref(db, `warehouse/${productKey}`), {
+      totalQty: newTotal,
+      lastUpdate: new Date().toISOString()
+    });
+  }
+}
+
+async function restoreStockForOrder(productsDetailed) {
+  await _adjustStock(productsDetailed, 'add');
+}
+
+async function deductStockForOrder(productsDetailed) {
+  await _adjustStock(productsDetailed, 'deduct');
+}
 
     // ===== الحفظ الرئيسي (مع نقل ذري بدون تكرار) =====
     async function handleSave() {
@@ -1106,7 +1174,16 @@ area: selectedArea,
           metaUpdate[`${newBase}/_meta/lastModified`] = metaTime;
           await update(ref(db), metaUpdate);
 
-          state.currentPath = newPath;
+state.currentPath = newPath;
+          if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+            await deductStockForOrder(cleanedDetails);
+          }
+  if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
+            await restoreStockForOrder(cleanedDetails);
+          }
+          if (newStatus === 'تم استلام الراجع' && oldStatus !== 'تم استلام الراجع') {
+            await restoreStockForOrder(cleanedDetails);
+          }
           state.orderData = fullOrderData;
           setupAutoRefresh(newPath);
           showToast(`✅ تم الحفظ ونقل الطلب إلى "${newStatus}"`, 'success');
@@ -1118,6 +1195,15 @@ area: selectedArea,
           const base = oldPath.split('/').slice(0, -1).join('/');
           await set(ref(db, `${base}/_meta/lastModified`), Date.now());
 
+if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+            await deductStockForOrder(cleanedDetails);
+          }
+if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
+            await restoreStockForOrder(cleanedDetails);
+          }
+          if (newStatus === 'تم استلام الراجع' && oldStatus !== 'تم استلام الراجع') {
+            await restoreStockForOrder(cleanedDetails);
+          }
           state.orderData = { ...state.orderData, ...fullOrderData };
           showToast('✅ تم الحفظ بنجاح', 'success');
         }

@@ -1187,6 +1187,18 @@ if (localStorage.getItem("forceListRefresh") === "true") {
     document.getElementById("filterBtn").classList.add("active");
     updateFilterNotice();
   }
+  // ✅ إخفاء أزرار الحذف والنقل للمستخدمين العاديين
+  const loggedUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+  const isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
+  
+if (!isAdmin) {
+    document.getElementById('deleteSelectedBtn').style.display = 'none';
+    document.getElementById('bulkUpdateBtn').style.display = 'none';
+    document.getElementById('bulkStatus').style.display = 'none';
+    // إخفاء زر التحديد كله للموظف العادي
+    document.getElementById('selectModeBtn').style.display = 'none';
+    document.getElementById('selectAllBtn').style.display = 'none';
+  }
 
   await loadOrders();
 

@@ -2,855 +2,1194 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#043B64">
   <title>📅 الجرد اليومي - نظام المراد</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
   <style>
+    :root {
+      --blue: #043B64;
+      --blue-dark: #022845;
+      --blue-light: #0a5a8c;
+      --orange: #FF6B2D;
+      --orange-dark: #e55a20;
+      --green: #22c55e;
+      --green-dark: #16a34a;
+      --red: #ef4444;
+      --red-light: #fef2f2;
+      --red-dark: #991b1b;
+      --yellow: #f59e0b;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --radius: 14px;
+      --shadow: 0 2px 12px rgba(4,59,100,0.08);
+      --shadow-md: 0 4px 20px rgba(4,59,100,0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
     body {
-      font-family: 'Tajawal', sans-serif;
-      background: #f4f6fa;
-      color: #043B64;
-      margin: 0;
-      padding: 0;
+      font-family: 'Tajawal', Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
     }
 
-    header {
-      background: #043B64;
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
       color: white;
-      text-align: center;
-      padding: 15px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    main {
-      padding: 20px;
-      max-width: 1000px;
-      margin: auto;
-    }
-
-    .section {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 25px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      margin-top: 0;
-      color: #043B64;
-      font-size: 18px;
+      padding: 0 20px;
+      height: 62px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 16px rgba(4,59,100,0.2);
     }
+    .header-title { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .header-title span { opacity: 0.85; font-size: 13px; font-weight: 400; }
+    .header-date { font-size: 12px; opacity: 0.75; direction: ltr; }
 
-    button {
-      background: #FF6B2D;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
+    /* ===== TABS ===== */
+    .tabs {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      padding: 0 20px;
+      gap: 0;
+      position: sticky;
+      top: 62px;
+      z-index: 99;
+    }
+    .tab {
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
       cursor: pointer;
-      font-size: 15px;
-      font-weight: bold;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
     }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    th, td {
-      border-bottom: 1px solid #ddd;
-      padding: 8px 10px;
-      text-align: center;
-    }
-
-    th {
-      background: #043B64;
+    .tab:hover { color: var(--blue); }
+    .tab.active { color: var(--blue); border-bottom-color: var(--orange); }
+    .tab .badge {
+      background: var(--orange);
       color: white;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 20px;
+      font-weight: 700;
     }
 
-    .loading {
-      color: #FF6B2D;
-      font-weight: bold;
+    /* ===== CONTAINER ===== */
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px 16px 100px; }
+
+    /* ===== TAB PANELS ===== */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: var(--orange);
+      border-radius: 2px;
+    }
+
+    /* ===== STATS ROW ===== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 14px 16px;
       text-align: center;
-      margin-top: 15px;
+      border: 1px solid var(--border);
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .stat-value { font-size: 26px; font-weight: 800; color: var(--blue); line-height: 1; }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.green { color: var(--green-dark); }
+    .stat-value.red { color: var(--red-dark); }
+
+    /* ===== DATE PICKER ===== */
+    .date-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .date-picker-row label { font-size: 14px; font-weight: 600; color: var(--blue); white-space: nowrap; }
+    .date-input {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      flex: 1;
+      min-width: 160px;
+    }
+    .date-input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,45,0.15); }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+    .btn-primary { background: var(--blue); color: white; box-shadow: 0 4px 12px rgba(4,59,100,0.25); }
+    .btn-primary:hover:not(:disabled) { background: var(--blue-light); box-shadow: 0 6px 16px rgba(4,59,100,0.3); }
+    .btn-orange { background: var(--orange); color: white; box-shadow: 0 4px 12px rgba(255,107,45,0.3); }
+    .btn-orange:hover:not(:disabled) { background: var(--orange-dark); }
+    .btn-green { background: var(--green); color: white; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+    .btn-green:hover:not(:disabled) { background: var(--green-dark); }
+    .btn-ghost { background: rgba(4,59,100,0.07); color: var(--blue); border: 1.5px solid rgba(4,59,100,0.15); }
+    .btn-ghost:hover { background: rgba(4,59,100,0.12); }
+    .btn-red { background: var(--red); color: white; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+    /* ===== BARCODE INPUT ===== */
+    .barcode-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .barcode-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 22px;
+      opacity: 0.4;
+    }
+    .barcode-input {
+      width: 100%;
+      padding: 14px 46px 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      transition: all 0.2s;
+    }
+    .barcode-input:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 4px rgba(255,107,45,0.12);
+    }
+    .barcode-input.pulse { animation: pulseBorder 0.4s ease; }
+    @keyframes pulseBorder {
+      0% { border-color: var(--green); box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      100% { border-color: var(--border); box-shadow: 0 0 0 8px rgba(34,197,94,0); }
     }
 
-    @media (max-width: 768px) {
-      main { padding: 10px; }
-      table { font-size: 13px; }
-      button { width: 100%; margin-top: 10px; }
+    /* ===== STATUS MSG ===== */
+    .scan-msg {
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      transition: all 0.3s;
+    }
+    .scan-msg.info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .scan-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .scan-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .scan-msg.warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .scan-msg.empty { background: transparent; border: none; }
+
+    /* ===== TABLES ===== */
+    .table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th {
+      background: var(--blue);
+      color: white;
+      padding: 11px 14px;
+      font-weight: 700;
+      font-size: 13px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    thead th:first-child { border-radius: 0 10px 0 0; }
+    thead th:last-child { border-radius: 10px 0 0 0; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 10px 14px; text-align: center; }
+    tbody tr.total-row { background: #f0f4f8; font-weight: 700; color: var(--blue); }
+    tbody tr.total-row td { border-top: 2px solid var(--blue); }
+
+    .return-table thead th { background: #842029; }
+    .return-table tbody tr:hover { background: #fff5f5; }
+    .return-table tbody tr.total-row { background: #fef2f2; color: #842029; }
+    .return-table tbody tr.total-row td { border-top: 2px solid #842029; }
+
+    /* ===== SECTION HEADERS ===== */
+    .section-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .section-badge.out { background: #eff6ff; color: var(--blue); border: 1px solid #bfdbfe; }
+    .section-badge.return { background: #fef2f2; color: #842029; border: 1px solid #fecaca; }
+
+    .summary-text { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .summary-text strong { color: var(--text); }
+
+    /* ===== ERRORS ===== */
+    .error-table thead th { background: #b45309; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: 14px; }
+
+    /* ===== LOADER ===== */
+    .loader {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--orange), var(--blue));
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ===== BOTTOM ACTIONS ===== */
+    .bottom-actions {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      z-index: 80;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    }
+    .bottom-actions .btn { flex: 1; max-width: 220px; justify-content: center; }
+
+    /* ===== PRODUCT TAG ===== */
+    .product-cell { text-align: right !important; font-weight: 500; }
+    .variant-tag {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-top: 3px;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--blue);
+      color: white;
+      padding: 12px 22px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      z-index: 9999;
+      white-space: nowrap;
+      box-shadow: var(--shadow-md);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--green-dark); }
+    .toast.error { background: var(--red-dark); }
+    .toast.warning { background: #b45309; }
+
+    /* ===== AUTO SECTION ===== */
+    .auto-filter-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .field-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
+    .field-group label { font-size: 13px; font-weight: 600; color: var(--blue); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .container { padding: 12px 10px 90px; }
+      .tab { padding: 12px 14px; font-size: 13px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .stat-value { font-size: 22px; }
+      .bottom-actions .btn { font-size: 13px; padding: 10px 14px; }
     }
   </style>
 </head>
 <body>
 
-  <header>📅 الجرد اليومي - نظام المراد</header>
+<header class="header">
+  <div class="header-title">
+    📋 الجرد اليومي
+    <span>نظام المراد</span>
+  </div>
+  <div class="header-date" id="headerDate"></div>
+</header>
 
-  <main>
-    <!-- 🟣 قسم الجرد بالباركود -->
-<div class="section">
-  <h2>📦 جرد بواسطة رقم الوصل</h2>
+<div class="tabs">
+  <div class="tab active" data-tab="auto">
+    🔄 أوتوماتيك
+    <span class="badge" id="autoBadge" style="display:none">0</span>
+  </div>
+  <div class="tab" data-tab="manual">
+    📷 باركود يدوي
+    <span class="badge" id="manualBadge" style="display:none">0</span>
+  </div>
+</div>
 
-  <input type="text" 
-         id="barcodeInput" 
-         placeholder="امسح رقم الوصل هنا..." 
-         style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;">
+<div class="container">
 
-<div id="outSection" style="display:none;">
+  <!-- ======== AUTO TAB ======== -->
+  <div class="panel active" id="panel-auto">
 
-  <h3>📦 الطلبات الطالعة</h3>
-  <p id="outSummary" style="font-weight:bold;color:#043B64;"></p>
-  <table id="outTable">
-    <thead>
-      <tr>
-        <th>المنتج</th>
-        <th>عدد الطلبات</th>
-        <th>الكمية</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <!-- Stats -->
+    <div class="stats-row" id="autoStats" style="display:none">
+      <div class="stat-card">
+        <div class="stat-label">طلبات طالعة</div>
+        <div class="stat-value orange" id="statOut">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">طلبات راجعة</div>
+        <div class="stat-value red" id="statReturn">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">قطع طالعة</div>
+        <div class="stat-value" id="statOutQty">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">قطع راجعة</div>
+        <div class="stat-value green" id="statReturnQty">0</div>
+      </div>
+    </div>
 
-  <button id="deductBtn"
-          style="margin-top:10px;background:#043B64;">
-    خصم من المخزن
-  </button>
+    <!-- Filter -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">🗓️ اختر الفترة الزمنية</div>
+
+      <div class="auto-filter-row">
+        <div class="field-group">
+          <label>من تاريخ</label>
+          <input type="date" class="date-input" id="dateFrom">
+        </div>
+        <div class="field-group">
+          <label>إلى تاريخ</label>
+          <input type="date" class="date-input" id="dateTo">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="setQuickDate('today')">اليوم</button>
+          <button class="btn btn-ghost" onclick="setQuickDate('yesterday')">أمس</button>
+          <button class="btn btn-ghost" onclick="setQuickDate('week')">الأسبوع</button>
+        </div>
+      </div>
+
+      <div id="progressBar" class="progress-bar" style="display:none">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+
+      <div id="autoMsg" class="scan-msg empty"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="autoLoadBtn" onclick="loadAutoReport()">
+          🔍 جلب التقرير
+        </button>
+        <button class="btn btn-ghost" id="autoClearBtn" onclick="clearAutoData()" style="display:none">
+          🗑️ مسح
+        </button>
+      </div>
+    </div>
+
+    <!-- Out Table -->
+    <div id="autoOutSection" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📦 الطلبات الطالعة</div>
+          <span class="section-badge out" id="autoOutBadge">0 طلب</span>
+        </div>
+        <p class="summary-text" id="autoOutSummary"></p>
+        <div class="table-wrapper">
+          <table id="autoOutTable">
+            <thead>
+              <tr>
+                <th style="width:36px">ت</th>
+                <th style="text-align:right">المنتج</th>
+                <th>عدد الطلبات</th>
+                <th>الكمية</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Table -->
+    <div id="autoReturnSection" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" style="color:#842029">📦 الطلبات الراجعة</div>
+          <span class="section-badge return" id="autoReturnBadge">0 طلب</span>
+        </div>
+        <p class="summary-text" id="autoReturnSummary"></p>
+        <div class="table-wrapper">
+          <table class="return-table" id="autoReturnTable">
+            <thead>
+              <tr>
+                <th style="width:36px">ت</th>
+                <th style="text-align:right">المنتج</th>
+                <th>عدد الطلبات</th>
+                <th>الكمية</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Errors -->
+    <div id="autoErrorSection" style="display:none">
+      <div class="card" style="border-color:#fca5a5">
+        <div class="card-header">
+          <div class="card-title" style="color:#991b1b">⚠️ مشاكل المخزن</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="error-table" id="autoErrorTable">
+            <thead><tr><th>المنتج</th><th>المتغير</th><th>المشكلة</th><th>الكمية</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF BTN -->
+    <div id="autoPdfRow" style="display:none;margin-top:8px">
+      <button class="btn btn-orange" style="width:100%;justify-content:center" onclick="generatePDF('auto')">
+        📄 تحميل تقرير PDF
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ======== MANUAL TAB ======== -->
+  <div class="panel" id="panel-manual">
+
+    <!-- Stats -->
+    <div class="stats-row" id="manualStats" style="display:none">
+      <div class="stat-card">
+        <div class="stat-label">طلبات طالعة</div>
+        <div class="stat-value orange" id="mStatOut">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">طلبات راجعة</div>
+        <div class="stat-value red" id="mStatReturn">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">قطع طالعة</div>
+        <div class="stat-value" id="mStatOutQty">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">قطع راجعة</div>
+        <div class="stat-value green" id="mStatReturnQty">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">📷 مسح رقم الوصل</div>
+      <div class="barcode-wrapper">
+        <span class="barcode-icon">▦</span>
+        <input type="text" class="barcode-input" id="barcodeInput"
+               placeholder="امسح رقم الوصل هنا أو اكتبه..." inputmode="numeric">
+      </div>
+      <div id="scanMsg" class="scan-msg empty"></div>
+    </div>
+
+    <!-- Out Table -->
+    <div id="outSection" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📦 الطلبات الطالعة</div>
+          <span class="section-badge out" id="outBadge">0 طلب</span>
+        </div>
+        <p class="summary-text" id="outSummary"></p>
+        <div class="table-wrapper">
+          <table id="outTable">
+            <thead>
+              <tr>
+                <th style="width:36px">ت</th>
+                <th style="text-align:right">المنتج</th>
+                <th>عدد الطلبات</th>
+                <th>الكمية</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="deductBtn" onclick="deductStock()">
+            ✅ خصم من المخزن
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Table -->
+    <div id="returnSection" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" style="color:#842029">📦 الطلبات الراجعة</div>
+          <span class="section-badge return" id="returnBadge">0 طلب</span>
+        </div>
+        <p class="summary-text" id="returnSummary"></p>
+        <div class="table-wrapper">
+          <table class="return-table" id="returnTable">
+            <thead>
+              <tr>
+                <th style="width:36px">ت</th>
+                <th style="text-align:right">المنتج</th>
+                <th>عدد الطلبات</th>
+                <th>الكمية</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-green" id="returnBtn" onclick="addReturnStock()">
+            🔄 إرجاع للمخزن
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Errors -->
+    <div id="errorSection" style="display:none">
+      <div class="card" style="border-color:#fca5a5">
+        <div class="card-header">
+          <div class="card-title" style="color:#991b1b">⚠️ مشاكل المخزن</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="error-table" id="errorTable">
+            <thead><tr><th>المنتج</th><th>المتغير</th><th>المشكلة</th><th>الكمية</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF BTN -->
+    <div id="manualPdfRow" style="display:none;margin-top:8px">
+      <button class="btn btn-orange" style="width:100%;justify-content:center" onclick="generatePDF('manual')">
+        📄 تحميل تقرير PDF
+      </button>
+    </div>
+
+  </div>
 
 </div>
 
-
-<div id="returnSection" style="display:none;margin-top:30px;">
-
-  <h3 style="color:#842029;">🔴 الطلبات الراجعة</h3>
-  <p id="returnSummary" style="font-weight:bold;color:#842029;"></p>
-  <table id="returnTable" style="background:#fff5f5;">
-    <thead>
-      <tr>
-        <th>المنتج</th>
-        <th>عدد الطلبات</th>
-        <th>الكمية</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <button id="returnBtn"
-          style="margin-top:10px;background:#f8d7da;color:#842029;">
-    إضافة راجع إلى المخزن
-  </button>
-
-</div>
-  <p id="scanMsg" class="loading"></p>
-</div>
-<div id="errorSection" style="display:none;margin-top:30px;">
-
-<h3 style="color:#b02a37;">⚠️ مشاكل المخزن</h3>
-
-<table id="errorTable" style="background:#fff3cd;">
-<thead>
-<tr>
-<th>المنتج</th>
-<th>المتغير</th>
-<th>المشكلة</th>
-<th>الكمية</th>
-</tr>
-</thead>
-
-<tbody></tbody>
-</table>
-
-</div>
-
-<button id="pdfBtn" style="background:#043B64;margin-top:10px;">
-📄 تحميل تقرير الجرد PDF
-</button>
- 
-  </main>
-
-  <!-- 🔹 سكربت -->
-  <script type="module">
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { 
-  getDatabase, 
-  ref, 
-  get, 
-  update,
-  query,
-  orderByChild,
-  equalTo,
-  child
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-    // إعداد Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-      authDomain: "almurad-system.firebaseapp.com",
-      databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-      projectId: "almurad-system",
-      storageBucket: "almurad-system.appspot.com",
-      messagingSenderId: "911755824405",
-      appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-
-const barcodeInput = document.getElementById("barcodeInput");
-// 🔥 يخلي الفوكس دائمًا على الحقل
-barcodeInput.focus();
-
-// إذا المستخدم لمس الشاشة أو تغير الفوكس
-setInterval(() => {
-  if (document.activeElement !== barcodeInput) {
-    barcodeInput.focus();
-  }
-}, 500);
-const outTable = document.querySelector("#outTable tbody");
-const returnTable = document.querySelector("#returnTable tbody");
-const scanMsg = document.getElementById("scanMsg");
-const outSummary = document.getElementById("outSummary");
-const returnSummary = document.getElementById("returnSummary");
-
-const outSection = document.getElementById("outSection");
-const returnSection = document.getElementById("returnSection");
-
-const deductBtn = document.getElementById("deductBtn");
-const returnBtn = document.getElementById("returnBtn");
-const errorSection = document.getElementById("errorSection");
-const errorTable = document.querySelector("#errorTable tbody");
-
-let inventoryErrors = [];
-let pendingOut = [];
-let pendingReturn = [];
-let scannedShipments = new Set();
-let isProcessing = false;
-async function getOrderByReceipt(shipmentId) {
-
- const paths = [
-  "ordersTest/قيد التجهيز",
-  "ordersTest/راجع"
-];
-
-  for (const path of paths) {
-
-    let q = query(
-      ref(db, path),
-      orderByChild("receiptNum"),
-      equalTo(shipmentId)
-    );
-
-    let snap = await get(q);
-
-    if (!snap.exists()) {
-      q = query(
-        ref(db, path),
-        orderByChild("receiptNum"),
-        equalTo(Number(shipmentId))
-      );
-      snap = await get(q);
-    }
-
-    if (snap.exists()) {
-      return Object.values(snap.val())[0];
-    }
-  }
-
-  return null;
-}
-async function processBarcode(shipmentId) {
-
-if (isProcessing) return;
-isProcessing = true;
-
-// 🔥 حوّل الرقم أول شي
-shipmentId = String(shipmentId)
-  .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-  .replace(/[^\d]/g, "")
-  .trim();
-
-// 🔥 بعدين ابحث
-const foundOrder = await getOrderByReceipt(shipmentId);
-
-  scanMsg.textContent = "⏳ جاري البحث...";
-
-console.log("ORDER:", foundOrder);
-if (!foundOrder) {
-  scanMsg.textContent = "❌ رقم الوصل غير موجود";
-  isProcessing = false; // 🔥 مهم
-  return;
-}
-
-if (scannedShipments.has(shipmentId)) {
-  scanMsg.textContent = "⚠️ هذا الوصل مضروب مسبقًا";
-  isProcessing = false;
-  return;
-}
-
-scannedShipments.add(shipmentId); // 🔥 خليه هنا مباشرة
-
-
-let productsList = [];
-
-// ✅ إذا Array
-if (Array.isArray(foundOrder.productsDetailed)) {
-  productsList = foundOrder.productsDetailed;
-}
-
-// ✅ إذا Object
-else if (typeof foundOrder.productsDetailed === "object" && foundOrder.productsDetailed !== null) {
-  productsList = Object.values(foundOrder.productsDetailed);
-}
-
-// ✅ إذا نص (productName)
-else if (foundOrder.productName) {
-  productsList = foundOrder.productName.split("،").map(name => ({
-    name: name.trim(),
-    qty: 1
-  }));
-}
-
-// 🔥 المعالجة
-for (const p of productsList) {
-
-  const productName = p.name || "منتج غير معروف";
-
-const rawQty = String(p.qty ?? p.quantity ?? 1)
-  .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-
-  const itemData = {
-    name: productName,
-    qty: isNaN(Number(rawQty)) ? 1 : Number(rawQty),
-    variants: p.variants || {},
-    orderId: shipmentId
-  };
-
-  const status = (foundOrder.status || "").trim();
-
-  if (
-    status.includes("توصيل") ||
-    status.includes("تجهيز") ||
-    status.includes("تم التسليم")
-  ) {
-    pendingOut.push(itemData);
-  }
-
-  if (status.includes("راجع")) {
-    pendingReturn.push(itemData);
-  }
-}
-
-  renderPendingTable();
-  scanMsg.textContent = "✅ تمت إضافة الطلب للجدول";
-  isProcessing = false; // 🔥 مهم جداً
-}
-function renderPendingTable() {
-
-  outTable.innerHTML = "";
-  returnTable.innerHTML = "";
-
-  outSection.style.display = pendingOut.length ? "block" : "none";
-  returnSection.style.display = pendingReturn.length ? "block" : "none";
-
-  const render = (data, table) => {
-
-    if (!data.length) {
-      table.innerHTML = `<tr><td colspan="3">لا توجد بيانات</td></tr>`;
-      return;
-    }
-
-    const map = new Map();
-
-    data.forEach(item => {
-
-      const variants = item.variants || {};
-const variantText = Object.entries(variants)
-  .sort(([a],[b]) => a.localeCompare(b))
-  .map(([k,v]) => `${k} | ${v}`)
-  .join(" | ");
-
-   const fullName = variantText
-  ? item.name + " - " + variantText
-  : item.name;
-
-      if (!map.has(fullName)) {
-        map.set(fullName, { orders: 0, qty: 0 });
-      }
-
-      const obj = map.get(fullName);
-obj.qty += item.qty;
-
-// نحسب الطلبات مرة واحدة فقط لكل وصل
-if (!obj.orderSet) obj.orderSet = new Set();
-obj.orderSet.add(item.orderId);
-obj.orders = obj.orderSet.size;
-    });
-
-    for (const [name, data] of map.entries()) {
-      table.innerHTML += `
-        <tr>
-          <td>${name}</td>
-          <td>${data.orders}</td>
-          <td>${data.qty}</td>
-        </tr>
-      `;
-    }
-  };
-
-render(pendingOut, outTable);
-render(pendingReturn, returnTable);
-
-// حساب المجاميع
-let outOrders = new Set(pendingOut.map(i => i.orderId)).size;
-let outQty = pendingOut.reduce((sum,i)=>sum+i.qty,0);
-
-let returnOrders = new Set(pendingReturn.map(i => i.orderId)).size;
-let returnQty = pendingReturn.reduce((sum,i)=>sum+i.qty,0);
-
-// عرض المجاميع
-outSummary.textContent = `عدد الطلبات: ${outOrders} | إجمالي الكمية: ${outQty}`;
-if (returnOrders > 0) {
-  returnSummary.textContent = `عدد الطلبات: ${returnOrders} | إجمالي الكمية: ${returnQty}`;
-} else {
-  returnSummary.textContent = "";
-}
-}
-
- 
-
-let scanTimer;
-
-barcodeInput.addEventListener("input", () => {
-
-  clearTimeout(scanTimer);
-
-  scanTimer = setTimeout(() => {
-
-    const code = barcodeInput.value.trim();
-    barcodeInput.value = "";
-barcodeInput.focus(); // 🔥 يرجع الفوكس بعد كل قراءة
-if (code.length >= 6) {
-  processBarcode(code);
-}
-}, 300);
-
-});
-
-function findMatchingVariant(stock, variantText){
-
-const normalize = (text)=>
-text
-.split("|")
-.map(s=>s.trim())
-.filter(Boolean)
-.sort()
-.join("|");
-
-const target = normalize(variantText);
-
-for(const key of Object.keys(stock)){
-
-if(normalize(key) === target){
-return key;
-}
-
-}
-
-return null;
-
-}
-deductBtn.addEventListener("click", async () => {
-
-if (!pendingOut.length) {
-    alert("لا توجد طلبات للخصم");
-    return;
-  }
-
-  scanMsg.textContent = "⏳ جاري الخصم...";
-
- const productTotals = new Map();
-
-pendingOut.forEach(item => {
-const variants = item.variants || {};
-const variantText = Object.entries(variants)
-  .sort(([a],[b]) => a.localeCompare(b))
-  .map(([k,v]) => `${k} | ${v}`)
-  .join(" | ");
-
-  const key = variantText
-    ? item.name + " || " + variantText
-    : item.name;
-
-  if (!productTotals.has(key)) {
-    productTotals.set(key, 0);
-  }
-
-  productTotals.set(key, productTotals.get(key) + item.qty);
-});
-
-for (const [fullKey, qty] of productTotals.entries()) {
-
-const parts = fullKey.split(" || ");
-const name = parts[0];
-const variantPart = parts.length > 1 ? parts[1] : null;
-
-// جلب المنتج مباشرة من المخزن
-const safeKey1 = String(name||"").trim().replace(/\s+/g," ").replace(/[.#$[\]/]/g,"_");
-const safeKey2 = String(name||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
-
-let productRef = ref(db, "warehouse/" + safeKey1);
-let productSnap = await get(productRef);
-
-if (!productSnap.exists()) {
-  productRef = ref(db, "warehouse/" + safeKey2);
-  productSnap = await get(productRef);
-}
-
-if (!productSnap.exists()) {
-  const allSnap = await get(ref(db, "warehouse"));
-  if (allSnap.exists()) {
-    for (const [key, val] of Object.entries(allSnap.val())) {
-      if (val.name === name) {
-        productRef = ref(db, "warehouse/" + key);
-        productSnap = await get(productRef);
-        break;
-      }
-    }
-  }
-}
-if (!productSnap.exists()) {
-inventoryErrors.push({
-name:name,
-variant:variantPart,
-problem:"المنتج غير موجود بالمخزن",
-qty:qty
-});
-
-renderErrors();
-
-scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
-  continue;
-}
-
-const productData = productSnap.val();
-const stock = productData.stock || {};
-// 🔥 منع التخريب إذا المنتج بي متغيرات
-const hasVariants = Object.keys(stock).some(k => k.includes("|"));
-
-if ((!variantPart || variantPart.trim() === "") && hasVariants) {
-
-  inventoryErrors.push({
-    name: name,
-    variant: "-",
-    problem: "يجب اختيار متغير (لون / قياس)",
-    qty: qty
-  });
-
-  renderErrors();
-
-  continue; // ❌ يوقف العملية
-}
-
-if (!variantPart) {
-
-let currentQty = 0;
-
-if (typeof stock === "number") {
-  currentQty = Number(stock) || 0;
-} else if (typeof stock === "object") {
-  currentQty = Number(stock.default || 0) || 0;
-}
-const safeQty = Number(qty) || 0;
-let newQty = currentQty - safeQty;
-
-if (newQty < 0) newQty = 0;
-
-await update(productRef, {
- stock: {
-  default: newQty
-},
-  totalQty: newQty,
-  lastUpdate: new Date().toISOString()
-});
-
-}
-
-else {
-let variantKey = findMatchingVariant(stock, variantPart);
-if (!variantPart) continue;
-if(!variantKey){
-  console.warn("⚠️ متغير غير مطابق - تم تجاهله", variantPart);
-
-  inventoryErrors.push({
-    name: name,
-    variant: variantPart,
-    problem: "متغير غير موجود بالمخزن",
-    qty: qty
-  });
-
-  renderErrors();
-
-  continue;
-}
-const rawValue = stock[variantKey];
-const currentVariantQty = isNaN(Number(rawValue)) ? 0 : Number(rawValue);
-const safeQty = (!qty || isNaN(Number(qty))) ? 0 : Number(qty);
-let newVariantQty = currentVariantQty - safeQty;
-if(newVariantQty < 0){
-
-inventoryErrors.push({
-name:name,
-variant:variantKey,
-problem:"الكمية سالبة",
-qty:newVariantQty
-});
-
-renderErrors();
-
-}
-
-const updatedStock = {
-...stock,
-[variantKey]: newVariantQty
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ====================================================== -->
+<!-- SCRIPT -->
+<!-- ====================================================== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 };
 
-let total = 0;
-for (const v of Object.values(updatedStock)) {
-total += Number(v) || 0;
-}
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-await update(productRef, {
-stock: updatedStock,
-totalQty: total,
-lastUpdate: new Date().toISOString()
-});
+// ===== STATE =====
+let manualOut = [], manualReturn = [], manualErrors = [];
+let autoOut = [], autoReturn = [], autoErrors = [];
+let scannedShipments = new Set();
+let isProcessing = false;
+let isLoading = false;
 
-}
+// ===== HEADER DATE =====
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ar-IQ', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-}
-
-
-// إنشاء التقرير قبل التصفير
-await generateInventoryPDF();
-
-pendingOut = [];
-scannedShipments = new Set();
-renderPendingTable();
-
-scanMsg.textContent = "✅ تم الخصم بنجاح";
-
-});
- returnBtn.addEventListener("click", async () => {
-
-if (!pendingReturn.length) {
-    alert("لا توجد طلبات للإرجاع");
-    return;
-  }
-
-  scanMsg.textContent = "⏳ جاري إضافة الراجع...";
-
-  const productTotals = new Map();
-
-pendingReturn.forEach(item => {
-const variants = item.variants || {};
-const variantText = Object.entries(variants)
-  .sort(([a],[b]) => a.localeCompare(b))
-  .map(([k,v]) => `${k} | ${v}`)
-  .join(" | ");
-    const key = variantText
-      ? item.name + " || " + variantText
-      : item.name;
-
-    if (!productTotals.has(key)) {
-      productTotals.set(key, 0);
+// ===== TABS =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'manual') {
+      setTimeout(() => document.getElementById('barcodeInput').focus(), 200);
     }
+  });
+});
 
-    productTotals.set(key, productTotals.get(key) + item.qty);
+// ===== TOAST =====
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== SET MSG =====
+function setMsg(id, msg, type = 'info') {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `scan-msg ${msg ? type : 'empty'}`;
+}
+
+// ===== QUICK DATE =====
+window.setQuickDate = function(range) {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0,10);
+  if (range === 'today') {
+    document.getElementById('dateFrom').value = fmt(today);
+    document.getElementById('dateTo').value = fmt(today);
+  } else if (range === 'yesterday') {
+    const y = new Date(today); y.setDate(y.getDate()-1);
+    document.getElementById('dateFrom').value = fmt(y);
+    document.getElementById('dateTo').value = fmt(y);
+  } else if (range === 'week') {
+    const w = new Date(today); w.setDate(w.getDate()-6);
+    document.getElementById('dateFrom').value = fmt(w);
+    document.getElementById('dateTo').value = fmt(today);
+  }
+};
+
+// default to today
+setQuickDate('today');
+
+// ===== NORMALIZE =====
+function normalizeNum(str) {
+  return String(str||'').replace(/[٠-٩]/g, d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d]/g,'').trim();
+}
+
+function getProductsList(order) {
+  if (Array.isArray(order.productsDetailed)) return order.productsDetailed;
+  if (order.productsDetailed && typeof order.productsDetailed === 'object') return Object.values(order.productsDetailed);
+  if (order.productName) return order.productName.split('،').map(n => ({ name:n.trim(), qty:1 }));
+  return [];
+}
+
+function buildItemData(p, orderId) {
+  const rawQty = normalizeNum(p.qty ?? p.quantity ?? 1);
+  return { name: p.name||'منتج', qty: isNaN(Number(rawQty))?1:Number(rawQty), variants: p.variants||{}, orderId };
+}
+
+// ===== RENDER TABLE =====
+function renderTable(data, tableId, summaryId, sectionId, badgeId, color='out') {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  const section = document.getElementById(sectionId);
+  tbody.innerHTML = '';
+
+  if (!data.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const map = new Map();
+  data.forEach(item => {
+    const vt = Object.entries(item.variants||{}).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k} | ${v}`).join(' | ');
+    const key = vt ? item.name+'||'+vt : item.name;
+    if (!map.has(key)) map.set(key, { name:item.name, variant:vt, orders:new Set(), qty:0 });
+    const obj = map.get(key);
+    obj.qty += item.qty;
+    obj.orders.add(item.orderId);
   });
 
+  let i = 1;
+  const sorted = [...map.entries()].sort((a,b)=>b[1].qty-a[1].qty);
+  sorted.forEach(([, d]) => {
+    const tr = document.createElement('tr');
+    const variantHtml = d.variant ? `<br><span class="variant-tag">${d.variant}</span>` : '';
+    tr.innerHTML = `<td>${i++}</td><td class="product-cell">${d.name}${variantHtml}</td><td>${d.orders.size}</td><td><strong>${d.qty}</strong></td>`;
+    tbody.appendChild(tr);
+  });
 
-  for (const [fullKey, qty] of productTotals.entries()) {
+  const totalOrders = new Set(data.map(i=>i.orderId)).size;
+  const totalQty = data.reduce((s,i)=>s+i.qty, 0);
 
-    const parts = fullKey.split(" || ");
-    const name = parts[0];
-    const variantPart = parts.length > 1 ? parts[1] : null;
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `<td></td><td class="product-cell">المجموع</td><td>${totalOrders}</td><td>${totalQty}</td>`;
+  tbody.appendChild(totalRow);
 
-// جلب المنتج مباشرة من المخزن
-const safeKey1 = String(name||"").trim().replace(/\s+/g," ").replace(/[.#$[\]/]/g,"_");
-const safeKey2 = String(name||"").trim().replace(/\s+/g,"_").replace(/[.#$[\]/]/g,"_");
-
-let productRef = ref(db, "warehouse/" + safeKey1);
-let productSnap = await get(productRef);
-
-if (!productSnap.exists()) {
-  productRef = ref(db, "warehouse/" + safeKey2);
-  productSnap = await get(productRef);
+  document.getElementById(summaryId).innerHTML = `<strong>${totalOrders}</strong> طلب | إجمالي الكمية: <strong>${totalQty}</strong> قطعة`;
+  document.getElementById(badgeId).textContent = `${totalOrders} طلب`;
 }
 
-if (!productSnap.exists()) {
-  const allSnap = await get(ref(db, "warehouse"));
+function renderErrors(errors, tableId, sectionId) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  const section = document.getElementById(sectionId);
+  tbody.innerHTML = '';
+  if (!errors.length) { section.style.display='none'; return; }
+  section.style.display = 'block';
+  errors.forEach(e => {
+    tbody.innerHTML += `<tr><td>${e.name}</td><td>${e.variant||'-'}</td><td>${e.problem}</td><td>${e.qty}</td></tr>`;
+  });
+}
+
+// ===== AUTO LOAD =====
+window.loadAutoReport = async function() {
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+  if (!from || !to) { setMsg('autoMsg','⚠️ اختر الفترة الزمنية','warning'); return; }
+
+  const fromDate = new Date(from + 'T00:00:00');
+  const toDate = new Date(to + 'T23:59:59');
+
+  if (fromDate > toDate) { setMsg('autoMsg','⚠️ تاريخ البداية أكبر من النهاية','warning'); return; }
+
+  isLoading = true;
+  document.getElementById('autoLoadBtn').disabled = true;
+  document.getElementById('autoLoadBtn').innerHTML = '<span class="loader"></span> جاري الجلب...';
+  document.getElementById('progressBar').style.display = 'block';
+  setMsg('autoMsg','⏳ جاري جلب البيانات من Firebase...','info');
+
+  autoOut = []; autoReturn = []; autoErrors = [];
+
+  const outStatuses = ['مثبت','قيد التجهيز','قيد التوصيل','تم التسليم'];
+  const returnStatuses = ['تم استلام الراجع'];
+  const allStatuses = [...outStatuses, ...returnStatuses];
+
+  let progress = 0;
+  const step = 100 / allStatuses.length;
+
+  for (const status of allStatuses) {
+    try {
+      const snap = await get(ref(db, `ordersTest/${status}`));
+      progress += step;
+      document.getElementById('progressFill').style.width = Math.min(progress, 95) + '%';
+
+      if (!snap.exists()) continue;
+      const orders = snap.val();
+
+      Object.entries(orders).forEach(([id, order]) => {
+        if (id === '_meta') return;
+
+        const dateField = order.updatedAt || order.lastStatusAt || order.createdAt || order.orderDate;
+        if (!dateField) return;
+
+        const orderDate = new Date(typeof dateField === 'number' ? dateField : dateField);
+        if (orderDate < fromDate || orderDate > toDate) return;
+
+        const products = getProductsList(order);
+        const isOut = outStatuses.includes(status);
+        const isReturn = returnStatuses.includes(status);
+
+        products.forEach(p => {
+          if (!p.name) return;
+          const item = buildItemData(p, id);
+          if (isOut) autoOut.push(item);
+          if (isReturn) autoReturn.push(item);
+        });
+      });
+    } catch(e) { console.warn('Error loading', status, e); }
+  }
+
+  document.getElementById('progressFill').style.width = '100%';
+  setTimeout(() => { document.getElementById('progressBar').style.display = 'none'; }, 500);
+
+  renderTable(autoOut, 'autoOutTable', 'autoOutSummary', 'autoOutSection', 'autoOutBadge', 'out');
+  renderTable(autoReturn, 'autoReturnTable', 'autoReturnSummary', 'autoReturnSection', 'autoReturnBadge', 'return');
+
+  const outOrders = new Set(autoOut.map(i=>i.orderId)).size;
+  const returnOrders = new Set(autoReturn.map(i=>i.orderId)).size;
+  const outQty = autoOut.reduce((s,i)=>s+i.qty,0);
+  const returnQty = autoReturn.reduce((s,i)=>s+i.qty,0);
+
+  document.getElementById('statOut').textContent = outOrders;
+  document.getElementById('statReturn').textContent = returnOrders;
+  document.getElementById('statOutQty').textContent = outQty;
+  document.getElementById('statReturnQty').textContent = returnQty;
+  document.getElementById('autoStats').style.display = outOrders+returnOrders > 0 ? 'grid' : 'none';
+
+  const total = autoOut.length + autoReturn.length;
+  if (total > 0) {
+    setMsg('autoMsg', `✅ تم جلب ${outOrders} طلب طالع و ${returnOrders} طلب راجع`, 'success');
+    document.getElementById('autoPdfRow').style.display = 'block';
+    document.getElementById('autoClearBtn').style.display = 'inline-flex';
+    document.getElementById('autoBadge').textContent = outOrders + returnOrders;
+    document.getElementById('autoBadge').style.display = 'inline';
+  } else {
+    setMsg('autoMsg', `ℹ️ لا توجد طلبات في هذه الفترة`, 'warning');
+    document.getElementById('autoPdfRow').style.display = 'none';
+  }
+
+  isLoading = false;
+  document.getElementById('autoLoadBtn').disabled = false;
+  document.getElementById('autoLoadBtn').innerHTML = '🔍 جلب التقرير';
+};
+
+window.clearAutoData = function() {
+  autoOut = []; autoReturn = []; autoErrors = [];
+  ['autoOutSection','autoReturnSection','autoErrorSection','autoPdfRow'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('autoStats').style.display = 'none';
+  document.getElementById('autoClearBtn').style.display = 'none';
+  document.getElementById('autoBadge').style.display = 'none';
+  setMsg('autoMsg','','empty');
+};
+
+// ===== MANUAL BARCODE =====
+const barcodeInput = document.getElementById('barcodeInput');
+barcodeInput.focus();
+setInterval(() => { if (document.activeElement !== barcodeInput && document.getElementById('panel-manual').classList.contains('active')) barcodeInput.focus(); }, 800);
+
+let scanTimer;
+barcodeInput.addEventListener('input', () => {
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    const code = barcodeInput.value.trim();
+    barcodeInput.value = '';
+    barcodeInput.focus();
+    if (code.length >= 4) processBarcode(normalizeNum(code));
+  }, 300);
+});
+
+async function getOrderByReceipt(shipmentId) {
+  const paths = ['ordersTest/قيد التجهيز', 'ordersTest/راجع'];
+  for (const path of paths) {
+    let snap = await get(query(ref(db, path), orderByChild('receiptNum'), equalTo(shipmentId)));
+    if (!snap.exists()) snap = await get(query(ref(db, path), orderByChild('receiptNum'), equalTo(Number(shipmentId))));
+    if (snap.exists()) return Object.values(snap.val())[0];
+  }
+  return null;
+}
+
+async function processBarcode(shipmentId) {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  setMsg('scanMsg', '⏳ جاري البحث...', 'info');
+
+  if (scannedShipments.has(shipmentId)) {
+    setMsg('scanMsg', '⚠️ هذا الوصل مضروب مسبقاً', 'warning');
+    isProcessing = false; return;
+  }
+
+  const order = await getOrderByReceipt(shipmentId);
+  if (!order) {
+    setMsg('scanMsg', '❌ رقم الوصل غير موجود في النظام', 'error');
+    isProcessing = false; return;
+  }
+
+  scannedShipments.add(shipmentId);
+  barcodeInput.classList.add('pulse');
+  setTimeout(() => barcodeInput.classList.remove('pulse'), 400);
+
+  const products = getProductsList(order);
+  const status = (order.status||'').trim();
+
+  products.forEach(p => {
+    if (!p.name) return;
+    const item = buildItemData(p, shipmentId);
+    if (status.includes('توصيل') || status.includes('تجهيز') || status.includes('تم التسليم')) manualOut.push(item);
+    if (status.includes('راجع')) manualReturn.push(item);
+  });
+
+  updateManualTables();
+  setMsg('scanMsg', `✅ تمت إضافة الوصل ${shipmentId} (${order.status})`, 'success');
+  isProcessing = false;
+}
+
+function updateManualTables() {
+  renderTable(manualOut, 'outTable', 'outSummary', 'outSection', 'outBadge', 'out');
+  renderTable(manualReturn, 'returnTable', 'returnSummary', 'returnSection', 'returnBadge', 'return');
+
+  const outOrders = new Set(manualOut.map(i=>i.orderId)).size;
+  const returnOrders = new Set(manualReturn.map(i=>i.orderId)).size;
+  const outQty = manualOut.reduce((s,i)=>s+i.qty,0);
+  const returnQty = manualReturn.reduce((s,i)=>s+i.qty,0);
+
+  document.getElementById('mStatOut').textContent = outOrders;
+  document.getElementById('mStatReturn').textContent = returnOrders;
+  document.getElementById('mStatOutQty').textContent = outQty;
+  document.getElementById('mStatReturnQty').textContent = returnQty;
+  document.getElementById('manualStats').style.display = outOrders+returnOrders > 0 ? 'grid' : 'none';
+
+  if (manualOut.length+manualReturn.length > 0) {
+    document.getElementById('manualPdfRow').style.display = 'block';
+    document.getElementById('manualBadge').textContent = outOrders+returnOrders;
+    document.getElementById('manualBadge').style.display = 'inline';
+  }
+}
+
+// ===== FIND VARIANT =====
+function findVariantKey(stock, variantText) {
+  const norm = t => t.split('|').map(s=>s.trim()).filter(Boolean).sort().join('|');
+  const target = norm(variantText);
+  for (const k of Object.keys(stock)) { if (norm(k)===target) return k; }
+  return null;
+}
+
+async function findProductRef(name) {
+  const safe = name.trim().replace(/\s+/g,' ').replace(/[.#$[\]/]/g,'_');
+  let pRef = ref(db, 'warehouse/'+safe);
+  let snap = await get(pRef);
+  if (snap.exists()) return { pRef, snap };
+
+  const allSnap = await get(ref(db, 'warehouse'));
   if (allSnap.exists()) {
-    for (const [key, val] of Object.entries(allSnap.val())) {
-      if (val.name === name) {
-        productRef = ref(db, "warehouse/" + key);
-        productSnap = await get(productRef);
-        break;
+    for (const [k, v] of Object.entries(allSnap.val())) {
+      if ((v.name||'').trim() === name.trim()) {
+        pRef = ref(db, 'warehouse/'+k);
+        snap = await get(pRef);
+        return { pRef, snap };
       }
     }
   }
+  return null;
 }
 
-if (!productSnap.exists()) {
-inventoryErrors.push({
-name:name,
-variant:variantPart,
-problem:"المنتج غير موجود بالمخزن",
-qty:qty
-});
+// ===== DEDUCT STOCK (Manual) =====
+window.deductStock = async function() {
+  if (!manualOut.length) { showToast('لا توجد طلبات للخصم','warning'); return; }
+  const btn = document.getElementById('deductBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="loader"></span> جاري الخصم...';
 
-renderErrors();
+  const totals = buildTotalsMap(manualOut);
+  manualErrors = [];
 
-scanMsg.textContent = `❌ المنتج غير موجود بالمخزن: ${name}`;
-  continue;
-}
+  for (const [fullKey, qty] of totals.entries()) {
+    const [name, variantPart] = fullKey.split('||');
+    const found = await findProductRef(name);
 
-const productData = productSnap.val();
-const stock = productData.stock || {};
-// 🔥 منع التخريب إذا المنتج بي متغيرات
-const hasVariants = Object.keys(stock).some(k => k.includes("|"));
+    if (!found) {
+      manualErrors.push({ name, variant:variantPart||'-', problem:'المنتج غير موجود بالمخزن', qty });
+      continue;
+    }
 
-if ((!variantPart || variantPart.trim() === "") && hasVariants) {
+    const { pRef, snap } = found;
+    const stock = snap.val().stock || {};
+    const hasVariants = Object.keys(stock).some(k=>k.includes('|'));
 
-  inventoryErrors.push({
-    name: name,
-    variant: "-",
-    problem: "يجب اختيار متغير (لون / قياس)",
-    qty: qty
+    if (!variantPart && hasVariants) {
+      manualErrors.push({ name, variant:'-', problem:'يجب تحديد المتغير', qty });
+      continue;
+    }
+
+    if (!variantPart) {
+      const cur = Number(typeof stock==='number'?stock:(stock.default||0));
+      const newQty = Math.max(0, cur-qty);
+      await update(pRef, { stock:{default:newQty}, totalQty:newQty, lastUpdate:new Date().toISOString() });
+    } else {
+      const vKey = findVariantKey(stock, variantPart);
+      if (!vKey) { manualErrors.push({ name, variant:variantPart, problem:'متغير غير موجود', qty }); continue; }
+      const cur = Number(stock[vKey]||0);
+      const newQty = Math.max(0, cur-qty);
+      if (cur-qty < 0) manualErrors.push({ name, variant:vKey, problem:'كمية سالبة', qty:cur-qty });
+      const updated = {...stock, [vKey]:newQty};
+      const total = Object.values(updated).reduce((s,v)=>s+(Number(v)||0),0);
+      await update(pRef, { stock:updated, totalQty:total, lastUpdate:new Date().toISOString() });
+    }
+  }
+
+  renderErrors(manualErrors, 'errorTable', 'errorSection');
+  await generatePDF('manual');
+  manualOut = []; scannedShipments = new Set();
+  updateManualTables();
+  showToast('✅ تم الخصم من المخزن بنجاح','success');
+  btn.disabled = false; btn.innerHTML = '✅ خصم من المخزن';
+};
+
+// ===== ADD RETURN STOCK (Manual) =====
+window.addReturnStock = async function() {
+  if (!manualReturn.length) { showToast('لا توجد طلبات للإرجاع','warning'); return; }
+  const btn = document.getElementById('returnBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="loader"></span> جاري الإرجاع...';
+
+  const totals = buildTotalsMap(manualReturn);
+
+  for (const [fullKey, qty] of totals.entries()) {
+    const [name, variantPart] = fullKey.split('||');
+    const found = await findProductRef(name);
+    if (!found) { manualErrors.push({ name, variant:variantPart||'-', problem:'المنتج غير موجود', qty }); continue; }
+
+    const { pRef, snap } = found;
+    const stock = snap.val().stock || {};
+    const hasVariants = Object.keys(stock).some(k=>k.includes('|'));
+
+    if (!variantPart && hasVariants) {
+      manualErrors.push({ name, variant:'-', problem:'يجب تحديد المتغير', qty });
+      continue;
+    }
+
+    if (!variantPart) {
+      const cur = Number(typeof stock==='number'?stock:(stock.default||0));
+      const newQty = cur+qty;
+      await update(pRef, { stock:{default:newQty}, totalQty:newQty, lastUpdate:new Date().toISOString() });
+    } else {
+      const vKey = findVariantKey(stock, variantPart);
+      if (!vKey) { manualErrors.push({ name, variant:variantPart, problem:'متغير غير موجود', qty }); continue; }
+      const cur = Number(stock[vKey]||0);
+      const updated = {...stock, [vKey]:cur+qty};
+      const total = Object.values(updated).reduce((s,v)=>s+(Number(v)||0),0);
+      await update(pRef, { stock:updated, totalQty:total, lastUpdate:new Date().toISOString() });
+    }
+  }
+
+  renderErrors(manualErrors, 'errorTable', 'errorSection');
+  await generatePDF('manual');
+  manualReturn = []; scannedShipments = new Set();
+  updateManualTables();
+  showToast('✅ تم إرجاع المخزن بنجاح','success');
+  btn.disabled = false; btn.innerHTML = '🔄 إرجاع للمخزن';
+};
+
+function buildTotalsMap(items) {
+  const map = new Map();
+  items.forEach(item => {
+    const vt = Object.entries(item.variants||{}).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k} | ${v}`).join(' | ');
+    const key = vt ? item.name+'||'+vt : item.name;
+    map.set(key, (map.get(key)||0) + item.qty);
   });
-
-  renderErrors();
-
-  continue; // ❌ يوقف العملية
-}
-// 🔥 نفس منطق الطالع لكن بالعكس (زيادة)
-
-if (!variantPart && !hasVariants) {
-
-  // بدون متغير
-  let currentQty = 0;
-
-  if (typeof stock === "number") {
-    currentQty = Number(stock) || 0;
-  } else if (typeof stock === "object") {
-    currentQty = Number(stock.default || 0) || 0;
-  }
-
-  const safeQty = Number(qty) || 0;
-  let newQty = currentQty + safeQty;
-
-  if (newQty < 0) newQty = 0;
-
-  await update(productRef, {
-    stock: {
-      default: newQty
-    },
-    totalQty: newQty,
-    lastUpdate: new Date().toISOString()
-  });
-
-}
-else {
-
-  // مع متغير
-  let variantKey = findMatchingVariant(stock, variantPart);
-
-  if (!variantKey) {
-    inventoryErrors.push({
-      name: name,
-      variant: variantPart,
-      problem: "متغير غير موجود بالمخزن",
-      qty: qty
-    });
-
-    renderErrors();
-    continue;
-  }
-
-  const currentVariantQty = Number(stock[variantKey]) || 0;
-  const safeQty = Number(qty) || 0;
-
-  let newVariantQty = currentVariantQty + safeQty;
-
-  if (newVariantQty < 0) newVariantQty = 0;
-
-  const updatedStock = {
-    ...stock,
-    [variantKey]: newVariantQty
-  };
-
-  let total = 0;
-  for (const v of Object.values(updatedStock)) {
-    total += Number(v) || 0;
-  }
-
-  await update(productRef, {
-    stock: updatedStock,
-    totalQty: total,
-    lastUpdate: new Date().toISOString()
-  });
-
+  return map;
 }
 
-  }
-// إنشاء التقرير قبل التصفير
-await generateInventoryPDF();
+// ===== PDF GENERATION =====
+window.generatePDF = async function(source) {
+  const outData = source==='auto' ? autoOut : manualOut;
+  const returnData = source==='auto' ? autoReturn : manualReturn;
 
-pendingReturn = [];
-scannedShipments = new Set();
-renderPendingTable();
+  if (!outData.length && !returnData.length) { showToast('لا يوجد بيانات للتقرير','warning'); return; }
 
-scanMsg.textContent = "✅ تم إضافة الراجع بنجاح";
- 
-});
-function renderErrors(){
+  try {
+    const fontRes = await fetch('Tajawal-Regular.ttf');
+    const buffer = await fontRes.arrayBuffer();
+    const binary = Array.from(new Uint8Array(buffer)).map(b=>String.fromCharCode(b)).join('');
+    const base64Font = btoa(binary);
 
-errorTable.innerHTML = "";
+    pdfMake.vfs = { 'Tajawal-Regular.ttf': base64Font };
+    pdfMake.fonts = { Tajawal: { normal:'Tajawal-Regular.ttf', bold:'Tajawal-Regular.ttf', italics:'Tajawal-Regular.ttf', bolditalics:'Tajawal-Regular.ttf' } };
 
-if(!inventoryErrors.length){
-errorSection.style.display = "none";
-return;
-}
+    let logoBase64 = null;
+    try {
+      const lr = await fetch('almurad-logo.png');
+      const lb = await lr.blob();
+      logoBase64 = await new Promise(r => { const fr=new FileReader(); fr.onloadend=()=>r(fr.result); fr.readAsDataURL(lb); });
+    } catch(e) {}
 
-errorSection.style.display = "block";
-
-inventoryErrors.forEach(err=>{
-
-errorTable.innerHTML += `
-<tr>
-<td>${err.name}</td>
-<td>${err.variant || "-"}</td>
-<td>${err.problem}</td>
-<td>${err.qty}</td>
-</tr>
-`;
-
-});
-
-}
-function fixArabicText(text) {
+function fix(text) {
   if (!text) return "";
-
-  return text
+  return String(text)
     .replace(/\s+/g, " ")
     .trim()
     .split(/([\u0600-\u06FF]+)/)
@@ -864,362 +1203,128 @@ function fixArabicText(text) {
     .join(" ")
     .replace(/\s+/g, " ");
 }
-const pdfBtn = document.getElementById("pdfBtn");
+    const dateRange = source==='auto'
+      ? `${document.getElementById('dateFrom').value} → ${document.getElementById('dateTo').value}`
+      : new Date().toLocaleDateString('ar-IQ');
 
-pdfBtn.addEventListener("click", generateInventoryPDF);
+    function buildTableBody(data, headerStyle) {
+      const map = new Map();
+      data.forEach(item => {
+        const vt = Object.entries(item.variants||{}).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k} | ${v}`).join(' | ');
+        const key = vt ? item.name+' - '+vt : item.name;
+        if (!map.has(key)) map.set(key, { orders:new Set(), qty:0 });
+        const obj = map.get(key); obj.qty+=item.qty; obj.orders.add(item.orderId);
+      });
 
-async function generateInventoryPDF() {
+      const body = [[
+        { text:fix('ت'), style:headerStyle, alignment:'center' },
+        { text:fix('المنتج'), style:headerStyle, alignment:'center' },
+        { text:fix('عدد الطلبات'), style:headerStyle, alignment:'center' },
+        { text:fix('الكمية'), style:headerStyle, alignment:'center' }
+      ]];
 
-  if (!pendingOut.length && !pendingReturn.length) {
-    alert("لا يوجد بيانات للجرد");
-    return;
-  }
+      let i=1;
+      [...map.entries()].sort((a,b)=>b[1].qty-a[1].qty).forEach(([name,d]) => {
+        body.push([i++, fix(name), d.orders.size, { text:String(d.qty), bold:true }]);
+      });
 
-  // 🔹 تحميل خط Tajawal محلياً مثل الفاتورة
-  const res = await fetch("Tajawal-Regular.ttf");
-  const buffer = await res.arrayBuffer();
-  const binary = Array.from(new Uint8Array(buffer))
-    .map(b => String.fromCharCode(b))
-    .join("");
-  const base64 = btoa(binary);
+      const totalOrders = new Set(data.map(i=>i.orderId)).size;
+      const totalQty = data.reduce((s,i)=>s+i.qty,0);
+      body.push([{ text:'', colSpan:1 }, { text:fix('المجموع'), bold:true }, totalOrders, { text:String(totalQty), bold:true }]);
 
-  pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
-  pdfMake.fonts = {
-    
-    Tajawal: {
-      normal: "Tajawal-Regular.ttf",
-      bold: "Tajawal-Regular.ttf",
-      italics: "Tajawal-Regular.ttf",
-      bolditalics: "Tajawal-Regular.ttf"
+      return { body, totalOrders, totalQty, products:map.size };
     }
-  };
-// تحميل شعار المراد
-const logoBase64 = await fetch("almurad-logo.png")
-.then(r => r.blob())
-.then(blob => new Promise(res => {
-const reader = new FileReader();
-reader.onloadend = () => res(reader.result);
-reader.readAsDataURL(blob);
-}));
-// جدول الطالع
-let outBody = [
-[
-{ text:fixArabicText("ت"), style:"tableHeader", alignment:"center"},
-{ text:fixArabicText("المنتج"), style:"tableHeader", alignment:"center"},
-{ text:fixArabicText("عدد الطلبات"), style:"tableHeader", alignment:"center"},
-{ text:fixArabicText("الكمية"), style:"tableHeader", alignment:"center"}
-]
-];
 
-// جدول الراجع
-let returnBody = [
-[
-{ text:fixArabicText("ت"), style:"returnHeader", alignment:"center"},
-{ text:fixArabicText("المنتج"), style:"returnHeader", alignment:"center"},
-{ text:fixArabicText("عدد الطلبات"), style:"returnHeader", alignment:"center"},
-{ text:fixArabicText("الكمية"), style:"returnHeader", alignment:"center"}
-]
-];
+    const outT = buildTableBody(outData, 'outHeader');
+    const retT = buildTableBody(returnData, 'retHeader');
 
-const outMap = new Map();
-const returnMap = new Map();
+    const contentBlocks = [];
 
-// الطالع
-pendingOut.forEach(item=>{
+    if (outData.length) {
+      const topEntry = [...new Map(outData.reduce((m,i)=>{
+        const k=i.name; m.set(k,(m.get(k)||0)+i.qty); return m;
+      }, new Map())).entries()].sort((a,b)=>b[1]-a[1])[0];
 
-const variant = Object.entries(item.variants || {})
-  .sort(([a],[b]) => a.localeCompare(b))
-  .map(([k,v]) => `${k} | ${v}`)
-  .join(" | ");
-const name = variant ? item.name+" - "+variant : item.name;
+      contentBlocks.push(
+        { text:fix('جرد الطالع'), bold:true, fontSize:13, color:'#043B64', margin:[0,8,0,6] },
+        { table:{ headerRows:1, widths:[28,'*',70,55], body:outT.body }, layout:{ hLineColor:'#e2e8f0', vLineColor:'#e2e8f0', paddingTop:()=>7, paddingBottom:()=>7 } }
+      );
 
-if(!outMap.has(name)){
-outMap.set(name,{orders:0,qty:0,orderSet:new Set()});
-}
+      contentBlocks.push(
+        { text:fix('ملخص الطالع'), bold:true, fontSize:12, margin:[0,16,0,6] },
+        { table:{ widths:['*','*'], body:[
+          [fix('عدد الطلبات'), outT.totalOrders],
+          [fix('عدد المنتجات'), outT.products],
+          [fix('إجمالي الكمية'), outT.totalQty],
+          [fix('أكثر منتج مبيعاً'), fix(topEntry ? `${topEntry[0]} (${topEntry[1]})` : '-')]
+        ]}, layout:{ hLineColor:'#e2e8f0', vLineColor:'#e2e8f0', paddingTop:()=>6, paddingBottom:()=>6 } }
+      );
+    }
 
-const obj = outMap.get(name);
-obj.qty += item.qty;
-obj.orderSet.add(item.orderId);
-obj.orders = obj.orderSet.size;
+    if (returnData.length) {
+      contentBlocks.push(
+        { text:fix('جرد الراجع'), bold:true, fontSize:13, color:'#842029', margin:[0,20,0,6] },
+        { table:{ headerRows:1, widths:[28,'*',70,55], body:retT.body }, layout:{ hLineColor:'#fee2e2', vLineColor:'#fee2e2', paddingTop:()=>7, paddingBottom:()=>7 } }
+      );
 
-});
+      contentBlocks.push(
+        { text:fix('ملخص الراجع'), bold:true, fontSize:12, margin:[0,16,0,6] },
+        { table:{ widths:['*','*'], body:[
+          [fix('عدد الطلبات'), retT.totalOrders],
+          [fix('عدد المنتجات'), retT.products],
+          [fix('إجمالي الكمية'), retT.totalQty]
+        ]}, layout:{ hLineColor:'#fee2e2', vLineColor:'#fee2e2', paddingTop:()=>6, paddingBottom:()=>6 } }
+      );
+    }
 
-// الراجع
-pendingReturn.forEach(item=>{
-const variant = Object.entries(item.variants || {})
-  .sort(([a],[b]) => a.localeCompare(b))
-  .map(([k,v]) => `${k} | ${v}`)
-  .join(" | ");
+    const headerCols = logoBase64
+      ? [{ image:logoBase64, width:70, alignment:'left', margin:[0,-5,0,0] }, { stack:[{ text:fix('شركة المراد التجارية'), fontSize:18, bold:true, color:'#FF6B2D', alignment:'right' }, { text:fix('تقرير الجرد'), alignment:'right', fontSize:11, color:'#64748b' }] }]
+      : [{ text:'' }, { stack:[{ text:fix('شركة المراد التجارية'), fontSize:18, bold:true, color:'#FF6B2D', alignment:'right' }, { text:fix('تقرير الجرد'), alignment:'right', fontSize:11, color:'#64748b' }] }];
 
-const name = variant ? item.name+" - "+variant : item.name;
+    const doc = {
+      pageSize:'A4',
+      pageMargins:[40,50,40,50],
+      pageDirection:'rtl',
+      defaultStyle:{ font:'Tajawal', fontSize:11 },
+      styles:{
+        outHeader:{ bold:true, color:'white', fillColor:'#043B64', alignment:'center' },
+        retHeader:{ bold:true, color:'white', fillColor:'#842029', alignment:'center' }
+      },
+      header: () => ({
+        margin:[40,14,40,0],
+        canvas:[{ type:'rect', x:0, y:0, w:515, h:3, r:1.5, color:'#FF6B2D' }]
+      }),
+      footer: (page, pages) => ({
+        columns:[
+          { text:fix('مسؤول المخزن: عبد المجيد أحمد'), bold:true, fontSize:10, margin:[40,0,0,0] },
+          { text:`${page} / ${pages}`, alignment:'left', fontSize:10, margin:[0,0,40,0], color:'#64748b' }
+        ],
+        margin:[0,10,0,0]
+      }),
+      content:[
+        { columns:headerCols, columnGap:12, margin:[0,0,0,12] },
+        { canvas:[{ type:'line', x1:0, y1:0, x2:515, y2:0, lineWidth:1, lineColor:'#e2e8f0' }], margin:[0,0,0,12] },
+        { text:fix('تقرير الجرد اليومي'), fontSize:16, bold:true, alignment:'center', color:'#043B64', margin:[0,0,0,4] },
+        { text:fix('الفترة: ')+dateRange, alignment:'center', fontSize:10, color:'#64748b', margin:[0,0,0,4] },
+        { text:fix('وقت الإنشاء: ')+new Date().toLocaleString('ar-IQ', { hour12:true }), alignment:'center', fontSize:10, color:'#64748b', margin:[0,0,0,16] },
+        ...contentBlocks,
+        { canvas:[{ type:'line', x1:0, y1:0, x2:515, y2:0, lineWidth:0.5, lineColor:'#e2e8f0' }], margin:[0,16,0,8] },
+        { text:fix('تقرير صادر من نظام المراد'), alignment:'center', fontSize:9, color:'#94a3b8', italics:true }
+      ]
+    };
 
-if(!returnMap.has(name)){
-returnMap.set(name,{orders:0,qty:0,orderSet:new Set()});
-}
+    const now = new Date();
+    const fname = `جرد_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.pdf`;
 
-const obj = returnMap.get(name);
-obj.qty += item.qty;
-obj.orderSet.add(item.orderId);
-obj.orders = obj.orderSet.size;
+    pdfMake.createPdf(doc).download(fname);
+    showToast('✅ تم تحميل التقرير','success');
 
-});
-
-// تعبئة الطالع
-let i=1;
-[...outMap.entries()]
-.sort((a,b)=>b[1].qty-a[1].qty)
-.forEach(([name,data])=>{
-
-outBody.push([
-i++,
-fixArabicText(name),
-data.orders,
-data.qty
-]);
-
-});
-
-// تعبئة الراجع
-let r=1;
-[...returnMap.entries()]
-.sort((a,b)=>b[1].qty-a[1].qty)
-.forEach(([name,data])=>{
-
-returnBody.push([
-r++,
-fixArabicText(name),
-data.orders,
-data.qty
-]);
-
-});
-
-// ملخص الطالع
-let outOrders = new Set(pendingOut.map(i => i.orderId)).size;
-let outProducts = outMap.size;
-let outQty = 0;
-
-for(const [,data] of outMap){
-outQty += data.qty;
-}
-let topProduct = "";
-let topQty = 0;
-
-for (const [name, data] of outMap) {
-  if (data.qty > topQty) {
-    topQty = data.qty;
-    topProduct = name;
+  } catch(e) {
+    console.error('PDF Error:', e);
+    showToast('❌ خطأ في إنشاء التقرير','error');
   }
-}
-// ملخص الراجع
-let returnOrders = new Set(pendingReturn.map(i => i.orderId)).size;
-let returnProducts = returnMap.size;
-let returnQty = 0;
+};
 
-for(const [,data] of returnMap){
-returnQty += data.qty;
-}
-// إضافة صف المجموع للطالع
-outBody.push([
-"",
-fixArabicText("المجموع"),
-outOrders,
-outQty
-]);
-
-// إضافة صف المجموع للراجع
-returnBody.push([
-"",
-fixArabicText("المجموع"),
-returnOrders,
-returnQty
-]);
-const contentBlocks = [];
-
-if(outMap.size){
-contentBlocks.push(
-{
-text:fixArabicText(" جرد الطالع"),
-bold:true,
-margin:[0,10,0,5]
-},
-{
-table:{
-headerRows:1,
-widths:[30,"*",80,60],
-body:outBody
-},
-layout:{
-hLineColor:"#ddd",
-vLineColor:"#ddd",
-paddingTop:()=>6,
-paddingBottom:()=>6
-}
-}
-);
-}
-
-if(returnMap.size){
-contentBlocks.push(
-{
-text:fixArabicText(" جرد الراجع"),
-bold:true,
-margin:[0,20,0,5]
-},
-{
-table:{
-headerRows:1,
-widths:[30,"*",80,60],
-body:returnBody
-},
-layout:{
-hLineColor:"#ddd",
-vLineColor:"#ddd",
-paddingTop:()=>6,
-paddingBottom:()=>6
-}
-}
-);
-}
- const docDefinition = {
-  pageSize: "A4",
-  pageMargins: [40, 50, 40, 50],
-
-footer: function() {
-  return {
-    columns: [
-      {
-        text: fixArabicText("مسؤول المخزن: عبد المجيد أحمد"),
-        alignment: "left",
-        margin: [40,0,40,10],
-        bold: true
-      }
-    ]
-  };
-},
-
-pageDirection:"rtl",
-defaultStyle: {
-  font: "Tajawal"
-},
-styles: {
-tableHeader:{
-bold:true,
-color:"white",
-fillColor:"#043B64",
-alignment:"center"
-},
-
-returnHeader:{
-bold:true,
-color:"white",
-fillColor:"#842029",
-alignment:"center"
-}
-},
-content: [
-
-
-      // 🔹 العنوان الرئيسي
-    {
-columns: [
-
-{ image: logoBase64, width: 80, alignment: "left", margin: [0,-10,0,0] },
-
-{
-text: fixArabicText("شركة المراد التجارية"),
-fontSize: 20,
-bold: true,
-color: "#FF6B2D",
-alignment: "right",
-margin: [0,15,0,0]
-}
-
-],
-margin:[0,0,0,10]
-},
-{
-text: fixArabicText("تقرير الجرد اليومي"),
-fontSize: 16,
-bold: true,
-alignment: "center",
-color: "#043B64",
-margin: [0,5,0,5]
-},
-{
-text: fixArabicText("تاريخ الجرد: ") + new Date().toLocaleString("en-US", {
-hour12: true
-}),
-alignment: "center",
-margin: [0,0,0,15]
-},
-...contentBlocks,
-   
-
-...(outQty > 0 ? [
-
-{
-text:fixArabicText("ملخص الطالع"),
-fontSize:14,
-bold:true,
-margin:[0,20,0,10]
-},
-
-{
-table:{
-widths:["*","*"],
-body:[
-[fixArabicText("عدد الطلبات"), outOrders],
-[fixArabicText("عدد المنتجات"), outProducts],
-[fixArabicText("إجمالي الكمية"), outQty],
-[fixArabicText("أكثر منتج مبيعاً"), fixArabicText(topProduct + " (" + topQty + ")")]
-]
-}
-}
-
-] : []),
-
-...(returnQty > 0 ? [
-{
-text:fixArabicText("ملخص الراجع"),
-fontSize:14,
-bold:true,
-margin:[0,20,0,10]
-},
-
-{
-table:{
-widths:["*","*"],
-body:[
-[fixArabicText("عدد الطلبات"), returnOrders],
-[fixArabicText("عدد المنتجات"), returnProducts],
-[fixArabicText("إجمالي الكمية"), returnQty]
-]
-}
-}
-] : []),
-
-{
-text: fixArabicText(" تقرير صادر من نظام المراد "),
-alignment: "center",
-italics: true,
-color: "#777",
-fontSize: 9,
-margin: [0,10,0,0]
-}
-    ]
-  };
-
-const now = new Date();
-
-const fileName = `جرد_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.pdf`;
-
-pdfMake.createPdf(docDefinition).download(fileName);
-}
-  </script>
-
-  <script
-   src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+</script>
 </body>
 </html>
