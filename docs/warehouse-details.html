@@ -401,7 +401,8 @@ for (const [name, p] of allProductsList) {
         <div class="card-content">
           <h3>${name}</h3>
           <p>الكمية الإجمالية: ${totalQty}</p>
-          <span>💰 ${p.sellPrice || 0} د.ع</span>
+      <span>🏪 حضوري: ${p.prices?.pos || p.sellPrice || 0} د.ع</span>
+          <span>🌐 أونلاين: ${p.prices?.online || 0} د.ع</span>
         </div>
       `;
       card.onclick = () => showDetails(name, p, totalQty);
@@ -424,7 +425,8 @@ function showDetails(name, product, totalQty) {
   // بناء HTML أولي
   let contentHTML = `
     <h2 style="font-size:18px; margin-bottom:10px; color:var(--orange);">${name}</h2>
-    <p><strong>💰 سعر البيع:</strong> <span style="color:var(--orange);">${product.sellPrice || "-"}</span> د.ع</p>
+    <p><strong>🏪 سعر الحضوري:</strong> <span style="color:var(--orange);">${product.prices?.pos || product.sellPrice || "-"}</span> د.ع</p>
+    <p><strong>🌐 سعر الأونلاين:</strong> <span style="color:var(--orange);">${product.prices?.online || "-"}</span> د.ع</p>
     <p><strong>📦 الكمية الإجمالية:</strong> <span style="color:var(--orange);">${totalQty}</span></p>
 
     <h4 style="color:var(--blue); margin-top:15px;">🧩 المتغيرات</h4>
@@ -690,7 +692,8 @@ searchInput.addEventListener("input", () => {
       <div class="card-content">
         <h3>${name}</h3>
         <p>الكمية الإجمالية: ${totalQty}</p>
-        <span>💰 ${p.sellPrice || 0} د.ع</span>
+      <span>🏪 حضوري: ${p.prices?.pos || p.sellPrice || 0} د.ع</span>
+          <span>🌐 أونلاين: ${p.prices?.online || 0} د.ع</span>
       </div>
     `;
     card.onclick = () => showDetails(name, p, totalQty);

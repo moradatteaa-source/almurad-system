@@ -128,7 +128,7 @@ body {
 .stat-icon.green { background: #f0fff4; }
 .stat-icon.purple { background: #f5f0ff; }
 .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-.stat-value { font-size: 16px; font-weight: 800; color: var(--navy); direction: ltr; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-value { font-size: 20px; font-weight: 800; color: var(--navy); direction: ltr; text-align: right; }
 
 /* ─── TOOLBAR ─── */
 .toolbar {
@@ -532,7 +532,7 @@ body {
   .header-brand h1 { font-size: 15px; }
   .btn { padding: 8px 12px; font-size: 12px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 14px; }
-.stat-value { font-size: 13px; }
+  .stat-value { font-size: 16px; }
   .toolbar { padding: 0 14px 12px; gap: 8px; }
   .table-wrap { display: none; }
   .mobile-cards { display: block; }
@@ -951,9 +951,9 @@ async function loadWarehouse(reset = false) {
     warehouseData[child.key] = { ...child.val() };
     lastKey = child.key;
   });
-if (Object.keys(snap.val()).length < PAGE_SIZE) allLoaded = true;
+
+  if (Object.keys(snap.val()).length < PAGE_SIZE) allLoaded = true;
   renderAll();
-  if (allLoaded) updateStats();
 }
 async function resetAndReload() {
   fullWarehouseCache = null;
@@ -985,24 +985,19 @@ function renderAll() {
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
   if (q && fullWarehouseCache) return;
 
-async function updateStats() {
-  const snap = await get(ref(db, "warehouse"));
+  // حساب الإحصائيات
   let totalProducts = 0, totalQty = 0, totalBuy = 0, totalSell = 0;
-  if (snap.exists()) {
-    snap.forEach(child => {
-      const p = child.val();
-      const qty = calcTotal(p.stock);
-      totalProducts++;
-      totalQty += qty;
-      totalBuy += qty * (p.buyPrice || 0);
-      totalSell += qty * (p.prices?.pos || 0);
-    });
+  for (const [k, p] of Object.entries(warehouseData)) {
+    const qty = calcTotal(p.stock);
+    totalProducts++;
+    totalQty += qty;
+    totalBuy += qty * (p.buyPrice || 0);
+    totalSell += qty * (p.prices?.pos || 0);
   }
   document.getElementById("statProducts").textContent = fmt(totalProducts);
   document.getElementById("statQty").textContent = fmt(totalQty);
   document.getElementById("statBuy").textContent = fmt(totalBuy) + " د.ع";
   document.getElementById("statSell").textContent = fmt(totalSell) + " د.ع";
-}
 
   // ترتيب: الأحدث أولاً
   const sorted = Object.entries(warehouseData).sort((a, b) => {
@@ -1786,7 +1781,6 @@ new IntersectionObserver(entries => {
 }, { threshold: 0.1 }).observe(sentinel);
 
 loadWarehouse(true);
-if (allLoaded) updateStats();
 </script>
 </body>
 </html>
