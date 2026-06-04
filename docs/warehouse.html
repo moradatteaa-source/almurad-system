@@ -829,7 +829,9 @@ body {
 // ════════════════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getDatabase, ref, get, set, update, remove, onValue, runTransaction
+getDatabase, ref, get, set, update, remove, onValue, runTransaction,
+query, orderByKey, startAfter, limitToFirst
+
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import * as XLSX from "https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs";
 
@@ -859,7 +861,12 @@ let addQtyVariantKey = null;
 let addQtyOperation = "add";  // add | sub | set
 let auditProductKey = null;
 let auditVariantKey = null;
-
+// ── PAGINATION ──
+const PAGE_SIZE = 20;
+let lastKey = null;
+let allLoaded = false;
+let isLoadingMore = false;
+let fullWarehouseCache = null; // كاش كامل للبحث
 // ════════════════════════════════════════════════════════
 //  UTILS
 // ════════════════════════════════════════════════════════
@@ -918,17 +925,66 @@ async function generateBarcode() {
 // ════════════════════════════════════════════════════════
 //  LOAD WAREHOUSE  (onValue → real-time)
 // ════════════════════════════════════════════════════════
-function loadWarehouse() {
-  onValue(ref(db, "warehouse"), (snap) => {
-    warehouseData = snap.exists() ? snap.val() : {};
-    renderAll();
+async function loadWarehouse(reset = false) {
+  if (reset) {
+    warehouseData = {};
+    lastKey = null;
+    allLoaded = false;
+    document.getElementById("tableBody").innerHTML =
+      `<tr class="loading-row"><td colspan="10">⏳ جاري التحميل...</td></tr>`;
+    document.getElementById("mobileCards").innerHTML =
+      `<div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>`;
+  }
+  if (allLoaded || isLoadingMore) return;
+  isLoadingMore = true;
+
+  const q = lastKey
+    ? query(ref(db,"warehouse"), orderByKey(), startAfter(lastKey), limitToFirst(PAGE_SIZE))
+    : query(ref(db,"warehouse"), orderByKey(), limitToFirst(PAGE_SIZE));
+
+  const snap = await get(q);
+  isLoadingMore = false;
+
+  if (!snap.exists()) { allLoaded = true; renderAll(); return; }
+
+  snap.forEach(child => {
+    warehouseData[child.key] = { ...child.val() };
+    lastKey = child.key;
   });
+
+  if (Object.keys(snap.val()).length < PAGE_SIZE) allLoaded = true;
+  renderAll();
+}
+async function resetAndReload() {
+  fullWarehouseCache = null;
+  warehouseData = {};
+  lastKey = null;
+  allLoaded = false;
+  isLoadingMore = false;
+
+  // جلب كل المخزن دفعة وحدة بعد أي تعديل
+  document.getElementById("tableBody").innerHTML =
+    `<tr class="loading-row"><td colspan="10">⏳ جاري التحميل...</td></tr>`;
+  document.getElementById("mobileCards").innerHTML =
+    `<div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>`;
+
+  const snap = await get(ref(db, "warehouse"));
+  if (snap.exists()) {
+    snap.forEach(child => {
+      warehouseData[child.key] = { ...child.val() };
+    });
+  }
+  allLoaded = true;
+  renderAll();
 }
 
 // ════════════════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════════════════
 function renderAll() {
+  const q = document.getElementById("searchInput").value.toLowerCase().trim();
+  if (q && fullWarehouseCache) return;
+
   // حساب الإحصائيات
   let totalProducts = 0, totalQty = 0, totalBuy = 0, totalSell = 0;
   for (const [k, p] of Object.entries(warehouseData)) {
@@ -1091,14 +1147,33 @@ function renderMobileCards(list) {
 // ════════════════════════════════════════════════════════
 //  FILTERS
 // ════════════════════════════════════════════════════════
-window.applyFilters = function() { renderAll(); };
-
 window.setAuditFilter = function(f) {
   auditFilter = f;
   ["all","audited","not","low"].forEach(x => {
     document.getElementById("pill-" + x)?.classList.toggle("active", x === f);
   });
-  renderAll();
+  applyFilters();
+};
+
+window.applyFilters = async function() {
+  const q = document.getElementById("searchInput").value.toLowerCase().trim();
+  if (!q) {
+    // بدون بحث = عرض المحمل فقط عادي
+    renderAll();
+    return;
+  }
+  // عند البحث = جلب كل المخزن مرة وحدة وتخزينه
+  if (!fullWarehouseCache) {
+    toast("🔍 جاري تحميل كل المنتجات للبحث...", "info", 2000);
+    const snap = await get(ref(db, "warehouse"));
+    fullWarehouseCache = snap.exists() ? snap.val() : {};
+  }
+  // فلترة من الكاش
+  const filtered = Object.entries(fullWarehouseCache).filter(([k, p]) => {
+    return (p.name || k).toLowerCase().includes(q);
+  });
+  renderDesktopTable(filtered);
+  renderMobileCards(filtered);
 };
 
 // ════════════════════════════════════════════════════════
@@ -1296,7 +1371,8 @@ window.saveProduct = async function() {
     lastUpdate: now
   });
 
-  toast(editingKey ? "✅ تم تعديل المنتج بنجاح" : "✅ تم إضافة المنتج بنجاح");
+toast(editingKey ? "✅ تم تعديل المنتج بنجاح" : "✅ تم إضافة المنتج بنجاح");
+  await resetAndReload();
   closeModal("productModal");
   editingKey = null;
   variants = [];
@@ -1308,7 +1384,8 @@ window.saveProduct = async function() {
 window.deleteProduct = async function(key) {
   const name = warehouseData[key]?.name || key;
   if (!confirm(`هل تريد حذف المنتج "${name}"؟ لا يمكن التراجع.`)) return;
-  await remove(ref(db, "warehouse/" + key));
+await remove(ref(db, "warehouse/" + key));
+  await resetAndReload();
   toast(`🗑 تم حذف "${name}"`, "info");
 };
 
@@ -1389,8 +1466,8 @@ window.confirmAddQty = async function() {
     totalQty: newTotal,
     lastUpdate: new Date().toISOString()
   });
-
-  toast(`✅ تم تحديث الكمية: ${currentQty} ← ${newQty}`);
+toast(`✅ تم تحديث الكمية: ${currentQty} ← ${newQty}`);
+  await resetAndReload();
   closeModal("addQtyModal");
 };
 
@@ -1443,7 +1520,8 @@ window.confirmAudit = async function() {
     lastUpdate: new Date().toISOString()
   });
 
-  toast("📊 تم حفظ الجرد بنجاح");
+toast("📊 تم حفظ الجرد بنجاح");
+  await resetAndReload();
   closeModal("auditModal");
 };
 
@@ -1457,7 +1535,8 @@ window.resetAudit = async function() {
     if (warehouseData[k].lastAudit) updates[`warehouse/${k}/lastAudit`] = null;
   }
   if (Object.keys(updates).length === 0) return toast("لا توجد منتجات مجرودة", "info");
-  await update(ref(db), updates);
+await update(ref(db), updates);
+  await resetAndReload();
   toast("✅ تم إعادة تعيين الجرد لكل المنتجات", "info");
 };
 
@@ -1690,7 +1769,15 @@ window.exportExcel = function() {
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
-loadWarehouse();
+const sentinel = document.createElement("div");
+sentinel.style.height = "1px";
+document.body.appendChild(sentinel);
+new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && !allLoaded && !isLoadingMore)
+    loadWarehouse();
+}, { threshold: 0.1 }).observe(sentinel);
+
+loadWarehouse(true);
 </script>
 </body>
 </html>
