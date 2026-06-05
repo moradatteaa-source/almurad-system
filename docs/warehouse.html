@@ -1204,7 +1204,8 @@ window.openEditModal = async function(key) {
   document.getElementById("fBarcode").value = "";
 
   // تحديد الوضع
-  const hasVariants = p.stock && typeof p.stock === "object" && !("default" in p.stock);
+const hasVariants = p.stock && typeof p.stock === "object" && 
+    Object.keys(p.stock).some(k => k.includes("|"));
 
   if (hasVariants) {
     // تحميل المتغيرات
@@ -1216,6 +1217,7 @@ window.openEditModal = async function(key) {
         qty: Number(qty) || 0
       });
     }
+renderVariantsMini(); // ← هذا السطر الناقص
     setMode("variant");
   } else {
     document.getElementById("fQty").value = p.stock?.default || p.totalQty || 0;
@@ -1286,13 +1288,16 @@ function renderVariantsMini() {
   const tbody = document.getElementById("variantsMiniBody");
   if (!tbody) return;
   tbody.innerHTML = variants.map((v, i) => `
-    <tr>
+    <tr id="vrow-${i}">
       <td>${v.type1 || "-"}</td>
       <td>${v.val1 || "-"}</td>
       <td>${v.type2 || "-"}</td>
       <td>${v.val2 || "-"}</td>
       <td>${v.qty}</td>
-      <td><button class="btn btn-danger btn-sm btn-icon" onclick="removeVariant(${i})">🗑</button></td>
+      <td>
+        <button class="btn btn-navy btn-sm btn-icon" onclick="editVariant(${i})">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="removeVariant(${i})">🗑</button>
+      </td>
     </tr>`).join("");
 }
 
@@ -1300,7 +1305,59 @@ window.removeVariant = function(i) {
   variants.splice(i, 1);
   renderVariantsMini();
 };
+window.editVariant = function(i) {
+  const v = variants[i];
+  if (!v) return;
 
+  // ملء الخانات بالبيانات الحالية
+  document.getElementById("vType1").value = v.type1 || "";
+  document.getElementById("vVal1").value  = v.val1  || "";
+  document.getElementById("vType2").value = v.type2 || "";
+  document.getElementById("vVal2").value  = v.val2  || "";
+  document.getElementById("vQty").value   = v.qty   || 0;
+
+  // تلوين الصف المحدد
+  document.querySelectorAll("#variantsMiniBody tr").forEach(r => r.style.background = "");
+  const row = document.getElementById(`vrow-${i}`);
+  if (row) row.style.background = "#fff4ee";
+
+  // تغيير زر الإضافة ليصبح "حفظ التعديل"
+  const addBtn = document.querySelector("#modeVariant .btn-success");
+  addBtn.textContent = "💾 حفظ التعديل";
+  addBtn.onclick = () => saveEditedVariant(i);
+};
+
+window.saveEditedVariant = function(i) {
+  const t1 = document.getElementById("vType1").value.trim();
+  const v1 = document.getElementById("vVal1").value.trim();
+  const t2 = document.getElementById("vType2").value.trim();
+  const v2 = document.getElementById("vVal2").value.trim();
+  const qty = parseInt(document.getElementById("vQty").value) || 0;
+
+  if (!t1 || !v1) return toast("أدخل البُعد الأول والقيمة الأولى", "error");
+  if (qty < 0)    return toast("الكمية لا تكون سالبة", "error");
+
+  // منع التكرار مع متغيرات أخرى (غير نفسه)
+  const newKey = buildVariantKey({ type1:t1, val1:v1, type2:t2, val2:v2 });
+  const duplicate = variants.some((x, idx) => idx !== i && buildVariantKey(x) === newKey);
+  if (duplicate) return toast("هذا المتغير موجود مسبقاً", "error");
+
+  // تحديث المتغير
+  variants[i] = { type1:t1, val1:v1, type2:t2, val2:v2, qty };
+  renderVariantsMini();
+
+  // إعادة زر الإضافة لوضعه الطبيعي
+  const addBtn = document.querySelector("#modeVariant .btn-success");
+  addBtn.textContent = "➕ إضافة";
+  addBtn.onclick = () => addVariantRow();
+
+  // تفريغ الخانات
+  ["vType1","vVal1","vType2","vVal2","vQty"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+
+  toast("✅ تم تعديل المتغير");
+};
 // ════════════════════════════════════════════════════════
 //  SAVE PRODUCT
 // ════════════════════════════════════════════════════════
