@@ -764,9 +764,12 @@ input.addEventListener('focus', () => {
       if (!container) return;
       container.innerHTML = '';
       try {
-        const snap = await get(ref(db, `warehouse/${productName}`));
-        if (!snap.exists()) return;
-        const stock = snap.val().stock || {};
+   const allSnap = await get(ref(db, 'warehouse'));
+        if (!allSnap.exists()) return;
+        let stock = {};
+        for (const val of Object.values(allSnap.val())) {
+          if ((val.name || '').trim() === productName.trim()) { stock = val.stock || {}; break; }
+        }
         const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
         if (!activeKeys.length) return;
 
@@ -855,9 +858,12 @@ input.addEventListener('focus', () => {
       variantsDiv.className = 'variants-container';
       variantsDiv.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-color)';
       try {
-        const snap = await get(ref(db, `warehouse/${productName}`));
-        if (!snap.exists()) return;
-        const stock = snap.val().stock || {};
+const allSnap = await get(ref(db, 'warehouse'));
+        if (!allSnap.exists()) return;
+        let stock = {};
+        for (const val of Object.values(allSnap.val())) {
+          if ((val.name || '').trim() === productName.trim()) { stock = val.stock || {}; break; }
+        }
         const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
         if (!activeKeys.length) return;
 
@@ -936,11 +942,24 @@ input.addEventListener('focus', () => {
 }
 
     // ===== التحقق قبل الحفظ =====
-    async function validateBeforeSave() {
+async function validateBeforeSave() {
       const statusVal = document.querySelector('#status input')?.value.trim();
       const requiredStatuses = ['مثبت', 'قيد التوصيل', 'تم التسليم', 'تم استلام الراجع'];
-      if (!requiredStatuses.includes(statusVal)) return true;
 
+      // ✅ تحقق من المتغيرات دائماً عند التثبيت
+      if (statusVal === 'مثبت') {
+        const emptyVariants = Array.from(
+          document.querySelectorAll('#variantsContainer .variant-group input')
+        ).filter(inp => !inp.value.trim());
+
+        if (emptyVariants.length > 0) {
+          emptyVariants.forEach(inp => inp.classList.add('input-error'));
+          showToast('⚠️ يرجى اختيار جميع متغيرات المنتج قبل التثبيت', 'error', 3000);
+          return false;
+        }
+      }
+
+      if (!requiredStatuses.includes(statusVal)) return true;
       let valid = true;
       document.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
 
