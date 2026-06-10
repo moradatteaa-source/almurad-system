@@ -864,7 +864,7 @@ window.loadAutoReport = async function() {
 
   autoOut = []; autoReturn = []; autoErrors = [];
 
-  const outStatuses = ['مثبت','قيد التجهيز','قيد التوصيل','تم التسليم'];
+const outStatuses = ['قيد التوصيل'];
   const returnStatuses = ['تم استلام الراجع'];
   const allStatuses = [...outStatuses, ...returnStatuses];
 
@@ -883,7 +883,13 @@ window.loadAutoReport = async function() {
       Object.entries(orders).forEach(([id, order]) => {
         if (id === '_meta') return;
 
-        const dateField = order.updatedAt || order.lastStatusAt || order.createdAt || order.orderDate;
+   // ✅ نأخذ تاريخ دخول الحالة الحالية من statusHistory
+        let dateField = null;
+        if (order.statusHistory) {
+          const hist = order.statusHistory[encodeURIComponent(status)] || order.statusHistory[status];
+          if (hist?.time) dateField = hist.time;
+        }
+        if (!dateField) dateField = order.updatedAt || order.orderDate;
         if (!dateField) return;
 
         const orderDate = new Date(typeof dateField === 'number' ? dateField : dateField);
