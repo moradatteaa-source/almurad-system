@@ -501,9 +501,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   getDatabase, ref, get, query,
-  orderByChild, endAt, limitToLast, update
+  orderByChild, endAt, limitToLast, update, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-
 // ════════════════════════════════════════════════════════
 // ⚙️ Firebase Config
 // ════════════════════════════════════════════════════════
@@ -723,7 +722,62 @@ function isDanger(order) {
 function getLoggedUser() {
   return JSON.parse(localStorage.getItem("loggedInUser") || "{}").username || "system";
 }
+// ════════════════════════════════════════════════════════
+// 📦 خصم / إرجاع المخزون
+// ════════════════════════════════════════════════════════
+function getStockKey(item) {
+  if (item.variants && Object.keys(item.variants).length) {
+    return Object.entries(item.variants)
+      .map(([k, v]) => `${k} | ${v}`).join(" | ");
+  }
+  return "default";
+}
 
+async function checkStockAvailable(order) {
+  const items = order.productsDetailed || [];
+  for (const item of items) {
+    const pname = item.name;
+    if (!pname) continue;
+    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const snap = await get(ref(db, `warehouse/${pkey}`));
+    if (!snap.exists()) return { ok: false, msg: `❌ المنتج "${pname}" غير موجود بالمخزن` };
+    const p = snap.val();
+    const vkey = getStockKey(item);
+    const avail = Number(p.stock?.[vkey]);
+    if (isNaN(avail) || avail < (item.qty || 1)) {
+      return { ok: false, msg: `❌ الكمية غير كافية للمنتج "${pname}"${vkey !== "default" ? " ("+vkey+")" : ""}` };
+    }
+  }
+  return { ok: true };
+}
+
+async function deductStockForOrder(order) {
+  const items = order.productsDetailed || [];
+  for (const item of items) {
+    const pname = item.name;
+    if (!pname) continue;
+    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const vkey = getStockKey(item);
+    const qty  = item.qty || 1;
+    await runTransaction(ref(db, `warehouse/${pkey}/stock/${vkey}`), cur => Math.max(0, (cur || 0) - qty));
+    await runTransaction(ref(db, `warehouse/${pkey}/totalQty`), cur => Math.max(0, (cur || 0) - qty));
+    await update(ref(db, `warehouse/${pkey}`), { lastUpdate: new Date().toISOString() });
+  }
+}
+
+async function restoreStockForOrder(order) {
+  const items = order.productsDetailed || [];
+  for (const item of items) {
+    const pname = item.name;
+    if (!pname) continue;
+    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const vkey = getStockKey(item);
+    const qty  = item.qty || 1;
+    await runTransaction(ref(db, `warehouse/${pkey}/stock/${vkey}`), cur => (cur || 0) + qty);
+    await runTransaction(ref(db, `warehouse/${pkey}/totalQty`), cur => (cur || 0) + qty);
+    await update(ref(db, `warehouse/${pkey}`), { lastUpdate: new Date().toISOString() });
+  }
+}
 // ════════════════════════════════════════════════════════
 // 🃏 Build Card
 // ════════════════════════════════════════════════════════
@@ -1536,17 +1590,44 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
   const newStatus = document.getElementById("bulkStatus").value;
   if (!newStatus)             { showToast("⚠️ اختر حالة", "error"); return; }
   if (!S.selectedOrders.size) { showToast("⚠️ اختر طلبات", "error"); return; }
-  if (!confirm(`تغيير حالة ${S.selectedOrders.size} طلب إلى "${newStatus}"؟`)) return;
+if (!confirm(`تغيير حالة ${S.selectedOrders.size} طلب إلى "${newStatus}"؟`)) return;
 
   showLoader(true);
+
+// ── فحص المخزون مسبقاً إذا التحويل إلى "مثبت" ──
+  let skippedIds = new Set();
+  if (newStatus === "مثبت") {
+    const ordersToCheck = [];
+    for (const id of S.selectedOrders) {
+      const order = Cache.fullGet(dataPath)?.data.get(id)
+                  || Cache.pageGet(dataPath)?.data.get(id);
+      if (order && order.status !== "مثبت") ordersToCheck.push(order);
+    }
+    const problems = [];
+    for (const order of ordersToCheck) {
+      const res = await checkStockAvailable(order);
+      if (!res.ok) {
+        skippedIds.add(order.id);
+        problems.push(`#${order.id}: ${res.msg}`);
+      }
+    }
+    if (problems.length) {
+      showToast(`⚠️ تم تخطي ${problems.length} طلب لنقص المخزون:\n${problems.join("\n")}`, "warning", 6000);
+    }
+    if (skippedIds.size === S.selectedOrders.size) {
+      showLoader(false);
+      return;
+    }
+  }
+
   const now      = new Date().toISOString();
   const userName = getLoggedUser();
   const newPath  = `ordersTest/${newStatus}`;
 
   try {
     const atomicUpdate = {};
-
-    for (const id of S.selectedOrders) {
+for (const id of S.selectedOrders) {
+      if (skippedIds.has(id)) continue;
       const oldPath = `${dataPath}/${id}`;
       let order = Cache.fullGet(dataPath)?.data.get(id)
                || Cache.pageGet(dataPath)?.data.get(id)
@@ -1575,16 +1656,24 @@ document.getElementById("bulkUpdateBtn").addEventListener("click", async () => {
         statusHistory: updatedHistory
       };
 
-      atomicUpdate[`${newPath}/${id}`] = updatedOrder;
+atomicUpdate[`${newPath}/${id}`] = updatedOrder;
       if (newPath !== oldPath) atomicUpdate[oldPath] = null;
 
       Cache.moveOrder(dataPath, newPath, id, updatedOrder);
-    }
 
+      // ── خصم/إرجاع المخزون حسب الانتقال ──
+      const oldStatus = order.status;
+      if (newStatus === "مثبت" && oldStatus !== "مثبت") {
+        await deductStockForOrder(updatedOrder);
+      }
+      if (newStatus === "تم استلام الراجع" && oldStatus !== "تم استلام الراجع") {
+        await restoreStockForOrder(updatedOrder);
+      }
+    }
     await update(ref(db), atomicUpdate);
 
-    const updatedIds = new Set(S.selectedOrders);
-    showToast(`✅ تم تحديث ${updatedIds.size} طلب`, "success");
+const updatedCount = S.selectedOrders.size - skippedIds.size;
+    showToast(`✅ تم تحديث ${updatedCount} طلب`, "success");
     S.selectedOrders.clear();
 
     const fullC = Cache.fullGet(dataPath);
