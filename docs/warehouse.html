@@ -1367,10 +1367,10 @@ window.saveProduct = async function() {
   const sellPos = parseFloat(document.getElementById("fSellPos").value);
   const sellOnline = parseFloat(document.getElementById("fSellOnline").value);
 
-  if (!name) return toast("أدخل اسم المنتج", "error");
+if (!name) return toast("أدخل اسم المنتج", "error");
   if (isNaN(buyPrice) || buyPrice < 0) return toast("أدخل سعر الشراء", "error");
-  if (isNaN(sellPos) || sellPos < 0) return toast("أدخل سعر البيع الحضوري", "error");
-  if (isNaN(sellOnline) || sellOnline < 0) return toast("أدخل سعر البيع أونلاين", "error");
+  if (document.getElementById("fSellPos").value !== "" && (isNaN(sellPos) || sellPos < 0)) return toast("سعر البيع الحضوري غير صحيح", "error");
+  if (document.getElementById("fSellOnline").value !== "" && (isNaN(sellOnline) || sellOnline < 0)) return toast("سعر البيع أونلاين غير صحيح", "error");
 
   const newKey = toKey(name);
 
@@ -1418,10 +1418,10 @@ window.saveProduct = async function() {
   // الاحتفاظ بـ createdAt القديمة
   const createdAt = (editingKey && warehouseData[editingKey]?.createdAt) ? warehouseData[editingKey].createdAt : now;
 
-  await set(ref(db, "warehouse/" + newKey), {
+await set(ref(db, "warehouse/" + newKey), {
     name,
     buyPrice,
-    prices: { pos: sellPos, online: sellOnline },
+    prices: { pos: isNaN(sellPos) ? 0 : sellPos, online: isNaN(sellOnline) ? 0 : sellOnline },
     stock,
     barcodes,
     totalQty,
