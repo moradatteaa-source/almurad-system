@@ -733,15 +733,57 @@ function getStockKey(item) {
   return "default";
 }
 
+// ── helper: يجيب مفتاح المنتج الصحيح من المخزن ──
+async function findWarehouseKey(pname) {
+  // أولاً: الاسم الأصلي كما هو (المخزن يحتفظ بالفراغات)
+  const originalKey = String(pname).trim();
+  const originalSnap = await get(ref(db, `warehouse/${originalKey}`));
+  if (originalSnap.exists()) return { key: originalKey, snap: originalSnap };
+
+  // ثانياً: مع تحويل الفراغات لشرطة سفلية (احتياط)
+  const directKey = originalKey.replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+  if (directKey !== originalKey) {
+    const directSnap = await get(ref(db, `warehouse/${directKey}`));
+    if (directSnap.exists()) return { key: directKey, snap: directSnap };
+  }
+
+  // ثالثاً: بحث شامل داخل كل المخزن
+  const allSnap = await get(ref(db, `warehouse`));
+  if (allSnap.exists()) {
+    const all = allSnap.val();
+    const matchKey = Object.keys(all).find(k =>
+      all[k].name === pname ||
+      k.replace(/_/g, " ") === originalKey
+    );
+    if (matchKey) {
+      const matchSnap = await get(ref(db, `warehouse/${matchKey}`));
+      return { key: matchKey, snap: matchSnap };
+    }
+  }
+  return null;
+}
+
 async function checkStockAvailable(order) {
-  const items = order.productsDetailed || [];
+  let items = order.productsDetailed || [];
+  if (!items.length) {
+    const pname = order.productName;
+    if (!pname) return { ok: true };
+    const found = await findWarehouseKey(pname);
+    if (!found) return { ok: false, msg: `❌ المنتج "${pname}" غير موجود بالمخزن` };
+    const p = found.snap.val();
+    const qty = Number(order.totalQty || order.quantity || 1);
+    const avail = Number(p.stock?.["default"]);
+    if (isNaN(avail) || avail < qty) {
+      return { ok: false, msg: `❌ الكمية غير كافية للمنتج "${pname}"` };
+    }
+    return { ok: true };
+  }
   for (const item of items) {
     const pname = item.name;
     if (!pname) continue;
-    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
-    const snap = await get(ref(db, `warehouse/${pkey}`));
-    if (!snap.exists()) return { ok: false, msg: `❌ المنتج "${pname}" غير موجود بالمخزن` };
-    const p = snap.val();
+    const found = await findWarehouseKey(pname);
+    if (!found) return { ok: false, msg: `❌ المنتج "${pname}" غير موجود بالمخزن` };
+    const p = found.snap.val();
     const vkey = getStockKey(item);
     const avail = Number(p.stock?.[vkey]);
     if (isNaN(avail) || avail < (item.qty || 1)) {
@@ -752,30 +794,57 @@ async function checkStockAvailable(order) {
 }
 
 async function deductStockForOrder(order) {
-  const items = order.productsDetailed || [];
+  let items = order.productsDetailed || [];
+  if (!items.length && order.productName) {
+    items = [{ name: order.productName, qty: Number(order.totalQty || order.quantity || 1) }];
+  }
   for (const item of items) {
     const pname = item.name;
     if (!pname) continue;
-    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const found = await findWarehouseKey(pname);
+    if (!found) continue;
+    const pkey = found.key;
     const vkey = getStockKey(item);
     const qty  = item.qty || 1;
+
+    // ✅ حماية من الخصم المزدوج
+    const processedKey = `deduct_${order.id}_${pname}_${vkey}`.replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const alreadySnap = await get(ref(db, `warehouse/${pkey}/processedOrders/${processedKey}`));
+    if (alreadySnap.exists()) continue; // سبق خصمه
+
     await runTransaction(ref(db, `warehouse/${pkey}/stock/${vkey}`), cur => Math.max(0, (cur || 0) - qty));
     await runTransaction(ref(db, `warehouse/${pkey}/totalQty`), cur => Math.max(0, (cur || 0) - qty));
-    await update(ref(db, `warehouse/${pkey}`), { lastUpdate: new Date().toISOString() });
+    await update(ref(db, `warehouse/${pkey}`), {
+      lastUpdate: new Date().toISOString(),
+      [`processedOrders/${processedKey}`]: true
+    });
   }
 }
-
 async function restoreStockForOrder(order) {
-  const items = order.productsDetailed || [];
+  let items = order.productsDetailed || [];
+  if (!items.length && order.productName) {
+    items = [{ name: order.productName, qty: Number(order.totalQty || order.quantity || 1) }];
+  }
   for (const item of items) {
     const pname = item.name;
     if (!pname) continue;
-    const pkey = String(pname).trim().replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const found = await findWarehouseKey(pname);
+    if (!found) continue;
+    const pkey = found.key;
     const vkey = getStockKey(item);
     const qty  = item.qty || 1;
+
+    // ✅ حماية من الإرجاع المزدوج
+    const processedKey = `return_${order.id}_${pname}_${vkey}`.replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+    const alreadySnap = await get(ref(db, `warehouse/${pkey}/processedOrders/${processedKey}`));
+    if (alreadySnap.exists()) continue; // سبق إرجاعه
+
     await runTransaction(ref(db, `warehouse/${pkey}/stock/${vkey}`), cur => (cur || 0) + qty);
     await runTransaction(ref(db, `warehouse/${pkey}/totalQty`), cur => (cur || 0) + qty);
-    await update(ref(db, `warehouse/${pkey}`), { lastUpdate: new Date().toISOString() });
+    await update(ref(db, `warehouse/${pkey}`), {
+      lastUpdate: new Date().toISOString(),
+      [`processedOrders/${processedKey}`]: true
+    });
   }
 }
 // ════════════════════════════════════════════════════════
