@@ -600,8 +600,8 @@ body {
   <input type="file" id="excelFile" accept=".xlsx,.xls">
   <button class="btn btn-primary btn-sm" onclick="uploadExcel()">📤 رفع المنتجات</button>
   <button class="btn btn-dark btn-sm" onclick="exportExcel()">⬇️ تصدير Excel</button>
+  <button class="btn btn-navy btn-sm" onclick="downloadSampleExcel()">📋 تحميل نموذج</button>
 </div>
-
 <!-- ─── TOOLBAR ─── -->
 <div class="toolbar">
   <div class="search-wrap">
@@ -1825,7 +1825,21 @@ window.exportExcel = function() {
   XLSX.writeFile(wb, `مخزون-المراد-${new Date().toLocaleDateString("ar-EG")}.xlsx`);
   toast("⬇️ تم تصدير الملف بنجاح", "info");
 };
-
+// ════════════════════════════════════════════════════════
+//  تحميل نموذج Excel جاهز
+// ════════════════════════════════════════════════════════
+window.downloadSampleExcel = function() {
+  const rows = [
+    { "اسم المنتج":"تيشيرت قطن", "سعر الشراء":5000, "سعر البيع الحضوري":8000, "سعر البيع اونلاين":9000, "نوع المتغير 1":"اللون", "قيمة المتغير 1":"أحمر", "نوع المتغير 2":"القياس", "قيمة المتغير 2":"M", "الكمية":20 },
+    { "اسم المنتج":"تيشيرت قطن", "سعر الشراء":5000, "سعر البيع الحضوري":8000, "سعر البيع اونلاين":9000, "نوع المتغير 1":"اللون", "قيمة المتغير 1":"أزرق", "نوع المتغير 2":"القياس", "قيمة المتغير 2":"L", "الكمية":15 },
+    { "اسم المنتج":"حقيبة ظهر", "سعر الشراء":12000, "سعر البيع الحضوري":18000, "سعر البيع اونلاين":20000, "نوع المتغير 1":"", "قيمة المتغير 1":"", "نوع المتغير 2":"", "قيمة المتغير 2":"", "الكمية":30 }
+  ];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "نموذج");
+  XLSX.writeFile(wb, "نموذج-رفع-المنتجات.xlsx");
+  toast("⬇️ تم تحميل النموذج", "info");
+};
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
