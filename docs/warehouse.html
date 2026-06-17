@@ -1747,7 +1747,8 @@ window.uploadExcel = async function() {
   const file = document.getElementById("excelFile").files[0];
   if (!file) return toast("اختر ملف Excel أولاً", "error");
 
-  const rows = XLSX.utils.sheet_to_json(XLSX.read(await file.arrayBuffer()).Sheets[0]);
+  const wbData = XLSX.read(await file.arrayBuffer());
+  const rows = XLSX.utils.sheet_to_json(wbData.Sheets[wbData.SheetNames[0]]);
   if (!rows.length) return toast("الملف فارغ أو غير صحيح", "error");
 
   const grouped = {};
