@@ -1128,6 +1128,9 @@ const mainQty = parseInt(document.getElementById("quantity").value) || "";
       const strictStatuses = ["مثبت", "قيد التوصيل", "تم التسليم"];
 
       if (strictStatuses.includes(status)) {
+        if (!selectedSource) {
+  errors.push("❌ يرجى اختيار مصدر الطلب");
+}
         if (!phone1) {
           errors.push("❌ رقم الهاتف مطلوب");
         } else {
@@ -1340,10 +1343,9 @@ async function deductStockForOrder(productsDetailed) {
           updatedBy: userName,
           createdAt: Date.now()
         };
-
-        if (status === "مثبت" || status === "رفض") {
-          order.fixedBy = userName;
-        }
+if (status === "مثبت" || status === "بانتظار البضاعة") {
+  order.fixedBy = userName;
+}
 
         // 🔢 إنشاء رقم طلب متسلسل
         const counterRef = ref(db, "testOrderCounter");

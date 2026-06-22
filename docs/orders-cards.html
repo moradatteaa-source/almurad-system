@@ -581,7 +581,7 @@ const SOURCE_META = {
   "أخرى":     { icon: "🔹", color: "linear-gradient(135deg,#95a5a6,#7a8694)" }
 };
 function getSourceBadge(source) {
-  if (!source || source === "غير محدد") return "";
+  if (!source || source === "غير محدد" || source === "كوكل شيت") return "";
   const m = SOURCE_META[source] || SOURCE_META["أخرى"];
   return `<div class="card-source" style="background:${m.color}">${m.icon} ${source}</div>`;
 }
@@ -1758,15 +1758,16 @@ for (const id of S.selectedOrders) {
         [encodeURIComponent(newStatus)]: { time: now, by: userName }
       };
 
-      const updatedOrder = {
-        ...order,
-        id,
-        status: newStatus,
-        updatedAt: now,
-        updatedBy: userName,
-        enterIndex: newPath !== dataPath ? Date.now() : (order.enterIndex || Date.now()),
-        statusHistory: updatedHistory
-      };
+  const updatedOrder = {
+  ...order,
+  id,
+  status: newStatus,
+  updatedAt: now,
+  updatedBy: userName,
+  enterIndex: newPath !== dataPath ? Date.now() : (order.enterIndex || Date.now()),
+  statusHistory: updatedHistory,
+ fixedBy: order.fixedBy || (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? userName : undefined)
+};
 
 atomicUpdate[`${newPath}/${id}`] = updatedOrder;
       if (newPath !== oldPath) atomicUpdate[oldPath] = null;

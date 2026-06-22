@@ -969,6 +969,21 @@ async function validateBeforeSave() {
       }
 
       if (!document.getElementById('code').value.trim()) markError(document.getElementById('code'), '⚠️ يرجى كتابة الكود');
+      const selectedSource = document.querySelector('#sourceButtons .source-btn.active')?.dataset?.value || '';
+if (!selectedSource) {
+  const sourceContainer = document.getElementById('sourceButtons');
+  if (sourceContainer) {
+    sourceContainer.style.border = '2px solid var(--error)';
+    sourceContainer.style.borderRadius = '10px';
+    sourceContainer.style.padding = '8px';
+    setTimeout(() => {
+      sourceContainer.style.border = '';
+      sourceContainer.style.padding = '';
+    }, 3000);
+  }
+  showToast('⚠️ يرجى اختيار مصدر الطلب', 'error');
+  valid = false;
+}
 const normalizedPhone = normalizeIraqiPhone(document.getElementById('phone1').value);
       if (!normalizedPhone || normalizedPhone.length !== 11) markError(document.getElementById('phone1'), '⚠️ رقم الهاتف غير صحيح'); 
       const phone2Val = document.getElementById('phone2').value.trim();
@@ -1171,8 +1186,9 @@ area: selectedArea,
           statusHistory: updatedHistory,
           updatedBy: userName,
           updatedAt: timeNow,
-        enterIndex: Date.now(),
-          ...(newStatus === 'مثبت' ? { fixedBy: userName } : (state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : {}))
+   enterIndex: Date.now(),
+        source: document.querySelector('#sourceButtons .source-btn.active')?.dataset?.value || state.orderData?.source || '',
+        fixedBy: state.orderData?.fixedBy || (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? userName : undefined)
         };
 
         const oldPath = state.currentPath;
