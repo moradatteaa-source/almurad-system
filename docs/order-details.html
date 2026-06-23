@@ -1188,7 +1188,7 @@ area: selectedArea,
           updatedAt: timeNow,
    enterIndex: Date.now(),
         source: document.querySelector('#sourceButtons .source-btn.active')?.dataset?.value || state.orderData?.source || '',
-        fixedBy: state.orderData?.fixedBy || (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? userName : undefined)
+    ...(state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {}))
         };
 
         const oldPath = state.currentPath;
