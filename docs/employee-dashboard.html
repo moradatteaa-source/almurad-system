@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة أداء الإعلانات — المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0f0c29;
+  --ink2:   #1a1545;
+  --ink3:   #252060;
+  --gold:   #f5b942;
+  --gold2:  #e8a020;
+  --green:  #22c55e;
+  --green2: #16a34a;
+  --red:    #ef4444;
+  --blue:   #38bdf8;
+  --purple: #a78bfa;
+  --orange: #fb923c;
+  --bg:     #f4f3f8;
+  --card:   #ffffff;
+  --border: #e4e1f0;
+  --text:   #1e1b4b;
+  --text2:  #6b7280;
+  --text3:  #9ca3af;
+  --shadow: 0 2px 16px rgba(15,12,41,0.08);
+  --shadow2:0 8px 40px rgba(15,12,41,0.16);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ═══ HEADER ═══ */
+#header{
+  background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 60%,#1e1060 100%);
+  color:white;height:68px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;position:sticky;top:0;z-index:900;
+  box-shadow:0 4px 32px rgba(0,0,0,0.45);
+  border-bottom:1px solid rgba(245,185,66,0.15);
+}
+.brand{display:flex;align-items:center;gap:14px;}
+.brand-icon{
+  width:42px;height:42px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:0 4px 16px rgba(245,185,66,0.45);
+}
+.brand-name{font-size:18px;font-weight:900;letter-spacing:-.2px;}
+.brand-sub{font-size:11px;opacity:.55;font-weight:400;}
+.hpills{display:flex;gap:8px;align-items:center;}
+.hpill{
+  background:rgba(245,185,66,0.12);
+  border:1px solid rgba(245,185,66,0.22);
+  border-radius:8px;padding:5px 14px;
+  font-size:12px;font-weight:700;color:var(--gold);
+}
+
+/* ═══ FILTERS BAR ═══ */
+#filtersBar{
+  background:white;border-bottom:2px solid var(--border);
+  padding:14px 28px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;
+  position:sticky;top:68px;z-index:800;
+  box-shadow:0 3px 18px rgba(15,12,41,0.07);
+}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;}
+.fi{
+  padding:8px 13px;border:1.5px solid var(--border);border-radius:9px;
+  font-size:13px;font-family:'Tajawal',sans-serif;
+  background:var(--bg);outline:none;font-weight:600;
+  transition:all .2s;min-width:120px;color:var(--text);
+}
+.fi:focus{border-color:var(--gold);background:white;box-shadow:0 0 0 3px rgba(245,185,66,.12);}
+
+/* ═══ DROPDOWN ═══ */
+.ddw{position:relative;}
+.ddb{
+  padding:8px 14px;border:1.5px solid var(--border);border-radius:9px;
+  font-size:13px;font-family:'Tajawal',sans-serif;
+  background:var(--bg);cursor:pointer;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap;
+}
+.ddb:hover{border-color:var(--gold);background:white;}
+.ddb.on{border-color:var(--gold);background:#fffbeb;color:var(--gold2);}
+.ddp{
+  display:none;position:absolute;top:calc(100% + 6px);right:0;
+  background:white;border:1px solid var(--border);border-radius:13px;
+  padding:13px;min-width:200px;max-height:270px;overflow-y:auto;
+  box-shadow:var(--shadow2);z-index:9999;
+}
+.ddw:hover .ddp{display:block;}
+.ddp label{
+  display:flex;align-items:center;gap:8px;padding:6px 9px;
+  border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;
+  transition:background .12s;
+}
+.ddp label:hover{background:#fffbeb;}
+.ddp label input[type=checkbox]{accent-color:var(--gold2);width:15px;height:15px;}
+.ddsep{height:1px;background:var(--border);margin:7px 0;}
+.ddsr{
+  width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:7px;
+  font-size:12px;font-family:'Tajawal',sans-serif;margin-bottom:9px;outline:none;
+}
+.ddsr:focus{border-color:var(--gold);}
+
+/* ═══ TIME QUICK FILTERS ═══ */
+.time-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;}
+.tpill{
+  padding:8px 14px;border:1.5px solid var(--border);border-radius:9px;
+  font-size:12px;font-family:'Tajawal',sans-serif;font-weight:700;
+  background:var(--bg);cursor:pointer;transition:all .2s;color:var(--text2);
+}
+.tpill:hover{border-color:var(--gold);color:var(--gold2);}
+.tpill.active{background:var(--gold);border-color:var(--gold2);color:white;box-shadow:0 3px 12px rgba(245,185,66,.35);}
+
+/* ═══ BUTTONS ═══ */
+.btn{
+  padding:9px 18px;border:none;border-radius:9px;
+  font-size:13px;font-family:'Tajawal',sans-serif;font-weight:800;
+  cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;
+  white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--ink);box-shadow:0 4px 14px rgba(245,185,66,.4);}
+.btn-ink{background:linear-gradient(135deg,var(--ink),var(--ink2));color:white;}
+.btn-green{background:linear-gradient(135deg,var(--green),var(--green2));color:white;}
+.btn-red{background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+
+/* ═══ MAIN ═══ */
+main{padding:24px 28px;max-width:1440px;margin:0 auto;}
+
+/* ═══ STAT CARDS ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:22px;}
+.sc{
+  background:white;border-radius:15px;padding:17px 19px;
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;
+}
+.sc:hover{transform:translateY(-3px);box-shadow:var(--shadow2);}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 15px 15px;}
+.sc-gold::after{background:linear-gradient(90deg,var(--gold),#fde68a);}
+.sc-green::after{background:linear-gradient(90deg,var(--green),#86efac);}
+.sc-red::after{background:linear-gradient(90deg,var(--red),#fca5a5);}
+.sc-blue::after{background:linear-gradient(90deg,var(--blue),#7dd3fc);}
+.sc-purple::after{background:linear-gradient(90deg,var(--purple),#c4b5fd);}
+.sc-ink::after{background:linear-gradient(90deg,var(--ink3),#4338ca);}
+.sc-orange::after{background:linear-gradient(90deg,var(--orange),#fdba74);}
+
+.sc-emoji{font-size:20px;margin-bottom:9px;}
+.sc-val{font-size:21px;font-weight:900;color:var(--ink);margin-bottom:2px;line-height:1;}
+.sc-lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.2px;}
+.sc-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* ═══ TABLE SECTION ═══ */
+.tbl-section{background:white;border-radius:17px;box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden;margin-bottom:24px;}
+.tbl-head-bar{
+  padding:17px 22px;display:flex;justify-content:space-between;align-items:center;
+  border-bottom:2px solid var(--bg);background:white;
+}
+.tbl-title{font-size:15px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:9px;}
+.tbl-wrap{overflow-x:auto;max-height:580px;overflow-y:auto;}
+
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{
+  background:linear-gradient(135deg,var(--ink),var(--ink2));
+  color:white;padding:12px 13px;text-align:center;
+  font-weight:700;font-size:11.5px;letter-spacing:.3px;
+  position:sticky;top:0;z-index:10;white-space:nowrap;
+}
+thead th:first-child{text-align:right;padding-right:18px;}
+tbody tr{border-bottom:1px solid #f1f0f7;transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#fafaf8;}
+tbody td{padding:11px 13px;text-align:center;vertical-align:middle;}
+tbody td:first-child{text-align:right;padding-right:18px;font-weight:700;}
+tfoot td{
+  padding:12px 13px;text-align:center;font-weight:800;font-size:13px;
+  background:#f8f7ff;border-top:2px solid var(--border);
+}
+tfoot td:first-child{text-align:right;padding-right:18px;}
+
+.badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:800;}
+.bg-gold{background:#fef9c3;color:#854d0e;}
+.bg-green{background:#dcfce7;color:#166534;}
+.bg-blue{background:#dbeafe;color:#1e40af;}
+.bg-purple{background:#ede9fe;color:#4c1d95;}
+.bg-red{background:#fee2e2;color:#991b1b;}
+.bg-gray{background:#f1f5f9;color:#475569;}
+.bg-orange{background:#ffedd5;color:#9a3412;}
+
+/* Rating text */
+.rtxt-excellent{color:#854d0e;font-weight:800;}
+.rtxt-great{color:#166534;font-weight:800;}
+.rtxt-good{color:#1e40af;font-weight:800;}
+.rtxt-average{color:#4c1d95;font-weight:800;}
+.rtxt-weak{color:#991b1b;font-weight:800;}
+.rtxt-nodata{color:var(--text3);font-weight:700;}
+
+/* Cheer text */
+.cheer-cell{font-size:12px;font-weight:700;color:var(--text);max-width:180px;line-height:1.5;text-align:right;}
+
+/* Ad input */
+.ad-inp{
+  width:75px;border:1.5px solid var(--border);border-radius:7px;
+  padding:5px 7px;font-size:12px;font-family:'Tajawal',sans-serif;
+  text-align:center;outline:none;transition:border-color .2s;font-weight:700;
+  background:var(--bg);
+}
+.ad-inp:focus{border-color:var(--gold);background:white;}
+
+/* ═══ STATUS BADGE ROW ═══ */
+.status-badge{
+  display:inline-block;padding:4px 12px;border-radius:20px;
+  font-size:11px;font-weight:800;margin:2px;
+}
+
+/* ═══ LOADING ═══ */
+#lo{
+  position:fixed;inset:0;
+  background:rgba(15,12,41,.85);backdrop-filter:blur(8px);
+  z-index:9999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;color:white;
+}
+.ls{
+  width:50px;height:50px;
+  border:4px solid rgba(245,185,66,.2);border-top-color:var(--gold);
+  border-radius:50%;animation:spin .9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.lt{font-size:15px;font-weight:700;opacity:.85;}
+
+/* ═══ TOAST ═══ */
+.toast{
+  position:fixed;bottom:26px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  padding:12px 30px;border-radius:14px;
+  font-size:14px;font-weight:800;color:white;
+  z-index:9999;opacity:0;transition:all .3s;pointer-events:none;
+  box-shadow:var(--shadow2);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.s{background:var(--green);}
+.toast.e{background:var(--red);}
+.toast.i{background:var(--ink2);}
+
+/* ═══ EMPTY ═══ */
+.empty{padding:65px;text-align:center;color:var(--text3);}
+.empty .ei{font-size:50px;margin-bottom:14px;}
+.empty p{font-size:14px;font-weight:500;}
+
+/* ═══ PDF TEMPLATE (hidden) ═══ */
+#pdfTemplate{display:none;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  #filtersBar{padding:12px 14px;}
+  main{padding:14px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="lo">
+  <div class="ls"></div>
+  <div class="lt">يا هلا... جاري تجهيز بياناتك 🌟</div>
+</div>
+
+<div id="toastEl" class="toast"></div>
+
+<!-- ═══ DEBUG MODAL ═══ -->
+<div id="debugModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:18px;padding:28px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;font-family:'Tajawal',sans-serif;direction:rtl;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:900;color:#0f0c29">🔍 تشخيص statusHistory</div>
+      <button onclick="document.getElementById('debugModal').style.display='none'" style="border:none;background:#f1f5f9;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:14px;font-weight:700">✕ إغلاق</button>
+    </div>
+    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:5px;flex:1">
+        <label style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">رقم الطلب (ID)</label>
+        <input id="debugOrderId" type="text" placeholder="مثال: 832" style="padding:9px 13px;border:1.5px solid #e4e1f0;border-radius:9px;font-size:14px;font-family:'Tajawal',sans-serif;outline:none;min-width:200px">
+      </div>
+      <button onclick="runDebug()" style="padding:9px 18px;background:linear-gradient(135deg,#f5b942,#e8a020);border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;color:#0f0c29">🔎 فحص</button>
+    </div>
+    <div id="debugResult" style="font-size:13px;line-height:1.8"></div>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<div id="header">
+  <div class="brand">
+    <div class="brand-icon">📣</div>
+    <div>
+      <div class="brand-name">لوحة أداء الإعلانات — المراد</div>
+      <div class="brand-sub">نظام متابعة الموظفين والمعلنين</div>
+    </div>
+  </div>
+  <div class="hpills">
+    <div class="hpill" id="hCount">0 طلب</div>
+    <button onclick="document.getElementById('debugModal').style.display='flex'" style="background:rgba(245,185,66,.15);border:1px solid rgba(245,185,66,.3);border-radius:8px;padding:5px 13px;font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;font-family:'Tajawal',sans-serif">🔍 تشخيص</button>
+    <div class="hpill" id="hDate"></div>
+  </div>
+</div>
+
+<!-- ═══ FILTERS ═══ -->
+<div id="filtersBar">
+
+  <!-- المعلنين -->
+  <div class="fg">
+    <div class="fl">المعلنين</div>
+    <div class="ddw">
+      <button class="ddb" id="btnAdv">👤 الكل <span id="cntAdv"></span></button>
+      <div class="ddp">
+        <label style="font-weight:800;color:var(--gold2)">
+          <input type="checkbox" id="allAdv"> تحديد الكل
+        </label>
+        <div class="ddsep"></div>
+        <div id="lstAdv"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- الحالات -->
+  <div class="fg">
+    <div class="fl">حالة الطلبات</div>
+    <div class="ddw">
+      <button class="ddb" id="btnSt">🧾 الكل <span id="cntSt"></span></button>
+      <div class="ddp">
+        <label style="font-weight:800;color:var(--gold2)">
+          <input type="checkbox" id="allSt"> تحديد الكل
+        </label>
+        <div class="ddsep"></div>
+        <div id="lstSt"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- المنتجات -->
+  <div class="fg">
+    <div class="fl">المنتجات</div>
+    <div class="ddw">
+      <button class="ddb" id="btnPrd">📦 الكل <span id="cntPrd"></span></button>
+      <div class="ddp">
+        <input type="text" class="ddsr" id="prodSrch" placeholder="🔍 بحث...">
+        <label style="font-weight:800;color:var(--gold2)">
+          <input type="checkbox" id="allPrd"> تحديد الكل
+        </label>
+        <div class="ddsep"></div>
+        <div id="lstPrd"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- المصدر -->
+  <div class="fg">
+    <div class="fl">المصدر</div>
+    <div class="ddw">
+      <button class="ddb" id="btnSrc">📡 الكل <span id="cntSrc"></span></button>
+      <div class="ddp">
+        <label style="font-weight:800;color:var(--gold2)">
+          <input type="checkbox" id="allSrc"> تحديد الكل
+        </label>
+        <div class="ddsep"></div>
+        <div id="lstSrc"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- وقت مخصص -->
+  <div class="fg">
+    <div class="fl">من تاريخ</div>
+    <input type="date" class="fi" id="fromDate">
+  </div>
+  <div class="fg">
+    <div class="fl">إلى تاريخ</div>
+    <input type="date" class="fi" id="toDate">
+  </div>
+
+  <!-- فلاتر سريعة للوقت -->
+  <div class="fg">
+    <div class="fl">فلتر سريع</div>
+    <div class="time-pills">
+      <button class="tpill" onclick="setTime('today')">اليوم</button>
+      <button class="tpill" onclick="setTime('yesterday')">أمس</button>
+      <button class="tpill" onclick="setTime('week')">هذا الأسبوع</button>
+      <button class="tpill" onclick="setTime('month')">هذا الشهر</button>
+      <button class="tpill" onclick="setTime('all')">الكل</button>
+    </div>
+  </div>
+
+  <!-- الإعدادات المالية -->
+  <div class="fg">
+    <div class="fl">كلفة التوصيل/طلب (د.ع)</div>
+    <input type="number" class="fi" id="delCost" value="3500" style="min-width:130px">
+  </div>
+  <div class="fg">
+    <div class="fl">سعر الصرف (د.ع/$)</div>
+    <input type="number" class="fi" id="exRate" value="1400" style="min-width:120px">
+  </div>
+
+  <div class="fg">
+    <div class="fl">نسبة الراجع التقديرية %</div>
+    <input type="number" class="fi" id="retRate" value="20" min="0" max="100" style="min-width:110px">
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+    <button class="btn btn-gold" onclick="applyFilter()">⚡ عرض النتائج</button>
+    <button class="btn btn-ink btn-sm" onclick="exportPDF()">📄 تصدير PDF</button>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<main>
+  <!-- STAT CARDS -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="sc sc-ink">
+      <div class="sc-emoji">📦</div>
+      <div class="sc-val" id="sTotal">—</div>
+      <div class="sc-lbl">إجمالي الطلبات</div>
+    </div>
+    <div class="sc sc-blue">
+      <div class="sc-emoji">🔢</div>
+      <div class="sc-val" id="sQty">—</div>
+      <div class="sc-lbl">الكمية الكلية</div>
+    </div>
+    <div class="sc sc-green">
+      <div class="sc-emoji">✅</div>
+      <div class="sc-val" id="sDeliv">—</div>
+      <div class="sc-lbl">تم التسليم</div>
+      <div class="sc-sub" id="sDelivPct"></div>
+    </div>
+    <div class="sc sc-red">
+      <div class="sc-emoji">↩️</div>
+      <div class="sc-val" id="sRet">—</div>
+      <div class="sc-lbl">الراجع</div>
+      <div class="sc-sub" id="sRetPct"></div>
+    </div>
+    <div class="sc sc-gold">
+      <div class="sc-emoji">💰</div>
+      <div class="sc-val" id="sSales">—</div>
+      <div class="sc-lbl">المبيعات (د.ع)</div>
+    </div>
+    <div class="sc sc-purple">
+      <div class="sc-emoji">🏪</div>
+      <div class="sc-val" id="sBuy">—</div>
+      <div class="sc-lbl">كلفة الشراء</div>
+    </div>
+    <div class="sc sc-green">
+      <div class="sc-emoji">📡</div>
+      <div class="sc-val" id="sSrcTop" style="font-size:13px">—</div>
+      <div class="sc-lbl">أعلى مصدر</div>
+      <div class="sc-sub" id="sSrcTopCount"></div>
+    </div>
+    <div class="sc sc-orange">
+      <div class="sc-emoji">🚚</div>
+      <div class="sc-val" id="sDel">—</div>
+      <div class="sc-lbl">كلفة التوصيل</div>
+    </div>
+    <div class="sc sc-blue">
+      <div class="sc-emoji">📣</div>
+      <div class="sc-val" id="sAd">—</div>
+      <div class="sc-lbl">كلفة الإعلان</div>
+    </div>
+
+    <div class="sc sc-gold">
+      <div class="sc-emoji">🏆</div>
+      <div class="sc-val" id="sBest" style="font-size:13px">—</div>
+      <div class="sc-lbl">أفضل منتج</div>
+    </div>
+  </div>
+
+  <!-- ESTIMATE NOTICE -->
+  <div id="estimateNotice" style="display:none;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #f59e0b;border-radius:13px;padding:13px 18px;margin-bottom:18px;display:none;align-items:center;gap:12px;">
+    <span style="font-size:22px">⚠️</span>
+    <div>
+      <div style="font-size:13px;font-weight:800;color:#92400e">وضع التقدير التقريبي مفعّل</div>
+      <div style="font-size:12px;color:#b45309;margin-top:3px" id="estimateDesc"></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tbl-section">
+    <div class="tbl-head-bar">
+      <div class="tbl-title">📊 جدول المنتجات التفصيلي</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">💡 أدخل كلفة الإعلان لكل منتج</span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الطلبات</th>
+            <th>القطع</th>
+            <th>✅ مسلّم</th>
+            <th>↩️ راجع</th>
+            <th>💰 المبيعات</th>
+            <th>🏪 الشراء</th>
+            <th>🚚 التوصيل</th>
+            <th>📣 إعلان ($)</th>
+            <th>📣 إعلان (د.ع)</th>
+            <th>نسبة الربح</th>
+            <th>🏅 التقييم</th>
+            <th>💬 التشجيع</th>
+          </tr>
+        </thead>
+        <tbody id="tBody">
+          <tr><td colspan="13"><div class="empty"><div class="ei">⚡</div><p>اضغط "عرض النتائج" لتحميل البيانات</p></div></td></tr>
+        </tbody>
+        <tfoot id="tFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══ PDF TEMPLATE ═══ -->
+<div id="pdfTemplate"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let allOrders = {}, warehouse = {}, productAds = {};
+let lastStats = null; // for PDF
+
+// ──────────────── UTILS ────────────────
+const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '0%';
+
+function toast(msg, type='i') {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.className = 'toast show '+type;
+  clearTimeout(t._t); t._t = setTimeout(() => t.className='toast', 2800);
+}
+
+// ──────────────── RATING SYSTEM ────────────────
+// profitMarginPct = netProfit / sales * 100
+function getRating(profitIQD, salesIQD) {
+  if (salesIQD <= 0) return 'nodata';
+  const margin = (profitIQD / salesIQD) * 100;
+  if (margin < 0)    return 'weak';
+  if (margin < 10)   return 'average';
+  if (margin < 20)   return 'good';
+  if (margin < 35)   return 'great';
+  return 'excellent';
+}
+
+const RATING = {
+  excellent: {
+    label:'ممتاز 🏆',
+    cls:'bg-gold', tcls:'rtxt-excellent',
+    cheer:'🔥 عاشت إيدك يا بطل! الإعلان هذا ذهب خالص!'
+  },
+  great: {
+    label:'جيد جداً ⭐',
+    cls:'bg-green', tcls:'rtxt-great',
+    cheer:'💪 شغل احترافي! استمر وزيد الميزانية!'
+  },
+  good: {
+    label:'جيد 👍',
+    cls:'bg-blue', tcls:'rtxt-good',
+    cheer:'👏 أحسنت! خطوة صغيرة للأمام وتصير ممتاز!'
+  },
+  average: {
+    label:'متوسط 📊',
+    cls:'bg-purple', tcls:'rtxt-average',
+    cheer:'💡 راجع جمهورك والمحتوى — الفرق بسيط!'
+  },
+  weak: {
+    label:'ضعيف ⚠️',
+    cls:'bg-red', tcls:'rtxt-weak',
+    cheer:'🛑 أوقف مؤقتاً وراجع الاستراتيجية — لا تيأس!'
+  },
+  nodata: {
+    label:'لم يُحسب',
+    cls:'bg-gray', tcls:'rtxt-nodata',
+    cheer:'✍️ أدخل كلفة الإعلان لترى نتيجتك'
+  }
+};
+
+// ──────────────── STATUS CONFIG ────────────────
+const STATUS_CFG = {
+  'تم التسليم':       { cls:'bg-green',  is_delivered:true },
+  'مثبت':             { cls:'bg-blue' },
+  'قيد التوصيل':      { cls:'bg-blue' },
+  'قيد التجهيز':      { cls:'bg-purple' },
+  'قيد المعالجة':     { cls:'bg-purple' },
+  'راجع':             { cls:'bg-red',    is_returned:true },
+  'تم استلام الراجع': { cls:'bg-red',    is_returned:true },
+  'رفض':              { cls:'bg-red' },
+  'جديد':             { cls:'bg-gray' },
+  'new':              { cls:'bg-gray' },
+  'بانتظار البضاعة':  { cls:'bg-orange' },
+};
+const statusClass = st => (STATUS_CFG[st]?.cls || 'bg-gray');
+const isDelivered  = st => STATUS_CFG[st]?.is_delivered || false;
+const isReturned   = st => STATUS_CFG[st]?.is_returned  || false;
+
+// ──────────────── DATE HEADER ────────────────
+document.getElementById('hDate').textContent =
+  new Date().toLocaleDateString('ar-EG',{weekday:'short',year:'numeric',month:'long',day:'numeric'});
+
+// ──────────────── LOAD DATA ────────────────
+async function loadData() {
+  try {
+    const [oSnap, wSnap] = await Promise.all([
+      get(ref(db,'ordersTest')),
+      get(ref(db,'warehouse'))
+    ]);
+    allOrders = oSnap.exists() ? oSnap.val() : {};
+    warehouse = wSnap.exists() ? wSnap.val() : {};
+    buildFilters();
+    toast('البيانات جاهزة! 🎉','s');
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في تحميل البيانات','e');
+  } finally {
+    document.getElementById('lo').style.display='none';
+  }
+}
+
+// ──────────────── BUILD FILTERS ────────────────
+function buildFilters() {
+  const advs=new Set(), prods=new Set(), stats=new Set(Object.keys(allOrders));
+  for (const st in allOrders)
+    for (const id in allOrders[st]) {
+      const o = allOrders[st][id];
+      if (o.advertiser) advs.add(o.advertiser);
+      (o.productName||'').split('،').map(s=>s.trim()).filter(Boolean).forEach(p=>prods.add(p));
+    }
+  const srcs=new Set();
+  for (const st in allOrders)
+    for (const id in allOrders[st]) {
+      const o = allOrders[st][id];
+      const src = (o.source||o.orderSource||o.platform||'').trim();
+      if(src) srcs.add(src);
+    }
+  buildList('lstAdv',[...advs].sort(),'allAdv');
+  buildList('lstSt',[...stats].sort(),'allSt');
+  buildList('lstPrd',[...prods].sort(),'allPrd');
+  buildList('lstSrc',[...srcs].sort(),'allSrc');
+  document.getElementById('prodSrch').addEventListener('input',e=>{
+    const q=e.target.value.toLowerCase();
+    document.querySelectorAll('#lstPrd label').forEach(l=>{
+      l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';
+    });
+  });
+}
+
+function buildList(cid, items, allId) {
+  const c=document.getElementById(cid);
+  c.innerHTML=items.map(i=>`<label><input type="checkbox" value="${i}"> ${i}</label>`).join('');
+  document.getElementById(allId).addEventListener('change',e=>{
+    c.querySelectorAll('input').forEach(x=>x.checked=e.target.checked);
+  });
+}
+
+function getSel(listId) {
+  return [...document.querySelectorAll(`#${listId} input:checked`)].map(c=>c.value);
+}
+
+function updBtn(btnId, sel, cntId) {
+  const btn=document.getElementById(btnId), cnt=document.getElementById(cntId);
+  if(sel.length){ btn.classList.add('on'); cnt.textContent=` (${sel.length})`; }
+  else { btn.classList.remove('on'); cnt.textContent=''; }
+}
+
+// ──────────────── QUICK TIME ────────────────
+window.setTime = function(range) {
+  document.querySelectorAll('.tpill').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  const now=new Date(), fromEl=document.getElementById('fromDate'), toEl=document.getElementById('toDate');
+  const fmt=d=>d.toISOString().split('T')[0];
+  if(range==='today'){
+    fromEl.value=fmt(now); toEl.value=fmt(now);
+  } else if(range==='yesterday'){
+    const y=new Date(now); y.setDate(y.getDate()-1);
+    fromEl.value=fmt(y); toEl.value=fmt(y);
+  } else if(range==='week'){
+    const w=new Date(now); w.setDate(w.getDate()-6);
+    fromEl.value=fmt(w); toEl.value=fmt(now);
+  } else if(range==='month'){
+    const m=new Date(now); m.setDate(1);
+    fromEl.value=fmt(m); toEl.value=fmt(now);
+  } else {
+    fromEl.value=''; toEl.value='';
+  }
+};
+
+// ──────────────── APPLY FILTER ────────────────
+window.applyFilter = function() {
+  const selAdv=getSel('lstAdv'), selSt=getSel('lstSt'), selPrd=getSel('lstPrd'), selSrc=getSel('lstSrc');
+  const fromDate=document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
+  const toDate=document.getElementById('toDate').value   ? new Date(document.getElementById('toDate').value+'T23:59:59') : null;
+  const delCost=Number(document.getElementById('delCost').value)||3500;
+  const exRate=Number(document.getElementById('exRate').value)||1400;
+
+  updBtn('btnAdv',selAdv,'cntAdv');
+  updBtn('btnSt',selSt,'cntSt');
+  updBtn('btnPrd',selPrd,'cntPrd');
+  updBtn('btnSrc',selSrc,'cntSrc');
+
+  const retRate=Number(document.getElementById('retRate').value)||0;
+
+  const PS={};
+  const seenOrders=new Set();
+  let totQty=0,totDeliv=0,totRet=0,totSales=0,totBuy=0;
+
+  for(const status in allOrders){
+    if(selSt.length && !selSt.includes(status)) continue;
+    const isDel=isDelivered(status), isRet=isReturned(status);
+
+    for(const id in allOrders[status]){
+      const o=allOrders[status][id];
+      if(selAdv.length && !selAdv.includes(o.advertiser||'')) continue;
+      // فلتر المصدر
+      const orderSrc=(o.source||o.orderSource||o.platform||'').trim();
+      if(selSrc.length && !selSrc.includes(orderSrc)) continue;
+
+      if(fromDate||toDate){
+        // ✅ نفس منطق الجرد اليومي: تاريخ دخول الحالة من statusHistory أولاً
+        let raw = null;
+        if(o.statusHistory){
+          const hist = o.statusHistory[encodeURIComponent(status)] || o.statusHistory[status];
+          if(hist && hist.time) raw = hist.time;
+        }
+        if(!raw) raw = o.updatedAt || o.orderDate || o.createdAt || null;
+        if(raw){
+          const d = typeof raw === 'number' ? new Date(raw) : new Date(raw);
+          if(!isNaN(d)){
+            if(fromDate && d < fromDate) continue;
+            if(toDate   && d > toDate)   continue;
+          }
+        } else { continue; }
+      }
+
+      const orderProds=(o.productName||'').split('،').map(s=>s.trim()).filter(Boolean);
+      const matchedProds=selPrd.length ? orderProds.filter(p=>selPrd.includes(p)) : orderProds;
+      if(matchedProds.length===0) continue;
+
+      if(!seenOrders.has(id)){
+        seenOrders.add(id);
+        if(isDel) totDeliv++;
+        if(isRet) totRet++;
+      }
+
+      matchedProds.forEach(p=>{
+        const detail=(o.productsDetailed||[]).find(d=>d.name===p);
+        const qty=Number(detail?.qty||detail?.quantity||1);
+        const sellP=Number(detail?.price||0);
+        const wKey=p.replace(/\s+/g,'_');
+        const buyP=Number(warehouse[wKey]?.buyPrice||warehouse[p]?.buyPrice||0);
+
+        totQty+=qty;
+        totBuy+=buyP*qty;
+
+        if(!PS[p]) PS[p]={ids:new Set(),qty:0,sales:0,buy:0,deliv:0,ret:0,rawSales:0,statusMap:{},srcMap:{}};
+        PS[p].ids.add(id);
+        PS[p].qty+=qty;
+        PS[p].statusMap[status]=(PS[p].statusMap[status]||0)+1;
+        if(orderSrc) PS[p].srcMap[orderSrc]=(PS[p].srcMap[orderSrc]||0)+1;
+
+        // ── حساب المبيعات لكل الحالات (تقديري) ──
+        // للمسلّمة فعلاً: نحسب المبيعات الحقيقية
+        // لباقي الحالات: نحسب المبيعات المتوقعة بعد خصم نسبة الراجع
+        if(isDel){
+          PS[p].sales+=sellP*qty;
+          PS[p].rawSales+=sellP*qty;
+          PS[p].deliv+=qty;
+          totSales+=sellP*qty;
+        } else if(!isRet){
+          // طلبات لسه ما تسلّمت (قيد التوصيل، مثبت، الخ) — حسابها تقديري
+          const estSales=sellP*qty*(1-(retRate/100));
+          PS[p].sales+=estSales;
+          PS[p].rawSales+=sellP*qty;
+          PS[p].deliv+=qty*(1-(retRate/100)); // تقديري
+          totSales+=estSales;
+        }
+        if(isRet) PS[p].ret+=qty;
+        PS[p].buy+=buyP*qty;
+      });
+    }
+  }
+
+  const totOrders=seenOrders.size;
+
+  // هل في حالات غير مسلّمة؟ لتحديد وضع التقدير
+  const hasNonDelivered = selSt.length===0 || selSt.some(s=>!isDelivered(s)&&!isReturned(s));
+  const isEstimateMode = hasNonDelivered && retRate>0;
+
+  const totDel=totOrders*delCost;
+  const totAd=Object.keys(PS).reduce((s,p)=>s+(productAds[p]||0)*exRate,0);
+  const totProfit=totSales-totBuy-totDel-totAd;
+  const totMargin=totSales>0?(totProfit/totSales*100).toFixed(1):0;
+
+  // ── بانر التقدير ──
+  const notice=document.getElementById('estimateNotice');
+  if(isEstimateMode){
+    notice.style.display='flex';
+    document.getElementById('estimateDesc').textContent=
+      `المبيعات محسوبة تقريبياً بعد خصم ${retRate}% راجع متوقع من الطلبات غير المسلّمة — الأرقام ليست نهائية`;
+  } else {
+    notice.style.display='none';
+  }
+
+  const se=id=>document.getElementById(id);
+  se('sTotal').textContent=fmt(totOrders);
+  se('sQty').textContent=fmt(totQty);
+  se('sDeliv').textContent=fmt(Math.round(totDeliv));
+  se('sDelivPct').textContent=totOrders?pct(Math.round(totDeliv),totOrders):'';
+  se('sRet').textContent=fmt(totRet);
+  se('sRetPct').textContent=totOrders?pct(totRet,totOrders):'';
+  se('sSales').textContent=(isEstimateMode?'~':'')+fmt(Math.round(totSales));
+  se('sBuy').textContent=fmt(totBuy);
+  se('sDel').textContent=fmt(totDel);
+  se('sAd').textContent=fmt(totAd);
+  // sProfit card hidden — update only if element exists
+  const sProfitEl=document.getElementById('sProfit');
+  if(sProfitEl){ sProfitEl.textContent=(isEstimateMode?'~':'')+fmt(Math.round(totProfit)); sProfitEl.style.color=totProfit>=0?'var(--green)':'var(--red)'; }
+
+  let bestP='—', bestScore=0;
+  for(const p in PS) if(PS[p].ids.size>bestScore){bestScore=PS[p].ids.size;bestP=p;}
+  se('sBest').textContent=bestP;
+
+  // أعلى مصدر
+  const globalSrcMap={};
+  for(const p in PS) for(const [src,cnt] of Object.entries(PS[p].srcMap||{}))
+    globalSrcMap[src]=(globalSrcMap[src]||0)+cnt;
+  const srcEntries=Object.entries(globalSrcMap).sort((a,b)=>b[1]-a[1]);
+  const srcTopEl=document.getElementById('sSrcTop'), srcTopCEl=document.getElementById('sSrcTopCount');
+  if(srcEntries.length){
+    srcTopEl.textContent=srcEntries[0][0];
+    srcTopCEl.textContent=srcEntries[0][1]+' طلب';
+  } else {
+    srcTopEl.textContent='—'; srcTopCEl.textContent='';
+  }
+  se('hCount').textContent=fmt(totOrders)+' طلب';
+
+  lastStats={PS,delCost,exRate,retRate,totSales,totBuy,totDel,totAd,totProfit,totMargin,totOrders,totQty,totDeliv,totRet,isEstimateMode};
+
+  renderTable(PS,delCost,exRate,retRate,totSales,totBuy,totDel,totAd,totProfit,totMargin,isEstimateMode);
+};
+
+// ──────────────── RENDER TABLE ────────────────
+function renderTable(PS,delCost,exRate,retRate,totSales,totBuy,totDel,totAd,totProfit,totMargin,isEstimateMode){
+  const tbody=document.getElementById('tBody'), tfoot=document.getElementById('tFoot');
+  const rows=Object.entries(PS).sort((a,b)=>b[1].ids.size-a[1].ids.size);
+
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="13"><div class="empty"><div class="ei">🔍</div><p>لا توجد بيانات تطابق الفلاتر</p></div></td></tr>`;
+    tfoot.innerHTML=''; return;
+  }
+
+  tbody.innerHTML=rows.map(([p,d])=>{
+    const orders=d.ids.size;
+    const delivCost=orders*delCost;
+    const adUSD=productAds[p]||0;
+    const adIQD=adUSD*exRate;
+    // المبيعات في d.sales هي مضبوطة حسب وضع التقدير من applyFilter
+    const profit=d.sales-d.buy-delivCost-adIQD;
+    const margin=d.sales>0?((profit/d.sales)*100).toFixed(1):null;
+    const rating=getRating(profit,d.sales);
+    const cfg=RATING[rating];
+    const estMark=isEstimateMode?'~':'';
+
+    // status pills
+    const pills=Object.entries(d.statusMap)
+      .map(([st,cnt])=>`<span class="status-badge ${statusClass(st)}">${st} (${cnt})</span>`).join('');
+    // source pills
+    const SOURCE_ICONS={'فيسبوك':'📘','facebook':'📘','fb':'📘','انستغرام':'📸','instagram':'📸','ig':'📸','تيك توك':'🎵','tiktok':'🎵','tt':'🎵','سناب':'👻','snapchat':'👻','snap':'👻','يوتيوب':'▶️','youtube':'▶️','واتساب':'💬','whatsapp':'💬'};
+    const srcPills=Object.entries(d.srcMap||{})
+      .sort((a,b)=>b[1]-a[1])
+      .map(([src,cnt])=>{const icon=SOURCE_ICONS[src.toLowerCase()]||'📡';return `<span class="status-badge bg-gold">${icon} ${src} (${cnt})</span>`;}).join('');
+
+    const marginDisplay = margin !== null
+      ? `<span class="${profit>=0?'rtxt-great':'rtxt-weak'}">${margin}%</span>`
+      : `<span class="rtxt-nodata">—</span>`;
+
+    return `<tr>
+      <td>
+        <div style="font-weight:800;margin-bottom:4px">${p}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${pills}</div>
+        ${srcPills?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${srcPills}</div>`:''}
+      </td>
+      <td>${fmt(orders)}</td>
+      <td>${fmt(d.qty)}</td>
+      <td><span class="badge bg-green">${fmt(d.deliv)}</span></td>
+      <td><span class="badge bg-red">${fmt(d.ret)}</span></td>
+      <td>${estMark}${fmt(Math.round(d.sales))}</td>
+      <td>${fmt(d.buy)}</td>
+      <td>${fmt(delivCost)}</td>
+      <td>
+        <input type="number" class="ad-inp" data-p="${p}"
+          value="${adUSD>0?adUSD.toFixed(2):''}"
+          placeholder="0.00"
+          oninput="updateAd('${p.replace(/'/g,"\\'")}',this.value)">
+      </td>
+      <td>${fmt(adIQD)}</td>
+      <td>${estMark}${marginDisplay}</td>
+      <td><span class="badge ${cfg.cls} ${cfg.tcls}">${cfg.label}</span></td>
+      <td class="cheer-cell">${cfg.cheer}</td>
+    </tr>`;
+  }).join('');
+
+  const totDeliv=rows.reduce((s,[,d])=>s+d.deliv,0);
+  const totRet=rows.reduce((s,[,d])=>s+d.ret,0);
+  const totQty=rows.reduce((s,[,d])=>s+d.qty,0);
+  const totOrds=rows.reduce((s,[,d])=>s+d.ids.size,0);
+
+  tfoot.innerHTML=`<tr>
+    <td>📊 الإجمالي</td>
+    <td>${fmt(totOrds)}</td>
+    <td>${fmt(totQty)}</td>
+    <td>${fmt(totDeliv)}</td>
+    <td>${fmt(totRet)}</td>
+    <td>${fmt(totSales)}</td>
+    <td>${fmt(totBuy)}</td>
+    <td>${fmt(totDel)}</td>
+    <td>—</td>
+    <td>${fmt(totAd)}</td>
+    <td><span class="${totProfit>=0?'rtxt-great':'rtxt-weak'}">${totMargin}%</span></td>
+    <td colspan="2"><span class="badge ${totProfit>=0?'bg-green':'bg-red'}">${totProfit>=0?'ربح 📈':'خسارة 📉'}</span></td>
+  </tr>`;
+}
+
+// ──────────────── UPDATE AD ────────────────
+window.updateAd = function(product, val) {
+  productAds[product] = Number(val)||0;
+  // Recalculate after user pauses typing (700ms), preserving focus
+  clearTimeout(window._adT);
+  window._adT = setTimeout(()=>{
+    // Remember which input has focus
+    const focused = document.activeElement;
+    applyFilter();
+    // Restore focus to the same product's input after re-render
+    if(focused && focused.classList.contains('ad-inp')){
+      const inp = document.querySelector(`.ad-inp[data-p="${product}"]`);
+      if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+    }
+  }, 700);
+};
+
+// ──────────────── EXPORT PDF ────────────────
+window.exportPDF = function() {
+  if(!lastStats){ toast('اضغط "عرض النتائج" أولاً','e'); return; }
+  const {PS,delCost,exRate,retRate,totSales,totBuy,totDel,totAd,totMargin,totOrders,totQty,totDeliv,totRet,isEstimateMode}=lastStats;
+  const now=new Date().toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'});
+  const nowFull=new Date().toLocaleString('ar-EG');
+
+  // ── كل المنتجات مرتبة حسب عدد الطلبات ──
+  const rows=Object.entries(PS).sort((a,b)=>b[1].ids.size-a[1].ids.size);
+
+  const tRows=rows.map(([p,d])=>{
+    const orders=d.ids.size;
+    const delivCost=orders*delCost;
+    const adIQD=(productAds[p]||0)*exRate;
+    const profit=d.sales-d.buy-delivCost-adIQD;
+    const margin=d.sales>0?((profit/d.sales)*100).toFixed(1):'—';
+    const rating=getRating(profit,d.sales);
+    const cfg=RATING[rating];
+    const estMark=isEstimateMode?'~':'';
+    const rowBg = profit>=0 ? '#f0fdf4' : '#fef2f2';
+    return `<tr style="page-break-inside:avoid;background:${rowBg}">
+      <td style="text-align:right;padding:7px 9px;border:1px solid #ddd;font-weight:700;font-size:11px">${p}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(orders)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(d.qty)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(Math.round(d.deliv))}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(d.ret)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${estMark}${fmt(Math.round(d.sales))}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(d.buy)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(delivCost)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(adIQD)}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-weight:800;font-size:11px;color:${profit>=0?'#166534':'#991b1b'}">${estMark}${margin}%</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:center;font-weight:800;font-size:11px">${cfg.label}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:right;font-size:10px;color:#374151">${cfg.cheer}</td>
+      <td style="padding:7px 9px;border:1px solid #ddd;text-align:right;font-size:10px;color:#4338ca">${Object.entries(d.srcMap||{}).sort((a,b)=>b[1]-a[1]).map(([s,c])=>s+'('+c+')'  ).join(' • ')||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── ملخص البطاقات (بدون الربح) ──
+  const summaryCards = [
+    ['📦 إجمالي الطلبات', fmt(totOrders)],
+    ['✅ تم التسليم',      fmt(Math.round(totDeliv))+' ('+pct(Math.round(totDeliv),totOrders)+')'],
+    ['↩️ الراجع',          fmt(totRet)+' ('+pct(totRet,totOrders)+')'],
+    ['💰 المبيعات',        (isEstimateMode?'~':'')+fmt(Math.round(totSales))+' د.ع'],
+    ['🏪 كلفة الشراء',    fmt(totBuy)+' د.ع'],
+    ['🚚 كلفة التوصيل',   fmt(totDel)+' د.ع'],
+    ['📣 كلفة الإعلان',   fmt(totAd)+' د.ع'],
+  ].map(([l,v])=>`
+    <div style="background:#f8f7ff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e4e1f0">
+      <div style="font-size:10px;color:#6b7280;margin-bottom:3px">${l}</div>
+      <div style="font-size:13px;font-weight:900;color:#0f0c29">${v}</div>
+    </div>`).join('');
+
+  const estimateBanner = isEstimateMode ? `
+    <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#92400e">
+      ⚠️ وضع التقدير التقريبي — المبيعات محسوبة بعد خصم ${retRate}% راجع متوقع
+    </div>` : '';
+
+  const el=document.createElement('div');
+  el.style.cssText='font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:16px;background:white;width:100%;';
+  el.innerHTML=`
+    <div style="text-align:center;margin-bottom:16px;border-bottom:3px solid #0f0c29;padding-bottom:12px">
+      <div style="font-size:20px;font-weight:900;color:#0f0c29">📣 تقرير أداء الإعلانات</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">المراد — نظام المعلنين</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px">${nowFull}</div>
+    </div>
+
+    ${estimateBanner}
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+      ${summaryCards}
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <colgroup>
+        <col style="width:16%">
+        <col style="width:6%">
+        <col style="width:6%">
+        <col style="width:6%">
+        <col style="width:6%">
+        <col style="width:9%">
+        <col style="width:9%">
+        <col style="width:8%">
+        <col style="width:8%">
+        <col style="width:7%">
+        <col style="width:8%">
+        <col style="width:9%">
+        <col style="width:9%">
+      </colgroup>
+      <thead>
+        <tr style="background:#0f0c29;color:white">
+          <th style="padding:8px 9px;text-align:right;border:1px solid #333;font-size:11px">المنتج</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">الطلبات</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">القطع</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">مسلّم</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">راجع</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">المبيعات</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">الشراء</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">التوصيل</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">الإعلان</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">الربح%</th>
+          <th style="padding:8px 9px;border:1px solid #333;font-size:11px">التقييم</th>
+          <th style="padding:8px 9px;text-align:right;border:1px solid #333;font-size:11px">التشجيع</th>
+          <th style="padding:8px 9px;text-align:right;border:1px solid #333;font-size:11px">المصدر</th>
+        </tr>
+      </thead>
+      <tbody>${tRows}</tbody>
+      <tfoot>
+        <tr style="background:#f0f4ff;font-weight:900;page-break-inside:avoid">
+          <td style="padding:9px;border:1px solid #ddd;text-align:right;font-size:11px">📊 الإجمالي (${rows.length} منتج)</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totOrders)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totQty)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(Math.round(totDeliv))}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totRet)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(Math.round(totSales))}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totBuy)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totDel)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${fmt(totAd)}</td>
+          <td style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">${totMargin}%</td>
+          <td colspan="3" style="padding:9px;border:1px solid #ddd;text-align:center;font-size:11px">
+            ${rows.length} منتج مُعلَن
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="margin-top:12px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #e4e1f0;padding-top:10px">
+      تقرير صادر من نظام المراد • ${nowFull} • ${rows.length} منتج
+    </div>
+  `;
+
+  html2pdf().set({
+    margin:[6,6,6,6],
+    filename:`almurad-report-${new Date().toISOString().split('T')[0]}.pdf`,
+    html2canvas:{scale:1.4,useCORS:true,scrollY:0,windowWidth:1400,logging:false},
+    jsPDF:{unit:'mm',format:'a3',orientation:'landscape'},
+    pagebreak:{mode:['css','legacy']}
+  }).from(el).save();
+  toast('جاري تصدير PDF... 📄','i');
+};
+
+// ──────────────── DEBUG TOOL ────────────────
+window.runDebug = async function() {
+  const orderId = document.getElementById('debugOrderId').value.trim();
+  const result  = document.getElementById('debugResult');
+  if(!orderId){ result.innerHTML='<span style="color:red">أدخل رقم الطلب</span>'; return; }
+
+  result.innerHTML = '<div style="color:#6b7280">⏳ جاري البحث...</div>';
+
+  // Search across all statuses
+  let found = null, foundStatus = null;
+  for(const status in allOrders){
+    if(allOrders[status][orderId]){
+      found = allOrders[status][orderId];
+      foundStatus = status;
+      break;
+    }
+  }
+
+  if(!found){
+    result.innerHTML = `<div style="background:#fee2e2;padding:12px;border-radius:10px;color:#991b1b">❌ الطلب <strong>${orderId}</strong> غير موجود في allOrders المحمّل.<br><small>تأكد إن البيانات محمّلة (اضغط عرض النتائج أولاً)</small></div>`;
+    return;
+  }
+
+  // Decode all statusHistory keys
+  const sh = found.statusHistory || {};
+  const shRows = Object.entries(sh).map(([k,v]) => {
+    let decoded = k;
+    try { decoded = decodeURIComponent(k); } catch(e) {}
+    const timeRaw = v?.time;
+    let timeDisplay = timeRaw;
+    if(timeRaw){
+      const d = typeof timeRaw==='number' ? new Date(timeRaw) : new Date(timeRaw);
+      if(!isNaN(d)) timeDisplay = d.toLocaleString('ar-IQ') + ' (' + (typeof timeRaw==='number'?'timestamp':'ISO string') + ')';
+    }
+    return `<tr>
+      <td style="padding:7px 10px;border:1px solid #e4e1f0;font-weight:700;color:#0f0c29">${decoded}</td>
+      <td style="padding:7px 10px;border:1px solid #e4e1f0;font-size:11px;color:#6b7280;word-break:break-all">${k}</td>
+      <td style="padding:7px 10px;border:1px solid #e4e1f0">${timeDisplay || '—'}</td>
+      <td style="padding:7px 10px;border:1px solid #e4e1f0">${v?.by || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Other date fields
+  const dateFields = ['orderDate','createdAt','updatedAt'].map(f => {
+    const raw = found[f];
+    if(!raw) return `<li><strong>${f}:</strong> <span style="color:#9ca3af">غير موجود</span></li>`;
+    const d = typeof raw==='number'?new Date(raw):new Date(raw);
+    return `<li><strong>${f}:</strong> ${isNaN(d)?raw:d.toLocaleString('ar-IQ')} <span style="color:#9ca3af">(${typeof raw})</span></li>`;
+  }).join('');
+
+  result.innerHTML = `
+    <div style="background:#f0fdf4;padding:12px 16px;border-radius:10px;margin-bottom:14px;border:1px solid #bbf7d0">
+      ✅ طلب <strong>${orderId}</strong> موجود في حالة: <strong style="color:#166534">${foundStatus}</strong>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-weight:800;color:#0f0c29;margin-bottom:8px">📅 حقول التاريخ الأخرى:</div>
+      <ul style="list-style:none;padding:0;background:#f8f7ff;border-radius:10px;padding:12px">${dateFields}</ul>
+    </div>
+
+    <div>
+      <div style="font-weight:800;color:#0f0c29;margin-bottom:8px">📋 statusHistory (${Object.keys(sh).length} حالة):</div>
+      ${shRows ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#0f0c29;color:white">
+          <th style="padding:8px 10px;border:1px solid #333">الحالة (مفكوك)</th>
+          <th style="padding:8px 10px;border:1px solid #333">المفتاح الأصلي</th>
+          <th style="padding:8px 10px;border:1px solid #333">وقت الدخول</th>
+          <th style="padding:8px 10px;border:1px solid #333">بواسطة</th>
+        </tr></thead>
+        <tbody>${shRows}</tbody>
+      </table></div>` : '<div style="color:#9ca3af;background:#f1f5f9;padding:12px;border-radius:8px">لا يوجد statusHistory لهذا الطلب</div>'}
+    </div>
+
+    <details style="margin-top:14px">
+      <summary style="cursor:pointer;font-weight:700;color:#6b7280;font-size:12px">📦 بيانات الطلب الكاملة (Raw)</summary>
+      <pre style="margin-top:8px;background:#f8f7ff;border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre-wrap;direction:ltr">${JSON.stringify(found,null,2)}</pre>
+    </details>
+  `;
+};
+
+// ──────────────── BOOT ────────────────
+loadData();
+</script>
+</body>
+</html>
