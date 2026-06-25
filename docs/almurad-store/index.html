@@ -81,10 +81,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 .mob-divider{height:1px;background:rgba(228,184,75,.1);margin:8px 20px;}
 
 /* ══ HERO ══ */
-.hero{position:relative;overflow:hidden;background:var(--nv);}
-.hero-track{display:flex;height:100%;transition:transform .75s cubic-bezier(.4,0,.2,1);}
-.hslide{min-width:100%;position:relative;overflow:hidden;}
-.hslide-default{display:none;}
+.hero{position:relative;overflow:hidden;background:transparent;width:100%;}
+.hero-track{display:flex;height:100%;transition:transform .75s cubic-bezier(.4,0,.2,1);will-change:transform;}
+.hslide{min-width:100%;width:100%;flex-shrink:0;position:relative;overflow:hidden;}.hslide-default{display:none;}
 
 
 /* إخفاء عناصر الموبايل على اللابتوب */
@@ -104,26 +103,22 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 
 /* Mobile hero */
 @media(max-width:600px){
-.hero{height:auto;padding:12px 14px 0;background:#fff;}
-  .hslide{display:block;padding:0;border-radius:18px;overflow:hidden;}
+  .hero{height:auto;padding:12px 14px 12px;background:#fff;overflow:hidden;}
+  .hslide{display:none;padding:0;border-radius:18px;overflow:hidden;width:100%;position:relative;}
+  .hslide.active{display:block;}
+  .hero-track{display:block;width:100%;}
   .hcontent{display:none;}
   .hslide-img-area{display:none;}
   .hero-deco-circle,.hero-deco-circle2{display:none;}
-  .hslide-mobile-img{
-    display:block;width:100%;aspect-ratio:750/340;
-    overflow:hidden;position:relative;
-  }
+  .hslide-mobile-img{display:block;width:100%;aspect-ratio:750/340;overflow:hidden;position:relative;}
   .hslide-mobile-img img{width:100%;height:100%;object-fit:cover;}
-.hcontent-mobile{
-    display:block;
-    position:absolute;
-    bottom:0;right:0;left:0;
-    padding:16px 18px 18px;
-    background:transparent;
-  }
+  .hcontent-mobile{display:block;position:absolute;bottom:0;right:0;left:0;padding:16px 18px 18px;background:transparent;}
   .hcontent-mobile h2{font-size:19px;margin-bottom:6px;}
   .hcontent-mobile p{font-size:12px;margin-bottom:12px;display:none;}
-  .hslide{position:relative;}
+  @keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slideInLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.hslide.slide-in-right{animation:slideInRight .4s ease;}
+.hslide.slide-in-left{animation:slideInLeft .4s ease;}
 }
 
 .htag{display:inline-flex;align-items:center;gap:6px;background:rgba(228,184,75,.15);border:1px solid rgba(228,184,75,.3);color:var(--gd2);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:14px;}
@@ -491,8 +486,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 </div>
 
 <!-- HERO -->
-<section class="hero" id="home">
-  <div class="hero-track" id="ht">
+<section class="hero" id="home" style="visibility:hidden;transition:visibility 0s,opacity 0.4s ease;opacity:0;">
+    <div class="hero-track" id="ht">
     <!-- Default slides (hidden until Firebase loads or fallback) -->
     <div class="hslide hs1 hslide-default">
       <!-- Desktop layout -->
@@ -565,7 +560,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 </section>
 
 <!-- CATEGORIES -->
-<section class="sec" id="cats">
+<section class="sec" id="cats" style="opacity:0;transition:opacity 0.4s ease;">
 <div class="wrap">
   <div class="sec-head">
     <div class="sec-title">أقسام المتجر</div>
@@ -582,7 +577,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 </section>
 
 <!-- PRODUCTS -->
-<section class="sec" id="prods" style="padding-bottom:70px;">
+<section class="sec" id="prods" style="padding-bottom:70px;opacity:0;transition:opacity 0.4s ease;">
 <div class="wrap">
   <!-- وصل حديثاً -->
   <div class="sec-head">
@@ -742,13 +737,33 @@ function initHero(){
     d.onclick=()=>goSlide(i);
     hd.appendChild(d);
   });
-  document.getElementById('ht').style.transform='translateX(0)';
+  goSlide(0);
   hTimer=setInterval(()=>goSlide(hIdx+1),5000);
 }
+
 function goSlide(n){
   const slides=document.querySelectorAll('.hslide');
-  hIdx=(n+slides.length)%slides.length;
-  document.getElementById('ht').style.transform=`translateX(${hIdx*100}%)`;
+  const total=slides.length;
+  const next=(n%total+total)%total;
+  const isMobile=window.innerWidth<=600;
+  if(isMobile){
+    // حساب الاتجاه بطريقة بسيطة
+    let goingForward=true;
+    if(n===hIdx-1) goingForward=false;
+    else if(hIdx===total-1&&next===0) goingForward=true;
+    else if(hIdx===0&&next===total-1) goingForward=false;
+    else if(next<hIdx) goingForward=false;
+
+    slides.forEach((s,i)=>{
+      s.classList.remove('active','slide-in-right','slide-in-left');
+      if(i===next) s.classList.add('active', goingForward?'slide-in-left':'slide-in-right');
+    });
+    document.getElementById('ht').style.transform='';
+  } else {
+    slides.forEach(s=>s.classList.remove('active'));
+    document.getElementById('ht').style.transform=`translateX(${next*100}%)`;
+  }
+  hIdx=next;
   document.querySelectorAll('.hdot').forEach((d,i)=>d.classList.toggle('on',i===hIdx));
 }
 window.chSlide=d=>{clearInterval(hTimer);goSlide(hIdx+d);hTimer=setInterval(()=>goSlide(hIdx+1),5000);};
@@ -1131,9 +1146,9 @@ window.applyF=applyF;
 async function loadDynSlides(){
   try{
     const snap=await get(ref(db,'storeSlides'));
-    if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.style.display='block');initHero();return;}
+if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();return;}
     const slides=Object.values(snap.val()).filter(s=>s.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));
-    if(!slides.length){document.querySelectorAll('.hslide-default').forEach(s=>s.style.display='block');initHero();return;}
+   if(!slides.length){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();return;}
     document.getElementById('ht').innerHTML=slides.map(s=>`
       <div class="hslide" style="background:${s.bgImg?`url('${s.bgImg}') center/cover no-repeat`:`linear-gradient(135deg,${s.color1||'#1C1208'} 0%,${s.color2||'#2E1F0A'} 100%)`};">
         <div class="hero-deco-circle"></div>
@@ -1164,7 +1179,7 @@ async function loadDynSlides(){
         </div>
       </div>`).join('');
     initHero();
-}catch(e){document.querySelectorAll('.hslide-default').forEach(s=>s.style.display='block');initHero();}
+}catch(e){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();}
 }
 
 async function loadDynCats(){
@@ -1201,11 +1216,28 @@ document.getElementById('pg').innerHTML=[...Array(6)].map(()=>`
   </div>`).join('');
 
 loadSettings();
-loadDynSlides();
-loadDynCats();
 updateCartUI();
 updateWishUI();
-loadProds();
+Promise.all([loadDynSlides(), loadDynCats()]).then(()=>{
+  const home=document.getElementById('home');
+  home.style.visibility='visible';
+  home.style.opacity='1';
+  document.getElementById('cats').style.opacity='1';
+});
+loadProds().then(()=>{
+  document.getElementById('prods').style.opacity='1';
+});
+/* ── SWIPE ── */
+let tsX=0;
+document.getElementById('ht').addEventListener('touchstart',e=>tsX=e.touches[0].clientX,{passive:true});
+document.getElementById('ht').addEventListener('touchend',e=>{
+  const diff=tsX-e.changedTouches[0].clientX;
+  if(Math.abs(diff)>50){
+    clearInterval(hTimer);
+    goSlide(diff>0?hIdx+1:hIdx-1);
+    hTimer=setInterval(()=>goSlide(hIdx+1),5000);
+  }
+},{passive:true});
 </script>
 </body>
 </html>
