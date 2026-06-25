@@ -552,34 +552,79 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <div class="slider-admin-grid" id="slidesGrid"></div>
     </div>
 
-    <!-- SETTINGS -->
-    <div class="page" id="page-settings">
-      <div class="sec-head"><div class="sec-title">إعدادات المتجر</div></div>
-      <div class="settings-grid">
-        <div class="setting-card">
-          <h4>🎨 ألوان المتجر</h4>
-          <div class="color-row"><label>اللون الرئيسي (كحلي)</label><input type="color" id="colorNavy" value="#043B64" onchange="saveColors()"></div>
-          <div class="color-row"><label>لون التمييز (برتقالي)</label><input type="color" id="colorOrange" value="#FF6B2D" onchange="saveColors()"></div>
-          <div class="color-row"><label>لون الخلفية</label><input type="color" id="colorBg" value="#f5f7fa" onchange="saveColors()"></div>
-          <button class="btn btn-orange btn-sm" onclick="saveColors(true)">💾 حفظ الألوان</button>
-        </div>
-        <div class="setting-card">
-          <h4>🏪 معلومات المتجر</h4>
-          <div class="fg"><label class="fl">اسم المتجر</label><input class="fi" id="sStoreName" placeholder="متجر المراد"></div>
-          <div class="fg"><label class="fl">وصف المتجر</label><input class="fi" id="sStoreDesc" placeholder="أجهزة منزلية وأدوات مطبخ"></div>
-          <div class="fg"><label class="fl">رقم واتساب التواصل</label><input class="fi" id="sWhatsapp" placeholder="07xxxxxxxxx" style="direction:ltr;"></div>
-          <button class="btn btn-orange btn-sm" onclick="saveStoreInfo()">💾 حفظ المعلومات</button>
-        </div>
-        <div class="setting-card">
-          <h4>🔐 تغيير كلمة المرور</h4>
-          <div class="fg"><label class="fl">كلمة المرور الحالية</label><input class="fi" type="password" id="oldPw"></div>
-          <div class="fg"><label class="fl">كلمة المرور الجديدة</label><input class="fi" type="password" id="newPw"></div>
-          <div class="fg"><label class="fl">تأكيد كلمة المرور</label><input class="fi" type="password" id="newPw2"></div>
-          <button class="btn btn-navy btn-sm" onclick="changePw()">🔐 تغيير المرور</button>
-        </div>
-      </div>
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="sec-head"><div class="sec-title">إعدادات المتجر</div></div>
+  <div class="settings-grid">
+
+    <!-- معلومات المتجر -->
+    <div class="setting-card">
+      <h4>🏪 معلومات المتجر</h4>
+      <div class="fg"><label class="fl">اسم المتجر</label><input class="fi" id="sStoreName" placeholder="متجر المراد"></div>
+      <div class="fg"><label class="fl">وصف المتجر</label><input class="fi" id="sStoreDesc" placeholder="أجهزة منزلية وأدوات مطبخ"></div>
+      <button class="btn btn-orange btn-sm" onclick="saveStoreInfo()">💾 حفظ</button>
     </div>
 
+    <!-- ألوان الموقع -->
+    <div class="setting-card">
+      <h4>🎨 ألوان الموقع</h4>
+      <div class="color-row"><label>لون الهيدر والفوتر</label><input type="color" id="cNavy" value="#1C1208"></div>
+      <div class="color-row"><label>لون الهيدر الثانوي</label><input type="color" id="cNavy2" value="#2E1F0A"></div>
+      <div class="color-row"><label>اللون الرئيسي (أزرار)</label><input type="color" id="cPrimary" value="#B5451B"></div>
+      <div class="color-row"><label>اللون الذهبي</label><input type="color" id="cGold" value="#C4922A"></div>
+      <div class="color-row"><label>الذهبي الفاتح</label><input type="color" id="cGold2" value="#E8B84B"></div>
+      <div class="color-row"><label>خلفية الموقع</label><input type="color" id="cBg" value="#FDF6ED"></div>
+      <div class="color-row"><label>خلفية البطاقات</label><input type="color" id="cBg2" value="#F5E8D3"></div>
+      <button class="btn btn-orange btn-sm" onclick="saveColors()">💾 حفظ الألوان</button>
+    </div>
+
+    <!-- ألوان النصوص -->
+    <div class="setting-card">
+      <h4>🔤 نصوص المنتجات</h4>
+      <div class="color-row"><label>لون اسم المنتج</label><input type="color" id="cProductName" value="#1C1208"></div>
+      <div class="color-row"><label>لون السعر</label><input type="color" id="cPrice" value="#B5451B"></div>
+      <div class="fg">
+        <label class="fl">حجم اسم المنتج (px)</label>
+        <input class="fi" type="number" id="sFontName" placeholder="14" min="10" max="22">
+      </div>
+      <div class="fg">
+        <label class="fl">حجم السعر (px)</label>
+        <input class="fi" type="number" id="sFontPrice" placeholder="17" min="12" max="26">
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="saveTextSettings()">💾 حفظ</button>
+    </div>
+
+    <!-- زر الطلب -->
+    <div class="setting-card">
+      <h4>🛒 زر الطلب الآن</h4>
+      <div class="fg"><label class="fl">نص الزر</label><input class="fi" id="sBtnText" placeholder="أضف للسلة"></div>
+      <div class="color-row"><label>لون خلفية الزر</label><input type="color" id="sBtnColor" value="#B5451B"></div>
+      <div class="color-row"><label>لون نص الزر</label><input type="color" id="sBtnTextColor" value="#ffffff"></div>
+      <button class="btn btn-orange btn-sm" onclick="saveBtnSettings()">💾 حفظ</button>
+    </div>
+
+    <!-- روابط التواصل -->
+    <div class="setting-card">
+      <h4>📱 روابط التواصل الاجتماعي</h4>
+      <div class="fg"><label class="fl">📞 واتساب (رقم فقط)</label><input class="fi" id="sWhatsapp" placeholder="9647XXXXXXXXX" style="direction:ltr;"></div>
+      <div class="fg"><label class="fl">📸 إنستغرام</label><input class="fi" id="sInstagram" placeholder="https://instagram.com/..." style="direction:ltr;"></div>
+      <div class="fg"><label class="fl">✈️ تيليغرام</label><input class="fi" id="sTelegram" placeholder="https://t.me/..." style="direction:ltr;"></div>
+      <div class="fg"><label class="fl">👥 فيسبوك</label><input class="fi" id="sFacebook" placeholder="https://facebook.com/..." style="direction:ltr;"></div>
+      <div class="fg"><label class="fl">🎵 تيك توك</label><input class="fi" id="sTiktok" placeholder="https://tiktok.com/..." style="direction:ltr;"></div>
+      <button class="btn btn-orange btn-sm" onclick="saveSocialLinks()">💾 حفظ الروابط</button>
+    </div>
+
+    <!-- كلمة المرور -->
+    <div class="setting-card">
+      <h4>🔐 تغيير كلمة المرور</h4>
+      <div class="fg"><label class="fl">كلمة المرور الحالية</label><input class="fi" type="password" id="oldPw"></div>
+      <div class="fg"><label class="fl">كلمة المرور الجديدة</label><input class="fi" type="password" id="newPw"></div>
+      <div class="fg"><label class="fl">تأكيد كلمة المرور</label><input class="fi" type="password" id="newPw2"></div>
+      <button class="btn btn-navy btn-sm" onclick="changePw()">🔐 تغيير</button>
+    </div>
+
+  </div>
+</div>
   </main>
 </div>
 
@@ -697,14 +742,22 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 <div class="fg">
-<label class="fl">رابط صورة الخلفية (اختياري) — القياس المثالي: 1920×600 بكسل | JPG مضغوط</label>
+<label class="fl">🖥️ صورة خلفية اللابتوب — القياس: 1920×600 بكسل | JPG</label>
   <div style="display:flex;gap:8px;">
-    <input class="fi" id="slBgImg" placeholder="https://رابط-صورة-الخلفية.jpg" style="direction:ltr;flex:1;">
+    <input class="fi" id="slBgImg" placeholder="https://رابط-خلفية-لابتوب.jpg" style="direction:ltr;flex:1;">
     <button class="btn btn-navy btn-sm" onclick="pickImg('slBgImg','slBgImgFile')">📁 رفع</button>
     <input type="file" id="slBgImgFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'slBgImg')">
   </div>
 </div>
-    <div class="fg"><label class="fl">الترتيب</label><input class="fi" type="number" id="slOrder" placeholder="1"></div>
+<div class="fg">
+<label class="fl">📱 صورة خلفية الموبايل — القياس: 750×900 بكسل | JPG</label>
+  <div style="display:flex;gap:8px;">
+    <input class="fi" id="slMobImg" placeholder="https://رابط-خلفية-موبايل.jpg" style="direction:ltr;flex:1;">
+    <button class="btn btn-navy btn-sm" onclick="pickImg('slMobImg','slMobImgFile')">📁 رفع</button>
+    <input type="file" id="slMobImgFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'slMobImg')">
+  </div>
+</div>
+<input class="fi" type="number" id="slOrder" placeholder="1"></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <input type="checkbox" id="slActive" checked style="width:16px;height:16px;">
       <label for="slActive" style="font-size:13px;font-weight:700;color:var(--muted);">البنر مفعّل</label>
@@ -1197,7 +1250,7 @@ function renderSlides() {
 window.openAddSlide=()=>{
   editSlideKey=null;
   document.getElementById('slideModalTitle').textContent='➕ بنر جديد';
-  ['slTitle','slSub','slBtn','slTag','slEmoji','slOrder'].forEach(id=>document.getElementById(id).value='');
+['slTitle','slSub','slBtn','slTag','slEmoji','slOrder','slBgImg','slMobImg','slImg'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('slColor1').value='#043B64';
   document.getElementById('slColor2').value='#0a5a96';
   document.getElementById('slActive').checked=true;
@@ -1217,6 +1270,7 @@ window.openEditSlide=(key)=>{
   document.getElementById('slColor2').value=s.color2||'#0a5a96';
 document.getElementById('slImg').value=s.img||'';
   document.getElementById('slBgImg').value=s.bgImg||'';
+  document.getElementById('slMobImg').value=s.mobImg||'';
   document.getElementById('slActive').checked=s.active!==false;
   document.getElementById('slideModal').classList.add('open');
 };
@@ -1224,13 +1278,13 @@ window.closeSlideModal=()=>document.getElementById('slideModal').classList.remov
 
 window.saveSlide=async()=>{
   const title=document.getElementById('slTitle').value.trim();
-  if(!title) return toast('أدخل عنوان البنر','e');
   const key=editSlideKey||('slide_'+Date.now());
 const data={
     title,
     sub:document.getElementById('slSub').value.trim(),
     img:document.getElementById('slImg').value.trim(),
-    bgImg:document.getElementById('slBgImg').value.trim(),
+   bgImg:document.getElementById('slBgImg').value.trim(),
+mobImg:document.getElementById('slMobImg').value.trim(),
     
     btnText:document.getElementById('slBtn').value.trim()||'تسوق الآن',
     tag:document.getElementById('slTag').value.trim(),
@@ -1261,25 +1315,75 @@ async function loadSettings() {
   const snap=await get(ref(db,'storeSettings'));
   if(!snap.exists()) return;
   const s=snap.val();
-  if(s.navy) document.getElementById('colorNavy').value=s.navy;
-  if(s.orange) document.getElementById('colorOrange').value=s.orange;
-  if(s.bg) document.getElementById('colorBg').value=s.bg;
   if(s.storeName) document.getElementById('sStoreName').value=s.storeName;
   if(s.storeDesc) document.getElementById('sStoreDesc').value=s.storeDesc;
+  if(s.colorNavy) document.getElementById('cNavy').value=s.colorNavy;
+  if(s.colorNavy2) document.getElementById('cNavy2').value=s.colorNavy2;
+  if(s.colorPrimary) document.getElementById('cPrimary').value=s.colorPrimary;
+  if(s.colorGold) document.getElementById('cGold').value=s.colorGold;
+  if(s.colorGold2) document.getElementById('cGold2').value=s.colorGold2;
+  if(s.colorBg) document.getElementById('cBg').value=s.colorBg;
+  if(s.colorBg2) document.getElementById('cBg2').value=s.colorBg2;
+  if(s.colorProductName) document.getElementById('cProductName').value=s.colorProductName;
+  if(s.colorPrice) document.getElementById('cPrice').value=s.colorPrice;
+  if(s.fontSizeName) document.getElementById('sFontName').value=s.fontSizeName;
+  if(s.fontSizePrice) document.getElementById('sFontPrice').value=s.fontSizePrice;
+  if(s.btnText) document.getElementById('sBtnText').value=s.btnText;
+  if(s.btnColor) document.getElementById('sBtnColor').value=s.btnColor;
+  if(s.btnTextColor) document.getElementById('sBtnTextColor').value=s.btnTextColor;
   if(s.whatsapp) document.getElementById('sWhatsapp').value=s.whatsapp;
+  if(s.instagram) document.getElementById('sInstagram').value=s.instagram;
+  if(s.telegram) document.getElementById('sTelegram').value=s.telegram;
+  if(s.facebook) document.getElementById('sFacebook').value=s.facebook;
+  if(s.tiktok) document.getElementById('sTiktok').value=s.tiktok;
 }
-
-window.saveColors=async(showToast=false)=>{
-  await set(ref(db,'storeSettings/navy'),document.getElementById('colorNavy').value);
-  await set(ref(db,'storeSettings/orange'),document.getElementById('colorOrange').value);
-  await set(ref(db,'storeSettings/bg'),document.getElementById('colorBg').value);
-  if(showToast) toast('✅ تم حفظ الألوان','s');
+window.saveColors=async()=>{
+  await update(ref(db,'storeSettings'),{
+    colorNavy:document.getElementById('cNavy').value,
+    colorNavy2:document.getElementById('cNavy2').value,
+    colorPrimary:document.getElementById('cPrimary').value,
+    colorGold:document.getElementById('cGold').value,
+    colorGold2:document.getElementById('cGold2').value,
+    colorBg:document.getElementById('cBg').value,
+    colorBg2:document.getElementById('cBg2').value,
+  });
+  toast('✅ تم حفظ الألوان','s');
 };
+
+window.saveTextSettings=async()=>{
+  await update(ref(db,'storeSettings'),{
+    colorProductName:document.getElementById('cProductName').value,
+    colorPrice:document.getElementById('cPrice').value,
+    fontSizeName:document.getElementById('sFontName').value||14,
+    fontSizePrice:document.getElementById('sFontPrice').value||17,
+  });
+  toast('✅ تم حفظ إعدادات النصوص','s');
+};
+
+window.saveBtnSettings=async()=>{
+  await update(ref(db,'storeSettings'),{
+    btnText:document.getElementById('sBtnText').value.trim()||'أضف للسلة',
+    btnColor:document.getElementById('sBtnColor').value,
+    btnTextColor:document.getElementById('sBtnTextColor').value,
+  });
+  toast('✅ تم حفظ إعدادات الزر','s');
+};
+
+window.saveSocialLinks=async()=>{
+  await update(ref(db,'storeSettings'),{
+    whatsapp:document.getElementById('sWhatsapp').value.trim(),
+    instagram:document.getElementById('sInstagram').value.trim(),
+    telegram:document.getElementById('sTelegram').value.trim(),
+    facebook:document.getElementById('sFacebook').value.trim(),
+    tiktok:document.getElementById('sTiktok').value.trim(),
+  });
+  toast('✅ تم حفظ روابط التواصل','s');
+};
+
 window.saveStoreInfo=async()=>{
   await update(ref(db,'storeSettings'),{
     storeName:document.getElementById('sStoreName').value.trim(),
     storeDesc:document.getElementById('sStoreDesc').value.trim(),
-    whatsapp:document.getElementById('sWhatsapp').value.trim()
   });
   toast('✅ تم حفظ معلومات المتجر','s');
 };
