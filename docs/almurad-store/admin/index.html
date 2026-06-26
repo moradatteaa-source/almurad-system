@@ -702,10 +702,18 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
     <div class="fg"><label class="fl">لون الخلفية (اختياري)</label><input class="fi" type="color" id="cColor" value="#ebf4ff"></div>
 <div class="fg">
 <label class="fl">رابط صورة الفئة (بدل أيقونة) — القياس المثالي: 200×200 بكسل | PNG أو JPG</label>
-  <div style="display:flex;gap:8px;">
+<div style="display:flex;gap:8px;">
     <input class="fi" id="cImg" placeholder="https://رابط-صورة-الفئة.jpg" style="direction:ltr;flex:1;">
     <button class="btn btn-navy btn-sm" onclick="pickImg('cImg','cImgFile')">📁 رفع</button>
     <input type="file" id="cImgFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'cImg')">
+  </div>
+</div>
+<div class="fg">
+<label class="fl">🖼️ صورة هيدر صفحة المنتجات — القياس: 1200×300 بكسل | JPG</label>
+  <div style="display:flex;gap:8px;">
+    <input class="fi" id="cHeaderImg" placeholder="https://رابط-صورة-هيدر.jpg" style="direction:ltr;flex:1;">
+    <button class="btn btn-navy btn-sm" onclick="pickImg('cHeaderImg','cHeaderImgFile')">📁 رفع</button>
+    <input type="file" id="cHeaderImgFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'cHeaderImg')">
   </div>
 </div>
   </div>
@@ -724,6 +732,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
     <button class="modal-x" onclick="closeSlideModal()">✕</button>
   </div>
   <div class="modal-body">
+    <div class="fg">
+  <label class="fl">نوع البنر *</label>
+  <select class="fi" id="slType">
+    <option value="main">🏠 البنر الرئيسي (السلايدر)</option>
+    <option value="cart">🛒 بنر السلة</option>
+    <option value="category">🏷️ بنر الفئات</option>
+    <option value="product">📦 بنر صفحة المنتج</option>
+    <option value="orders">📋 بنر الطلبات</option>
+  </select>
+</div>
     <div class="fg"><label class="fl">عنوان البنر *</label><input class="fi" id="slTitle" placeholder="عنوان جذاب للبنر"></div>
     <div class="fg"><label class="fl">النص الفرعي</label><input class="fi" id="slSub" placeholder="وصف قصير..."></div>
     <div class="fg"><label class="fl">نص الزر</label><input class="fi" id="slBtn" placeholder="تسوق الآن"></div>
@@ -924,7 +942,7 @@ function buildProdCard(key,p) {
   return `
     <div class="prod-admin-card">
       <div class="pac-img">
-        ${imgs[0]?`<img src="${imgs[0]}" alt="${p.name||key}" loading="lazy">`:`<div class="no-img">📦</div>`}
+        ${imgs[0]?`<img src="${imgs[0]}" alt="${p.name||key}" loading="lazy" decoding="async" style="width:100%;height:180px;object-fit:cover;">`:`<div class="no-img">📦</div>`}
         ${imgs.length>1?`<div class="pac-img-count">📸 ${imgs.length}</div>`:''}
         <div class="pac-badge ${inStock?'in':'out'}">${inStock?'متوفر ✅':'نفذ ❌'}</div>
         <div style="position:absolute;top:10px;right:10px;margin-top:28px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:${p.visible?'#c6f6d5':'#fed7d7'};color:${p.visible?'#276749':'#c53030'};">${p.visible?'🌐 ظاهر':'🔒 مخفي'}</div>
@@ -946,24 +964,36 @@ function buildProdCard(key,p) {
     </div>`;
 }
 
+let filterTimer=null;
 function filterProds() {
-  const q = document.getElementById('prodSearch').value.toLowerCase().trim();
-  const cat = document.getElementById('prodCatFilter').value;
-  const stock = document.getElementById('prodStockFilter').value;
-  const filtered = Object.entries(allProds).filter(([k,p]) => {
-    const name = (p.name||k).toLowerCase();
-    const qty = p.stock?Object.values(p.stock).reduce((a,b)=>a+Number(b||0),0):(p.totalQty||0);
-    if (q && !name.includes(q)) return false;
-    if (cat && p.category !== cat) return false;
-   if (stock==='in' && qty<=0) return false;
-if (stock==='out' && qty>0) return false;
-if (curVisTab==='visible' && p.visible!==true) return false;
-if (curVisTab==='hidden' && p.visible===true) return false;
-return true;
-  });
-  const grid = document.getElementById('prodsGrid');
-  grid.innerHTML = filtered.map(([k,p])=>buildProdCard(k,p)).join('');
-  if(!filtered.length) grid.innerHTML = `<div class="empty-state"><div class="ei">🔍</div><p>لا توجد نتائج</p></div>`;
+  clearTimeout(filterTimer);
+  filterTimer=setTimeout(()=>{
+    const q = document.getElementById('prodSearch').value.toLowerCase().trim();
+    const cat = document.getElementById('prodCatFilter').value;
+    const stock = document.getElementById('prodStockFilter').value;
+    const filtered = Object.entries(allProds).filter(([k,p]) => {
+      const name = (p.name||k).toLowerCase();
+      const qty = p.totalQty||0;
+      if (q && !name.includes(q)) return false;
+      if (cat && p.category !== cat) return false;
+      if (stock==='in' && qty<=0) return false;
+      if (stock==='out' && qty>0) return false;
+      if (curVisTab==='visible' && p.visible!==true) return false;
+      if (curVisTab==='hidden' && p.visible===true) return false;
+      return true;
+    });
+    const grid = document.getElementById('prodsGrid');
+    if(!filtered.length){
+      grid.innerHTML=`<div class="empty-state"><div class="ei">🔍</div><p>لا توجد نتائج</p></div>`;
+      return;
+    }
+    // عرض أول 30 فقط لتجنب التجميد
+    const show=filtered.slice(0,30);
+    grid.innerHTML=show.map(([k,p])=>buildProdCard(k,p)).join('');
+    if(filtered.length>30){
+      grid.insertAdjacentHTML('beforeend',`<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);font-weight:700;">يعرض 30 من ${filtered.length} — دقق البحث لنتائج أدق</div>`);
+    }
+  }, 250);
 }
 window.filterProds = filterProds;
 let curVisTab = 'all';
@@ -1049,23 +1079,25 @@ async function addFiles(files) {
 function renderImgPreviews() {
   const grid = document.getElementById('imgPreviewGrid');
   grid.innerHTML = prodImages.map((img,i)=>`
-    <div class="img-prev-item">
+    <div class="img-prev-item" draggable="true" 
+      ondragstart="dragStart(${i})" 
+      ondragover="event.preventDefault()" 
+      ondrop="dragDrop(${i})"
+      style="cursor:grab;">
       <img src="${img.url}" alt="">
       <button class="del-img" onclick="removeImg(${i})">✕</button>
       ${i===0?'<div class="main-badge">رئيسية</div>':''}
     </div>`).join('');
 }
-window.removeImg = (i) => { prodImages.splice(i,1); renderImgPreviews(); };
 
-// ── VARIANTS ──
-window.addVariant = () => {
-  const type = document.getElementById('vType').value.trim();
-  const val = document.getElementById('vVal').value.trim();
-  const qty = parseInt(document.getElementById('vQty').value)||0;
-  if(!type||!val) return toast('أدخل نوع وقيمة المتغير','e');
-  prodVariants.push({type,val,qty,key:`${type} | ${val}`});
-  document.getElementById('vType').value='';document.getElementById('vVal').value='';document.getElementById('vQty').value='';
-  renderVariantsList();
+let dragIdx=null;
+window.dragStart=i=>{ dragIdx=i; };
+window.dragDrop=i=>{
+  if(dragIdx===null||dragIdx===i) return;
+  const moved=prodImages.splice(dragIdx,1)[0];
+  prodImages.splice(i,0,moved);
+  dragIdx=null;
+  renderImgPreviews();
 };
 function renderVariantsList() {
   const el = document.getElementById('variantsList');
@@ -1098,18 +1130,22 @@ window.saveProduct = async () => {
   const oldImgs = prodImages.filter(i=>!i.isNew).map(i=>i.url);
   let uploadedUrls = [...oldImgs];
 
-  if(newImgs.length) {
+if(newImgs.length) {
     progressBar.style.display='block';
-    for(let i=0;i<newImgs.length;i++) {
-      const file = newImgs[i].file;
-      const safeName = name.replace(/[^\w\s]/gi,'_');
-      const uniqueName = `${Date.now()}_${i}_${file.name}`;
+    progressFill.style.width='10%';
+    const safeName = name.replace(/[^\w\s]/gi,'_');
+    
+    // رفع كل الصور بالتوازي
+    const uploads = newImgs.map((img,i) => {
+      const uniqueName = `${Date.now()}_${i}_${img.file.name}`;
       const storageRef = sRef(storage,`warehouse_images/${safeName}/${uniqueName}`);
-      await uploadBytes(storageRef,file);
-      const url = await getDownloadURL(storageRef);
-      uploadedUrls.push(url);
-      progressFill.style.width = `${((i+1)/newImgs.length)*100}%`;
-    }
+      return uploadBytes(storageRef, img.file).then(()=>getDownloadURL(storageRef));
+    });
+    
+    progressFill.style.width='60%';
+    const newUrls = await Promise.all(uploads);
+    uploadedUrls.push(...newUrls);
+    progressFill.style.width='100%';
     progressBar.style.display='none';
   }
 
@@ -1188,7 +1224,9 @@ window.openAddCat = () => {
   editCatKey=null;
   document.getElementById('catModalTitle').textContent='➕ فئة جديدة';
   ['cName','cIcon','cOrder'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cColor').value='#ebf4ff';
+document.getElementById('cColor').value='#ebf4ff';
+  document.getElementById('cImg').value='';
+  document.getElementById('cHeaderImg').value='';
   document.getElementById('catModal').classList.add('open');
 };
 window.openEditCat = (key) => {
@@ -1200,6 +1238,7 @@ window.openEditCat = (key) => {
   document.getElementById('cOrder').value=c.order||'';
   document.getElementById('cColor').value=c.color||'#ebf4ff';
 document.getElementById('cImg').value=c.img||'';
+  document.getElementById('cHeaderImg').value=c.headerImg||'';
   document.getElementById('catModal').classList.add('open');
 };
 window.closeCatModal=()=>document.getElementById('catModal').classList.remove('open');
@@ -1210,10 +1249,9 @@ window.saveCat = async () => {
   const order=parseInt(document.getElementById('cOrder').value)||99;
   const color=document.getElementById('cColor').value;
   if(!name) return toast('أدخل اسم الفئة','e');
-  if(!icon) return toast('أدخل أيقونة للفئة','e');
   const key=editCatKey||(name.replace(/\s+/g,'_')+Date.now());
-const data={name,icon,order,color,key,img:document.getElementById('cImg').value.trim()};
-  await set(ref(db,'storeCategories/'+key),data);
+const data={name,icon,order,color,key,img:document.getElementById('cImg').value.trim(),headerImg:document.getElementById('cHeaderImg').value.trim()};
+await set(ref(db,'storeCategories/'+key),data);
   allCats[key]=data;
   toast(editCatKey?'✅ تم تعديل الفئة':'✅ تم إضافة الفئة','s');
   closeCatModal(); renderCats(); buildCatSelects(); buildCatFilter();
@@ -1254,6 +1292,7 @@ window.openAddSlide=()=>{
   document.getElementById('slColor1').value='#043B64';
   document.getElementById('slColor2').value='#0a5a96';
   document.getElementById('slActive').checked=true;
+  document.getElementById('slType').value='main';
   document.getElementById('slideModal').classList.add('open');
 };
 window.openEditSlide=(key)=>{
@@ -1272,15 +1311,18 @@ document.getElementById('slImg').value=s.img||'';
   document.getElementById('slBgImg').value=s.bgImg||'';
   document.getElementById('slMobImg').value=s.mobImg||'';
   document.getElementById('slActive').checked=s.active!==false;
+  document.getElementById('slType').value=s.type||'main';
   document.getElementById('slideModal').classList.add('open');
 };
 window.closeSlideModal=()=>document.getElementById('slideModal').classList.remove('open');
 
 window.saveSlide=async()=>{
   const title=document.getElementById('slTitle').value.trim();
+  const slType=document.getElementById('slType').value;
   const key=editSlideKey||('slide_'+Date.now());
 const data={
     title,
+    type:slType,
     sub:document.getElementById('slSub').value.trim(),
     img:document.getElementById('slImg').value.trim(),
    bgImg:document.getElementById('slBgImg').value.trim(),
@@ -1431,7 +1473,7 @@ function cropImage(file) {
       cropper = new Cropper(img, {
         aspectRatio: 4/5,
         viewMode: 1,
-        autoCropArea: 0.9,
+       autoCropArea: 1,
       });
     }, 300);
   });

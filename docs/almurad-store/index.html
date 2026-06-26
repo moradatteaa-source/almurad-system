@@ -13,6 +13,15 @@
   font-style:normal;
 }
 </style><style>
+.cp-header{width:100%;overflow:hidden;height:300px;position:relative;}
+.cp-header img{width:100%;height:100%;object-fit:cover;}
+.cp-header-default{width:100%;height:300px;background:linear-gradient(135deg,var(--nv),var(--nv2));position:relative;}
+.cp-header-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.25);}
+.cp-header-title{font-family:'Tajawal',sans-serif;font-size:42px;font-weight:900;color:var(--pr);text-shadow:0 2px 12px rgba(0,0,0,0.4);}
+.cp-header-bread{font-size:14px;color:rgba(255,255,255,0.8);margin-top:8px;}
+@media(max-width:600px){.cp-header{height:200px;}.cp-header-title{font-size:28px;}}
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px;padding:20px;}
+@media(max-width:600px){.cp-grid{grid-template-columns:repeat(2,1fr);gap:10px;}}
 @font-face {
   font-family: 'Tajawal';
   src: url('../tajawal-logo.png') format('truetype');
@@ -294,7 +303,26 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 .pp-related h3{font-family:'Tajawal',sans-serif;font-size:18px;font-weight:700;color:var(--nv);margin-bottom:16px;}
 .pp-rel-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
 @media(min-width:600px){.pp-rel-grid{grid-template-columns:repeat(3,1fr);}}
-
+/* ══ PRODUCT PAGE IMPROVEMENTS ══ */
+.pp-cat-header{width:100%;overflow:hidden;max-height:220px;position:relative;}
+.pp-cat-header img{width:100%;height:220px;object-fit:cover;}
+.pp-cat-header-default{width:100%;height:160px;background:linear-gradient(135deg,var(--nv),var(--nv2));display:flex;align-items:center;justify-content:center;font-size:60px;}
+.pp-img-slide{min-width:100%;aspect-ratio:unset !important;overflow:hidden;}
+.pp-img-slide img{width:100%;height:auto !important;object-fit:contain !important;max-height:420px;display:block;}
+/* كمية */
+.pp-qty-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.pp-qty-btn{width:38px;height:38px;border-radius:10px;border:2px solid var(--br);background:#fff;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--nv);transition:var(--t);}
+.pp-qty-btn:hover{background:var(--nv);color:#fff;border-color:var(--nv);}
+.pp-qty-num{font-size:18px;font-weight:800;min-width:32px;text-align:center;color:var(--nv);}
+/* زر طلب مباشر */
+.pp-direct-btn{width:100%;background:linear-gradient(135deg,var(--gd),var(--gd2));color:#fff;border:none;border-radius:14px;padding:16px;font-family:'Cairo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(45,182,163,.3);margin-top:10px;}
+.pp-direct-btn:hover{transform:translateY(-2px);}
+/* الأقسام قابلة للسحب على الموبايل */
+@media(max-width:600px){
+  .cats-wrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .cats-wrap::-webkit-scrollbar{display:none;}
+  .cats-track{transform:none !important;display:flex;flex-wrap:nowrap;}
+}
 /* ══ LOAD MORE ══ */
 .lm-wrap{text-align:center;padding:36px 0 20px;}
 .lm-btn{background:var(--nv);color:var(--gd2);border:none;border-radius:12px;padding:13px 38px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:var(--t);}
@@ -610,7 +638,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
   <div class="f-btm">© 2026 متجر المراد – جميع الحقوق محفوظة</div>
 </div>
 </footer>
-
+<!-- CATEGORY PAGE -->
+<div class="prod-page" id="catPage">
+  <div class="pp-nav">
+    <button class="pp-back" onclick="closeCatPage()">←</button>
+    <div class="pp-title" id="cpTitle">القسم</div>
+  </div>
+  <div id="cpBanner"></div>
+  <div id="cpContent"></div>
+</div>
 <!-- PRODUCT PAGE (full screen overlay) -->
 <div class="prod-page" id="prodPage">
   <div class="pp-nav">
@@ -618,6 +654,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
     <div class="pp-title" id="ppTitle">تفاصيل المنتج</div>
     <button class="pp-wish-btn" id="ppWishBtn" onclick="toggleWishFromPage()">🤍</button>
   </div>
+  <div id="ppBanner"></div>
   <div id="ppContent"></div>
 </div>
 
@@ -638,6 +675,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
     <h3>🛒 سلة المشتريات</h3>
     <button class="c-xbtn" onclick="closeCart()">✕</button>
   </div>
+  <div id="cartBanner"></div>
   <div class="c-items" id="ci"></div>
   <div class="c-foot" id="cf" style="display:none;">
     <div class="c-total">
@@ -656,6 +694,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
     <button class="m-xbtn" onclick="closeCheckout()">✕</button>
   </div>
   <div class="m-body">
+    <div id="ordersBanner" style="margin:-22px -24px 20px;border-radius:22px 22px 0 0;overflow:hidden;"></div>
     <div class="osumm" id="osb"></div>
     <div class="fg"><label class="fl">الاسم الكامل *</label><input class="fi" id="cn" placeholder="أدخل اسمك الكامل"></div>
     <div class="fr2">
@@ -717,7 +756,7 @@ const db = getDatabase(fb);
 
 /* ── STATE ── */
 let all=[], filt=[], disp=0;
-const PS=20;
+const PS=8;
 let curCat='all', q='';
 let cart=JSON.parse(localStorage.getItem('mc2')||'[]');
 let wishlist=JSON.parse(localStorage.getItem('mw2')||'[]');
@@ -800,16 +839,63 @@ window.moveCats=dir=>{
   track.style.transform=`translateX(${catOff}px)`;
 };
 window.filterCat=cat=>{
-  curCat=cat;
-  document.querySelectorAll('.cat-card').forEach(c=>{
-    const nm=c.querySelector('.cat-name').textContent;
-    c.classList.remove('on');
-  });
-  // Update section title
-  const title=document.getElementById('prodSectionTitle');
-  title.textContent=cat==='all'||cat==='الكل'?'وصل حديثاً':cat;
-  applyF();
-  document.getElementById('prods').scrollIntoView({behavior:'smooth'});
+  if(cat==='all'||cat==='الكل'){
+    curCat='all';
+    document.getElementById('prodSectionTitle').textContent='وصل حديثاً';
+    applyF();
+    document.getElementById('prods').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  openCatPage(cat);
+};
+
+window.openCatPage=cat=>{
+  const catData=Object.values(window._allCatsData||{}).find(c=>c.name===cat);
+  const header=catData?.headerImg||'';
+  const icon=catData?.icon||'📦';
+  const prods=all.filter(p=>p.category===cat);
+
+  document.getElementById('cpTitle').textContent=cat;
+  document.getElementById('cpContent').innerHTML=`
+${header
+  ?`<div class="cp-header">
+      <img src="${header}" alt="${cat}">
+      <div class="cp-header-overlay">
+        <div class="cp-header-title">${cat}</div>
+        <div class="cp-header-bread">الصفحة الرئيسية / ${cat}</div>
+      </div>
+    </div>`
+  :`<div class="cp-header-default">
+      <div class="cp-header-overlay">
+        <div style="font-size:60px;margin-bottom:10px;">${icon}</div>
+        <div class="cp-header-title">${cat}</div>
+      </div>
+    </div>`
+}
+    <div style="padding:16px 20px 8px;">
+      <div style="font-size:14px;color:var(--mu);font-weight:700;">${prods.length} منتج</div>
+    </div>
+    <div class="cp-grid">
+      ${prods.length
+        ?prods.map(p=>buildCard(p)).join('')
+        :`<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--mu);">لا توجد منتجات في هذا القسم</div>`
+      }
+    </div>`;
+// بنر الفئات
+getBannerByType('category').then(banner=>{
+  const bannerEl=document.getElementById('cpBanner');
+  if(banner&&bannerEl){
+    const src=banner.bgImg||banner.img||'';
+    if(src) bannerEl.innerHTML=`<div style="width:100%;overflow:hidden;max-height:400px;position:relative;"><img src="${src}" style="width:100%;object-fit:cover;" alt=""></div>`;
+  }
+});
+document.getElementById('catPage').classList.add('open');
+document.body.style.overflow='hidden';
+};
+
+window.closeCatPage=()=>{
+  document.getElementById('catPage').classList.remove('open');
+  document.body.style.overflow='';
 };
 
 /* ── LOAD PRODUCTS ── */
@@ -870,7 +956,7 @@ function buildCard(p){
   const inWish=wishlist.includes(p.key);
   return`<div class="pc" onclick="openProdPage('${p.key}')">
     <div class="pc-img">
-      ${img?`<img src="${img}" alt="${name}" loading="lazy">`:`<div class="pc-no-img">📦</div>`}
+      ${img?`<img src="${img}" alt="${name}" loading="lazy" decoding="async" width="400" height="500">`:`<div class="pc-no-img">📦</div>`}
       <button class="pc-wish${inWish?' on':''}" onclick="event.stopPropagation();toggleWish('${p.key}',this)" title="المفضلة">${inWish?'❤️':'🤍'}</button>
     </div>
     <div class="pc-body">
@@ -892,20 +978,28 @@ window.openProdPage=key=>{
   const av=p.totalQty>0;
   const inWish=wishlist.includes(key);
   window._ppSelVar=vars[0]||null;
+  window._ppQty=1;
   let ppIdx=0;
+
+  // ابحث عن صورة هيدر الفئة
+  const catData=Object.values(window._allCatsData||{}).find(c=>c.name===p.category);
+  const catHeader=catData?.headerImg||'';
 
   document.getElementById('ppTitle').textContent=name;
   document.getElementById('ppWishBtn').textContent=inWish?'❤️':'🤍';
   document.getElementById('ppWishBtn').classList.toggle('on',inWish);
 
-  // Build related products
   const related=all.filter(x=>x.key!==key&&x.category===p.category).slice(0,6);
 
   document.getElementById('ppContent').innerHTML=`
+    ${catHeader
+      ?`<div class="pp-cat-header"><img src="${catHeader}" alt="${p.category||''}"></div>`
+      :(p.category?`<div class="pp-cat-header-default">${catData?.icon||'🏺'}</div>`:'')
+    }
     <div class="pp-imgs">
       <div class="pp-imgs-track" id="ppTrack">
-        ${imgs.length?imgs.map(u=>`<div class="pp-img-slide"><img src="${u}" alt="${name}"></div>`).join('')
-        :`<div class="pp-img-slide" style="display:flex;align-items:center;justify-content:center;background:var(--cr2);aspect-ratio:4/3;font-size:80px;">📦</div>`}
+        ${imgs.length?imgs.map(u=>`<div class="pp-img-slide"><img src="${u}" alt="${name}" loading="lazy"></div>`).join('')
+        :`<div class="pp-img-slide" style="display:flex;align-items:center;justify-content:center;background:var(--cr2);min-height:260px;font-size:80px;">📦</div>`}
       </div>
     </div>
     ${imgs.length>1?`<div class="pp-thumbs">${imgs.map((u,i)=>`<div class="pp-thumb${i===0?' on':''}" onclick="ppGoImg(${i})"><img src="${u}"></div>`).join('')}</div>`:''}
@@ -919,8 +1013,17 @@ window.openProdPage=key=>{
       ${p.desc?`<div class="pp-desc">${p.desc}</div>`:''}
       ${vars.length?`<div class="pp-vars-title">اختر المتغير:</div>
       <div class="pp-vars">${vars.map((v,i)=>`<div class="ppv${i===0?' on':''}" onclick="ppSelVar(this,'${v}')">${v}</div>`).join('')}</div>`:''}
+      <div class="pp-qty-row">
+        <span style="font-size:13px;font-weight:700;color:var(--mu);">الكمية:</span>
+        <button class="pp-qty-btn" onclick="ppChQty(-1)">−</button>
+        <span class="pp-qty-num" id="ppQtyNum">1</span>
+        <button class="pp-qty-btn" onclick="ppChQty(1)">+</button>
+      </div>
       <button class="pp-order-btn" ${!av?'disabled':''} onclick="ppAddCart('${key}')">
         🛒 أضف للسلة
+      </button>
+      <button class="pp-direct-btn" ${!av?'disabled':''} onclick="ppDirectOrder('${key}')">
+        ⚡ اطلب الآن مباشرة
       </button>
     </div>
     ${related.length?`<div class="pp-related">
@@ -928,7 +1031,6 @@ window.openProdPage=key=>{
       <div class="pp-rel-grid">${related.map(r=>buildCard(r)).join('')}</div>
     </div>`:''}`;
 
-  // img slider for product page
   window.ppGoImg=i=>{
     ppIdx=i;
     document.getElementById('ppTrack').style.transform=`translateX(${i*100}%)`;
@@ -939,12 +1041,45 @@ window.openProdPage=key=>{
     document.querySelectorAll('.ppv').forEach(d=>d.classList.remove('on'));
     el.classList.add('on');
   };
-  window.ppAddCart=k=>{
-    addCart(k,window._ppSelVar);
-    toast('✅ أضيف للسلة','s');
+  window.ppChQty=d=>{
+    window._ppQty=Math.max(1,( window._ppQty||1)+d);
+    document.getElementById('ppQtyNum').textContent=window._ppQty;
   };
-
-  document.getElementById('prodPage').classList.add('open');
+  window.ppAddCart=k=>{
+    const qty=window._ppQty||1;
+    for(let i=0;i<qty;i++) addCart(k,window._ppSelVar);
+    toast(`✅ أضيف ${qty} للسلة`,'s');
+  };
+  window.ppDirectOrder=k=>{
+    const qty=window._ppQty||1;
+    const pr=all.find(x=>x.key===k);if(!pr)return;
+    // أضف للسلة مؤقتاً وافتح الطلب
+    const tempCart=[{key:k,qty,name:pr.name||k,price:pr.prices?.online||pr.prices?.pos||0,img:getImg(pr),variant:window._ppSelVar||null}];
+    const total=tempCart[0].price*qty;
+    document.getElementById('osb').innerHTML=`<h4>ملخص الطلب (${qty} قطعة)</h4>
+      <div class="osumm-row"><span>${pr.name||k}${window._ppSelVar?` - ${window._ppSelVar}`:''} ×${qty}</span><span>IQD ${total.toLocaleString()}</span></div>
+      <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
+    // احفظ الطلب المؤقت
+    window._directOrderData=tempCart;
+    document.getElementById('chkMov').classList.add('op');
+    getBannerByType('orders').then(banner=>{
+  const bannerEl=document.getElementById('ordersBanner');
+  if(banner&&bannerEl){
+    bannerEl.innerHTML=`<div style="width:100%;overflow:hidden;max-height:400px;">
+      <img src="${banner.bgImg||banner.img||''}" style="width:100%;object-fit:cover;" alt="">
+    </div>`;
+  }
+});
+  };
+getBannerByType('product').then(banner=>{
+  const bannerEl=document.getElementById('ppBanner');
+  if(banner&&bannerEl){
+    const src=banner.bgImg||banner.img||'';
+    if(src) bannerEl.innerHTML=`<div style="width:100%;overflow:hidden;max-height:400px;position:relative;"><img src="${src}" style="width:100%;object-fit:cover;" alt=""></div>`;
+  }
+});
+document.getElementById('prodPage').classList.add('open');
+document.body.style.overflow='hidden';
   document.body.style.overflow='hidden';
 };
 window.closeProdPage=()=>{
@@ -1066,7 +1201,19 @@ function renderCart(){
 }
 window.chQty=(i,d)=>{cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);saveCart();};
 window.delItem=i=>{cart.splice(i,1);saveCart();};
-window.openCart=()=>{renderCart();document.getElementById('cov').classList.add('op');document.getElementById('cdr').classList.add('op');};
+window.openCart=()=>{
+  renderCart();
+  document.getElementById('cov').classList.add('op');
+  document.getElementById('cdr').classList.add('op');
+  getBannerByType('cart').then(banner=>{
+    const bannerEl=document.getElementById('cartBanner');
+    if(banner&&bannerEl){
+      bannerEl.innerHTML=`<div style="width:100%;overflow:hidden;max-height:400px;">
+        <img src="${banner.bgImg||banner.img||''}" style="width:100%;object-fit:cover;" alt="">
+      </div>`;
+    }
+  });
+};
 window.closeCart=()=>{document.getElementById('cov').classList.remove('op');document.getElementById('cdr').classList.remove('op');};
 
 /* ── CHECKOUT ── */
@@ -1092,7 +1239,8 @@ window.submitOrder=async()=>{
   if(!phone||phone.length<10) return toast('أدخل رقم هاتف صحيح','e');
   if(!city) return toast('اختر المحافظة','e');
   if(!addr) return toast('أدخل عنوانك التفصيلي','e');
-  if(!cart.length) return toast('السلة فارغة','e');
+  const orderCart = window._directOrderData || cart;
+if(!orderCart.length) return toast('السلة فارغة','e');
   const btn=document.getElementById('subbtn');
   btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';
   let orderNum=1000;
@@ -1101,16 +1249,18 @@ window.submitOrder=async()=>{
     orderNum=(cs.exists()&&cs.val()>1000)?cs.val()+1:1001;
     await set(ref(db,'orderCounter'),orderNum);
   }catch(e){orderNum=Math.floor(1000+Math.random()*9000);}
-  const total=cart.reduce((s,c)=>s+(c.price*c.qty),0);
+const total=orderCart.reduce((s,c)=>s+(c.price*c.qty),0);
   const now=new Date();
-  const qty=cart.reduce((s,c)=>s+c.qty,0);
-  const mainProduct=cart.length===1?cart[0].name:cart.map(c=>`${c.name}×${c.qty}`).join(' + ');
-  const productsDetailed={};cart.forEach((c,i)=>{productsDetailed['item_'+(i+1)]={name:c.name,variant:c.variant||'',qty:c.qty,price:c.price,subtotal:c.price*c.qty};});
+  const qty=orderCart.reduce((s,c)=>s+c.qty,0);
+  const mainProduct=orderCart.length===1?orderCart[0].name:orderCart.map(c=>`${c.name}×${c.qty}`).join(' + ');
+  const productsDetailed={};orderCart.forEach((c,i)=>{productsDetailed['item_'+(i+1)]={name:c.name,variant:c.variant||'',qty:c.qty,price:c.price,subtotal:c.price*c.qty};});
   const order={orderNumber:orderNum,customerName:name,phone1:phone,city:`${city}${area?' - '+area:''}`,area:area||city,address:`${name} ${city}${area?' '+area:''} ${addr} ${phone}`,productName:mainProduct,productsDetailed,quantity:qty,price:total,notes:note||'',status:'جديد',source:'الموقع الإلكتروني',advertiser:'',code:'WEB',orderDate:now.toISOString(),createdAt:now.getTime(),enterIndex:now.getTime(),lastUpdate:now.toISOString()};
   try{
     await set(ref(db,`ordersTest/جديد/${orderNum}`),order);
     await set(ref(db,`ordersTest/جديد/_meta`),{lastModified:Date.now()});
-    cart=[];saveCart();closeCheckout();
+if(!window._directOrderData) {cart=[];saveCart();}
+window._directOrderData=null;
+closeCheckout();
     document.getElementById('son').textContent=`#${orderNum}`;
     document.getElementById('succMov').classList.add('op');
     ['cn','cp','ca2','ca','cno'].forEach(id=>document.getElementById(id).value='');
@@ -1141,13 +1291,28 @@ window.toast=(msg,type='s')=>{
 /* ── UTILS ── */
 window.scrollToP=()=>document.getElementById('prods').scrollIntoView({behavior:'smooth'});
 window.applyF=applyF;
-
-
+async function preloadBanners(){
+  try{
+    const snap=await get(ref(db,'storeSlides'));
+    _bannersCache=snap.exists()?snap.val():{};
+  }catch(e){_bannersCache={};}
+}
+let _bannersCache=null;
+async function getBannerByType(type){
+  try{
+    if(!_bannersCache){
+      const snap=await get(ref(db,'storeSlides'));
+      _bannersCache=snap.exists()?snap.val():{};
+    }
+    const banners=Object.values(_bannersCache).filter(s=>s.type===type&&s.active!==false);
+    return banners.length?banners[0]:null;
+  }catch(e){return null;}
+}
 async function loadDynSlides(){
   try{
     const snap=await get(ref(db,'storeSlides'));
 if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();return;}
-    const slides=Object.values(snap.val()).filter(s=>s.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));
+  const slides=Object.values(snap.val()).filter(s=>s.active!==false&&(s.type==='main'||!s.type)).sort((a,b)=>(a.order||99)-(b.order||99));
    if(!slides.length){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();return;}
     document.getElementById('ht').innerHTML=slides.map(s=>`
       <div class="hslide" style="background:${s.bgImg?`url('${s.bgImg}') center/cover no-repeat`:`linear-gradient(135deg,${s.color1||'#1C1208'} 0%,${s.color2||'#2E1F0A'} 100%)`};">
@@ -1185,6 +1350,7 @@ if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.cla
 async function loadDynCats(){
   try{
     const snap=await get(ref(db,'storeCategories'));
+        window._allCatsData=snap.exists()?snap.val():{}; 
     if(!snap.exists()){buildCats();return;}
     const cats=Object.values(snap.val()).sort((a,b)=>(a.order||99)-(b.order||99));
     buildCats([{n:'الكل',icon:'🏠'},...cats.map(c=>({...c,n:c.name}))]);
@@ -1218,11 +1384,13 @@ document.getElementById('pg').innerHTML=[...Array(6)].map(()=>`
 loadSettings();
 updateCartUI();
 updateWishUI();
-Promise.all([loadDynSlides(), loadDynCats()]).then(()=>{
-  const home=document.getElementById('home');
-  home.style.visibility='visible';
-  home.style.opacity='1';
-  document.getElementById('cats').style.opacity='1';
+preloadBanners().then(()=>{
+  Promise.all([loadDynSlides(), loadDynCats()]).then(()=>{
+    const home=document.getElementById('home');
+    home.style.visibility='visible';
+    home.style.opacity='1';
+    document.getElementById('cats').style.opacity='1';
+  });
 });
 loadProds().then(()=>{
   document.getElementById('prods').style.opacity='1';
@@ -1238,6 +1406,7 @@ document.getElementById('ht').addEventListener('touchend',e=>{
     hTimer=setInterval(()=>goSlide(hIdx+1),5000);
   }
 },{passive:true});
+
 </script>
 </body>
 </html>
