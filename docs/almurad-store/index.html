@@ -254,8 +254,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 @media(max-width:600px){.pgrid{grid-template-columns:repeat(2,1fr);gap:10px;}}
 
 /* ══ PRODUCT CARD ══ */
-.pc{background:var(--wh);border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid rgba(232,213,183,.5);transition:var(--t);cursor:pointer;position:relative;}
-.pc:hover{transform:translateY(-6px);box-shadow:var(--sh2);}
+.pc{background:#F5ECD7;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid rgba(232,213,183,.5);transition:var(--t);cursor:pointer;position:relative;}.pc:hover{transform:translateY(-6px);box-shadow:var(--sh2);}
 .pc-img{aspect-ratio:4/5;overflow:hidden;position:relative;background:var(--cr2);}
 .pc-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s;}
 .pc:hover .pc-img img{transform:scale(1.07);}
@@ -310,6 +309,20 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 .pp-related h3{font-family:'Tajawal',sans-serif;font-size:18px;font-weight:700;color:var(--nv);margin-bottom:16px;}
 .pp-rel-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
 @media(min-width:600px){.pp-rel-grid{grid-template-columns:repeat(3,1fr);}}
+/* ══ PRODUCT PAGE DESKTOP LAYOUT ══ */
+@media(min-width:601px){
+  .pp-desktop-wrap{display:flex;gap:40px;padding:30px;max-width:1100px;margin:0 auto;}
+  .pp-desktop-imgs{flex:0 0 480px;width:480px;}
+  .pp-desktop-info{flex:1;padding-top:10px;}
+  .pp-imgs{background:#fff;border-radius:16px;overflow:hidden;}
+  .pp-imgs-track{display:flex;}
+  .pp-img-slide img{width:100%;height:480px;object-fit:contain;background:#f8f8f8;}
+  .pp-thumbs{display:flex;gap:8px;padding:12px 0;flex-wrap:wrap;}
+  .pp-thumb{width:64px;height:64px;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid transparent;flex-shrink:0;}
+  .pp-thumb.on{border-color:var(--pr);}
+  .pp-related{padding:30px;}
+  .pp-rel-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+}
 /* ══ PRODUCT PAGE IMPROVEMENTS ══ */
 .pp-cat-header{width:100%;overflow:hidden;max-height:220px;position:relative;}
 .pp-cat-header img{width:100%;height:220px;object-fit:cover;}
@@ -328,9 +341,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 @media(max-width:600px){
   .cats-wrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .cats-wrap::-webkit-scrollbar{display:none;}
-  .cats-track{display:flex;flex-wrap:nowrap;}
+.cats-track{display:flex;flex-wrap:nowrap;width:max-content;}
   .cat-card{width:22vw !important;flex:0 0 22vw !important;}
-.cat-ico{width:95px !important;height:95px !important;}
+  .cat-ico{width:95px !important;height:95px !important;}
 }
 /* ══ LOAD MORE ══ */
 .lm-wrap{text-align:center;padding:36px 0 20px;}
@@ -827,7 +840,8 @@ const DEFAULT_CATS=[
 
 function buildCats(cats=null){
   const track=document.getElementById('catsTrack');
-  const list=cats||DEFAULT_CATS;
+const list=cats||DEFAULT_CATS;
+  window._lastCatsList=list;
   
   const buildCards = () => list.map(c=>`
     <div class="cat-card" onclick="filterCat('${c.n===undefined?c.name:c.n}')">
@@ -848,21 +862,23 @@ const CARD_W = isMob ? 90 : 164;
   track.style.transition = 'none';
   track.style.transform = `translateX(${offset}px)`;
   
-  clearInterval(window._catTimer);
+clearInterval(window._catTimer);
   
-  window._catTimer = setInterval(()=>{
-    offset -= CARD_W;
-    track.style.transition = 'transform 0.5s cubic-bezier(.4,0,.2,1)';
-    track.style.transform = `translateX(${offset}px)`;
-    
-    setTimeout(()=>{
-      if(offset <= -(totalOneSet * 2)){
-        track.style.transition = 'none';
-        offset = -totalOneSet;
-        track.style.transform = `translateX(${offset}px)`;
-      }
-    }, 510);
-  }, 2500);
+if(true){
+    window._catTimer = setInterval(()=>{
+      offset -= CARD_W;
+      track.style.transition = 'transform 0.5s cubic-bezier(.4,0,.2,1)';
+      track.style.transform = `translateX(${offset}px)`;
+      
+      setTimeout(()=>{
+        if(offset <= -(totalOneSet * 2)){
+          track.style.transition = 'none';
+          offset = -totalOneSet;
+          track.style.transform = `translateX(${offset}px)`;
+        }
+      }, 510);
+    }, 2500);
+  }
 }
 
 window.moveCats = dir => {
@@ -1057,7 +1073,8 @@ window.openProdPage=key=>{
 
   const related=all.filter(x=>x.key!==key&&x.category===p.category).slice(0,6);
 
-  document.getElementById('ppContent').innerHTML=`
+const isMob=window.innerWidth<=600;
+  document.getElementById('ppContent').innerHTML= isMob ? `
     <div class="pp-imgs">
       <div class="pp-imgs-track" id="ppTrack">
         ${imgs.length?imgs.map(u=>`<div class="pp-img-slide"><img src="${u}" alt="${name}" loading="lazy"></div>`).join('')
@@ -1081,18 +1098,43 @@ window.openProdPage=key=>{
         <span class="pp-qty-num" id="ppQtyNum">1</span>
         <button class="pp-qty-btn" onclick="ppChQty(1)">+</button>
       </div>
-      <button class="pp-order-btn" ${!av?'disabled':''} onclick="ppAddCart('${key}')">
-        🛒 أضف للسلة
-      </button>
-      <button class="pp-direct-btn" ${!av?'disabled':''} onclick="ppDirectOrder('${key}')">
-        ⚡ اطلب الآن مباشرة
-      </button>
+      <button class="pp-order-btn" ${!av?'disabled':''} onclick="ppAddCart('${key}')">🛒 أضف للسلة</button>
+      <button class="pp-direct-btn" ${!av?'disabled':''} onclick="ppDirectOrder('${key}')">⚡ اطلب الآن مباشرة</button>
     </div>
-    ${related.length?`<div class="pp-related">
-      <h3>منتجات ذات صلة</h3>
-      <div class="pp-rel-grid">${related.map(r=>buildCard(r)).join('')}</div>
-    </div>`:''}`;
-
+    ${related.length?`<div class="pp-related"><h3>منتجات ذات صلة</h3><div class="pp-rel-grid">${related.map(r=>buildCard(r)).join('')}</div></div>`:''}
+  ` : `
+    <div class="pp-desktop-wrap">
+      <div class="pp-desktop-imgs">
+        <div class="pp-imgs">
+          <div class="pp-imgs-track" id="ppTrack">
+            ${imgs.length?imgs.map(u=>`<div class="pp-img-slide"><img src="${u}" alt="${name}" loading="lazy"></div>`).join('')
+            :`<div class="pp-img-slide" style="display:flex;align-items:center;justify-content:center;background:var(--cr2);min-height:480px;font-size:80px;">📦</div>`}
+          </div>
+        </div>
+        ${imgs.length>1?`<div class="pp-thumbs">${imgs.map((u,i)=>`<div class="pp-thumb${i===0?' on':''}" onclick="ppGoImg(${i})"><img src="${u}"></div>`).join('')}</div>`:''}
+      </div>
+      <div class="pp-desktop-info">
+        <div class="pp-cat-row">
+          ${p.category?`<div class="pp-cat-tag">🏷️ ${p.category}</div>`:''}
+          <div class="pp-avail ${av?'av':'out'}">${av?'✅ متوفر':'❌ نفذت الكمية'}</div>
+        </div>
+        <div class="pp-prod-name">${name}</div>
+        <div class="pp-price">IQD ${price.toLocaleString('en-US')}</div>
+        ${p.desc?`<div class="pp-desc">${p.desc}</div>`:''}
+        ${vars.length?`<div class="pp-vars-title">اختر المتغير:</div>
+        <div class="pp-vars">${vars.map((v,i)=>`<div class="ppv${i===0?' on':''}" onclick="ppSelVar(this,'${v}')">${v}</div>`).join('')}</div>`:''}
+        <div class="pp-qty-row">
+          <span style="font-size:13px;font-weight:700;color:var(--mu);">الكمية:</span>
+          <button class="pp-qty-btn" onclick="ppChQty(-1)">−</button>
+          <span class="pp-qty-num" id="ppQtyNum">1</span>
+          <button class="pp-qty-btn" onclick="ppChQty(1)">+</button>
+        </div>
+        <button class="pp-order-btn" ${!av?'disabled':''} onclick="ppAddCart('${key}')">🛒 أضف للسلة</button>
+        <button class="pp-direct-btn" ${!av?'disabled':''} onclick="ppDirectOrder('${key}')">⚡ اطلب الآن مباشرة</button>
+      </div>
+    </div>
+    ${related.length?`<div class="pp-related"><h3>منتجات ذات صلة</h3><div class="pp-rel-grid">${related.map(r=>buildCard(r)).join('')}</div></div>`:''}
+  `;
   window.ppGoImg=i=>{
     ppIdx=i;
     document.getElementById('ppTrack').style.transform=`translateX(${i*100}%)`;
@@ -1141,9 +1183,15 @@ window.ppDirectOrder=k=>{
   }
 });
   };
-document.getElementById('ppBanner').innerHTML='';
-
 document.getElementById('prodPage').classList.add('open');
+document.getElementById('ppBanner').innerHTML='';
+getBannerByType('product').then(banner=>{
+  const bannerEl=document.getElementById('ppBanner');
+  if(banner&&bannerEl){
+    const src=banner.bgImg||banner.img||'';
+    if(src) bannerEl.innerHTML=`<div style="width:100%;overflow:hidden;max-height:300px;"><img src="${src}" style="width:100%;object-fit:cover;display:block;" alt=""></div>`;
+  }
+});
 document.body.style.overflow='hidden';
   document.body.style.overflow='hidden';
 };
