@@ -547,6 +547,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 @media(max-width:768px){
   .footer{margin-bottom:70px;}
   .toast-wrap{bottom:90px !important;}
+  .cp-grid{padding-bottom:90px !important;}
 }
 </style>
 </head>
@@ -1109,7 +1110,7 @@ async function loadProds(){
     return;
   }
   all=[];
-  snap.forEach(c=>{
+snap.forEach(c=>{
     const p=c.val();
     if(p.visible!==true) return;
     const qty=p.stock?Object.values(p.stock).reduce((a,b)=>a+Number(b||0),0):(p.totalQty||0);

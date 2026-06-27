@@ -408,8 +408,9 @@ async function loadProduct(){
       return;
     }
     snap.forEach(c=>{
-      const p=c.val();
-      if(p.visible!==false) allProds.push({key:c.key,...p});
+   const p=c.val();
+      if(p.visible!==true) return;
+      allProds.push({key:c.key,...p});
     });
     sessionStorage.setItem('_prods_cache',JSON.stringify(allProds));
   }
