@@ -479,6 +479,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <div class="sb-item" onclick="goPage('products',this)">📦 المنتجات <span class="badge" id="prodBadge">0</span></div>
       <div class="sb-item" onclick="goPage('categories',this)">🏷️ الفئات</div>
       <div class="sb-item" onclick="goPage('slider',this)">🖼️ البنرات والسلايدر</div>
+      <div class="sb-item" onclick="goPage('delivery',this)">🚚 التوصيل والخصومات</div>
       <div class="sb-label">الإعدادات</div>
       <div class="sb-item" onclick="goPage('settings',this)">⚙️ إعدادات المتجر</div>
     </nav>
@@ -551,7 +552,59 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       </div>
       <div class="slider-admin-grid" id="slidesGrid"></div>
     </div>
+<!-- DELIVERY & DISCOUNTS -->
+<div class="page" id="page-delivery">
+  <div class="sec-head"><div class="sec-title">🚚 إعدادات التوصيل والخصومات</div></div>
+  <div class="settings-grid">
 
+    <div class="setting-card">
+      <h4>📍 أسعار التوصيل للمحافظات</h4>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">الأسعار بالدينار العراقي — اتركها فارغة للسعر الافتراضي</div>
+      <div id="deliveryList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input class="fi" id="newGov" placeholder="اسم المحافظة" style="flex:1;">
+        <input class="fi" type="number" id="newGovPrice" placeholder="السعر" style="width:100px;">
+        <button class="btn btn-success btn-sm" onclick="addGovPrice()">➕</button>
+      </div>
+      <div class="fg">
+        <label class="fl">السعر الافتراضي لباقي المحافظات (د.ع)</label>
+        <input class="fi" type="number" id="defaultDelivery" placeholder="5000">
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="saveDelivery()">💾 حفظ أسعار التوصيل</button>
+    </div>
+
+    <div class="setting-card">
+      <h4>🏷️ ملاحظة التوصيل للزبون</h4>
+      <div class="fg">
+        <label class="fl">النص اللي يشوفه الزبون قبل الطلب</label>
+        <textarea class="fi fi-ta" id="deliveryNote" placeholder="مثال: التوصيل داخل كركوك 3000 د.ع — باقي المحافظات 5000 د.ع" style="min-height:80px;"></textarea>
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="saveDelivery()">💾 حفظ</button>
+    </div>
+
+    <div class="setting-card">
+      <h4>🎁 إعدادات الخصومات</h4>
+      <div class="fg">
+        <label class="fl">خصم تلقائي (%) على كل المنتجات</label>
+        <input class="fi" type="number" id="globalDiscount" placeholder="0" min="0" max="100">
+      </div>
+      <div class="fg">
+        <label class="fl">حد أدنى للطلب للتوصيل المجاني (د.ع) — 0 = معطل</label>
+        <input class="fi" type="number" id="freeDeliveryMin" placeholder="0">
+      </div>
+      <div class="fg">
+        <label class="fl">كود خصم</label>
+        <input class="fi" id="discountCode" placeholder="مثال: MURAD10">
+      </div>
+      <div class="fg">
+        <label class="fl">نسبة خصم الكود (%)</label>
+        <input class="fi" type="number" id="discountCodePct" placeholder="10" min="0" max="100">
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="saveDiscounts()">💾 حفظ الخصومات</button>
+    </div>
+
+  </div>
+</div>
 <!-- SETTINGS -->
 <div class="page" id="page-settings">
   <div class="sec-head"><div class="sec-title">إعدادات المتجر</div></div>
@@ -858,7 +911,7 @@ if (localStorage.getItem('admin_logged')==='1') {
 // ══════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════
-const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',settings:'إعدادات المتجر'};
+const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',delivery:'التوصيل والخصومات',settings:'إعدادات المتجر'};
 window.goPage = (id, el) => {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
@@ -871,6 +924,7 @@ window.goPage = (id, el) => {
   if(id==='categories') renderCats();
   if(id==='slider') renderSlides();
   if(id==='settings') loadSettings();
+  if(id==='delivery') loadDeliveryPage();
   if(id==='dashboard') loadDash();
 };
 window.toggleSb = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobOverlay').classList.toggle('show'); };
@@ -1523,7 +1577,69 @@ window.uploadSlideImg = async (fileInput, targetId) => {
     btn.disabled = false;
     fileInput.value = '';
   }
+};// ══════════════════════════════════════
+// DELIVERY & DISCOUNTS
+// ══════════════════════════════════════
+let deliveryPrices = {};
+
+async function loadDeliveryPage() {
+  const snap = await get(ref(db,'storeSettings'));
+  if(!snap.exists()) return;
+  const s = snap.val();
+  deliveryPrices = s.deliveryPrices || {'كركوك':3000};
+  document.getElementById('defaultDelivery').value = s.defaultDelivery || 5000;
+  document.getElementById('deliveryNote').value = s.deliveryNote || '';
+  document.getElementById('globalDiscount').value = s.globalDiscount || 0;
+  document.getElementById('freeDeliveryMin').value = s.freeDeliveryMin || 0;
+  document.getElementById('discountCode').value = s.discountCode || '';
+  document.getElementById('discountCodePct').value = s.discountCodePct || 0;
+  renderDeliveryList();
+}
+
+function renderDeliveryList() {
+  const el = document.getElementById('deliveryList');
+  el.innerHTML = Object.entries(deliveryPrices).map(([gov,price])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7fafc;border-radius:8px;border:1px solid var(--border);">
+      <span style="flex:1;font-weight:700;color:var(--navy);">${gov}</span>
+      <span style="color:var(--orange);font-weight:800;">${Number(price).toLocaleString()} د.ع</span>
+      <button class="btn btn-danger btn-sm" onclick="removeGov('${gov}')">🗑</button>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px;">لا توجد محافظات مخصصة</div>';
+}
+
+window.addGovPrice = () => {
+  const gov = document.getElementById('newGov').value.trim();
+  const price = parseInt(document.getElementById('newGovPrice').value) || 0;
+  if(!gov || !price) return toast('أدخل اسم المحافظة والسعر','e');
+  deliveryPrices[gov] = price;
+  document.getElementById('newGov').value = '';
+  document.getElementById('newGovPrice').value = '';
+  renderDeliveryList();
 };
+
+window.removeGov = (gov) => {
+  delete deliveryPrices[gov];
+  renderDeliveryList();
+};
+
+window.saveDelivery = async () => {
+  await update(ref(db,'storeSettings'), {
+    deliveryPrices,
+    defaultDelivery: parseInt(document.getElementById('defaultDelivery').value) || 5000,
+    deliveryNote: document.getElementById('deliveryNote').value.trim(),
+  });
+  toast('✅ تم حفظ إعدادات التوصيل','s');
+};
+
+window.saveDiscounts = async () => {
+  await update(ref(db,'storeSettings'), {
+    globalDiscount: parseInt(document.getElementById('globalDiscount').value) || 0,
+    freeDeliveryMin: parseInt(document.getElementById('freeDeliveryMin').value) || 0,
+    discountCode: document.getElementById('discountCode').value.trim().toUpperCase(),
+    discountCodePct: parseInt(document.getElementById('discountCodePct').value) || 0,
+  });
+  toast('✅ تم حفظ إعدادات الخصومات','s');
+};
+
 // ── INIT ──
 if(localStorage.getItem('admin_logged')==='1') loadAll();
 </script>

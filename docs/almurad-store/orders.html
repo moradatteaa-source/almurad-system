@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>طلباتي - متجر المراد</title>
+<style>
+@font-face{font-family:'Tajawal';src:url('../Tajawal-Regular.ttf') format('truetype');}
+:root{
+  --pr:#FF6B2D;--pr2:#ff8c5a;--pr3:#e55a1e;
+  --gd:#2DB6A3;--gd2:#3dd6c4;
+  --cr:#FFFFFF;--cr2:#F5ECD7;
+  --nv:#043B64;--nv2:#032d4e;
+  --tx:#1a202c;--mu:#718096;--br:#c8d4df;
+  --sh:0 2px 20px rgba(4,59,100,0.08);
+  --t:0.25s cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Tajawal',sans-serif;background:#f5f7fa;color:var(--tx);min-height:100vh;}
+
+/* NAV */
+.nav{background:var(--nv);position:sticky;top:0;z-index:900;box-shadow:0 2px 24px rgba(0,0,0,.3);}
+.nav-in{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 20px;height:68px;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;}
+.logo-emblem{width:48px;height:48px;border-radius:10px;overflow:hidden;}
+.logo-emblem img{width:100%;height:100%;object-fit:contain;}
+.logo-txt h1{color:#FF6B2D;font-size:18px;font-weight:900;letter-spacing:2px;}
+.logo-txt span{color:rgba(255,255,255,.35);font-size:9px;display:block;letter-spacing:3px;text-transform:uppercase;}
+.nav-back{background:rgba(255,255,255,.1);border:1.5px solid rgba(45,182,163,.3);color:var(--gd2);padding:8px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;transition:var(--t);margin-right:auto;}
+.nav-back:hover{background:rgba(45,182,163,.15);}
+
+/* MAIN */
+.main{max-width:900px;margin:0 auto;padding:24px 20px 100px;}
+@media(max-width:600px){.main{padding:16px 14px 100px;}}
+
+/* LOGIN BOX */
+.login-box{background:#fff;border-radius:20px;padding:36px 28px;box-shadow:var(--sh);text-align:center;margin-top:20px;}
+.login-icon{font-size:60px;margin-bottom:16px;}
+.login-box h2{font-size:22px;font-weight:800;color:var(--nv);margin-bottom:8px;}
+.login-box p{font-size:14px;color:var(--mu);margin-bottom:28px;line-height:1.8;}
+.fi{width:100%;padding:14px 16px;border:2px solid var(--br);border-radius:13px;font-family:'Tajawal',sans-serif;font-size:15px;color:var(--tx);background:#fff;outline:none;transition:var(--t);text-align:center;direction:ltr;letter-spacing:2px;}
+.fi:focus{border-color:var(--pr);box-shadow:0 0 0 3px rgba(255,107,45,.1);}
+.search-btn{width:100%;margin-top:14px;background:linear-gradient(135deg,var(--pr),var(--pr3));color:#fff;border:none;border-radius:13px;padding:15px;font-family:'Tajawal',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:var(--t);}
+.search-btn:hover{transform:translateY(-1px);}
+.search-btn:disabled{background:#ccc;cursor:not-allowed;transform:none;}
+
+/* ORDERS LIST */
+.orders-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.orders-title{font-size:18px;font-weight:800;color:var(--nv);}
+.orders-count{background:var(--cr2);color:var(--nv);padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700;}
+.change-phone{background:none;border:2px solid var(--br);border-radius:10px;padding:8px 14px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--mu);cursor:pointer;transition:var(--t);}
+.change-phone:hover{border-color:var(--pr);color:var(--pr);}
+
+/* ORDER CARD */
+.order-card{background:#fff;border-radius:18px;box-shadow:var(--sh);margin-bottom:16px;overflow:hidden;border:1px solid rgba(200,212,223,.4);transition:var(--t);}
+.order-card:hover{box-shadow:0 8px 30px rgba(4,59,100,.12);}
+.order-head{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0;cursor:pointer;gap:12px;}
+.order-num{font-size:15px;font-weight:800;color:var(--nv);}
+.order-total{font-size:17px;font-weight:900;color:var(--pr);white-space:nowrap;}
+.order-toggle{color:var(--mu);font-size:20px;transition:var(--t);flex-shrink:0;}
+.order-card.open .order-toggle{transform:rotate(180deg);}
+
+/* STATUS BADGE */
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+.s-new      {background:#dbeafe;color:#1e40af;}
+.s-confirm  {background:#dcfce7;color:#166534;}
+.s-process  {background:#fef3c7;color:#92400e;}
+.s-ready    {background:#fef9c3;color:#854d0e;}
+.s-shipping {background:#f3e8ff;color:#6b21a8;}
+.s-delivered{background:#d1fae5;color:#065f46;}
+.s-cancel   {background:#fee2e2;color:#991b1b;}
+.s-return   {background:#ffe4e6;color:#9f1239;}
+
+/* TRACKER */
+.tracker{padding:20px;border-bottom:1px solid #f0f0f0;}
+.tracker-title{font-size:13px;font-weight:700;color:var(--mu);margin-bottom:16px;}
+.steps{display:flex;align-items:flex-start;position:relative;}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;}
+.step-line{position:absolute;top:14px;left:50%;right:-50%;height:2px;background:#e5e7eb;z-index:0;}
+.step:last-child .step-line{display:none;}
+.step-line.done{background:var(--gd);}
+.step-dot{width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1;position:relative;flex-shrink:0;border:2px solid #e5e7eb;transition:var(--t);}
+.step-dot.done  {background:var(--gd);border-color:var(--gd);color:#fff;}
+.step-dot.active{background:var(--pr);border-color:var(--pr);color:#fff;box-shadow:0 0 0 4px rgba(255,107,45,.2);}
+.step-dot.wait  {background:#fff;border-color:#e5e7eb;color:#9ca3af;}
+.step-label{font-size:10px;color:var(--mu);margin-top:6px;line-height:1.4;font-weight:600;}
+.step-label.active{color:var(--pr);font-weight:800;}
+.step-label.done  {color:var(--gd);font-weight:700;}
+
+/* REJECTED BOX */
+.rejected-box{margin:16px 20px;background:#fee2e2;border:1px solid #fca5a5;border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;}
+.rejected-box .rj-icon{font-size:32px;flex-shrink:0;}
+.rejected-box .rj-title{font-size:14px;font-weight:800;color:#991b1b;margin-bottom:4px;}
+.rejected-box .rj-sub{font-size:12px;color:#b91c1c;}
+
+/* ORDER BODY */
+.order-body{padding:16px 20px;display:none;}
+.order-card.open .order-body{display:block;}
+.body-sec{margin-bottom:16px;}
+.body-sec-title{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+
+/* PRODUCT ITEM */
+.prod-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f5;}
+.prod-item:last-child{border-bottom:none;}
+.prod-thumb{width:56px;height:56px;border-radius:10px;overflow:hidden;background:var(--cr2);flex-shrink:0;}
+.prod-thumb img{width:100%;height:100%;object-fit:cover;}
+.prod-info{flex:1;}
+.prod-name{font-size:14px;font-weight:700;color:var(--nv);margin-bottom:2px;}
+.prod-var{font-size:11px;color:var(--mu);}
+.prod-price{font-size:14px;font-weight:800;color:var(--pr);margin-top:4px;}
+
+/* INFO ROW */
+.info-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f5;}
+.info-row:last-child{border-bottom:none;}
+.info-lbl{color:var(--mu);}
+.info-val{color:var(--tx);font-weight:700;text-align:left;direction:ltr;}
+
+/* TOTAL ROW */
+.total-row{display:flex;justify-content:space-between;padding:12px 0 0;font-size:16px;font-weight:800;color:var(--pr);border-top:2px solid var(--br);margin-top:8px;}
+
+/* EMPTY */
+.empty-box{text-align:center;padding:60px 20px;color:var(--mu);}
+.empty-box .ei{font-size:64px;margin-bottom:16px;}
+.empty-box h3{font-size:18px;font-weight:800;color:var(--nv);margin-bottom:8px;}
+.empty-box p{font-size:14px;line-height:1.8;}
+
+/* LOADING */
+.loading{text-align:center;padding:60px 20px;color:var(--mu);}
+.spin{font-size:44px;display:inline-block;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* TOAST */
+.tw{position:fixed;bottom:90px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 18px;border-radius:13px;color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:tst .3s ease;}
+@keyframes tst{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+.toast.s{background:linear-gradient(135deg,#38a169,#276749);}
+.toast.e{background:linear-gradient(135deg,#e53e3e,#c53030);}
+
+/* BOTTOM NAV */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,var(--pr),var(--pr3));z-index:1200;border-radius:22px 22px 0 0;padding:10px 0 calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.25);}
+@media(max-width:768px){.bottom-nav{display:flex;}}
+.bn-items{display:flex;width:100%;justify-content:space-around;align-items:center;}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 14px;border-radius:14px;transition:var(--t);color:#fff;border:none;background:none;font-family:'Tajawal',sans-serif;font-size:10px;font-weight:700;text-decoration:none;position:relative;}
+.bn-item.active,.bn-item:hover{background:rgba(255,255,255,.2);}
+.bn-icon{font-size:22px;line-height:1;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo">
+      <div class="logo-emblem"><img src="../almushtari-logo.png" alt="المراد"></div>
+      <div class="logo-txt"><h1>AL-Murad</h1><span>APPLIANCES & KITCHEN</span></div>
+    </a>
+    <a href="index.html" class="nav-back">🏠 الرئيسية</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div id="content"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="bn-items">
+    <a href="index.html" class="bn-item">
+      <span class="bn-icon">🏠</span>
+      <span>الرئيسية</span>
+    </a>
+    <a href="orders.html" class="bn-item active">
+      <span class="bn-icon">📦</span>
+      <span>طلباتي</span>
+    </a>
+    <a href="index.html" class="bn-item" onclick="localStorage.setItem('openCart','1')">
+      <span class="bn-icon">🛒</span>
+      <span>السلة</span>
+    </a>
+    <a href="index.html" class="bn-item" onclick="localStorage.setItem('openWish','1')">
+      <span class="bn-icon">🤍</span>
+      <span>المفضلة</span>
+    </a>
+  </div>
+</div>
+
+<div class="tw" id="tw"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const fb = initializeApp({
+  apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain:"almurad-system.firebaseapp.com",
+  databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId:"almurad-system",
+  storageBucket:"almurad-system.firebasestorage.app",
+  messagingSenderId:"911755824405",
+  appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+});
+const db = getDatabase(fb);
+
+let savedPhone = localStorage.getItem('my_phone') || '';
+// الحالات النهائية — تُحفظ بالكاش ولا تُحذف
+const FINAL_STATUSES = ['تم التسليم', 'رفض', 'راجع', 'تم استلام الراجع'];
+
+function saveFinalOrders(orders) {
+  const finals = orders.filter(o => FINAL_STATUSES.includes(o._status));
+  if(!finals.length) return;
+  const cached = JSON.parse(localStorage.getItem('_final_orders') || '[]');
+  const cachedIds = new Set(cached.map(o => String(o.orderNumber)));
+  finals.forEach(o => {
+    if(!cachedIds.has(String(o.orderNumber))) cached.push(o);
+  });
+  localStorage.setItem('_final_orders', JSON.stringify(cached));
+}
+
+function getCachedFinalOrders(phone) {
+  const cached = JSON.parse(localStorage.getItem('_final_orders') || '[]');
+  return cached.filter(o => o.phone1 === phone || o.phone2 === phone);
+}
+// ══════════════════════════════════════════
+// حالات الطلب — مطابقة لنظام المراد الداخلي
+// ══════════════════════════════════════════
+const STATUS_MAP = {
+  // حالات نشطة
+  'جديد':              { label:'استلمنا طلبك',   icon:'📋', cls:'s-new',       step:0, active:true  },
+  'مثبت':              { label:'تأكد طلبك',      icon:'✅', cls:'s-confirm',   step:1, active:true  },
+  'قيد المعالجة':      { label:'تأكد طلبك',      icon:'✅', cls:'s-process',   step:1, active:true  },
+  'بانتظار البضاعة':   { label:'تأكد طلبك',      icon:'✅', cls:'s-process',   step:1, active:true  },
+'قيد التجهيز':       { label:'طلبك جاهز',      icon:'📦', cls:'s-ready',     step:2, active:true  },
+  'قيد التوصيل':       { label:'بالطريق إلك',    icon:'🚚', cls:'s-shipping',  step:3, active:true  },
+'تم التسليم':        { label:'وصلك طلبك',      icon:'🎉', cls:'s-delivered', step:4, active:true  },
+  // حالات ملغاة/مرفوضة
+  'رفض':               { label:'رُفض الطلب',     icon:'❌', cls:'s-cancel',    step:-1, active:false },
+  'راجع':              { label:'راجع للمتجر',    icon:'↩️', cls:'s-return',    step:-1, active:false },
+  'تم استلام الراجع':  { label:'راجع للمتجر',    icon:'↩️', cls:'s-return',    step:-1, active:false },
+};
+
+// خطوات التتبع للطلبات النشطة
+const STEPS = [
+  { icon:'📋', label:'استلمنا طلبك' },
+  { icon:'✅', label:'تأكد طلبك'    },
+  { icon:'📦', label:'طلبك جاهز'    },
+  { icon:'🚚', label:'بالطريق إلك'  },
+  { icon:'🎉', label:'وصلك'         },
+];
+
+// كل الحالات الموجودة في Firebase
+const ALL_STATUSES = [
+  'جديد',
+  'مثبت',
+  'قيد المعالجة',
+  'بانتظار البضاعة',
+  'قيد التجهيز',
+  'قيد التوصيل',
+  'تم التسليم',
+  'رفض',
+  'راجع',
+  'تم استلام الراجع',
+];
+
+// ══════════════════════════════════════════
+function toast(msg, type='s'){
+  const w = document.getElementById('tw');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ══════════════════════════════════════════
+// صفحة إدخال الرقم
+// ══════════════════════════════════════════
+window.showLogin = function(){
+  document.getElementById('content').innerHTML = `
+    <div class="login-box">
+      <div class="login-icon">📦</div>
+      <h2>تابع طلباتك</h2>
+      <p>أدخل رقم هاتفك اللي سجلت فيه الطلب وراح تشوف كل طلباتك وحالتها</p>
+      <input class="fi" id="phoneInput" type="tel" placeholder="07XXXXXXXXX" maxlength="11"
+        value="${savedPhone}"
+        onkeydown="if(event.key==='Enter')searchOrders()">
+      <button class="search-btn" id="searchBtn" onclick="searchOrders()">🔍 اعرض طلباتي</button>
+    </div>`;
+};
+
+// ══════════════════════════════════════════
+// البحث عن الطلبات
+// ══════════════════════════════════════════
+window.searchOrders = async () => {
+  const phone = document.getElementById('phoneInput').value.trim();
+  if(!phone || phone.length < 10) return toast('أدخل رقم هاتف صحيح', 'e');
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري البحث...';
+  localStorage.setItem('my_phone', phone);
+  savedPhone = phone;
+  // مسح الكاش عند كل بحث جديد حتى تظهر الحالات المحدثة
+  sessionStorage.removeItem(`_orders_cache_${phone}`);
+  document.getElementById('content').innerHTML = `
+    <div class="loading">
+      <div class="spin">⏳</div>
+      <p style="margin-top:14px;font-size:14px;">نفتش على طلباتك...</p>
+    </div>`;
+  try {
+    const orders = await fetchOrdersByPhone(phone);
+    showOrders(phone, orders);
+  } catch(e) {
+    toast('حدث خطأ، حاول مرة ثانية', 'e');
+    showLogin();
+  }
+};
+
+// ══════════════════════════════════════════
+// جلب الطلبات من كل الحالات
+// ══════════════════════════════════════════
+async function fetchOrdersByPhone(phone) {
+  // كاش الجلسة — ما يعيد التحميل عند الرفرش
+  const cacheKey = `_orders_cache_${phone}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if(cached) {
+    try {
+      const cachedOrders = JSON.parse(cached);
+      // دمج الكاش النهائي
+      const cachedFinals = getCachedFinalOrders(phone);
+      cachedFinals.forEach(co => {
+        if(!cachedOrders.find(o => String(o.orderNumber) === String(co.orderNumber))) {
+          cachedOrders.push(co);
+        }
+      });
+      cachedOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return cachedOrders;
+    } catch(e) {}
+  }
+
+  let orders = [];
+  // تحميل الحالات النشطة والنهائية بالتوازي لتسريع
+  const activeStatuses   = ['جديد','مثبت','قيد المعالجة','بانتظار البضاعة','قيد التجهيز','قيد التوصيل'];
+  const finalStatuses    = ['تم التسليم','رفض','راجع','تم استلام الراجع'];
+
+  // الحالات النشطة بالتوازي
+  const activeResults = await Promise.allSettled(
+    activeStatuses.map(st => get(ref(db, `ordersTest/${st}`)))
+  );
+  activeResults.forEach((res, i) => {
+    if(res.status === 'fulfilled' && res.value.exists()) {
+      res.value.forEach(c => {
+        const o = c.val();
+        if(o && (o.phone1 === phone || o.phone2 === phone)) {
+          orders.push({ ...o, _status: activeStatuses[i], _key: c.key });
+        }
+      });
+    }
+  });
+
+  // الحالات النهائية بالتوازي
+  const finalResults = await Promise.allSettled(
+    finalStatuses.map(st => get(ref(db, `ordersTest/${st}`)))
+  );
+  finalResults.forEach((res, i) => {
+    if(res.status === 'fulfilled' && res.value.exists()) {
+      res.value.forEach(c => {
+        const o = c.val();
+        if(o && (o.phone1 === phone || o.phone2 === phone)) {
+          orders.push({ ...o, _status: finalStatuses[i], _key: c.key });
+        }
+      });
+    }
+  });
+// دمج الكاش مع Firebase (الكاش للحالات النهائية)
+  saveFinalOrders(orders);
+  const cachedFinals = getCachedFinalOrders(phone);
+  cachedFinals.forEach(co => {
+    if(!orders.find(o => String(o.orderNumber) === String(co.orderNumber))) {
+      orders.push(co);
+    }
+  });
+
+// حفظ بالكاش للرفرش التالي
+  sessionStorage.setItem(cacheKey, JSON.stringify(orders));
+
+  // ترتيب من الأحدث للأقدم
+  orders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return orders;
+}
+
+// ══════════════════════════════════════════
+// عرض قائمة الطلبات
+// ══════════════════════════════════════════
+function showOrders(phone, orders) {
+  if(!orders.length) {
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:800;color:var(--nv);">📱 ${phone}</div>
+        <button class="change-phone" onclick="showLogin()">تغيير الرقم</button>
+      </div>
+      <div class="empty-box">
+        <div class="ei">🔍</div>
+        <h3>ما لقينا طلبات</h3>
+        <p>ما عندنا طلبات بهذا الرقم<br>تأكد من الرقم أو تسوق معنا!</p>
+        <a href="index.html" style="display:inline-block;margin-top:20px;background:linear-gradient(135deg,var(--pr),var(--pr3));color:#fff;padding:12px 28px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">🛍️ تسوق الآن</a>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div class="orders-header">
+      <div>
+        <div class="orders-title">📦 طلباتي</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px;">📱 ${phone}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="orders-count">${orders.length} طلب</span>
+        <button class="change-phone" onclick="showLogin()">تغيير الرقم</button>
+      </div>
+    </div>
+    ${orders.map(o => buildOrderCard(o)).join('')}`;
+}
+
+// ══════════════════════════════════════════
+// بناء كارد الطلب
+// ══════════════════════════════════════════
+function buildOrderCard(o) {
+  const st = STATUS_MAP[o._status] || { label: o._status, icon:'📋', cls:'s-new', step:0, active:true };
+  const date = o.orderDate
+    ? new Date(o.orderDate).toLocaleDateString('ar-IQ', { year:'numeric', month:'long', day:'numeric' })
+    : '';
+
+// المنتجات — يتعامل مع كل أشكال البيانات
+  let products = [];
+  if(o.productsDetailed) {
+    const pd = o.productsDetailed;
+    const vals = Array.isArray(pd) ? pd : Object.values(pd);
+    products = vals.filter(p => p && p.name);
+  }
+if(!products.length) {
+    products = [{ name: o.productName, qty: o.quantity || 1, price: o.price || 0, img: '' }];
+  }
+  // حساب الإجمالي الصحيح
+// السعر الكلي من price (الإجمالي الحقيقي شامل التوصيل)
+const prodTotal = o.productsDetailed
+  ? (Array.isArray(o.productsDetailed) ? o.productsDetailed : Object.values(o.productsDetailed))
+      .reduce((s,p)=>s+(p.price||0)*(p.qty||1),0)
+  : (o.price || 0);
+const orderTotal = prodTotal + Number(o.deliveryPrice || 0);
+  // سعر كل منتج للعرض فقط (من productsDetailed)
+  const hasDetailedPrices = products.some(p => p.price > 0);
+
+const prodsHTML = products.map(p => {
+  const unitPrice = p.qty > 1 ? Math.round((p.price||0) / (p.qty||1)) : (p.price||0);
+  return `
+    <div class="prod-item">
+      <div class="prod-thumb">
+        ${(p.img || p.image || p.imageUrl)
+          ? `<img src="${p.img || p.image || p.imageUrl}" alt="${p.name||''}">`
+          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;">📦</div>`}
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">${p.name || 'منتج'}</div>
+        ${p.variant ? `<div class="prod-var">📌 ${p.variant}</div>` : ''}
+        <div class="prod-price" style="color:var(--mu);font-size:13px;">${p.qty||1} قطعة × IQD ${unitPrice.toLocaleString('en-US')}</div>
+      </div>
+      ${hasDetailedPrices && p.price ? `<div style="font-size:14px;font-weight:800;color:var(--nv);white-space:nowrap;">IQD ${(p.price||0).toLocaleString('en-US')}</div>` : ''}
+    </div>`;
+}).join('');
+
+  // تتبع الطلب — فقط للطلبات النشطة
+  let trackerHTML = '';
+  if(st.active && st.step >= 0) {
+    const currentStep = st.step;
+    trackerHTML = `
+      <div class="tracker">
+        <div class="tracker-title">📍 تتبع طلبك</div>
+        <div class="steps">
+          ${STEPS.map((s, i) => {
+            const isDone   = i < currentStep;
+            const isActive = i === currentStep;
+            const cls      = isDone ? 'done' : isActive ? 'active' : 'wait';
+            return `
+              <div class="step">
+                <div class="step-line ${isDone || isActive ? 'done' : ''}"></div>
+                <div class="step-dot ${cls}">${isDone ? '✓' : s.icon}</div>
+                <div class="step-label ${cls}">${s.label}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  // بوكس الرفض / الراجع
+  let rejectedHTML = '';
+  if(!st.active) {
+    const isRejected = o._status === 'رفض';
+    rejectedHTML = `
+      <div class="rejected-box">
+        <div class="rj-icon">${isRejected ? '❌' : '↩️'}</div>
+        <div>
+          <div class="rj-title">${isRejected ? 'تم رفض طلبك' : 'الطلب راجع للمتجر'}</div>
+          <div class="rj-sub">${isRejected ? 'للاستفسار تواصل معنا على واتساب' : 'جاري مراجعة طلبك، تواصل معنا للمزيد'}</div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="order-card" id="ord_${o.orderNumber}">
+      <div class="order-head" onclick="toggleOrder('${o.orderNumber}')">
+        <div style="flex:1;min-width:0;">
+          <div class="order-num">طلب رقم #${o.orderNumber}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <span class="status-badge ${st.cls}">${st.icon} ${st.label}</span>
+            ${date ? `<span style="font-size:11px;color:var(--mu);">${date}</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:left;">
+     <div class="order-total">IQD ${orderTotal.toLocaleString('en-US')}</div>
+          <div style="font-size:11px;color:var(--mu);text-align:center;margin-top:2px;">${o.quantity||1} قطعة</div>
+        </div>
+        <div class="order-toggle">⌄</div>
+      </div>
+
+      ${trackerHTML}
+      ${rejectedHTML}
+
+      <div class="order-body">
+        <div class="body-sec">
+          <div class="body-sec-title">المنتجات</div>
+          ${prodsHTML}
+${o.deliveryPrice !== undefined ? `<div class="info-row" style="margin-top:8px;"><span class="info-lbl">🚚 التوصيل</span><span class="info-val">IQD ${Number(o.deliveryPrice).toLocaleString('en-US')}</span></div>` : ''}
+          <div class="total-row">
+            <span>المجموع الكلي</span>
+            <span>IQD ${orderTotal.toLocaleString('en-US')}</span>
+          </div>
+        </div>
+
+        <div class="body-sec">
+          <div class="body-sec-title">معلومات التوصيل</div>
+          <div class="info-row"><span class="info-lbl">الاسم</span><span class="info-val">${o.customerName||'-'}</span></div>
+          <div class="info-row"><span class="info-lbl">الهاتف</span><span class="info-val">${o.phone1||'-'}${o.phone2?' / '+o.phone2:''}</span></div>
+        <div class="info-row"><span class="info-lbl">المحافظة</span><span class="info-val">${o.city||o.area||'-'}</span></div>
+          <div class="info-row"><span class="info-lbl">العنوان</span><span class="info-val" style="direction:rtl;text-align:right;">${o.address||'-'}</span></div>
+          ${o.notes ? `<div class="info-row"><span class="info-lbl">ملاحظات</span><span class="info-val" style="direction:rtl;text-align:right;">${o.notes}</span></div>` : ''}
+        </div>
+
+        <div style="background:linear-gradient(135deg,#d1fae5,#ecfdf5);border-radius:12px;padding:12px 16px;border:1px solid #a7f3d0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;">💳</span>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#065f46;">الدفع عند الاستلام</div>
+            <div style="font-size:12px;color:#047857;">ادفع بس لما يوصل طلبك</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.toggleOrder = (num) => {
+  const card = document.getElementById(`ord_${num}`);
+  if(card) card.classList.toggle('open');
+};
+
+// ══════════════════════════════════════════
+// تحميل تلقائي عند فتح الصفحة
+// ══════════════════════════════════════════
+if(savedPhone) {
+  document.getElementById('content').innerHTML = `
+    <div class="loading">
+      <div class="spin">⏳</div>
+      <p style="margin-top:14px;font-size:14px;">نفتش على طلباتك...</p>
+    </div>`;
+  // مسح الكاش عند كل فتح للصفحة حتى تظهر آخر تحديث
+  sessionStorage.removeItem(`_orders_cache_${savedPhone}`);
+  setTimeout(async () => {
+    try {
+      const orders = await fetchOrdersByPhone(savedPhone);
+      showOrders(savedPhone, orders);
+    } catch(e) {
+      showLogin();
+    }
+  }, 300);
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>

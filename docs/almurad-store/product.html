@@ -214,6 +214,8 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
 .toast.s{background:linear-gradient(135deg,#38a169,#276749);}
 .toast.e{background:linear-gradient(135deg,#e53e3e,#c53030);}
 .toast.i{background:linear-gradient(135deg,var(--nv),var(--nv2));}
+.delivery-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--br);color:var(--mu);}
+.delivery-total{display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--pr);margin-top:10px;padding-top:10px;border-top:2px solid var(--br);}
 </style>
 </head>
 <body>
@@ -246,13 +248,17 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
     <button class="m-xbtn" onclick="closeCheckout()">✕</button>
   </div>
   <div class="m-body">
-    <div class="osumm" id="osb"></div>
+  <div id="deliveryNoteBox" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+  <strong style="font-size:13px;color:#856404;">🚚 ملاحظة التوصيل</strong>
+  <div id="deliveryNoteText" style="font-size:13px;color:#856404;margin-top:4px;"></div>
+</div>
+<div class="osumm" id="osb"></div>
     <div class="fg"><label class="fl">الاسم الكامل *</label><input class="fi" id="cn" placeholder="أدخل اسمك الكامل"></div>
     <div class="fg"><label class="fl">رقم الهاتف *</label><input class="fi" id="cp" placeholder="07XXXXXXXXX" type="tel" style="direction:ltr;"></div>
     <div class="fg"><label class="fl">رقم هاتف ثاني (اختياري)</label><input class="fi" id="cp2" placeholder="07XXXXXXXXX" type="tel" style="direction:ltr;"></div>
-    <div class="fg">
+<div class="fg">
       <label class="fl">المحافظة *</label>
-      <input class="fi" id="cc" placeholder="اكتب المحافظة..." list="govList">
+      <input class="fi" id="cc" placeholder="اكتب المحافظة..." list="govList" oninput="updateDelivery()">
       <datalist id="govList">
         <option>بغداد</option><option>كربلاء</option><option>الانبار</option>
         <option>الحلة - بابل</option><option>البصرة</option><option>دهوك</option>
@@ -268,6 +274,7 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
       <select class="fi" id="orderVar"></select>
     </div>
     <div class="fg"><label class="fl">ملاحظات (اختياري)</label><input class="fi" id="cno" placeholder="أي ملاحظة..."></div>
+
     <div class="pay-info">
       <strong>✅ الدفع عند الاستلام</strong>
       <span>لا حاجة لدفع مسبق – ادفع عند وصول طلبك</span>
@@ -305,6 +312,10 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
       <span>السلة</span>
       <div class="bn-badge" id="bnCartBadge">0</div>
     </button>
+<a class="bn-item" href="orders.html">
+      <span class="bn-icon">📦</span>
+      <span>طلباتي</span>
+    </a>
     <a class="bn-item" href="#" data-wa>
       <span class="bn-icon">📞</span>
       <span>واتساب</span>
@@ -530,7 +541,28 @@ window.ppAddCart = () => {
 };
 
 window.ppDirectOrder = () => {
-  if(!curProd) return;
+  if(!cart.length && !curProd) return;
+  // لو السلة فيها منتجات نطلب كلها، لو لا نطلب المنتج الحالي
+  if(cart.length){
+    const total = cart.reduce((s,c)=>s+(c.price*c.qty),0);
+    document.getElementById('osb').innerHTML=`
+      <h4>ملخص الطلب (${cart.reduce((s,c)=>s+c.qty,0)} قطعة)</h4>
+      ${cart.map(c=>`<div class="osumm-row"><span>${c.name}${c.variant?` - ${c.variant}`:''} ×${c.qty}</span><span>IQD ${(c.price*c.qty).toLocaleString()}</span></div>`).join('')}
+      <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
+    orderData = cart.map(c=>({...c}));
+document.getElementById('varsSelectWrap').style.display='none';
+    get(ref(db,'storeSettings')).then(snap=>{
+      if(!snap.exists()) return;
+      const note = snap.val().deliveryNote || '';
+      if(note){
+        const box = document.getElementById('deliveryNoteBox');
+        const txt = document.getElementById('deliveryNoteText');
+        if(box && txt){ box.style.display='block'; txt.textContent=note; }
+      }
+    });
+    document.getElementById('chkMov').classList.add('op');
+    return;
+  }
   const price = curProd.prices?.online||curProd.prices?.pos||0;
   const total = price * ppQty;
   const vars = curProd.stock?Object.keys(curProd.stock).filter(v=>v!=='default'):[];
@@ -548,9 +580,55 @@ window.ppDirectOrder = () => {
     <div class="osumm-row"><span>${curProd.name||prodKey}${ppSelVar?` - ${ppSelVar}`:''} ×${ppQty}</span><span>IQD ${total.toLocaleString()}</span></div>
     <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
   orderData = [{key:prodKey,qty:ppQty,name:curProd.name||prodKey,price,img:getImg(curProd),variant:ppSelVar||null}];
+  
+get(ref(db,'storeSettings')).then(snap=>{
+    if(!snap.exists()) return;
+    const note = snap.val().deliveryNote || '';
+    if(note){
+      const box = document.getElementById('deliveryNoteBox');
+      const txt = document.getElementById('deliveryNoteText');
+      if(box && txt){ box.style.display='block'; txt.textContent=note; }
+    }
+  });
   document.getElementById('chkMov').classList.add('op');
 };
-
+window.updateDelivery = async () => {
+  const city = document.getElementById('cc').value.trim();
+  if(!city) return;
+  let delivery = 5000;
+  let note = '';
+  try {
+    const snap = await get(ref(db,'storeSettings'));
+    if(snap.exists()){
+      const s = snap.val();
+      const prices = s.deliveryPrices || {};
+      delivery = prices[city] !== undefined ? prices[city] : (s.defaultDelivery || 5000);
+      const freeMin = s.freeDeliveryMin || 0;
+      const items = orderData || cart;
+      const subtotal = items ? items.reduce((a,c)=>a+(c.price*c.qty),0) : 0;
+      if(freeMin > 0 && subtotal >= freeMin) delivery = 0;
+      note = s.deliveryNote || '';
+    }
+  } catch(e){}
+  window._deliveryFee = delivery;
+  const noteBox = document.getElementById('deliveryNoteBox');
+  const noteTxt = document.getElementById('deliveryNoteText');
+  if(noteBox && noteTxt && note){ noteBox.style.display='block'; noteTxt.textContent=note; }
+  window._deliveryFee = delivery;
+  const osb = document.getElementById('osb');
+  if(!osb) return;
+  const items = orderData || cart;
+  if(!items?.length) return;
+  const subtotal = items.reduce((s,c)=>s+(c.price*c.qty),0);
+  const total = subtotal + delivery;
+  osb.innerHTML=`
+    <h4>ملخص الطلب (${items.reduce((s,c)=>s+c.qty,0)} قطعة)</h4>
+    ${items.map(c=>`<div class="osumm-row"><span>${c.name}${c.variant?` - ${c.variant}`:''} ×${c.qty}</span><span>IQD ${(c.price*c.qty).toLocaleString()}</span></div>`).join('')}
+    <div class="delivery-row"><span>توصيل (${city||'...'})</span><span>IQD ${delivery.toLocaleString()}</span></div>
+    <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
+  // حفظ المجموع الجديد للطلب
+  window._deliveryFee = delivery;
+};
 window.closeCheckout = () => document.getElementById('chkMov').classList.remove('op');
 
 window.submitOrder = async () => {
@@ -577,20 +655,73 @@ window.submitOrder = async () => {
     orderNum=(cs.exists()&&cs.val()>1000)?cs.val()+1:1001;
     await set(ref(db,'orderCounter'),orderNum);
   }catch(e){}
-  const total=orderData.reduce((s,c)=>s+(c.price*c.qty),0);
-  const now=new Date();
-  const qty=orderData.reduce((s,c)=>s+c.qty,0);
-  const mainProduct=orderData[0].name;
-  const productsDetailed={};orderData.forEach((c,i)=>{productsDetailed['item_'+(i+1)]={name:c.name,variant:c.variant||'',qty:c.qty,price:c.price,subtotal:c.price*c.qty};});
-  const order={orderNumber:orderNum,customerName:name,phone1:phone,phone2:phone2||'',city,area:city,address:`${name} - ${city} - ${addr} - ${phone}${phone2?' / '+phone2:''}`,productName:mainProduct,productsDetailed,quantity:qty,price:total,notes:note||'',status:'جديد',source:'الموقع الإلكتروني',advertiser:'',code:'WEB',orderDate:now.toISOString(),createdAt:now.getTime(),enterIndex:now.getTime(),lastUpdate:now.toISOString()};
+const mainItem   = orderData[0];
+  const extraItems = orderData.slice(1);
+  const mainPrice  = mainItem.price || 0;
+  const mainQty    = mainItem.qty   || 1;
+  const delivery   = window._deliveryFee || 5000;
+  const now        = new Date();
+
+const productsDetailed = orderData.map(c => ({
+    name:     c.name    || '',
+    price:    (c.price || 0) * (c.qty || 1),
+    qty:      c.qty     || 1,
+    img:      c.img     || '',
+    variants: c.variant ? { 'المتغير': c.variant } : {},
+  }));
+
+  const extraProducts = extraItems.map(c => ({
+    id:    `${Date.now()}${Math.random().toString(36).slice(2)}`,
+    name:  c.name  || '',
+    price: c.price || 0,
+    qty:   c.qty   || 1,
+  }));
+
+  const order = {
+    phone1:           phone,
+    phone2:           phone2 || '',
+    source:           'الموقع الإلكتروني',
+    address:          addr,
+    city:             city,
+    area:             city,
+    productName:      mainItem.name || '',
+price:            mainPrice,
+totalPrice:       orderData.reduce((s,c)=>s+(c.price*c.qty),0) + delivery,
+deliveryPrice:    delivery,
+notes:            orderData.map(c=>`${c.name} ×${c.qty}`).join(' | ') + (note ? ` || ${note}` : ''),
+    quantity:         mainQty,
+    productsDetailed: productsDetailed,
+    extraProducts:    extraProducts,
+    status:           'جديد',
+    statusHistory:    {},
+    receiptNum:       '',
+    notes:            note || '',
+    advertiser:       name,
+    code:             'WEB',
+    orderNumber:      orderNum,
+    orderDate:        now.toISOString(),
+    updatedAt:        now.toISOString(),
+    updatedBy:        'website',
+    createdAt:        now.getTime(),
+    enterIndex:       now.getTime(),
+  };
   try{
-    await set(ref(db,`ordersTest/جديد/${orderNum}`),order);
-    await set(ref(db,`ordersTest/جديد/_meta`),{lastModified:Date.now()});
+   await set(ref(db, `ordersTest/جديد/${orderNum}`), order);
+    await set(ref(db, `ordersTest/جديد/_meta`), { lastModified: Date.now() });
+    await set(ref(db, `ordersTest/جديد/${orderNum}/statusHistory/جديد`), { time: Date.now(), by: 'website' });
+    await set(ref(db, 'orderCounter'), orderNum);
+localStorage.setItem('my_phone', phone);
+    cart=[];
+    saveCart();
+    orderData=null;
     closeCheckout();
     document.getElementById('son').textContent=`#${orderNum}`;
     document.getElementById('succMov').classList.add('op');
     ['cn','cp','cp2','cc','ca','cno'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    orderData=null;
+    setTimeout(()=>{
+      document.getElementById('succMov').classList.remove('op');
+      window.location.href='index.html';
+    }, 3000);
   }catch(e){toast('❌ حدث خطأ، حاول مرة أخرى','e');}
   finally{btn.disabled=false;btn.textContent='✅ تأكيد الطلب الآن';}
 };
