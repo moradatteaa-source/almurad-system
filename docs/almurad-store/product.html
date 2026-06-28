@@ -670,10 +670,10 @@ const productsDetailed = orderData.map(c => ({
     variants: c.variant ? { 'المتغير': c.variant } : {},
   }));
 
-  const extraProducts = extraItems.map(c => ({
+const extraProducts = extraItems.map(c => ({
     id:    `${Date.now()}${Math.random().toString(36).slice(2)}`,
     name:  c.name  || '',
-    price: c.price || 0,
+    price: (c.price || 0) * (c.qty || 1),
     qty:   c.qty   || 1,
   }));
 
@@ -685,7 +685,7 @@ const productsDetailed = orderData.map(c => ({
     city:             city,
     area:             city,
     productName:      mainItem.name || '',
-price:            mainPrice,
+price:            (mainPrice * mainQty) + delivery,
 totalPrice:       orderData.reduce((s,c)=>s+(c.price*c.qty),0) + delivery,
 deliveryPrice:    delivery,
 notes:            orderData.map(c=>`${c.name} ×${c.qty}`).join(' | ') + (note ? ` || ${note}` : ''),

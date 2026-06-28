@@ -565,16 +565,19 @@
    <div class="nav-item" id="archiveNavItem" onclick="location.href='monthly-archive.html'">
         <span>🗂️</span> الأرشيف الشهري
       </div>
-
+<div class="nav-label" style="margin-top:8px">إدارة الزبائن</div>
+<div class="nav-item" id="customersNavItem" style="display:none;"onclick="location.href='customers.html'">
+  <span>👥</span> دفتر الزبائن
+</div>
       <div class="nav-label" style="margin-top:8px">المتجر الإلكتروني</div>
       <div class="nav-item" onclick="toggleNav('storeOnlineNav', this)">
         <span>🌐</span> المتجر الإلكتروني
         <span class="nav-arrow">›</span>
       </div>
-      <div class="nav-sub" id="storeOnlineNav">
-        <div class="nav-sub-item highlight" onclick="window.open('almurad-store/index.html','_blank')">🛍️ عرض المتجر للزبائن</div>
-        <div class="nav-sub-item" onclick="window.open('almurad-store/admin/index.html','_blank')">🛠️ إدارة المتجر</div>
-      </div>
+    <div class="nav-sub" id="storeOnlineNav">
+  <div class="nav-sub-item highlight" onclick="window.open('almurad-store/index.html','_blank')">🛍️ عرض المتجر للزبائن</div>
+  <div class="nav-sub-item" onclick="window.open('almurad-store/admin/index.html','_blank')">🛠️ إدارة المتجر</div>
+</div>
       <div class="nav-item" onclick="openMyTasks()" style="position:relative">
         <span>🎯</span> مهامي وأهدافي
         <span id="taskBadge" style="display:none;position:absolute;top:8px;left:18px;
@@ -957,7 +960,9 @@ if (!roles.includes("admin") && !roles.includes("center")) {
 if (!roles.includes("admin") && !roles.includes("accountant")) {
   document.getElementById("financeNavItem").style.display = "none";
 }
-
+if (roles.includes('admin') || roles.includes('accountant')) {
+  document.getElementById('customersNavItem').style.display = 'flex';
+}
 // ============================================================
 // 🔔 الإشعارات
 // ============================================================

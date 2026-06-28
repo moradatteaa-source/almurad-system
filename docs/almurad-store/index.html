@@ -52,7 +52,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 
 /* ══ NAVBAR ══ */
 .nav{background:var(--nv);position:sticky;top:0;z-index:900;box-shadow:0 2px 24px rgba(0,0,0,.3);}
-.nav-in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 20px;height:68px;}
+.nav-in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 10px 0 20px;height:68px;}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;}
 .logo-emblem{
   width:64px;
@@ -68,11 +68,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 .nav-search input::placeholder{color:rgba(255,255,255,.35);}
 .nav-search input:focus{background:rgba(255,255,255,.13);border-color:var(--gd);}
 .nav-search .si{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:rgba(228,184,75,.6);font-size:16px;}
-.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;}
+.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;}.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;padding-left:10px;}
 .nav-ico{background:rgba(255,255,255,.08);border:1.5px solid rgba(228,184,75,.2);color:var(--gd2);width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:var(--t);position:relative;text-decoration:none;}
 .nav-ico:hover{background:rgba(228,184,75,.15);border-color:var(--gd);}
 .nav-ico .badge{position:absolute;top:-5px;left:-5px;background:var(--pr);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--nv);}
-.nav-menu-btn{background:rgba(255,255,255,.08);border:1.5px solid rgba(228,184,75,.2);color:var(--gd2);width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:var(--t);display:none;}
+.nav-menu-btn{background:rgba(255,255,255,.08);border:1.5px solid rgba(228,184,75,.2);color:var(--gd2);width:40px;height:40px;border-radius:11px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:var(--t);}
 .nav-menu-btn:hover{background:rgba(228,184,75,.15);}
 .nav-links{display:flex;gap:4px;}
 .nav-links a{color:rgba(255,255,255,.75);text-decoration:none;padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;transition:var(--t);}
@@ -569,7 +569,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
   <div class="nav-links">
     <a href="#home">الرئيسية</a>
     <a href="#cats">الأقسام</a>
-    <a href="#prods">المنتجات</a>
+<a href="#prods">المنتجات</a>
+    <a href="orders.html">طلباتي</a>
   </div>
 
   <div class="nav-right">
@@ -581,7 +582,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
       🛒
       <div class="badge" id="ncc">0</div>
     </a>
-    <button class="nav-menu-btn" onclick="openMobMenu()" aria-label="القائمة">☰</button>
+<button class="nav-menu-btn" onclick="openMobMenu()" aria-label="القائمة" style="font-size:22px;color:#fff;border:2px solid rgba(255,255,255,.4);margin-left:10px;">☰</button>
   </div>
 </div>
 </nav>
@@ -618,7 +619,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
       <div class="hero-deco-circle"></div>
       <div class="hero-deco-circle2"></div>
       <div class="hslide-img-area">
-        <div style="font-size:120px;opacity:0.3;">🏺</div>
+        <div style="display:none;"></div>
       </div>
       <div class="hcontent">
         <div class="htag"><span class="htag-dot"></span> أجهزة منزلية فاخرة</div>
@@ -628,7 +629,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
       </div>
       <!-- Mobile layout -->
       <div class="hslide-mobile-img">
-        <div style="width:100%;height:100%;background:linear-gradient(135deg,#1C1208,#2E1F0A);display:flex;align-items:center;justify-content:center;font-size:100px;opacity:0.3;">🏺</div>
+<div style="width:100%;height:100%;background:linear-gradient(135deg,#1C1208,#2E1F0A);"></div>
       </div>
       <div class="hcontent-mobile">
         <div class="htag"><span class="htag-dot"></span> أجهزة منزلية فاخرة</div>
@@ -639,7 +640,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
     </div>
     <div class="hslide hs2 hslide-default" style="background:linear-gradient(135deg,#8B3214 0%,#1C1208 100%);">
       <div class="hslide-img-area">
-        <div style="font-size:120px;opacity:0.3;">🍳</div>
+     <div style="display:none;"></div>
       </div>
       <div class="hcontent">
         <div class="htag"><span class="htag-dot"></span> أدوات مطبخ احترافية</div>
@@ -1587,10 +1588,10 @@ const productsDetailed = orderData.map(c => ({
     img:      c.img     || '',
     variants: c.variant ? { 'المتغير': c.variant } : {},
   }));
-  const extraProducts = extraItems.map(c => ({
+const extraProducts = extraItems.map(c => ({
     id:    `${Date.now()}${Math.random().toString(36).slice(2)}`,
     name:  c.name  || '',
-    price: c.price || 0,
+    price: (c.price || 0) * (c.qty || 1),
     qty:   c.qty   || 1,
   }));
   const now = new Date();
@@ -1603,7 +1604,7 @@ const productsDetailed = orderData.map(c => ({
     city:        city,
     area:        city,
 productName: mainItem.name || '',
-price:            mainPrice,
+price:            (mainPrice * mainQty) + delivery,
 totalPrice:       orderData.reduce((s,c)=>s+(c.price*c.qty),0) + delivery,
 deliveryPrice:    delivery,
 notes:            orderData.map(c=>`${c.name} ×${c.qty}`).join(' | ') + (note ? ` || ${note}` : ''),
@@ -1705,10 +1706,8 @@ if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.cla
    if(!slides.length){document.querySelectorAll('.hslide-default').forEach(s=>s.classList.add('active'));initHero();return;}
     document.getElementById('ht').innerHTML=slides.map(s=>`
       <div class="hslide" style="background:${s.bgImg?`url('${s.bgImg}') center/cover no-repeat`:`linear-gradient(135deg,${s.color1||'#1C1208'} 0%,${s.color2||'#2E1F0A'} 100%)`};">
-        <div class="hero-deco-circle"></div>
-        <div class="hero-deco-circle2"></div>
-        <div class="hslide-img-area">
-          ${s.img?`<img src="${s.img}" alt="${s.title||''}">`:`<div style="font-size:120px;opacity:0.2;">${s.emoji||'🏺'}</div>`}
+     <div class="hslide-img-area">
+      ${s.img?`<img src="${s.img}" alt="${s.title||''}" style="width:100%;height:100%;object-fit:contain;">`:`<div></div>`}
         </div>
         <div class="hcontent">
           ${s.tag?`<div class="htag"><span class="htag-dot"></span>${s.tag}</div>`:''}
@@ -1723,7 +1722,7 @@ if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.cla
     ? `<img src="${s.bgImg}" style="width:100%;height:100%;object-fit:cover;">`
     : s.img
     ? `<img src="${s.img}" style="width:100%;height:100%;object-fit:contain;background:var(--nv);">`
-    : `<div style="width:100%;height:100%;background:linear-gradient(135deg,${s.color1||'#1C1208'},${s.color2||'#2E1F0A'});display:flex;align-items:center;justify-content:center;font-size:80px;opacity:0.3;">${s.emoji||'🏺'}</div>`}
+: `<div style="width:100%;height:100%;background:linear-gradient(135deg,${s.color1||'#1C1208'},${s.color2||'#2E1F0A'});"></div>`}
 </div>
         <div class="hcontent-mobile">
           ${s.tag?`<div class="htag"><span class="htag-dot"></span>${s.tag}</div>`:''}

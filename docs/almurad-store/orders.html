@@ -442,11 +442,11 @@ if(!products.length) {
   }
   // حساب الإجمالي الصحيح
 // السعر الكلي من price (الإجمالي الحقيقي شامل التوصيل)
-const prodTotal = o.productsDetailed
-  ? (Array.isArray(o.productsDetailed) ? o.productsDetailed : Object.values(o.productsDetailed))
-      .reduce((s,p)=>s+(p.price||0)*(p.qty||1),0)
-  : (o.price || 0);
-const orderTotal = prodTotal + Number(o.deliveryPrice || 0);
+const orderTotal = Number(o.totalPrice || 0) || 
+  (o.productsDetailed
+    ? (Array.isArray(o.productsDetailed) ? o.productsDetailed : Object.values(o.productsDetailed))
+        .reduce((s,p)=>s+(p.price||0),0) + Number(o.deliveryPrice||0)
+    : Number(o.price||0));
   // سعر كل منتج للعرض فقط (من productsDetailed)
   const hasDetailedPrices = products.some(p => p.price > 0);
 
