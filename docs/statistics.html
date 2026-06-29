@@ -495,7 +495,7 @@ function render() {
   </div>`;
 
   // ── كروت الموظفات (للأدمن فقط) ──
-  if (isAdmin && selectedEmp === "all" && emps.length > 0) {
+if (isAdmin && selectedEmp === "all" && emps.length > 0) {
     html += `<div class="emp-cards-wrap">
       <div class="section-label" style="padding:0 0 10px">أداء كل موظفة</div>`;
 
@@ -584,7 +584,7 @@ function buildShareText() {
   const from   = document.getElementById("fromDate").value || "";
   const to     = document.getElementById("toDate").value   || "";
   const period = from === to && from ? from : (from && to ? `${from} → ${to}` : "كل الطلبات");
-  const empLabel = selectedEmp === "all" ? "جميع الموظفات" : selectedEmp;
+const empLabel = isAdmin && selectedEmp === "all" ? "جميع الموظفات" : (selectedEmp === "all" ? currentName : selectedEmp);
 
   let txt = `📊 *تقرير نظام المراد*\n`;
   txt += `👤 ${empLabel}\n`;
@@ -600,7 +600,7 @@ function buildShareText() {
   txt += `↩️ راجع: *${counts["راجع"]||0}*\n`;
 
   // كروت الموظفات لو الكل
-  if (isAdmin && selectedEmp === "all") {
+if (isAdmin && selectedEmp === "all" && getEmployees(filteredOrders).length > 0) {
     const emps = getEmployees(filteredOrders);
     if (emps.length > 0) {
       txt += `\n👥 *أداء كل موظفة:*\n`;

@@ -945,6 +945,7 @@ if (!user) { location.href = "index.html"; }
 
 const displayName  = user?.name || user?.username || user?.user || "مجهول";
 const roles        = user?.roles || [];
+const isAdmin      = roles.includes("admin");
 const initials     = displayName.charAt(0) || "م";
 
 document.getElementById("userName").textContent  = displayName;
@@ -962,6 +963,14 @@ if (!roles.includes("admin") && !roles.includes("accountant")) {
 }
 if (roles.includes('admin') || roles.includes('accountant')) {
   document.getElementById('customersNavItem').style.display = 'flex';
+}
+// إخفاء الإحصائيات ما عدا الطلبات للموظف العادي
+if (!isAdmin) {
+  document.querySelectorAll('#statsNav .nav-sub-item').forEach(item => {
+    if (!item.textContent.includes('إحصائيات الطلبات')) {
+      item.style.display = 'none';
+    }
+  });
 }
 // ============================================================
 // 🔔 الإشعارات
@@ -1028,6 +1037,7 @@ window.openStatistics = (t) => {
   const map = { employees:"stats-employees.html", advertisers:"stats-advertisers.html", products:"product-stats.html" };
   location.href = map[t] || `statistics.html?tab=${t}`;
 };
+
 window.openAccounting = (t) => { location.href = `accounting/${t}.html`; };
 window.openAccountingProtected = () => {
   if (localStorage.getItem("financeUnlocked") === "yes") { toggleNav("accountingNav"); return; }
