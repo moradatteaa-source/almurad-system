@@ -1,492 +1,670 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>📊 الإحصائيات - نظام المراد</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>📊 إحصائيات اليوم - نظام المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#043B64;
+  --navy2:#0a5a96;
+  --orange:#FF6B2D;
+  --green:#10b981;
+  --red:#ef4444;
+  --purple:#8b5cf6;
+  --yellow:#f59e0b;
+  --sky:#0ea5e9;
+  --bg:#f0f4f8;
+  --card:#fff;
+  --text:#0d1b2a;
+  --muted:#64748b;
+  --border:#e2e8f0;
+  --r:14px;
+}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-  <!-- خط مشابه للي طلبته -->
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+/* ===== HEADER ===== */
+.hdr{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+  color:#fff;padding:16px 18px 20px;
+  position:sticky;top:0;z-index:100;
+}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hdr-title{font-size:18px;font-weight:800}
+.hdr-sub{font-size:12px;opacity:.7;margin-top:2px}
+.refresh-btn{
+  background:rgba(255,255,255,.15);border:none;color:#fff;
+  width:38px;height:38px;border-radius:10px;font-size:18px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:.2s;flex-shrink:0;
+}
+.refresh-btn:active{background:rgba(255,255,255,.3)}
+.refresh-btn.spin{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  <!-- Chart.js (موجود في الهيدر) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+/* ===== FILTERS ===== */
+.filters{
+  background:var(--navy);padding:10px 18px 16px;
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.filter-chip{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#fff;padding:6px 14px;border-radius:30px;font-size:13px;
+  font-family:'Tajawal',sans-serif;cursor:pointer;transition:.2s;
+  white-space:nowrap;
+}
+.filter-chip.active{background:var(--orange);border-color:var(--orange)}
+.date-row{
+  padding:12px 18px;background:#fff;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);
+}
+.date-row label{font-size:12px;color:var(--muted);white-space:nowrap}
+.date-row input{
+  flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border);
+  border-radius:8px;font-size:14px;font-family:'Tajawal',sans-serif;color:var(--text);
+}
+.apply-btn{
+  background:var(--navy);color:#fff;border:none;padding:8px 16px;
+  border-radius:8px;font-size:14px;font-family:'Tajawal',sans-serif;
+  cursor:pointer;white-space:nowrap;
+}
 
-  <style>
-    :root{
-      --main-blue:#043B64;
-      --accent:#FF6B2D;
-      --card-bg:#ffffff;
-      --muted:#6b7280;
-      --surface:#f5f6fa;
-    }
-    body{font-family:'Tajawal',sans-serif;background:var(--surface);margin:0;color:#222}
-    header{background:var(--main-blue);color:#fff;padding:14px 18px;text-align:center;font-weight:700}
-    .container{max-width:1200px;margin:20px auto;padding:16px}
-    .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-    .controls select, .controls input[type="date"], .controls button {padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:14px}
-    .controls button {background:var(--main-blue);color:#fff;border:0;cursor:pointer}
-    .controls .preset {background:transparent;color:var(--main-blue);border:1px solid #ddd;cursor:pointer}
-    .grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px}
-    .card {background:var(--card-bg);padding:16px;border-radius:10px;box-shadow:0 4px 12px rgba(6,21,34,0.04);text-align:center}
-    .card h3{margin:0;color:var(--main-blue);font-size:15px}
-    .card p{margin:6px 0 0;font-size:20px;font-weight:700}
-    .charts {display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .full {grid-column:1/-1}
-    canvas{background:#fff;border-radius:8px;padding:8px}
-    .table-wrap{margin-top:18px;background:#fff;padding:10px;border-radius:8px;box-shadow:0 6px 14px rgba(6,21,34,0.04)}
-    table{width:100%;border-collapse:collapse;font-size:13px}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:center}
-    th{background:#f8fafc;color:var(--main-blue)}
-    .small{font-size:12px;color:var(--muted)}
-    @media(max-width:900px){ .charts {grid-template-columns:1fr} }
-    .toolbar {display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .export-btn{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-    .muted{color:var(--muted);font-size:13px}
-  </style>
+/* ===== EMPLOYEE SELECTOR ===== */
+.emp-section{padding:16px 18px 8px}
+.section-label{
+  font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;
+}
+.emp-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.emp-scroll::-webkit-scrollbar{display:none}
+.emp-chip{
+  background:var(--card);border:1.5px solid var(--border);
+  color:var(--text);padding:8px 16px;border-radius:30px;
+  font-size:13px;font-family:'Tajawal',sans-serif;cursor:pointer;
+  white-space:nowrap;transition:.2s;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;
+}
+.emp-chip .dot{
+  width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;
+}
+.emp-chip.active{
+  background:var(--navy);border-color:var(--navy);color:#fff;
+}
+.emp-chip.active .dot{background:var(--orange)}
+
+/* ===== TOTAL CARD ===== */
+.total-wrap{padding:12px 18px}
+.total-card{
+  background:linear-gradient(135deg,var(--orange),#d94f18);
+  border-radius:var(--r);padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  color:#fff;box-shadow:0 6px 20px rgba(255,107,45,.3);
+}
+.total-num{font-size:40px;font-weight:900;line-height:1}
+.total-label{font-size:14px;opacity:.9;margin-top:4px}
+
+/* ===== STATS GRID ===== */
+.stats-wrap{padding:0 18px 8px}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+.stat-card{
+  background:var(--card);border-radius:var(--r);
+  padding:14px 10px;text-align:center;
+  border:1.5px solid var(--border);
+  transition:.2s;
+}
+.stat-card:active{transform:scale(.97)}
+.stat-icon{font-size:22px;margin-bottom:6px}
+.stat-num{font-size:24px;font-weight:900;color:var(--navy);line-height:1}
+.stat-label{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+.stat-card.highlight{border-color:var(--orange);background:rgba(255,107,45,.04)}
+
+/* ===== CHART ===== */
+.chart-wrap{padding:0 18px 12px}
+.chart-card{background:var(--card);border-radius:var(--r);padding:16px;border:1px solid var(--border)}
+.chart-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px}
+
+/* ===== EMPLOYEE CARDS ===== */
+.emp-cards-wrap{padding:0 18px 100px}
+.emp-card{
+  background:var(--card);border-radius:var(--r);
+  margin-bottom:12px;overflow:hidden;
+  border:1.5px solid var(--border);
+  transition:.2s;
+}
+.emp-card-hdr{
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;
+}
+.emp-avatar{
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,var(--navy),var(--navy2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;flex-shrink:0;
+}
+.emp-info{flex:1}
+.emp-name{font-size:15px;font-weight:700}
+.emp-total{font-size:12px;color:var(--muted);margin-top:2px}
+.emp-badge{
+  background:var(--orange);color:#fff;
+  font-size:18px;font-weight:900;
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.emp-body{
+  padding:0 16px 14px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+.emp-stat{
+  background:var(--bg);border-radius:10px;padding:10px 8px;text-align:center;
+}
+.emp-stat-num{font-size:20px;font-weight:900;color:var(--navy)}
+.emp-stat-label{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+
+/* ===== SHARE BUTTON ===== */
+.share-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:1px solid var(--border);
+  padding:12px 18px;display:flex;gap:10px;
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  z-index:50;
+}
+.share-wa{
+  flex:1;background:#25D366;color:#fff;border:none;
+  padding:14px;border-radius:12px;font-size:15px;font-weight:700;
+  font-family:'Tajawal',sans-serif;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.share-wa:active{opacity:.85}
+.share-copy{
+  background:var(--bg);border:1.5px solid var(--border);color:var(--navy);
+  padding:14px 18px;border-radius:12px;font-size:15px;font-weight:700;
+  font-family:'Tajawal',sans-serif;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.share-copy:active{opacity:.7}
+
+/* ===== LOADING ===== */
+.loading{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:60px 20px;gap:14px;
+  color:var(--muted);font-size:14px;
+}
+.spinner{
+  width:40px;height:40px;border:3px solid var(--border);
+  border-top-color:var(--navy);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:10px}
+
+/* ===== TODAY BADGE ===== */
+.today-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(255,255,255,.2);border-radius:20px;
+  padding:3px 10px;font-size:11px;margin-top:6px;
+}
+
+@media(min-width:600px){
+  .stats-grid{grid-template-columns:repeat(5,1fr)}
+  .emp-body{grid-template-columns:repeat(5,1fr)}
+}
+</style>
 </head>
 <body>
-  <header>📊 صفحة الإحصائيات - نظام المراد</header>
 
-  <div class="container">
-    <!-- فلترة + إعدادات -->
-    <div class="controls">
-      <div class="toolbar">
-        <label class="small">من:</label>
-        <input type="date" id="fromDate">
-        <label class="small">إلى:</label>
-        <input type="date" id="toDate">
-        <select id="statusFilter" title="فلتر الحالة">
-          <option value="">كل الحالات</option>
-          <!-- حالات ستُملأ ديناميكياً -->
-        </select>
-
-        <select id="granularity" title="المقاس الزمني">
-          <option value="day">يومي</option>
-          <option value="week">أسبوعي</option>
-          <option value="month" selected>شهري</option>
-          <option value="all">الكل</option>
-        </select>
-
-        <button id="applyBtn">تطبيق الفلتر</button>
-        <button class="preset" id="todayBtn">اليوم</button>
-        <button class="preset" id="weekBtn">آخر 7 أيام</button>
-        <button class="preset" id="monthBtn">آخر 30 يوم</button>
-        <button class="preset" id="allBtn">الكل</button>
-      </div>
-
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-        <div class="muted">عدد الطلبات المظاهرة: <span id="shownCount">0</span></div>
-        <button class="export-btn" id="downloadCsv">تحميل CSV</button>
-      </div>
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-top">
+    <div>
+      <div class="hdr-title">📊 إحصائيات الطلبات</div>
+      <div class="hdr-sub">نظام المراد</div>
     </div>
-
-    <!-- عدادات الحالة -->
-<!-- عدادات الحالة + المجموع -->
-<div id="summary" class="grid"></div>
-
-<!-- 🧮 بطاقة المجموع الكلي -->
-<div id="totalCard" class="card" style="
-  margin-top: 10px;
-  background: #043B64;
-  color: white;
-  font-weight: bold;
-  text-align: center;
-  font-size: 18px;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-">
-  📦 إجمالي الطلبات الكلية: <span id="totalOrders">0</span>
+    <button class="refresh-btn" id="refreshBtn" title="تحديث">⟳</button>
+  </div>
+  <div class="today-badge" id="dateLabel">📅 جاري التحميل...</div>
 </div>
 
-    <!-- الرسوم البيانية -->
-    <div class="charts">
-      <div class="card">
-        <h3>📈 تطور المبيعات حسب التاريخ</h3>
-        <canvas id="chartLine" height="160"></canvas>
-      </div>
+<!-- QUICK FILTERS -->
+<div class="filters">
+  <button class="filter-chip active" data-range="today">اليوم</button>
+  <button class="filter-chip" data-range="week">آخر 7 أيام</button>
+  <button class="filter-chip" data-range="month">آخر 30 يوم</button>
+  <button class="filter-chip" data-range="all">الكل</button>
+</div>
 
-      <div class="card">
-        <h3>📊 توزيع حالات الطلب</h3>
-        <canvas id="chartDonut" height="160"></canvas>
-      </div>
+<!-- DATE RANGE -->
+<div class="date-row">
+  <label>من</label>
+  <input type="date" id="fromDate"/>
+  <label>إلى</label>
+  <input type="date" id="toDate"/>
+  <button class="apply-btn" id="applyBtn">تطبيق</button>
+</div>
 
-      <div class="card full">
-        <h3>🛒 أكثر المنتجات مبيعاً (Top 10)</h3>
-        <canvas id="chartBar" height="160"></canvas>
-      </div>
-    </div>
-
-    <!-- جدول النتائج (جدول واحد للفلترة كلها) -->
-    <div class="table-wrap">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="muted">قائمة الطلبات المفلترة (جدول واحد)</div>
-        <div class="muted small">اضغط على صف لعرض تفاصيل</div>
-      </div>
-      <div style="overflow:auto;max-height:420px">
-        <table id="ordersTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>الكود</th>
-              <th>المنتج</th>
-              <th>السعر</th>
-              <th>الكمية</th>
-              <th>الهاتف</th>
-              <th>المدينة</th>
-              <th>المنطقة</th>
-              <th>الحالة</th>
-              <th>تاريخ الطلب</th>
-              <th>المعلن</th>
-            </tr>
-          </thead>
-          <tbody id="ordersTbody"></tbody>
-        </table>
-      </div>
-    </div>
+<!-- CONTENT -->
+<div id="content">
+  <div class="loading">
+    <div class="spinner"></div>
+    جاري تحميل البيانات...
   </div>
+</div>
 
-  <!-- سكربتات: Firebase + منطق الإحصائيات -->
-  <script type="module">
-    // ----- تهيئة Firebase (نفس config عندك) -----
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, child } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+<!-- SHARE BAR -->
+<div class="share-bar">
+  <button class="share-wa" id="shareWa">
+    <span>📲</span> مشاركة واتساب
+  </button>
+  <button class="share-copy" id="shareCopy">📋</button>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-      authDomain: "almurad-system.firebaseapp.com",
-      databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
-      projectId: "almurad-system",
-      storageBucket: "almurad-system.appspot.com",
-      messagingSenderId: "911755824405",
-      appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-    // ----- عناصر الواجهة -----
-    const fromDateEl = document.getElementById('fromDate');
-    const toDateEl = document.getElementById('toDate');
-    const applyBtn = document.getElementById('applyBtn');
-    const statusFilter = document.getElementById('statusFilter');
-    const granularityEl = document.getElementById('granularity');
-    const summaryEl = document.getElementById('summary');
-    const shownCountEl = document.getElementById('shownCount');
-    const ordersTbody = document.getElementById('ordersTbody');
-    const downloadCsvBtn = document.getElementById('downloadCsv');
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.appspot.com",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
 
-    // Charts
-    let chartLine = null, chartDonut = null, chartBar = null;
+// ── حالات ordersTest ──
+const STATUS_PATHS = [
+  {key:"جديد",      emoji:"✨", color:"#3b82f6"},
+  {key:"مثبت",      emoji:"📌", color:"#10b981"},
+  {key:"قيد المعالجة", emoji:"⚙️", color:"#8b5cf6"},
+  {key:"قيد التجهيز",  emoji:"📦", color:"#f59e0b"},
+  {key:"بانتظار البضاعة",emoji:"🚚",color:"#f97316"},
+  {key:"قيد التوصيل",  emoji:"🛵", color:"#0ea5e9"},
+  {key:"تم التسليم",   emoji:"✅", color:"#22c55e"},
+  {key:"راجع",        emoji:"↩️", color:"#ef4444"},
+  {key:"تم استلام الراجع",emoji:"📥",color:"#a855f7"},
+  {key:"رفض",         emoji:"❌", color:"#6b7280"},
+];
 
-    // الحالة الافتراضية للقائمة (نضيف حالاتك مع "تم استلام الراجع")
-    const defaultStatuses = ["", "مثبت", "قيد المعالجة", "قيد التجهيز", "بانتظار البضاعة", "قيد التوصيل", "تم التسليم", "راجع", "تم استلام الراجع", "رفض"];
-
-// تحميل الطلبات من Firebase (مباشر، ونستخدم onValue لكي تتحدّث تلقائياً)
-const ordersRef = ref(db, 'orders');
-
-// 🧩 جلب المستخدم الحالي وصلاحياته
-const loggedUser = JSON.parse(localStorage.getItem("loggedInUser")) || {};
-const roles = loggedUser.roles || [];
+// ── مستخدم ──
+const loggedUser  = JSON.parse(localStorage.getItem("loggedInUser")||"{}");
+const roles       = loggedUser.roles || [];
 const currentName = loggedUser.name || loggedUser.username || loggedUser.user || "";
-console.log("🧾 بيانات المستخدم كاملة:", loggedUser);
+const isAdmin     = roles.includes("admin");
+const isStabilizer= roles.includes("stabilizer") && !isAdmin;
 
 let allOrders = [];
+let filteredOrders = [];
+let selectedEmp = "all";
+let chartInstance = null;
 
-// ✅ نقرأ البيانات ونتابعها مباشرة من Firebase
-onValue(ordersRef, (snap) => {
-  if (!snap.exists()) {
-    allOrders = [];
-    renderAll([]);
-    return;
+// ── تحميل كل الطلبات ──
+async function loadOrders() {
+  showLoading();
+  const results = await Promise.all(
+    STATUS_PATHS.map(async s => {
+      try {
+        const snap = await get(ref(db, `ordersTest/${s.key}`));
+        if (!snap.exists()) return [];
+        return Object.entries(snap.val())
+          .filter(([id]) => id !== "_meta")
+          .map(([id, val]) => ({ id, status: s.key, ...val }));
+      } catch { return []; }
+    })
+  );
+  allOrders = results.flat();
+
+  // فلتر المثبت
+  if (isStabilizer) {
+    allOrders = allOrders.filter(o => {
+      const f = (o.fixedBy || "").trim();
+      return f && (f === currentName.trim() || currentName.includes(f) || f.includes(currentName));
+    });
   }
 
-  const obj = snap.val();
-  let ordersArray = Object.entries(obj).map(([id, val]) => ({ id, ...val }));
+  applyFilters();
+}
 
- if (roles.includes("stabilizer") && !roles.includes("admin")) {
-  ordersArray = ordersArray.filter(o => {
-    const fixed = (o.fixedBy || "").trim();
-    return fixed &&
-      (
-        fixed === currentName.trim() ||
-        fixed === (loggedUser.username || "").trim() ||
-        fixed === (loggedUser.name || "").trim() ||
-        fixed.includes(currentName.trim()) || // دعم جزئي (مثلاً "مراد الكافي" يحتوي "مراد")
-        currentName.trim().includes(fixed)
-      );
+// ── تحويل تاريخ ──
+function toDate(d) {
+  if (!d) return null;
+  const n = new Date(d);
+  if (!isNaN(n)) return n;
+  const t = Number(d);
+  if (!isNaN(t)) return new Date(t);
+  return null;
+}
+
+// ── نطاق التاريخ الحالي ──
+let dateFrom = null, dateTo = null;
+
+function setRange(range) {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+  document.querySelector(`[data-range="${range}"]`)?.classList.add("active");
+
+  if (range === "today") {
+    dateFrom = dateTo = today;
+    document.getElementById("fromDate").value = today;
+    document.getElementById("toDate").value   = today;
+    document.getElementById("dateLabel").textContent = `📅 ${formatArabicDate(now)}`;
+  } else if (range === "week") {
+    const f = new Date(); f.setDate(now.getDate()-6);
+    dateFrom = f.toISOString().split("T")[0];
+    dateTo   = today;
+    document.getElementById("fromDate").value = dateFrom;
+    document.getElementById("toDate").value   = dateTo;
+    document.getElementById("dateLabel").textContent = `📅 آخر 7 أيام`;
+  } else if (range === "month") {
+    const f = new Date(); f.setDate(now.getDate()-29);
+    dateFrom = f.toISOString().split("T")[0];
+    dateTo   = today;
+    document.getElementById("fromDate").value = dateFrom;
+    document.getElementById("toDate").value   = dateTo;
+    document.getElementById("dateLabel").textContent = `📅 آخر 30 يوم`;
+  } else {
+    dateFrom = dateTo = null;
+    document.getElementById("fromDate").value = "";
+    document.getElementById("toDate").value   = "";
+    document.getElementById("dateLabel").textContent = `📅 كل الطلبات`;
+  }
+  applyFilters();
+}
+
+function formatArabicDate(d) {
+  return d.toLocaleDateString("ar-EG", {weekday:"long", year:"numeric", month:"long", day:"numeric"});
+}
+
+function applyFilters() {
+  const from = document.getElementById("fromDate").value;
+  const to   = document.getElementById("toDate").value;
+  const fDate = from ? new Date(from + "T00:00:00") : null;
+  const tDate = to   ? new Date(to   + "T23:59:59") : null;
+
+  filteredOrders = allOrders.filter(o => {
+    const dt = toDate(o.orderDate) || toDate(o.createdAt);
+    if (fDate && dt && dt < fDate) return false;
+    if (tDate && dt && dt > tDate) return false;
+    return true;
+  });
+
+  render();
+}
+
+// ── عدادات الحالة ──
+function countByStatus(orders) {
+  const c = {};
+  STATUS_PATHS.forEach(s => c[s.key] = 0);
+  orders.forEach(o => { c[o.status] = (c[o.status]||0)+1; });
+  return c;
+}
+
+// ── موظفات ──
+function getEmployees(orders) {
+  const emps = new Set();
+  orders.forEach(o => {
+    if (o.fixedBy) emps.add(o.fixedBy.trim());
+    if (o.employeeName) emps.add(o.employeeName.trim());
+  });
+  return Array.from(emps).filter(Boolean).sort();
+}
+
+function ordersForEmp(emp, orders) {
+  if (emp === "all") return orders;
+  return orders.filter(o =>
+    (o.fixedBy||"").trim() === emp ||
+    (o.employeeName||"").trim() === emp
+  );
+}
+
+// ── RENDER ──
+function render() {
+  const content = document.getElementById("content");
+  const emps = getEmployees(filteredOrders);
+  const empOrders = ordersForEmp(selectedEmp, filteredOrders);
+  const counts = countByStatus(empOrders);
+  const total  = empOrders.length;
+  const delivered = counts["تم التسليم"] || 0;
+  const returned  = counts["راجع"] || 0;
+
+  let html = "";
+
+  // ── مجموع كلي ──
+  html += `
+  <div class="total-wrap">
+    <div class="total-card">
+      <div>
+        <div class="total-num">${total}</div>
+        <div class="total-label">إجمالي الطلبات</div>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:13px;opacity:.85">✅ مسلّم: <b>${delivered}</b></div>
+        <div style="font-size:13px;opacity:.85;margin-top:4px">↩️ راجع: <b>${returned}</b></div>
+        <div style="font-size:13px;opacity:.85;margin-top:4px">📊 نسبة: <b>${total ? Math.round(delivered/total*100) : 0}%</b></div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── اختيار موظفة ──
+  if (emps.length > 0 && isAdmin) {
+    html += `<div class="emp-section">
+      <div class="section-label">عرض حسب الموظفة</div>
+      <div class="emp-scroll">
+        <button class="emp-chip ${selectedEmp==='all'?'active':''}" data-emp="all">
+          <span class="dot"></span> الكل
+        </button>`;
+    emps.forEach(e => {
+      html += `<button class="emp-chip ${selectedEmp===e?'active':''}" data-emp="${e}">
+        <span class="dot"></span> ${e}
+      </button>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // ── بطاقات الحالات ──
+  html += `<div class="stats-wrap"><div class="stats-grid">`;
+  STATUS_PATHS.forEach(s => {
+    const n = counts[s.key] || 0;
+    html += `
+    <div class="stat-card ${n>0?'highlight':''}">
+      <div class="stat-icon">${s.emoji}</div>
+      <div class="stat-num" style="color:${s.color}">${n}</div>
+      <div class="stat-label">${s.key}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // ── رسم بياني ──
+  html += `
+  <div class="chart-wrap">
+    <div class="chart-card">
+      <div class="chart-title">📊 توزيع الحالات</div>
+      <canvas id="donutChart" height="200"></canvas>
+    </div>
+  </div>`;
+
+  // ── كروت الموظفات (للأدمن فقط) ──
+  if (isAdmin && selectedEmp === "all" && emps.length > 0) {
+    html += `<div class="emp-cards-wrap">
+      <div class="section-label" style="padding:0 0 10px">أداء كل موظفة</div>`;
+
+    emps.forEach(emp => {
+      const eo = ordersForEmp(emp, filteredOrders);
+      const ec = countByStatus(eo);
+      const et = eo.length;
+      const ed = ec["تم التسليم"]||0;
+      const er = ec["راجع"]||0;
+      const ep = ec["قيد التجهيز"]||0;
+      const initials = emp.split(" ").map(w=>w[0]||"").slice(0,2).join("");
+      html += `
+      <div class="emp-card">
+        <div class="emp-card-hdr">
+          <div class="emp-avatar">${initials}</div>
+          <div class="emp-info">
+            <div class="emp-name">${emp}</div>
+            <div class="emp-total">${et} طلب إجمالي</div>
+          </div>
+          <div class="emp-badge">${et}</div>
+        </div>
+        <div class="emp-body">
+          <div class="emp-stat">
+            <div class="emp-stat-num" style="color:#22c55e">${ed}</div>
+            <div class="emp-stat-label">✅ مسلّم</div>
+          </div>
+          <div class="emp-stat">
+            <div class="emp-stat-num" style="color:#f59e0b">${ep}</div>
+            <div class="emp-stat-label">📦 تجهيز</div>
+          </div>
+          <div class="emp-stat">
+            <div class="emp-stat-num" style="color:#0ea5e9">${ec["قيد التوصيل"]||0}</div>
+            <div class="emp-stat-label">🛵 توصيل</div>
+          </div>
+          <div class="emp-stat">
+            <div class="emp-stat-num" style="color:#ef4444">${er}</div>
+            <div class="emp-stat-label">↩️ راجع</div>
+          </div>
+          <div class="emp-stat">
+            <div class="emp-stat-num" style="color:#6b7280">${ec["رفض"]||0}</div>
+            <div class="emp-stat-label">❌ مرفوض</div>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div style="height:100px"></div>`;
+  }
+
+  content.innerHTML = html;
+
+  // ── رسم الدونات ──
+  const ctx = document.getElementById("donutChart")?.getContext("2d");
+  if (ctx) {
+    if (chartInstance) chartInstance.destroy();
+    const labels = STATUS_PATHS.map(s => s.key);
+    const data   = STATUS_PATHS.map(s => counts[s.key]||0);
+    const colors = STATUS_PATHS.map(s => s.color);
+    chartInstance = new Chart(ctx, {
+      type: "doughnut",
+      data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:"#fff" }] },
+      options: {
+        responsive:true, cutout:"65%",
+        plugins:{
+          legend:{ position:"bottom", labels:{ font:{family:"Tajawal",size:12}, padding:10, boxWidth:14 } }
+        }
+      }
+    });
+  }
+
+  // ── إعادة ربط أزرار الموظفات ──
+  document.querySelectorAll(".emp-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedEmp = btn.dataset.emp;
+      render();
+    });
   });
 }
 
-  // 🚫 إذا المثبت ما عنده أي طلبات
-if (roles.includes("stabilizer") && ordersArray.length === 0) {
-  document.querySelector(".container").innerHTML = `
-    <div style="
-      text-align:center;
-      margin-top:120px;
-      font-size:20px;
-      color:#043B64;
-      font-weight:bold;
-    ">
-      🚫 ماكو طلبات بعد، ثبّت طلبات وزيد أرباحك 🔥
-    </div>
-  `;
-  return; // نوقف باقي الكود
+// ── توليد نص المشاركة ──
+function buildShareText() {
+  const empOrders = ordersForEmp(selectedEmp, filteredOrders);
+  const counts = countByStatus(empOrders);
+  const total  = empOrders.length;
+  const from   = document.getElementById("fromDate").value || "";
+  const to     = document.getElementById("toDate").value   || "";
+  const period = from === to && from ? from : (from && to ? `${from} → ${to}` : "كل الطلبات");
+  const empLabel = selectedEmp === "all" ? "جميع الموظفات" : selectedEmp;
+
+  let txt = `📊 *تقرير نظام المراد*\n`;
+  txt += `👤 ${empLabel}\n`;
+  txt += `📅 ${period}\n`;
+  txt += `━━━━━━━━━━━━━━━━\n`;
+  STATUS_PATHS.forEach(s => {
+    const n = counts[s.key] || 0;
+    if (n > 0) txt += `${s.emoji} ${s.key}: *${n}*\n`;
+  });
+  txt += `━━━━━━━━━━━━━━━━\n`;
+  txt += `📦 الإجمالي: *${total}* طلب\n`;
+  txt += `✅ تم التسليم: *${counts["تم التسليم"]||0}*\n`;
+  txt += `↩️ راجع: *${counts["راجع"]||0}*\n`;
+
+  // كروت الموظفات لو الكل
+  if (isAdmin && selectedEmp === "all") {
+    const emps = getEmployees(filteredOrders);
+    if (emps.length > 0) {
+      txt += `\n👥 *أداء كل موظفة:*\n`;
+      emps.forEach(emp => {
+        const eo = ordersForEmp(emp, filteredOrders);
+        const ec = countByStatus(eo);
+        txt += `\n▪️ *${emp}* (${eo.length} طلب)\n`;
+        txt += `  ✅ ${ec["تم التسليم"]||0} مسلّم  📦 ${ec["قيد التجهيز"]||0} تجهيز  🛵 ${ec["قيد التوصيل"]||0} توصيل  ↩️ ${ec["راجع"]||0} راجع\n`;
+      });
+    }
+  }
+
+  return txt;
 }
 
-
-  allOrders = ordersArray;
-  populateStatusFilter();
-  applyFiltersAndRender();
+// ── واتساب ──
+document.getElementById("shareWa").addEventListener("click", () => {
+  const txt = buildShareText();
+  const url = `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  window.open(url, "_blank");
 });
 
+// ── نسخ ──
+document.getElementById("shareCopy").addEventListener("click", async () => {
+  const txt = buildShareText();
+  try {
+    await navigator.clipboard.writeText(txt);
+    const btn = document.getElementById("shareCopy");
+    btn.textContent = "✅";
+    setTimeout(() => btn.textContent = "📋", 1500);
+  } catch {
+    alert(buildShareText());
+  }
+});
 
+// ── فلاتر سريعة ──
+document.querySelectorAll(".filter-chip").forEach(btn => {
+  btn.addEventListener("click", () => setRange(btn.dataset.range));
+});
 
-    // ملئ قائمة الحالات
-    function populateStatusFilter() {
-      const found = new Set(defaultStatuses);
-      allOrders.forEach(o => {
-        const st = (o.status || "").toString().trim();
-        if (st) found.add(st);
-      });
-      // افراغ العنصر ثم إعادة ملئه
-      statusFilter.innerHTML = '<option value="">كل الحالات</option>';
-      Array.from(found).forEach(s => {
-        // لا نريد إضافة القيمة الفارغة مرتين
-        if (s === "") return;
-        const opt = document.createElement('option');
-        opt.value = s; opt.textContent = s;
-        statusFilter.appendChild(opt);
-      });
-    }
+// ── تطبيق يدوي ──
+document.getElementById("applyBtn").addEventListener("click", () => {
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+  applyFilters();
+});
 
-    // مساعد لتحويل قيم التاريخ
-    function toDateObj(d) {
-      if (!d) return null;
-      // إذا كان تاريخ ISO
-      const n = new Date(d);
-      if (!isNaN(n)) return n;
-      // إذا كان رقم (timestamp)
-      const t = Number(d);
-      if (!isNaN(t)) return new Date(t);
-      return null;
-    }
+// ── تحديث ──
+document.getElementById("refreshBtn").addEventListener("click", () => {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.add("spin");
+  loadOrders().finally(() => btn.classList.remove("spin"));
+});
 
-    // دالة تطبيق الفلاتر وحساب الإحصائيات و الرندر
-    function applyFiltersAndRender() {
-      // قراءة الفلاتر
-      const fromVal = fromDateEl.value ? new Date(fromDateEl.value + 'T00:00:00') : null;
-      const toVal = toDateEl.value ? new Date(toDateEl.value + 'T23:59:59') : null;
-      const statusVal = statusFilter.value;
-      const gran = granularityEl.value;
+function showLoading() {
+  document.getElementById("content").innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      جاري تحميل البيانات...
+    </div>`;
+}
 
-      // تصفية حسب التاريخ والحالة
-      const filtered = allOrders.filter(o => {
-        const dt = toDateObj(o.orderDate) || toDateObj(o.createdAt) || new Date();
-        if (!dt) return false;
-        if (fromVal && dt < fromVal) return false;
-        if (toVal && dt > toVal) return false;
-        if (statusVal && ((o.status||'').toString().trim() !== statusVal)) return false;
-        return true;
-      });
-
-      renderAll(filtered, gran);
-    }
-
-    // renderAll: يعرض العدادات والرسوم والجدول
-    function renderAll(filtered, granularity = 'month') {
-      // --- ملخص العدادات لكل حالة (نحسب باستخدام كل الحالات الموجودة) ---
-      const statusCounts = {};
-      // نضمن أن كل الحالات الافتراضية موجودة
-      defaultStatuses.forEach(s => statusCounts[s] = 0);
-
-      filtered.forEach(o => {
-        const st = (o.status || '').toString().trim();
-        statusCounts[st] = (statusCounts[st] || 0) + 1;
-      });
-
-      // render summary
-      summaryEl.innerHTML = '';
-      Object.keys(statusCounts).forEach(key => {
-        // skip empty key if you want rename: show as "طلبات جديدة"
-        const label = (key === "" ? "طلبات جديدة" : key);
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `<h3>${label}</h3><p>${statusCounts[key] || 0}</p>`;
-        summaryEl.appendChild(div);
-      });
-
-      // --- جدول الطلبات (واحد فقط) ---
-      ordersTbody.innerHTML = '';
-      filtered.sort((a,b) => {
-        const da = toDateObj(a.orderDate) || new Date(0);
-        const db = toDateObj(b.orderDate) || new Date(0);
-        return db - da; // تصاعدي حسب التاريخ الأحدث أولاً
-      }).forEach((o, idx) => {
-        const tr = document.createElement('tr');
-        const dt = toDateObj(o.orderDate);
-        tr.innerHTML = `
-          <td>${idx+1}</td>
-          <td>${o.code || '-'}</td>
-          <td>${(o.productName || o.product) || '-'}</td>
-          <td>${o.price || 0}</td>
-          <td>${o.quantity || 0}</td>
-          <td>${o.phone1 || o.phone || '-'}</td>
-          <td>${o.city || '-'}</td>
-          <td>${o.area || '-'}</td>
-          <td>${o.status || '-'}</td>
-          <td>${dt ? dt.toLocaleString() : '-'}</td>
-          <td>${o.advertiser || '-'}</td>
-        `;
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', () => openInlineDetails(o));
-        ordersTbody.appendChild(tr);
-      });
-
-      shownCountEl.textContent = filtered.length;
-document.getElementById("totalOrders").textContent = filtered.length;
-
-      // --- بيانات الرسوم البيانية ---
-      buildCharts(filtered, statusCounts, granularity);
-    }
-
-    // فتح تفاصيل الطلب داخل مودال بسيط
-    function openInlineDetails(order) {
-      const overlay = document.createElement('div');
-      Object.assign(overlay.style, {
-        position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:99999
-      });
-      const box = document.createElement('div');
-      Object.assign(box.style, {background:'#fff',padding:'18px',borderRadius:'10px',minWidth:'300px',maxWidth:'720px',direction:'rtl',textAlign:'right',maxHeight:'90%',overflow:'auto'});
-      const dt = toDateObj(order.orderDate);
-      box.innerHTML = `
-        <h3 style="margin-top:0;color:${getComputedStyle(document.documentElement).getPropertyValue('--main-blue') || '#043B64'}">تفاصيل الطلب</h3>
-        <p><b>الكود:</b> ${order.code || '-'}</p>
-        <p><b>المنتج:</b> ${(order.productName || order.product) || '-'}</p>
-        <p><b>الكمية:</b> ${order.quantity || '-'}</p>
-        <p><b>السعر:</b> ${order.price || '-'}</p>
-        <p><b>الهاتف:</b> ${order.phone1 || order.phone || '-'}</p>
-        <p><b>العنوان:</b> ${(order.city||'-') + ' - ' + (order.area||'-')}</p>
-        <p><b>الحالة:</b> ${order.status || '-'}</p>
-        <p><b>تاريخ الطلب:</b> ${dt ? dt.toLocaleString() : '-'}</p>
-        <p><b>الملاحظات:</b> ${order.notes || '-'}</p>
-        <div style="text-align:center;margin-top:12px"><button id="closeDetails" style="background:var(--main-blue);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer">إغلاق</button></div>
-      `;
-      overlay.appendChild(box);
-      document.body.appendChild(overlay);
-      document.getElementById('closeDetails').addEventListener('click', () => overlay.remove());
-      
-    }
-
-    // بناء الرسوم البيانية
-    function buildCharts(filtered, statusCounts, granularity) {
-      // --- خط تطور المبيعات يومياً (أو بالأسبوع/الشهر) ---
-      const salesByDate = {}; // key -> مبلغ إجمالي
-      const profitByDate = {}; // مثال: يمكن حساب ربح تقريبي إن أردت
-      const qtyByProduct = {};
-      const returnsByProduct = {};
-
-      filtered.forEach(o => {
-        const dt = toDateObj(o.orderDate) || new Date();
-        // التجميع حسب granularity
-        let key;
-        if (granularity === 'day') key = dt.toISOString().split('T')[0];
-        else if (granularity === 'week') {
-          const start = new Date(dt); // حساب بداية الأسبوع (الاثنين مثلاً)
-          const day = start.getDay(); // 0..6
-          const diff = start.getDate() - day + (day === 0 ? -6 : 1); // الاثنين كبداية
-          start.setDate(diff);
-          key = start.toISOString().split('T')[0];
-        } else if (granularity === 'month') {
-          key = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0');
-        } else key = dt.toISOString().split('T')[0];
-
-        const price = Number(o.price || 0);
-        const qty = Number(o.quantity || 0);
-
-        salesByDate[key] = (salesByDate[key] || 0) + price;
-        // profitByDate[key] = (profitByDate[key] || 0) + (price - 4000); // مثال
-        const prod = (o.productName || o.product || 'غير معروف').toString();
-        if ((o.status||'').toString().trim() === 'راجع') returnsByProduct[prod] = (returnsByProduct[prod] || 0) + qty;
-        else qtyByProduct[prod] = (qtyByProduct[prod] || 0) + qty;
-      });
-
-      // Line chart data (sorted keys)
-      const labelsLine = Object.keys(salesByDate).sort();
-      const dataLine = labelsLine.map(k => salesByDate[k]);
-
-      // Donut chart for statuses
-      const statusLabels = Object.keys(statusCounts).filter(k => k !== undefined);
-      const statusValues = statusLabels.map(k => statusCounts[k] || 0);
-
-      // Top products
-      const topProducts = Object.entries(qtyByProduct).sort((a,b)=>b[1]-a[1]).slice(0,10);
-      const topLabels = topProducts.map(p=>p[0]);
-      const topValues = topProducts.map(p=>p[1]);
-
-      // --- render or update charts ---
-      const ctxLine = document.getElementById('chartLine').getContext('2d');
-      if (chartLine) chartLine.destroy();
-      chartLine = new Chart(ctxLine, {
-        type: 'line',
-        data: { labels: labelsLine, datasets: [{ label:'إجمالي المبيعات', data: dataLine, borderColor: '#043B64', backgroundColor:'rgba(4,59,100,0.08)', fill:true, tension:0.2 }] },
-        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-      });
-
-      const ctxDonut = document.getElementById('chartDonut').getContext('2d');
-      if (chartDonut) chartDonut.destroy();
-      chartDonut = new Chart(ctxDonut, {
-        type: 'doughnut',
-        data: { labels: statusLabels.map(k => k==='' ? 'جديدة' : k), datasets:[{ data: statusValues, backgroundColor: ['#6C757D','#0D6EFD','#198754','#FFC107','#FF6B2D','#17A2B8','#28A745','#EF476F','#5D3FD3','#D6336C'] }] },
-        options: { responsive:true, plugins:{legend:{position:'right'}} }
-      });
-
-      const ctxBar = document.getElementById('chartBar').getContext('2d');
-      if (chartBar) chartBar.destroy();
-      chartBar = new Chart(ctxBar, {
-        type: 'bar',
-        data: { labels: topLabels, datasets:[{ label:'الكمية', data: topValues, backgroundColor: '#FF6B2D' }] },
-        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-      });
-    }
-
-    // event listeners للفلاتر و أزرار الاختصارات
-    applyBtn.addEventListener('click', () => applyFiltersAndRender());
-    document.getElementById('todayBtn').addEventListener('click', ()=> {
-      const d = new Date(); fromDateEl.value = d.toISOString().split('T')[0]; toDateEl.value = d.toISOString().split('T')[0];
-      applyFiltersAndRender();
-    });
-    document.getElementById('weekBtn').addEventListener('click', ()=> {
-      const to = new Date(); const from = new Date(); from.setDate(to.getDate()-6);
-      fromDateEl.value = from.toISOString().split('T')[0]; toDateEl.value = to.toISOString().split('T')[0];
-      applyFiltersAndRender();
-    });
-    document.getElementById('monthBtn').addEventListener('click', ()=> {
-      const to = new Date(); const from = new Date(); from.setDate(to.getDate()-29);
-      fromDateEl.value = from.toISOString().split('T')[0]; toDateEl.value = to.toISOString().split('T')[0];
-      applyFiltersAndRender();
-    });
-    document.getElementById('allBtn').addEventListener('click', ()=> {
-      fromDateEl.value = ''; toDateEl.value = ''; applyFiltersAndRender();
-    });
-
-    // تحميل CSV للطلبات المفلترة
-    downloadCsvBtn.addEventListener('click', () => {
-      // نجمع البيانات المرئية في الجدول
-      const rows = Array.from(document.querySelectorAll('#ordersTbody tr')).map(tr => {
-        return Array.from(tr.children).map(td => td.textContent.trim().replace(/\n/g,' '));
-      });
-      if (!rows.length) return alert('لا توجد بيانات للتصدير');
-      let csv = 'رقم,كود,منتج,سعر,كمية,هاتف,مدينة,منطقة,حالة,تاريخ,معلن\n';
-      rows.forEach(r => { csv += r.join(',') + '\n'; });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'orders_stats.csv'; a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    // تهيئة أولية: نعرض "الكل" إذا لا يوجد شيء
-    // (onValue سيستدعي applyFiltersAndRender عند تحميل البيانات)
-  </script>
+// ── تشغيل ──
+setRange("today");
+loadOrders();
+</script>
 </body>
 </html>
-
