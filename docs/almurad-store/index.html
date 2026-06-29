@@ -2,8 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" type="image/png" href="almushtari-logo.png">
+<link rel="apple-touch-icon" href="almushtari-logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>متجر المراد</title>
+<meta property="og:title" content="أهلاً بك في رحلة إلى كوكب المشتري 🪐">
+<meta property="og:description" content="مُرادنا تقديم أفضل خدمة تناسبك — أجهزة منزلية وأدوات مطبخ بأفضل الأسعار في العراق">
+<meta property="og:image" content="https://almurad.store/almurad-store/almushtari-logo.png">
+<meta property="og:url" content="https://almurad.store">
+<meta property="og:type" content="website">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face{
@@ -52,7 +59,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 
 /* ══ NAVBAR ══ */
 .nav{background:var(--nv);position:sticky;top:0;z-index:900;box-shadow:0 2px 24px rgba(0,0,0,.3);}
-.nav-in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 10px 0 20px;height:68px;}
+.nav-in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:0 10px;height:68px;}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;}
 .logo-emblem{
   width:64px;
@@ -60,15 +67,21 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
   border-radius:10px;
   overflow:hidden;
   flex-shrink:0;
-}.logo-emblem img{width:100%;height:100%;object-fit:contain;}
+}
+@media(max-width:768px){.logo-emblem{width:44px;height:44px;}}
+.logo-emblem img{width:100%;height:100%;object-fit:contain;}
 .logo-txt h1{color:#FF6B2D;font-family:'Cairo',sans-serif;font-size:20px;font-weight:900;line-height:1.1;letter-spacing:2px;text-transform:uppercase;}
 .logo-txt span{color:rgba(255,255,255,0.35);font-size:9px;font-weight:600;display:block;letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
+@media(max-width:768px){
+  .logo-txt span{display:none;}
+  .logo-txt h1{font-size:14px;letter-spacing:1px;}
+}
 .nav-search{flex:1;max-width:380px;position:relative;}
 .nav-search input{width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(228,184,75,.25);border-radius:12px;padding:10px 44px 10px 16px;color:#fff;font-family:'Cairo',sans-serif;font-size:14px;outline:none;transition:var(--t);}
 .nav-search input::placeholder{color:rgba(255,255,255,.35);}
 .nav-search input:focus{background:rgba(255,255,255,.13);border-color:var(--gd);}
 .nav-search .si{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:rgba(228,184,75,.6);font-size:16px;}
-.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;}.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;padding-left:10px;}
+.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;}.nav-right{margin-right:auto;display:flex;align-items:center;gap:8px;padding-left:4px;margin-left:0;}
 .nav-ico{background:rgba(255,255,255,.08);border:1.5px solid rgba(228,184,75,.2);color:var(--gd2);width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:var(--t);position:relative;text-decoration:none;}
 .nav-ico:hover{background:rgba(228,184,75,.15);border-color:var(--gd);}
 .nav-ico .badge{position:absolute;top:-5px;left:-5px;background:var(--pr);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--nv);}
@@ -124,7 +137,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
   .hcontent{display:none;}
   .hslide-img-area{display:none;}
   .hero-deco-circle,.hero-deco-circle2{display:none;}
-  .hslide-mobile-img{display:block;width:100%;aspect-ratio:750/280;overflow:hidden;position:relative;}
+  .hslide-mobile-img{display:block;width:100%;aspect-ratio:750/340;;overflow:hidden;position:relative;}
   .hslide-mobile-img img{width:100%;height:100%;object-fit:cover;}
   .hcontent-mobile{display:block;position:absolute;bottom:0;right:0;left:0;padding:10px 14px 12px;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 100%);}
   .hcontent-mobile h2{font-size:16px;margin-bottom:4px;font-weight:800;}
@@ -558,7 +571,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 <div class="nav-in">
   <a href="#" class="logo">
     <div class="logo-emblem">
-<img src="../almushtari-logo.png" alt="المشتري">
+<img src="almushtari-logo.png" alt="المشتري">
     </div>
     <div class="logo-txt">
       <h1>AL-Murad</h1>
@@ -582,8 +595,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
       🛒
       <div class="badge" id="ncc">0</div>
     </a>
-<button class="nav-menu-btn" onclick="openMobMenu()" aria-label="القائمة" style="font-size:22px;color:#fff;border:2px solid rgba(255,255,255,.4);margin-left:10px;">☰</button>
-  </div>
+<button class="nav-menu-btn" onclick="openMobMenu()" aria-label="القائمة" style="font-size:22px;color:#fff;border:2px solid rgba(255,255,255,.4);margin-left:auto;">☰</button>  </div>
 </div>
 </nav>
 
@@ -1713,7 +1725,7 @@ if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.cla
           ${s.tag?`<div class="htag"><span class="htag-dot"></span>${s.tag}</div>`:''}
           <h2>${s.title||''}</h2>
           <p>${s.sub||''}</p>
-          <button class="hbtn" onclick="scrollToP()">${s.btnText||'تسوق الآن'} ←</button>
+          <button class="hbtn" onclick="${s.link?`window.open('${s.link}','_self')`:'scrollToP()'}">${s.btnText||'تسوق الآن'} ←</button>
         </div>
    <div class="hslide-mobile-img">
   ${s.mobImg
@@ -1728,7 +1740,7 @@ if(!snap.exists()){document.querySelectorAll('.hslide-default').forEach(s=>s.cla
           ${s.tag?`<div class="htag"><span class="htag-dot"></span>${s.tag}</div>`:''}
           <h2>${s.title||''}</h2>
           <p>${s.sub||''}</p>
-          <button class="hbtn" onclick="scrollToP()">${s.btnText||'تسوق الآن'} ←</button>
+        <button class="hbtn" onclick="${s.link?`window.open('${s.link}','_self')`:'scrollToP()'}">${s.btnText||'تسوق الآن'} ←</button>
         </div>
       </div>`).join('');
     initHero();

@@ -2,6 +2,11 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" type="image/png" href="almushtari-logo.png">
+<link rel="apple-touch-icon" href="almushtari-logo.png">
+<meta property="og:image" content="https://almurad.store/almushtari-logo.png">
+<meta property="og:title" content="متجر المراد">
+<meta property="og:description" content="أجهزة منزلية وأدوات مطبخ بأفضل الأسعار في العراق">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>🛠️ لوحة تحكم المتجر - المراد</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
@@ -821,12 +826,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 <div class="fg">
-<label class="fl">📱 صورة خلفية الموبايل — القياس: 750×900 بكسل | JPG</label>
+<label class="fl">📱 صورة خلفية الموبايل — القياس: 349 بكسل | JPG</label>
   <div style="display:flex;gap:8px;">
     <input class="fi" id="slMobImg" placeholder="https://رابط-خلفية-موبايل.jpg" style="direction:ltr;flex:1;">
     <button class="btn btn-navy btn-sm" onclick="pickImg('slMobImg','slMobImgFile')">📁 رفع</button>
     <input type="file" id="slMobImgFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'slMobImg')">
   </div>
+</div>
+<div class="fg">
+  <label class="fl">🔗 رابط الزر (اتركه فارغاً للتمرير للمنتجات)</label>
+  <input class="fi" id="slLink" placeholder="https://almurad.store/product.html?id=..." style="direction:ltr;">
 </div>
 <input class="fi" type="number" id="slOrder" placeholder="1"></div>
     <div style="display:flex;gap:8px;align-items:center;">
@@ -1341,6 +1350,7 @@ function renderSlides() {
 
 window.openAddSlide=()=>{
   editSlideKey=null;
+  document.getElementById('slLink').value='';
   document.getElementById('slideModalTitle').textContent='➕ بنر جديد';
 ['slTitle','slSub','slBtn','slTag','slEmoji','slOrder','slBgImg','slMobImg','slImg'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('slColor1').value='#043B64';
@@ -1352,6 +1362,7 @@ window.openAddSlide=()=>{
 window.openEditSlide=(key)=>{
   editSlideKey=key;
   const s=allSlides[key];
+  document.getElementById('slLink').value=s.link||'';
   document.getElementById('slideModalTitle').textContent='✏️ تعديل البنر';
   document.getElementById('slTitle').value=s.title||'';
   document.getElementById('slSub').value=s.sub||'';
@@ -1388,7 +1399,8 @@ mobImg:document.getElementById('slMobImg').value.trim(),
     order:parseInt(document.getElementById('slOrder').value)||99,
     color1:document.getElementById('slColor1').value,
     color2:document.getElementById('slColor2').value,
-    active:document.getElementById('slActive').checked
+active:document.getElementById('slActive').checked,
+    link:document.getElementById('slLink').value.trim()
   };
   await set(ref(db,'storeSlides/'+key),data);
   allSlides[key]=data;
@@ -1403,7 +1415,6 @@ window.deleteSlide=async(key)=>{
   toast('🗑 تم حذف البنر','i');
   renderSlides();
 };
-
 // ══════════════════════════════════════
 // SETTINGS
 // ══════════════════════════════════════

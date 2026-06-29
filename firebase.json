@@ -1,5 +1,13 @@
 {
   "functions": {
     "source": "backend/functions"
+  },
+  "hosting": {
+    "public": "docs/almurad-store",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }
