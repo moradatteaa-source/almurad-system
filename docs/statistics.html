@@ -590,7 +590,7 @@ const empLabel = isAdmin && selectedEmp === "all" ? "جميع الموظفات" 
   txt += `👤 ${empLabel}\n`;
   txt += `📅 ${period}\n`;
   txt += `━━━━━━━━━━━━━━━━\n`;
-  STATUS_PATHS.forEach(s => {
+STATUS_PATHS.forEach(s => {
     const n = counts[s.key] || 0;
     if (n > 0) txt += `${s.emoji} ${s.key}: *${n}*\n`;
   });
@@ -608,7 +608,10 @@ if (isAdmin && selectedEmp === "all" && getEmployees(filteredOrders).length > 0)
         const eo = ordersForEmp(emp, filteredOrders);
         const ec = countByStatus(eo);
         txt += `\n▪️ *${emp}* (${eo.length} طلب)\n`;
-        txt += `  ✅ ${ec["تم التسليم"]||0} مسلّم  📦 ${ec["قيد التجهيز"]||0} تجهيز  🛵 ${ec["قيد التوصيل"]||0} توصيل  ↩️ ${ec["راجع"]||0} راجع\n`;
+STATUS_PATHS.forEach(s => {
+  const n = ec[s.key] || 0;
+  if (n > 0) txt += `  ${s.emoji} ${s.key}: ${n}\n`;
+});
       });
     }
   }
