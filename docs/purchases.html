@@ -1320,12 +1320,20 @@ if (!added) {
   }
 
   renderInvoiceItems();
-
-  // تنظيف الحقول
+// تنظيف الحقول
   document.querySelectorAll(".variantQty").forEach(i => i.value = "");
   document.querySelectorAll(".variantPrice").forEach(i => i.value = "");
   document.getElementById("productSearchInput").value = "";
   document.getElementById("simpleProductName").value = "";
+  document.getElementById("simpleBuyPrice").value = "";
+  document.getElementById("simpleSellPricePos").value = "";
+  document.getElementById("simpleSellPriceOnline").value = "";
+  document.getElementById("simpleQty").value = "";
+  document.getElementById("variantContainer").innerHTML = "";
+  document.getElementById("newVariantContainer").innerHTML = "";
+  document.getElementById("productType").value = "";
+  document.getElementById("existingProductDiv").style.display = "none";
+  document.getElementById("newProductDiv").style.display = "none";
 };
 
 
@@ -1418,21 +1426,6 @@ await set(idRef, {
   invoiceItems = [];
 document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
 closePurchasePopup();
-document.getElementById("productSearchInput").addEventListener("blur", () => {
-  const name = document.getElementById("productSearchInput").value.trim();
-  if (name) {
-    loadProductVariants(name);
-  }
-});
-// ✅ توليد الفاتورة الجديدة بنفس تصميم printInvoice
-if (canShare()) {
-  setTimeout(() => {
-    const last = window.purchases.at(-1);
-    printInvoice(last.id);
-  }, 800);
-}
-
-
 
 window.isSaving = false;
 }; // إغلاق savePurchase
