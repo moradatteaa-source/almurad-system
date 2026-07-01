@@ -347,7 +347,7 @@ tfoot td:first-child { text-align: right; padding-right: 20px; }
   <!-- الإعدادات المالية -->
   <div class="filter-group">
     <div class="filter-label">كلفة التوصيل / طلب</div>
-    <input type="number" class="filter-input" id="deliveryCost" value="3500" style="min-width:130px">
+    <input type="number" class="filter-input" id="deliveryCost" value="4000" style="min-width:130px">
   </div>
   <div class="filter-group">
     <div class="filter-label">سعر الصرف (د.ع/$)</div>
@@ -511,12 +511,12 @@ function getRating(profitIQD, salesIQD) {
   return 'excellent';
 }
 const RATING = {
-  excellent: { label:'ممتاز 🏆',   cheer:'🔥 عاشت إيدك! الإعلان ذهب خالص!' },
-  great:     { label:'جيد جداً ⭐', cheer:'💪 شغل احترافي! زيد الميزانية!' },
-  good:      { label:'جيد 👍',      cheer:'👏 أحسنت! خطوة للأمام وتصير ممتاز!' },
-  average:   { label:'متوسط 📊',    cheer:'💡 راجع جمهورك — الفرق بسيط!' },
-  weak:      { label:'ضعيف ⚠️',    cheer:'🛑 راجع الاستراتيجية — لا تيأس!' },
-  nodata:    { label:'لم يُحسب',    cheer:'✍️ أدخل كلفة الإعلان لترى نتيجتك' },
+  excellent: { label:'ممتاز',   cheer:'عاشت إيدك! الإعلان ذهب خالص!' },
+  great:     { label:'جيد جداً', cheer:'شغل احترافي! زيد الميزانية!' },
+  good:      { label:'جيد',      cheer:'أحسنت! خطوة للأمام وتصير ممتاز!' },
+  average:   { label:'متوسط',    cheer:'راجع جمهورك — الفرق بسيط!' },
+  weak:      { label:'ضعيف',    cheer:'راجع الاستراتيجية — لا تيأس!' },
+  nodata:    { label:'لم يُحسب',    cheer:'أدخل كلفة الإعلان لترى نتيجتك' },
 };
 const pct = (a, b) => b ? ((a/b)*100).toFixed(1) + '%' : '0%';
 
@@ -623,7 +623,7 @@ window.applyFilter = function() {
   const selSource = getSelected('sourceList');
   const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
   const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value + 'T23:59:59') : null;
-  const deliveryCostPerOrder = Number(document.getElementById('deliveryCost').value) || 3500;
+  const deliveryCostPerOrder = Number(document.getElementById('deliveryCost').value) || 4000;
   const exchangeRate = Number(document.getElementById('exchangeRate').value) || 1400;
   const returnRatePct = Number(document.getElementById('returnRate').value) || 0;
 
@@ -900,17 +900,19 @@ const rows = Object.entries(PS).sort((a,b)=>b[1].orderIds.size-a[1].orderIds.siz
   const nowFull = new Date().toLocaleString('ar-IQ');
   const estMark = isEstimateMode ? '~' : '';
 
-  const summaryData = [
-    ['إجمالي الطلبات', fmt(totOrders)],
-    ['تم التسليم',     fmt(Math.round(totDeliv))+'('+pct(Math.round(totDeliv),totOrders)+')'],
-    ['الراجع',         fmt(totRet)+'('+pct(totRet,totOrders)+')'],
-    ['المبيعات',       estMark+fmt(Math.round(totSales))+' د.ع'],
-    ['كلفة الشراء',   fmt(totBuy)+' د.ع'],
-    ['كلفة التوصيل',  fmt(totDel)+' د.ع'],
-    ['كلفة الإعلان',  fmt(totAd)+' د.ع'],
-  ];
+let bestProd = '—', bestScore = 0;
+  for (const [p, d] of rows) { if (d.delivered > bestScore) { bestScore = d.delivered; bestProd = p; } }
+const profitColor = lastStats.totProfit >= 0 ? '#1d4ed8' : '#ea580c';
+  const marginColor = parseFloat(totMargin) >= 0 ? '#1d4ed8' : '#ea580c';
 
-  const th = t => ({ text:fix(t), bold:true, color:'white', fillColor:'#0f0c29', fontSize:9, alignment:'center' });
+  const statCard = (label, value, color) => ({
+    stack: [
+      {text:fix(label), fontSize:8, color:'#6b7280', bold:true, alignment:'center', margin:[0,0,0,3]},
+{text:fix(value), fontSize:12, bold:true, alignment:'center', color:color||'#04122a'}
+    ],
+    margin:[0,4,0,4]
+  });
+const th = t => ({ text:fix(t), bold:true, color:'white', fillColor:'#04122a', fontSize:9, alignment:'center' });
 
 const tableHeader = [
     'المنتج','الطلبات','القطع','مسلّم','راجع',
@@ -937,13 +939,13 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
       {text:fmt(d.buy),         alignment:'center', fontSize:9},
       {text:fmt(delivCost),     alignment:'center', fontSize:9},
       {text:fmt(adIQD),         alignment:'center', fontSize:9},
-      {text:estMark+fmt(Math.round(profit)), alignment:'center', fontSize:9, bold:true,
-       color:profit>=0?'#166534':'#991b1b'},
+{text:estMark+fmt(Math.round(profit)), alignment:'center', fontSize:9, bold:true,
+       color:profit>=0?'#1d4ed8':'#ea580c'},
       {text:estMark+margin+'%', alignment:'center', fontSize:9, bold:true,
-       color:profit>=0?'#166534':'#991b1b'},
+       color:profit>=0?'#1d4ed8':'#ea580c'},
       {text:fix(cfg.label),     alignment:'center', fontSize:9, bold:true},
       {text:fix(cfg.cheer),     alignment:'right',  fontSize:8, color:'#374151'},
-      {text:fix(srcText),       alignment:'right',  fontSize:8, color:'#4338ca'},
+{text:fix(srcText),       alignment:'right',  fontSize:8, color:'#1e40af'},
     ];
   });
 
@@ -958,14 +960,14 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
     {text:fmt(totDel),alignment:'center',bold:true,fontSize:9},
     {text:fmt(totAd),alignment:'center',bold:true,fontSize:9},
 {text:fmt(Math.round(lastStats.totProfit)),alignment:'center',bold:true,fontSize:9,
-     color:parseFloat(totMargin)>=0?'#166534':'#991b1b'},
+     color:parseFloat(totMargin)>=0?'#1d4ed8':'#ea580c'},
     {text:totMargin+'%',alignment:'center',bold:true,fontSize:9,
-     color:parseFloat(totMargin)>=0?'#166534':'#991b1b'},
-    {text:fix(rows.length+' منتج'),alignment:'center',bold:true,fontSize:9,colSpan:4},{},{},{},
+     color:parseFloat(totMargin)>=0?'#1d4ed8':'#ea580c'},
+{text:fix(rows.length+' منتج'),alignment:'center',bold:true,fontSize:9,colSpan:3},{},{},
   ];
 
   const estimateBanner = isEstimateMode ? [{
-    text:fix('⚠️ وضع التقدير التقريبي — المبيعات محسوبة بعد خصم '+retRate+'% راجع متوقع'),
+   text:fix('وضع التقدير التقريبي — المبيعات محسوبة بعد خصم '+retRate+'% راجع متوقع'),
     color:'#92400e', bold:true, alignment:'center', margin:[0,0,0,10]
   }] : [];
 
@@ -984,23 +986,34 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
         columns:[
 ...(logoData ? [{ image: logoData, width:70, alignment:'left', margin:[0,0,0,0] }] : [{ text:'', width:70 }]),
           { stack:[
-            {text:fix('📣 تقرير أداء الإعلانات'), fontSize:18, bold:true, color:'#0f0c29', alignment:'right'},
+            {text:fix('تقرير أداء الإعلانات'), fontSize:18, bold:true, color:'#04122a', alignment:'right'},
             {text:fix('المراد — نظام المعلنين • ')+nowFull, fontSize:10, color:'#6b7280', alignment:'right'},
           ], alignment:'right' }
         ],
         columnGap:12, margin:[0,0,0,16]
       },
       ...estimateBanner,
-      {
+    {
         table:{
-          widths: Array(7).fill('*'),
+          widths: Array(4).fill('*'),
           body:[
-            summaryData.map(([l])=>th(l)),
-            summaryData.map(([,v])=>({text:v, alignment:'center', bold:true, fontSize:10})),
+           [statCard('إجمالي الطلبات', fmt(totOrders)),
+             statCard('الكمية الكلية', fmt(totQty)),
+             statCard('تم التسليم', fmt(Math.round(totDeliv))+' ('+pct(Math.round(totDeliv),totOrders)+')'),
+             statCard('الراجع', fmt(totRet)+' ('+pct(totRet,totOrders)+')')],
+            [statCard('المبيعات', estMark+fmt(Math.round(totSales))+' د.ع'),
+             statCard('كلفة الشراء', fmt(totBuy)+' د.ع'),
+             statCard('كلفة التوصيل', fmt(totDel)+' د.ع'),
+             statCard('كلفة الإعلان', fmt(totAd)+' د.ع')],
+            [statCard('الربح الصافي', estMark+fmt(Math.round(lastStats.totProfit))+' د.ع', profitColor),
+             statCard('نسبة الربح', totMargin+'%', marginColor),
+             statCard('أفضل منتج', bestProd),
+             {text:''}]
           ]
         },
         layout:{hLineColor:'#e4e1f0', vLineColor:'#e4e1f0',
-          paddingTop:()=>6, paddingBottom:()=>6},
+          fillColor:(row)=> row%2===0 ? '#f8fafc' : '#ffffff',
+          paddingTop:()=>8, paddingBottom:()=>8},
         margin:[0,0,0,16]
       },
       {
@@ -1011,14 +1024,14 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
         },
         layout:{
 fillColor:(row)=>{
-            if(row===0) return '#0f0c29';
+    if(row===0) return '#04122a';
             if(row===tableRows.length+1) return '#f0f4ff';
             const [,d]=rows[row-1]||[];
             if(!d) return null;
             const orders=d.orderIds.size;
             const adIQD=(productAds[rows[row-1]?.[0]]||0)*exRate;
             const profit=d.sales-d.buy-(orders*delCost)-adIQD;
-            return profit<0?'#fff0f0':(row%2===0?'#fafaf8':null);
+          return profit<0?'#fff7ed':(row%2===0?'#fafaf8':null);
           },
           hLineColor:'#e4e1f0', vLineColor:'#e4e1f0',
           paddingTop:()=>5, paddingBottom:()=>5
