@@ -825,6 +825,14 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
       <select class="fi" id="orderVar"></select>
     </div>
     <div class="fg"><label class="fl">ملاحظات (اختياري)</label><input class="fi" id="cno" placeholder="أي ملاحظة..."></div>
+    <div class="fg">
+  <label class="fl">🏷️ كود الخصم (اختياري)</label>
+  <div style="display:flex;gap:8px;">
+    <input class="fi" id="discountCodeInput" placeholder="أدخل كود الخصم" style="flex:1;direction:ltr;">
+    <button type="button" onclick="applyDiscount()" style="background:var(--nv);color:var(--gd2);border:none;border-radius:11px;padding:0 16px;font-family:'Tajawal',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;">تطبيق</button>
+  </div>
+  <div id="discountMsg" style="font-size:12px;margin-top:6px;display:none;"></div>
+</div>
     <div id="deliveryNoteBox" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:12px 16px;margin-bottom:14px;">
       <strong style="font-size:13px;color:#856404;">🚚 ملاحظة التوصيل</strong>
       <div id="deliveryNoteText" style="font-size:13px;color:#856404;margin-top:4px;"></div>
@@ -1551,6 +1559,40 @@ window.updateDelivery = async () => {
     <div class="delivery-row"><span>🚚 توصيل (${city})</span><span>${delivery===0?'مجاني 🎉':'IQD '+delivery.toLocaleString()}</span></div>
     <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
 };
+window._discountPct = 0;
+window.applyDiscount = async () => {
+  const code = document.getElementById('discountCodeInput').value.trim().toUpperCase();
+  const msg = document.getElementById('discountMsg');
+  if(!code){ msg.style.display='block'; msg.style.color='#e53e3e'; msg.textContent='أدخل كود الخصم أولاً'; return; }
+  try{
+    const snap = await get(ref(db,'storeSettings'));
+    if(!snap.exists()) return;
+    const s = snap.val();
+    if(s.discountCode && code === s.discountCode.toUpperCase()){
+      window._discountPct = s.discountCodePct || 0;
+      msg.style.display='block'; msg.style.color='#276749';
+      msg.textContent = `✅ تم تطبيق خصم ${window._discountPct}%`;
+      // أعد حساب الملخص
+    const items = window._directOrderData || cart;
+const subtotal = items.reduce((s,c)=>s+(c.price*c.qty),0);
+const delivery = window._deliveryFee || 0;
+const discountAmt = Math.round(subtotal * window._discountPct / 100);
+const total = subtotal - discountAmt + delivery;
+      const osb = document.getElementById('osb');
+      osb.innerHTML = `
+        <h4>ملخص الطلب (${items.reduce((s,c)=>s+c.qty,0)} قطعة)</h4>
+        ${items.map(c=>`<div class="osumm-row"><span>${c.name}${c.variant?` - ${c.variant}`:''} ×${c.qty}</span><span>IQD ${(c.price*c.qty).toLocaleString()}</span></div>`).join('')}
+        ${delivery?`<div class="osumm-row"><span>🚚 توصيل</span><span>IQD ${delivery.toLocaleString()}</span></div>`:''}
+        <div class="osumm-row" style="color:#276749;"><span>🏷️ خصم ${window._discountPct}%</span><span>- IQD ${discountAmt.toLocaleString()}</span></div>
+        <div class="osumm-total"><span>الإجمالي</span><span>IQD ${total.toLocaleString()}</span></div>`;
+      window._finalTotal = total;
+    } else {
+      window._discountPct = 0;
+      msg.style.display='block'; msg.style.color='#e53e3e';
+      msg.textContent = '❌ كود الخصم غير صحيح';
+    }
+  }catch(e){ msg.style.display='block'; msg.textContent='خطأ في التحقق من الكود'; }
+};
 window.closeCheckout=()=>document.getElementById('chkMov').classList.remove('op');
 
 /* ── SUBMIT ORDER ── */
@@ -1593,6 +1635,9 @@ const mainItem   = orderData[0];
   const mainPrice  = mainItem.price || 0;
   const mainQty    = mainItem.qty   || 1;
   const delivery   = window._deliveryFee || 5000;
+  const discountPct = window._discountPct || 0;
+const subtotalBeforeDiscount = orderData.reduce((s,c)=>s+(c.price*c.qty),0);
+const discountAmt = Math.round(subtotalBeforeDiscount * discountPct / 100);
 const productsDetailed = orderData.map(c => ({
     name:     c.name    || '',
     price:    (c.price || 0) * (c.qty || 1),
@@ -1616,8 +1661,8 @@ const extraProducts = extraItems.map(c => ({
     city:        city,
     area:        city,
 productName: mainItem.name || '',
-price:            (mainPrice * mainQty) + delivery,
-totalPrice:       orderData.reduce((s,c)=>s+(c.price*c.qty),0) + delivery,
+price:      (mainPrice * mainQty) + delivery - discountAmt,
+totalPrice: subtotalBeforeDiscount - discountAmt + delivery,
 deliveryPrice:    delivery,
 notes:            orderData.map(c=>`${c.name} ×${c.qty}`).join(' | ') + (note ? ` || ${note}` : ''),
     quantity:    mainQty,
