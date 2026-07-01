@@ -586,34 +586,116 @@ function buildShareText() {
   const period = from === to && from ? from : (from && to ? `${from} → ${to}` : "كل الطلبات");
 const empLabel = isAdmin && selectedEmp === "all" ? "جميع الموظفات" : (selectedEmp === "all" ? currentName : selectedEmp);
 
-  let txt = `📊 *تقرير نظام المراد*\n`;
-  txt += `👤 ${empLabel}\n`;
-  txt += `📅 ${period}\n`;
-  txt += `━━━━━━━━━━━━━━━━\n`;
-STATUS_PATHS.forEach(s => {
+let txt = `*تقرير نظام المراد*\n`;
+  txt += `*${empLabel}*\n`;
+  txt += `التاريخ: ${period}\n`;
+  txt += `================================\n`;
+  txt += `*الاجمالي: ${total} طلب*\n`;
+  txt += `================================\n`;
+  STATUS_PATHS.forEach(s => {
     const n = counts[s.key] || 0;
-    if (n > 0) txt += `${s.emoji} ${s.key}: *${n}*\n`;
+    if (n > 0) txt += `${s.key}: *${n}*\n`;
   });
-  txt += `━━━━━━━━━━━━━━━━\n`;
-  txt += `📦 الإجمالي: *${total}* طلب\n`;
-  txt += `✅ تم التسليم: *${counts["تم التسليم"]||0}*\n`;
-  txt += `↩️ راجع: *${counts["راجع"]||0}*\n`;
-
-  // كروت الموظفات لو الكل
-if (isAdmin && selectedEmp === "all" && getEmployees(filteredOrders).length > 0) {
-    const emps = getEmployees(filteredOrders);
-    if (emps.length > 0) {
-      txt += `\n👥 *أداء كل موظفة:*\n`;
-      emps.forEach(emp => {
-        const eo = ordersForEmp(emp, filteredOrders);
-        const ec = countByStatus(eo);
-        txt += `\n▪️ *${emp}* (${eo.length} طلب)\n`;
-STATUS_PATHS.forEach(s => {
-  const n = ec[s.key] || 0;
-  if (n > 0) txt += `  ${s.emoji} ${s.key}: ${n}\n`;
-});
+  txt += `================================\n`;
+  txt += `تم التسليم: *${counts["تم التسليم"]||0}*\n`;
+  // منتجات الموظف الواحد (لو مو أدمن أو اختار موظفة محددة)
+  if (!isAdmin || selectedEmp !== "all") {
+    const sourceProds = {};
+    empOrders.forEach(o => {
+      const src = (o.source || 'غير محدد').trim();
+      if(!sourceProds[src]) sourceProds[src] = {};
+      const addProd = (name, qty) => {
+        const p = name.trim();
+        if(p) sourceProds[src][p] = (sourceProds[src][p] || 0) + qty;
+      };
+      if(o.productsDetailed && Array.isArray(o.productsDetailed)){
+        o.productsDetailed.forEach(p => addProd(p.name || '', p.qty || 1));
+      } else if(o.productName){
+        addProd(o.productName, o.quantity || 1);
+      }
+    });
+    const srcKeys = Object.keys(sourceProds).sort((a,b) => {
+      const ta = Object.values(sourceProds[a]).reduce((s,n)=>s+n,0);
+      const tb = Object.values(sourceProds[b]).reduce((s,n)=>s+n,0);
+      return tb - ta;
+    });
+    if(srcKeys.length){
+      txt += `\nالمنتجات حسب المصدر:\n`;
+      srcKeys.forEach(src => {
+        const prods = Object.entries(sourceProds[src]).sort((a,b)=>b[1]-a[1]);
+        const srcTotal = prods.reduce((s,[,n])=>s+n,0);
+        txt += `${src} (${srcTotal}):\n`;
+        prods.forEach(([prod,n]) => {
+          txt += `  - ${prod} x${n}\n`;
+        });
       });
     }
+  }
+  txt += `راجع: *${counts["راجع"]||0}*\n`;
+
+  const allSources = {};
+  empOrders.forEach(o => {
+    const src = (o.source || 'غير محدد').trim();
+    allSources[src] = (allSources[src] || 0) + 1;
+  });
+  if (Object.keys(allSources).length) {
+    txt += `\n*المصادر:*\n`;
+    Object.entries(allSources).sort((a,b)=>b[1]-a[1]).forEach(([s,n]) => {
+      txt += `  - ${s}: *${n}*\n`;
+    });
+  }
+
+  if (isAdmin && selectedEmp === "all" && getEmployees(filteredOrders).length > 0) {
+    const emps = getEmployees(filteredOrders);
+    txt += `\n*اداء كل موظفة:*\n`;
+    emps.forEach(emp => {
+      const eo = ordersForEmp(emp, filteredOrders);
+      const ec = countByStatus(eo);
+      txt += `\n--- *${emp}* (${eo.length} طلب) ---\n`;
+      STATUS_PATHS.forEach(s => {
+        const n = ec[s.key] || 0;
+        if (n > 0) txt += `  ${s.key}: ${n}\n`;
+      });
+      const empSources = {};
+      eo.forEach(o => {
+        const src = (o.source || 'غير محدد').trim();
+        empSources[src] = (empSources[src] || 0) + 1;
+      });
+      if (Object.keys(empSources).length) {
+        txt += `  المصادر: ${Object.entries(empSources).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`${s}(${n})`).join(' | ')}\n`;
+      }
+   // المنتجات مقسمة حسب المصدر
+      const sourceProds = {};
+      eo.forEach(o => {
+        const src = (o.source || 'غير محدد').trim();
+        if(!sourceProds[src]) sourceProds[src] = {};
+        const addProd = (name, qty) => {
+          const p = name.trim();
+          if(p) sourceProds[src][p] = (sourceProds[src][p] || 0) + qty;
+        };
+        if(o.productsDetailed && Array.isArray(o.productsDetailed)){
+          o.productsDetailed.forEach(p => addProd(p.name || '', p.qty || 1));
+        } else if(o.productName){
+          addProd(o.productName, o.quantity || 1);
+        }
+      });
+      const srcKeys = Object.keys(sourceProds).sort((a,b) => {
+        const ta = Object.values(sourceProds[a]).reduce((s,n)=>s+n,0);
+        const tb = Object.values(sourceProds[b]).reduce((s,n)=>s+n,0);
+        return tb - ta;
+      });
+      if(srcKeys.length){
+        txt += `  المنتجات حسب المصدر:\n`;
+        srcKeys.forEach(src => {
+          const prods = Object.entries(sourceProds[src]).sort((a,b)=>b[1]-a[1]);
+          const srcTotal = prods.reduce((s,[,n])=>s+n,0);
+          txt += `  ${src} (${srcTotal}):\n`;
+          prods.forEach(([prod,n]) => {
+            txt += `    - ${prod} x${n}\n`;
+          });
+        });
+      }
+    });
   }
 
   return txt;
