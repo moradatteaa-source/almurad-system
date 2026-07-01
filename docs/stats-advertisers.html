@@ -175,7 +175,13 @@
     <label><input type="checkbox" value="رفض"> رفض</label>
   </div>
 </div>
-
+<div class="dropdown">
+  <button class="dropbtn">📡 المصدر</button>
+  <div class="dropdown-content" id="sourceDropdown">
+    <label><input type="checkbox" id="selectAllSources"> ✅ تحديد الكل</label>
+    <div id="sourceCheckboxes"></div>
+  </div>
+</div>
 
 <div class="dropdown">
   <button class="dropbtn">📦 المنتجات</button>
@@ -211,8 +217,8 @@
       <table id="ordersTable">
         <thead>
           <tr>
-            <th>#</th><th>المعلن</th><th>المنتج</th><th>الكمية</th>
-            <th>سعر البيع</th><th>سعر الشراء</th><th>الحالة</th><th>التاريخ</th>
+<th>#</th><th>المعلن</th><th>المنتج</th><th>الكمية</th>
+<th>سعر البيع</th><th>سعر الشراء</th><th>الحالة</th><th>المصدر</th><th>التاريخ</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -298,9 +304,27 @@ async function loadData() {
   const warehouseSnap = await get(ref(db, "warehouse"));
   if (warehouseSnap.exists()) warehouse = warehouseSnap.val();
 
-  populateAdvertisers();
+populateAdvertisers();
+  populateSources();
   populateProductsForAdvertiser();
   applyFilter();
+}
+function populateSources() {
+  const sources = [...new Set(
+    allOrders
+      .map(o => (o.source || o.orderSource || o.platform || '').trim())
+      .filter(Boolean)
+  )].sort();
+
+  const container = document.getElementById('sourceCheckboxes');
+  container.innerHTML = sources.map(s =>
+    `<label><input type="checkbox" value="${s}"> ${s}</label>`
+  ).join('');
+
+  document.getElementById('selectAllSources').addEventListener('change', e => {
+    container.querySelectorAll('input').forEach(c => c.checked = e.target.checked);
+    applyFilter();
+  });
 }
 function populateAdvertisers() {
   const advs = [...new Set(allOrders.map(o => o.advertiser || "").filter(Boolean))];
@@ -317,6 +341,9 @@ function populateAdvertisers() {
 function populateProductsForAdvertiser() {
  const adv = Array.from(
   document.querySelectorAll("#advertiserCheckboxes input:checked")
+).map(c => c.value);
+const selectedSources = Array.from(
+  document.querySelectorAll("#sourceCheckboxes input:checked")
 ).map(c => c.value);
   const products = allOrders
 .filter(o => !adv.length || adv.includes(o.advertiser))
@@ -376,12 +403,19 @@ const adv = Array.from(
 ).map(c => c.value);
 const statusFilter = Array.from(document.querySelectorAll("#statusCheckboxes input:checked")).map(c => c.value);
 const selectedProducts = Array.from(document.querySelectorAll("#productCheckboxes input:checked")).map(c => c.value);
+const selectedSources = Array.from(
+  document.querySelectorAll("#sourceCheckboxes input:checked")
+).map(c => c.value);
     const adCost = Number(document.getElementById("adCost").value) || 0;
     const f = fromDate.value ? new Date(fromDate.value) : null;
     const t = toDate.value ? new Date(toDate.value + "T23:59:59") : null;
 
     let filtered = allOrders.filter(o => {
 if (adv.length && !adv.includes(o.advertiser)) return false;
+if (selectedSources.length) {
+  const orderSrc = (o.source || o.orderSource || o.platform || '').trim();
+  if (!selectedSources.includes(orderSrc)) return false;
+}
 if (statusFilter.length) {
   if (!statusFilter.includes(o.status)) return false;
 }
@@ -469,8 +503,9 @@ let saleVal = sell;
       <td>${formatNumber(qty)}</td>
       <td>${formatNumber(sell)}</td>
  <td>${formatNumber(buy * qty)}</td>
-      <td>${status}</td>
-      <td>${new Date(order.orderDate).toLocaleDateString('en-GB')}</td>
+<td>${status}</td>
+<td>${(order.source || order.orderSource || order.platform || '—')}</td>
+<td>${new Date(order.orderDate).toLocaleDateString('en-GB')}</td>
   </tr>`;
 });
 
