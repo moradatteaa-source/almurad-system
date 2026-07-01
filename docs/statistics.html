@@ -235,7 +235,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- QUICK FILTERS -->
 <div class="filters">
-  <button class="filter-chip active" data-range="today">اليوم</button>
+<button class="filter-chip active" data-range="today">اليوم</button>
+  <button class="filter-chip" data-range="yesterday">أمس</button>
   <button class="filter-chip" data-range="week">آخر 7 أيام</button>
   <button class="filter-chip" data-range="month">آخر 30 يوم</button>
   <button class="filter-chip" data-range="all">الكل</button>
@@ -335,13 +336,12 @@ async function loadOrders() {
   applyFilters();
 }
 
-// ── تحويل تاريخ ──
 function toDate(d) {
   if (!d) return null;
-  const n = new Date(d);
-  if (!isNaN(n)) return n;
   const t = Number(d);
-  if (!isNaN(t)) return new Date(t);
+  if (!isNaN(t) && t > 1000000000) return new Date(t);
+  const n = new Date(d);
+  if (!isNaN(n.getTime())) return n;
   return null;
 }
 
@@ -350,15 +350,25 @@ let dateFrom = null, dateTo = null;
 
 function setRange(range) {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+// توقيت العراق UTC+3
+  const iraqOffset = 3 * 60;
+  const iraqNow = new Date(now.getTime() + (iraqOffset - now.getTimezoneOffset()) * 60000);
+  const today = iraqNow.toISOString().split("T")[0];
   document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
   document.querySelector(`[data-range="${range}"]`)?.classList.add("active");
 
-  if (range === "today") {
+if (range === "today") {
     dateFrom = dateTo = today;
     document.getElementById("fromDate").value = today;
     document.getElementById("toDate").value   = today;
     document.getElementById("dateLabel").textContent = `📅 ${formatArabicDate(now)}`;
+  } else if (range === "yesterday") {
+const y = new Date(iraqNow); y.setDate(iraqNow.getDate()-1);
+    const yesterday = y.toISOString().split("T")[0];
+    dateFrom = dateTo = yesterday;
+    document.getElementById("fromDate").value = yesterday;
+    document.getElementById("toDate").value   = yesterday;
+    document.getElementById("dateLabel").textContent = `📅 ${formatArabicDate(y)}`;
   } else if (range === "week") {
     const f = new Date(); f.setDate(now.getDate()-6);
     dateFrom = f.toISOString().split("T")[0];
@@ -389,11 +399,14 @@ function formatArabicDate(d) {
 function applyFilters() {
   const from = document.getElementById("fromDate").value;
   const to   = document.getElementById("toDate").value;
-  const fDate = from ? new Date(from + "T00:00:00") : null;
-  const tDate = to   ? new Date(to   + "T23:59:59") : null;
+  // توقيت العراق UTC+3
+  const fDate = from ? new Date(from + "T00:00:00+03:00") : null;
+  const tDate = to   ? new Date(to   + "T23:59:59+03:00") : null;
 
-  filteredOrders = allOrders.filter(o => {
-    const dt = toDate(o.orderDate) || toDate(o.createdAt);
+filteredOrders = allOrders.filter(o => {
+    // وقت دخول الطلب للحالة الحالية
+    const statusTime = o.statusHistory?.[o.status]?.time;
+    const dt = toDate(statusTime) || toDate(o.orderDate) || toDate(o.createdAt);
     if (fDate && dt && dt < fDate) return false;
     if (tDate && dt && dt > tDate) return false;
     return true;
