@@ -1,154 +1,469 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>📊 لوحة الأداء الشاملة - نظام المراد</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>لوحة أداء الفريق — المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
 :root{
-  --blue:#043B64;
+  --navy:#043B64;
+  --navy-mid:#0a5a96;
+  --navy-dim:#0d3352;
   --orange:#FF6B2D;
-  --bg:#f5f6fa;
+  --orange-dim:#e5541c;
+  --green:#10B981;
+  --green-dim:#059669;
+  --red:#EF4444;
+  --red-dim:#DC2626;
+  --yellow:#F59E0B;
+  --yellow-dim:#D97706;
+  --blue-accent:#3B82F6;
+  --bg:#F1F5F9;
+  --card:#FFFFFF;
+  --border:#E2E8F0;
+  --text:#0F172A;
+  --muted:#64748B;
+  --sidebar-w:280px;
+  --header-h:68px;
+  --radius:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(4,59,100,.14);
 }
-body{font-family:'Tajawal',sans-serif;background:var(--bg);margin:0;color:#222}
-header{background:var(--blue);color:#fff;text-align:center;padding:14px;font-weight:700}
-.container{max-width:1200px;margin:20px auto;padding:16px}
-.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center;justify-content:center}
-select,input{padding:8px;border:1px solid #ccc;border-radius:8px}
-button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
-.card{background:#fff;padding:12px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);text-align:center;transition:0.3s}
-.card:hover{transform:translateY(-3px);box-shadow:0 4px 12px rgba(0,0,0,0.08)}
-.card h3{margin:0;color:var(--blue);font-size:14px}
-.card p{margin:6px 0 0;font-weight:700;font-size:20px}
-.chart-container{background:#fff;border-radius:10px;padding:12px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-canvas{width:100%!important;height:auto!important}
-.table-wrap{background:#fff;border-radius:8px;padding:10px;margin-top:18px;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px;min-width:700px}
-th,td{padding:8px;text-align:center;border-bottom:1px solid #eee}
-th{background:#f9fafc;color:var(--blue)}
-.tips{background:#fff;margin-top:16px;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-.hidden{display:none!important}
-@media(max-width:768px){
-  .charts{display:flex;flex-direction:column}
-  .cards{grid-template-columns:repeat(2,1fr)}
-}
-.chart-row{
-  display:flex;
-  gap:15px;
-  margin-bottom:20px;
-}
-.chart-box{
-  flex:1;
-  background:#fff;
-  padding:10px;
-  border-radius:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.05);
-  min-height:250px;
-}
-.chart-info{
-  
-  flex:1;
-  background:#fff;
-  padding:15px;
-  border-radius:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ══ SCROLLBAR ══ */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* ══ LAYOUT ══ */
+.layout{display:block;min-height:100vh;position:relative}
+
+/* ══ SIDEBAR ══ */
+.sidebar{
+  width:var(--sidebar-w);
+  background:var(--navy);
+  color:#fff;
   display:flex;
   flex-direction:column;
-  justify-content:center;
+  position:fixed;
+  top:0;right:0;bottom:0;
+  z-index:200;
+  transition:transform .3s ease;
+  overflow:hidden;
 }
-.chart-box canvas{
-  width:100% !important;
-  height:100% !important;
+.sidebar-brand{
+  padding:22px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  flex-shrink:0;
 }
-/* موبايل */
-@media(max-width:768px){
-  .chart-row{
-    flex-direction:column;
-  }
+.sidebar-brand .logo{
+  display:flex;align-items:center;gap:10px;
 }
+.sidebar-brand .logo-icon{
+  width:40px;height:40px;
+  background:var(--orange);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.sidebar-brand h1{font-size:15px;font-weight:800;line-height:1.2}
+.sidebar-brand p{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+
+.sidebar-nav{
+  padding:14px 12px 10px;
+  flex-shrink:0;
+}
+.nav-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin-bottom:6px}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:10px 12px;
+  border:none;background:transparent;color:rgba(255,255,255,.7);
+  border-radius:10px;cursor:pointer;font-family:'Tajawal',sans-serif;
+  font-size:13px;font-weight:600;text-align:right;
+  transition:all .2s;margin-bottom:2px;
+}
+.nav-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-btn.active{background:var(--orange);color:#fff}
+.nav-btn .icon{font-size:16px;flex-shrink:0}
+
+.sidebar-employees{
+  flex:1;overflow-y:auto;padding:0 12px 12px;
+}
+.emp-section-label{
+  font-size:10px;font-weight:700;color:rgba(255,255,255,.35);
+  text-transform:uppercase;letter-spacing:.8px;
+  padding:10px 8px 6px;
+}
+.emp-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 10px;border-radius:10px;cursor:pointer;
+  transition:all .2s;margin-bottom:2px;
+  border:1px solid transparent;
+}
+.emp-item:hover{background:rgba(255,255,255,.06)}
+.emp-item.selected{background:rgba(255,107,45,.15);border-color:rgba(255,107,45,.3)}
+.emp-avatar{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;flex-shrink:0;color:#fff;
+}
+.emp-info{flex:1;min-width:0}
+.emp-name{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:1px}
+.score-pill{
+  font-size:11px;font-weight:800;
+  padding:2px 8px;border-radius:20px;flex-shrink:0;
+}
+.score-great{background:rgba(16,185,129,.2);color:#34D399}
+.score-good{background:rgba(59,130,246,.2);color:#60A5FA}
+.score-avg{background:rgba(245,158,11,.2);color:#FCD34D}
+.score-low{background:rgba(239,68,68,.2);color:#F87171}
+
+/* ══ MAIN ══ */
+.main{
+  margin-right:var(--sidebar-w);
+  display:flex;flex-direction:column;min-height:100vh;
+  min-width:0;overflow-x:hidden;
+}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  height:var(--header-h);
+  background:var(--card);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+  padding:0 24px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 0 rgba(0,0,0,.06);
+}
+.menu-toggle{
+  display:none;
+  width:36px;height:36px;border:none;background:transparent;
+  cursor:pointer;border-radius:8px;font-size:20px;align-items:center;justify-content:center;
+}
+.topbar-title{font-size:16px;font-weight:800;color:var(--navy);flex:1}
+.topbar-title span{color:var(--orange)}
+.filter-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-label{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+.filter-input{
+  padding:7px 12px;border:1.5px solid var(--border);
+  border-radius:9px;font-family:'Tajawal',sans-serif;
+  font-size:13px;color:var(--text);background:#fff;
+  transition:border-color .2s;
+}
+.filter-input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,107,45,.1)}
+.apply-btn{
+  padding:8px 16px;background:var(--orange);color:#fff;
+  border:none;border-radius:9px;font-family:'Tajawal',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap;
+}
+.apply-btn:hover{background:var(--orange-dim)}
+.apply-btn:active{transform:scale(.97)}
+
+/* ══ CONTENT ══ */
+.content{padding:24px;flex:1;min-width:0;overflow-x:hidden}
+
+/* ══ SELECTED EMPLOYEE BANNER ══ */
+.emp-banner{
+  background:var(--navy);color:#fff;
+  border-radius:var(--radius);padding:18px 22px;
+  display:flex;align-items:center;gap:16px;
+  margin-bottom:22px;
+}
+.emp-banner-avatar{
+  width:52px;height:52px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:800;flex-shrink:0;
+}
+.emp-banner-info h2{font-size:18px;font-weight:800}
+.emp-banner-info p{font-size:12px;color:rgba(255,255,255,.55);margin-top:3px}
+.emp-banner-score{
+  margin-right:auto;text-align:center;
+}
+.emp-banner-score .score-num{font-size:36px;font-weight:900;color:var(--orange);line-height:1}
+.emp-banner-score .score-lbl{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+
+/* ══ KPI GRID ══ */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:12px;margin-bottom:22px;
+}
+.kpi-card{
+  background:var(--card);border-radius:var(--radius);
+  padding:16px;border:1px solid var(--border);
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;right:0;
+  width:3px;height:100%;
+}
+.kpi-card.c-total::before{background:var(--blue-accent)}
+.kpi-card.c-fixed::before{background:var(--muted)}
+.kpi-card.c-transit::before{background:var(--yellow)}
+.kpi-card.c-done::before{background:var(--green)}
+.kpi-card.c-return::before{background:var(--orange)}
+.kpi-card.c-reject::before{background:var(--red)}
+.kpi-icon{font-size:20px;margin-bottom:8px}
+.kpi-val{font-size:26px;font-weight:900;color:var(--navy);line-height:1}
+.kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:5px}
+.kpi-badge{
+  display:inline-block;margin-top:6px;
+  font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;
+}
+.badge-green{background:#D1FAE5;color:#065F46}
+.badge-red{background:#FEE2E2;color:#991B1B}
+.badge-yellow{background:#FEF3C7;color:#92400E}
+.badge-blue{background:#DBEAFE;color:#1E40AF}
+.badge-gray{background:#F1F5F9;color:#475569}
+
+/* ══ CHART ROW ══ */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+.chart-card{
+  background:var(--card);border-radius:var(--radius);
+  padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);
+}
+.chart-card h3{
+  font-size:14px;font-weight:800;color:var(--navy);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.chart-card h3 span{font-weight:400;font-size:12px;color:var(--muted)}
+.chart-wrap{position:relative;height:260px}
+
+/* ══ RANKING TABLE ══ */
+.section-card{
+  background:var(--card);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  margin-bottom:20px;overflow:hidden;
+}
+.section-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.section-header h3{font-size:14px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px}
+.section-header p{font-size:12px;color:var(--muted)}
+.sort-pills{display:flex;gap:6px;flex-wrap:wrap}
+.sort-pill{
+  padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);
+  background:#fff;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:700;
+  color:var(--muted);cursor:pointer;transition:.2s;
+}
+.sort-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sort-pill:hover:not(.active){border-color:var(--navy);color:var(--navy)}
+
+.rank-table{width:100%;border-collapse:collapse}
+.rank-table th{
+  background:#F8FAFC;color:var(--navy);font-size:12px;font-weight:700;
+  padding:11px 16px;text-align:center;border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+.rank-table td{
+  padding:12px 16px;text-align:center;
+  border-bottom:1px solid #F1F5F9;font-size:13px;
+  vertical-align:middle;
+}
+.rank-table tr:last-child td{border-bottom:none}
+.rank-table tr:hover td{background:#FAFBFD}
+.rank-table tr.top-1 td:first-child::before{content:'🥇 ';font-size:14px}
+.rank-table tr.top-2 td:first-child::before{content:'🥈 ';font-size:14px}
+.rank-table tr.top-3 td:first-child::before{content:'🥉 ';font-size:14px}
+
+.emp-cell{display:flex;align-items:center;gap:10px;text-align:right}
+.emp-cell-avatar{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.emp-cell-name{font-weight:700;font-size:13px;color:var(--navy)}
+.emp-cell-sub{font-size:11px;color:var(--muted)}
+
+.bar-cell{display:flex;align-items:center;gap:8px}
+.mini-bar-wrap{flex:1;height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden;min-width:60px}
+.mini-bar{height:100%;border-radius:3px;transition:.6s}
+.bar-val{font-size:12px;font-weight:700;white-space:nowrap;min-width:36px;text-align:left}
+
+.score-circle{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;margin:auto;
+  border:2.5px solid;
+}
+
+/* ══ ORDERS TABLE ══ */
+.orders-wrap{overflow-x:auto}
+.orders-table{width:100%;border-collapse:collapse;min-width:750px}
+.orders-table th{
+  background:#F8FAFC;color:var(--navy);font-size:12px;font-weight:700;
+  padding:10px 14px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.orders-table td{
+  padding:10px 14px;text-align:center;font-size:12px;
+  border-bottom:1px solid #F1F5F9;vertical-align:middle;
+}
+.orders-table tr:last-child td{border-bottom:none}
+.orders-table tr:hover td{background:#FAFBFD}
+.status-badge{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:700;white-space:nowrap;
+}
+.s-done{background:#D1FAE5;color:#065F46}
+.s-transit{background:#FEF3C7;color:#92400E}
+.s-return{background:#FED7AA;color:#9A3412}
+.s-ret-done{background:#E0E7FF;color:#3730A3}
+.s-reject{background:#FEE2E2;color:#991B1B}
+.s-fixed{background:#F1F5F9;color:#475569}
+.s-other{background:#F1F5F9;color:#475569}
+
+/* ══ COMMISSION SECTION ══ */
+.comm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:16px 20px}
+.comm-item{
+  display:flex;align-items:center;gap:10px;
+  background:#F8FAFC;border-radius:10px;padding:12px;border:1px solid var(--border);
+}
+.comm-avatar{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.comm-name{font-size:13px;font-weight:700;color:var(--navy)}
+.comm-input{
+  width:80px;margin-right:auto;
+  padding:6px 8px;border:1.5px solid var(--border);
+  border-radius:8px;font-family:'Tajawal',sans-serif;
+  font-size:13px;text-align:center;
+}
+.comm-input:focus{outline:none;border-color:var(--orange)}
+.save-btn{
+  display:flex;align-items:center;gap:8px;
+  margin:0 20px 16px;padding:11px 22px;
+  background:var(--green);color:#fff;border:none;
+  border-radius:10px;font-family:'Tajawal',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;transition:.2s;
+}
+.save-btn:hover{background:var(--green-dim)}
+
+/* ══ INSIGHT BOX ══ */
+.insights{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.insight-card{
+  background:var(--card);border-radius:var(--radius);
+  padding:16px 18px;border:1px solid var(--border);
+  box-shadow:var(--shadow);
+}
+.insight-card .insight-icon{font-size:22px;margin-bottom:8px}
+.insight-card h4{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.insight-card .insight-val{font-size:18px;font-weight:900;color:var(--navy)}
+.insight-card .insight-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.insight-highlight{border-color:var(--orange);background:linear-gradient(135deg,#fff 60%,rgba(255,107,45,.04))}
+
+/* ══ EMPTY / LOADING ══ */
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-state .e-icon{font-size:44px;margin-bottom:12px}
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:15px}
+
+/* ══ MOBILE OVERLAY ══ */
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;
+}
+
+/* ══ TABS ══ */
+.tabs{display:flex;gap:2px;background:#F1F5F9;border-radius:12px;padding:4px;margin-bottom:20px;width:fit-content}
+.tab{
+  padding:8px 18px;border-radius:9px;border:none;background:transparent;
+  font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:.2s;white-space:nowrap;
+}
+.tab.active{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ══ TOAST ══ */
+.toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999}
+.toast{
+  padding:12px 20px;border-radius:12px;color:#fff;
+  font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);margin-top:8px;
+  animation:toastIn .3s ease;
+}
+.toast.success{background:var(--green)}
+.toast.info{background:var(--navy)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:1280px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.main{margin-right:var(--sidebar-w)}}
+@media(max-width:1024px){:root{--sidebar-w:240px}.kpi-grid{grid-template-columns:repeat(3,1fr)}.chart-row{grid-template-columns:1fr}}
+@media(max-width:900px){:root{--sidebar-w:220px}.kpi-grid{grid-template-columns:repeat(2,1fr)}.insights{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.open{display:block}.main{margin-right:0 !important;width:100% !important}.menu-toggle{display:flex}.topbar{padding:10px 14px;gap:6px;height:auto;min-height:56px;flex-wrap:wrap}.topbar-title{font-size:14px;width:100%}.filter-group{width:100%;justify-content:flex-start}.filter-input{font-size:12px;padding:6px 10px}.apply-btn{font-size:12px;padding:6px 12px}.content{padding:12px}.kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}.kpi-val{font-size:20px}.chart-row{grid-template-columns:1fr;gap:12px}.chart-wrap{height:220px}.insights{grid-template-columns:1fr;gap:8px}.emp-banner{flex-wrap:wrap;gap:10px;padding:14px}.comm-grid{grid-template-columns:1fr 1fr}.section-header{flex-direction:column;align-items:flex-start}.sort-pills{width:100%;overflow-x:auto;padding-bottom:4px;flex-wrap:nowrap}.sort-pill{white-space:nowrap;font-size:10px;padding:4px 10px}}
+@media(max-width:480px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.filter-label{display:none}.comm-grid{grid-template-columns:1fr}.insights{grid-template-columns:1fr}.kpi-val{font-size:18px}.kpi-card{padding:12px}}
 </style>
 </head>
 <body>
-<header>👨‍💼 لوحة الأداء الشاملة - نظام المراد</header>
 
-<div class="container">
-  <div class="controls">
-    <label>الموظف:</label>
-    <select id="userSelect"></select>
-    <label>من:</label>
-    <input type="date" id="fromDate">
-    <label>إلى:</label>
-    <input type="date" id="toDate">
-    <button id="applyBtn">تطبيق</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="layout">
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">
+      <div class="logo-icon">📊</div>
+      <div>
+        <h1>لوحة الأداء</h1>
+        <p>نظام المراد</p>
+      </div>
+    </div>
   </div>
 
-  <!-- 🔸 لوحة التحكم بالعمولات -->
-  <div class="table-wrap" id="commissionSection">
-    <h3 style="color:var(--blue)">💰 تعديل العمولات لكل موظف</h3>
-    <table id="commissionTable">
-      <thead><tr><th>الموظف</th><th>العمولة لكل طلب (دينار)</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <button id="saveCommission">💾 حفظ العمولات</button>
+  <div class="sidebar-nav">
+    <div class="nav-label">العرض</div>
+    <button class="nav-btn active" id="navAll" onclick="selectAll()">
+      <span class="icon">👥</span> كل الفريق
+    </button>
   </div>
 
-  <div class="cards" id="statusCards"></div>
-  
-<div class="chart-row">
-  
-  <!-- الدائرة -->
-  <div class="chart-box">
-    <canvas id="mainChart"></canvas>
+  <div class="sidebar-employees">
+    <div class="emp-section-label">الموظفون</div>
+    <div id="empList"><div style="color:rgba(255,255,255,.4);font-size:12px;padding:8px">جارٍ التحميل...</div></div>
+  </div>
+</aside>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="topbar-title" id="topbarTitle">كل <span>الفريق</span></div>
+    <div class="filter-group">
+      <span class="filter-label">من:</span>
+      <input type="date" class="filter-input" id="fromDate"/>
+      <span class="filter-label">إلى:</span>
+      <input type="date" class="filter-input" id="toDate"/>
+      <button class="apply-btn" onclick="applyFilters()">تطبيق</button>
+    </div>
   </div>
 
-  <!-- معلومات أو جارت ثاني -->
-  <div class="chart-info" id="extraInfo">
-    <!-- هنا نعرض افضل منتج -->
+  <!-- CONTENT -->
+  <div class="content" id="mainContent">
+    <div class="loading">⏳ جارٍ تحميل البيانات...</div>
   </div>
 
-</div>
+</div><!-- /main -->
+</div><!-- /layout -->
 
-  <div class="table-wrap" id="summaryTableWrap">
-    <h3 style="color:var(--blue)">📋 ملخص الموظفين</h3>
-    <table id="summaryTable">
-      <thead>
-        <tr>
-          <th>الموظف</th>
-          <th>تم التسليم</th>
-          <th>راجع</th>
-          <th>رفض</th>
-          <th>الإجمالي</th>
-          <th>نسبة الإنجاز</th>
-          <th>نسبة الراجع</th>
-          <th>العمولة (دينار)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-      <tfoot>
-        <tr><th colspan="7" style="text-align:right">💰 العمولة الكلية لجميع الموظفين:</th><th id="totalCommissionCell">0</th></tr>
-      </tfoot>
-    </table>
-  </div>
+<div class="toast-container" id="toastContainer"></div>
 
-  <div class="table-wrap" id="ordersWrap">
-    <h3 style="color:var(--blue)">📦 تفاصيل الطلبات</h3>
-    <table id="ordersTable">
-      <thead>
-        <tr>
-          <th>#</th><th>الكود</th><th>المنتج</th><th>السعر</th>
-          <th>المدينة</th><th>الحالة</th><th>التاريخ</th><th>الموظف</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="tips" id="tipsBox"></div>
-</div>
-
+<!-- ══════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════ -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -160,286 +475,682 @@ const config = {
   projectId:"almurad-system"
 };
 const app = initializeApp(config);
-const db = getDatabase(app);
+const db  = getDatabase(app);
 
-// 🧮 إعداد العمولات (يتم حفظها محليًا)
-let commissionRates = JSON.parse(localStorage.getItem("commissionRates") || "{}");
+/* ── STATE ── */
+let allOrders = [];
+let selectedUser = null; // null = all
+let commissionRates = JSON.parse(localStorage.getItem("commRates") || "{}");
+let sortKey = "score";
+let chartBar = null, chartDoughnut = null;
 
-const selectEl=document.getElementById('userSelect');
-const fromEl=document.getElementById('fromDate');
-const toEl=document.getElementById('toDate');
-const applyBtn=document.getElementById('applyBtn');
-const tbody=document.querySelector('#ordersTable tbody');
-const summaryBody=document.querySelector('#summaryTable tbody');
-const totalCommissionCell=document.getElementById('totalCommissionCell');
-const cards=document.getElementById('statusCards');
-const tipsBox=document.getElementById('tipsBox');
-const commissionBody=document.querySelector('#commissionTable tbody');
-const saveCommissionBtn=document.getElementById('saveCommission');
-const commissionSection=document.getElementById('commissionSection');
-const summaryTableWrap=document.getElementById('summaryTableWrap');
-let chart;
-let allOrders=[];
+/* ── COLORS ── */
+const COLORS = [
+  "#FF6B2D","#3B82F6","#10B981","#F59E0B","#8B5CF6",
+  "#EF4444","#06B6D4","#EC4899","#84CC16","#F97316",
+  "#6366F1","#14B8A6","#FBBF24","#A855F7","#22D3EE"
+];
+function colorFor(name, i) {
+  if(i !== undefined) return COLORS[i % COLORS.length];
+  let h = 0;
+  for(let c of name) h = (h * 31 + c.charCodeAt(0)) % COLORS.length;
+  return COLORS[h];
+}
 
-onValue(ref(db,'orders'),snap=>{
-  if(!snap.exists())return;
-  allOrders=Object.values(snap.val());
-  populateUsers();
+/* ── SCORE FORMULA ── */
+function calcScore(del, ret, rej, total, outgoing) {
+  if(!total) return 0;
+  // الطالع = قيد التوصيل + تسليم + راجع + تم استلام الراجع
+  // الراجع الكلي = راجع + تم استلام الراجع (مجموعين)
+  // النسب:
+  const delRate = outgoing ? (del / outgoing) : 0; // تسليم من الطالع
+  const retRate = outgoing ? (ret / outgoing) : 0; // راجع كلي من الطالع
+  const rejRate = total    ? (rej / total)    : 0; // رفض من الإجمالي
+
+  const raw = (delRate * 55) - (retRate * 35) - (rejRate * 10);
+  return Math.max(0, Math.min(100, Math.round(raw * 100)));
+}
+function scoreClass(s) {
+  if(s >= 75) return "score-great";
+  if(s >= 55) return "score-good";
+  if(s >= 35) return "score-avg";
+  return "score-low";
+}
+function scoreColor(s) {
+  if(s >= 75) return "#10B981";
+  if(s >= 55) return "#3B82F6";
+  if(s >= 35) return "#F59E0B";
+  return "#EF4444";
+}
+
+/* ── PARSE ORDERS ── */
+function parseEmployee(orders) {
+  const counts = {
+    total: 0,
+    fixed: 0,
+    transit: 0,
+    done: 0,
+    ret: 0,
+    retDone: 0,
+    rej: 0,
+    outgoing: 0
+  };
+  const products = {};
+  const cities   = {};
+
+  orders.forEach(o => {
+    const st = (o.status || "").trim();
+    counts.total++;
+    if(st === "مثبت")                  counts.fixed++;
+    if(st === "قيد التوصيل")           counts.transit++;
+    if(st === "تم التسليم")            counts.done++;
+    if(st === "راجع")                  counts.ret++;
+    if(st === "تم استلام الراجع")      counts.retDone++;
+if(st === "رفض")                   counts.rej++;
+    if(["قيد التوصيل","تم التسليم","راجع","تم استلام الراجع"].includes(st))
+      counts.outgoing++;
+    if(o.productName) products[o.productName] = (products[o.productName]||0)+1;
+    if(o.city)        cities[o.city]          = (cities[o.city]||0)+1;
+  });
+
+  const totalRet  = counts.ret + counts.retDone;
+  const score     = calcScore(counts.done, totalRet, counts.rej, counts.total, counts.outgoing);
+  const delRate   = counts.total   ? ((counts.done / counts.total)     * 100).toFixed(1) : "0.0";
+  const retRate   = counts.outgoing? ((totalRet    / counts.outgoing)  * 100).toFixed(1) : "0.0";
+  const rejRate   = counts.total   ? ((counts.rej  / counts.total)     * 100).toFixed(1) : "0.0";
+
+  const bestProduct = Object.entries(products).sort((a,b)=>b[1]-a[1])[0];
+  const bestCity    = Object.entries(cities).sort((a,b)=>b[1]-a[1])[0];
+
+  return { ...counts, totalRet, score, delRate, retRate, rejRate, bestProduct, bestCity };
+}
+
+/* ── FIREBASE LOAD ── */
+onValue(ref(db, "ordersTest"), snap => {
+  if(!snap.exists()){ renderEmpty(); return; }
+  allOrders = [];
+  const raw = snap.val();
+
+  // الهيكل: ordersTest/حالة/id → طلب
+  // أو: ordersTest/id → طلب مباشرة
+  // نتعامل مع الحالتين
+  Object.entries(raw).forEach(([key, val]) => {
+    if(val && typeof val === "object") {
+      // إذا الـ value فيه حقول طلب مباشرة (code, fixedBy...)
+      if(val.fixedBy !== undefined || val.code !== undefined || val.productName !== undefined) {
+        // طلب مباشر
+        allOrders.push({ ...val, status: val.status || key });
+      } else {
+        // مجلد حالة — كل عنصر داخله طلب
+        Object.entries(val).forEach(([orderId, order]) => {
+          if(order && typeof order === "object") {
+            allOrders.push({ ...order, status: order.status || key });
+          }
+        });
+      }
+    }
+  });
+
+  if(allOrders.length === 0){ renderEmpty(); return; }
+  buildSidebar();
   render();
 });
 
-function populateUsers(){
-  const users=[...new Set(allOrders.map(o=>o.fixedBy||'غير محدد'))];
-  selectEl.innerHTML=`<option value="">كل الموظفين</option>`;
-  commissionBody.innerHTML="";
-  users.forEach(u=>{
-    const opt=document.createElement('option');
-    opt.value=u;opt.textContent=u;
-    selectEl.appendChild(opt);
+/* ── SIDEBAR ── */
+function buildSidebar() {
+  const users = [...new Set(allOrders.map(o => o.fixedBy || "غير محدد"))];
+  const userStats = users.map((u, i) => {
+    const orders = allOrders.filter(o => (o.fixedBy||"غير محدد") === u);
+    const st = parseEmployee(orders);
+    return { name: u, ...st, color: colorFor(u, i) };
+  }).sort((a,b) => b.score - a.score);
 
-    // 🔸 تعبئة جدول العمولات
-    const rate=commissionRates[u]||250;
-    commissionBody.innerHTML+=`
-      <tr>
-        <td>${u}</td>
-        <td><input type="number" id="rate_${u}" value="${rate}" style="width:100px"></td>
-      </tr>`;
-  });
+  const list = document.getElementById("empList");
+  list.innerHTML = userStats.map(u => `
+    <div class="emp-item" id="emp_${CSS.escape(u.name)}" onclick="selectUser('${u.name}')">
+      <div class="emp-avatar" style="background:${u.color}">${u.name[0]}</div>
+      <div class="emp-info">
+        <div class="emp-name">${u.name}</div>
+        <div class="emp-sub">${u.done} تسليم · ${u.total} طلب</div>
+      </div>
+      <span class="score-pill ${scoreClass(u.score)}">${u.score}</span>
+    </div>
+  `).join("");
 }
 
-saveCommissionBtn.onclick=()=>{
-  const rows=document.querySelectorAll('#commissionTable tbody tr');
-  rows.forEach(r=>{
-    const name=r.cells[0].textContent;
-    const rate=Number(r.querySelector('input').value)||0;
-    commissionRates[name]=rate;
-  });
-  localStorage.setItem("commissionRates",JSON.stringify(commissionRates));
-  alert("✅ تم حفظ العمولات بنجاح!");
+/* ── SELECTION ── */
+window.selectAll = function() {
+  selectedUser = null;
+  document.querySelectorAll(".emp-item").forEach(el => el.classList.remove("selected"));
+  document.getElementById("navAll").classList.add("active");
+  document.getElementById("topbarTitle").innerHTML = "كل <span>الفريق</span>";
   render();
 };
 
-applyBtn.onclick=()=>render();
+window.selectUser = function(name) {
+  selectedUser = name;
+  document.querySelectorAll(".emp-item").forEach(el => el.classList.remove("selected"));
+  const el = document.getElementById("emp_" + CSS.escape(name));
+  if(el) el.classList.add("selected");
+  document.getElementById("navAll").classList.remove("active");
+  document.getElementById("topbarTitle").innerHTML = `أداء <span>${name}</span>`;
+  render();
+  // close sidebar on mobile
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarOverlay").classList.remove("open");
+};
 
-function toDateObj(d){if(!d)return null;const n=new Date(d);return isNaN(n)?null:n;}
+/* ── FILTERS ── */
+window.applyFilters = function() { render(); };
 
-function render(){
-  const from=fromEl.value?new Date(fromEl.value+'T00:00:00'):null;
-  const to=toEl.value?new Date(toEl.value+'T23:59:59'):null;
-  const user=selectEl.value;
-  
-  const filtered=allOrders.filter(o=>{
-    const dt=toDateObj(o.updatedAt||o.orderDate)||new Date();
-    if(from&&dt<from)return false;
-    if(to&&dt>to)return false;
-    if(user&&(o.fixedBy)!==user)return false;
+function getFiltered() {
+  const from = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value + "T00:00:00") : null;
+  const to   = document.getElementById("toDate").value   ? new Date(document.getElementById("toDate").value   + "T23:59:59") : null;
+  return allOrders.filter(o => {
+    const dt = new Date(o.updatedAt || o.orderDate || Date.now());
+    if(from && dt < from) return false;
+    if(to   && dt > to)   return false;
+    if(selectedUser && (o.fixedBy||"غير محدد") !== selectedUser) return false;
     return true;
   });
-
-  // إظهار/إخفاء الجداول حسب الاختيار
-  if(user===""){
-    commissionSection.classList.remove('hidden');
-    summaryTableWrap.classList.remove('hidden');
-    renderAllEmployees(filtered);
-  } else {
-    commissionSection.classList.add('hidden');
-    summaryTableWrap.classList.add('hidden');
-    renderSingleUser(filtered,user);
-  }
 }
 
-function renderAllEmployees(filtered){
-  const usersData={};
-  filtered.forEach(o=>{
-    const u=o.fixedBy||'غير محدد';
-   usersData[u]=usersData[u]||{del:0,ret:0,rej:0,total:0,outgoing:0};
-
-// كل الطلبات
-usersData[u].total++;
-
-// ✅ الطالع (من قيد التوصيل وما بعدها)
-if(["قيد التوصيل","تم التسليم","راجع","تم استلام الراجع"].includes(o.status)){
-  usersData[u].outgoing++;
+/* ── RENDER MAIN ── */
+function render() {
+  const filtered = getFiltered();
+  if(selectedUser) renderSingle(filtered, selectedUser);
+  else             renderAll(filtered);
 }
 
-// التسليم
-if(o.status==="تم التسليم") usersData[u].del++;
-
-// ✅ الراجع (راجع + تم استلام الراجع)
-if(o.status==="راجع" || o.status==="تم استلام الراجع"){
-  usersData[u].ret++;
-}
-
-// رفض
-if(o.status==="رفض") usersData[u].rej++;
+/* ══════════════════════════
+   RENDER ALL EMPLOYEES
+══════════════════════════ */
+function renderAll(filtered) {
+  const users = [...new Set(filtered.map(o => o.fixedBy||"غير محدد"))];
+  const userStats = users.map((u, i) => {
+    const orders = filtered.filter(o => (o.fixedBy||"غير محدد") === u);
+    const st = parseEmployee(orders);
+    return { name: u, ...st, color: colorFor(u, i), commission: st.done * (commissionRates[u]||250) };
   });
 
-  const summary=[];
-  for(const u in usersData){
-    const d=usersData[u];
-    const rate=d.total?((d.del/d.total)*100).toFixed(1):0;
-const retRate=d.outgoing?((d.ret/d.outgoing)*100).toFixed(1):0;
-    const commission=(d.del*(commissionRates[u]||250));
-
-
-set(ref(db,"commissions/"+u),commission);
-    summary.push({u,rate,retRate,commission,...d});
-  }
-  summary.sort((a,b)=>b.rate-a.rate);
-
-  const totalCommission=summary.reduce((a,b)=>a+b.commission,0);
-  totalCommissionCell.textContent=totalCommission.toLocaleString();
-
-  const ctx=document.getElementById('mainChart').getContext('2d');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels:summary.map(s=>s.u),
-      datasets:[
-        {label:'تم التسليم',data:summary.map(s=>s.del),backgroundColor:'#198754'},
-        {label:'راجع',data:summary.map(s=>s.ret),backgroundColor:'#FF6B2D'},
-        {label:'رفض',data:summary.map(s=>s.rej),backgroundColor:'#DC3545'}
-      ]
-    },
-    options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+  // sort
+userStats.sort((a, b) => {
+    if(sortKey === "score")  return b.score   - a.score;
+    if(sortKey === "done")   return b.done    - a.done;
+    if(sortKey === "ret")    return parseFloat(b.retRate) - parseFloat(a.retRate);
+    if(sortKey === "rej")    return parseFloat(b.rejRate) - parseFloat(a.rejRate);
+    if(sortKey === "total")  return b.total   - a.total;
+    return b.score - a.score;
   });
 
-  summaryBody.innerHTML=summary.map(s=>`
-    <tr>
-      <td>${s.u}</td>
-      <td>${s.del}</td>
-      <td>${s.ret}</td>
-      <td>${s.rej}</td>
-      <td>${s.total}</td>
-      <td>${s.rate}%</td>
-      <td>${s.retRate}%</td>
-      <td>${s.commission.toLocaleString()}</td>
-    </tr>
-  `).join('');
+  const totalOrders     = filtered.length;
+  const totalDone       = userStats.reduce((s,u)=>s+u.done,0);
+  const totalRet        = userStats.reduce((s,u)=>s+u.totalRet,0);
+  const totalRej        = userStats.reduce((s,u)=>s+u.rej,0);
+  const totalTransit    = userStats.reduce((s,u)=>s+u.transit,0);
+  const totalCommission = userStats.reduce((s,u)=>s+u.commission,0);
 
-  cards.innerHTML=`
-    <div class="card"><h3>إجمالي الطلبات</h3><p>${filtered.length}</p></div>
-    <div class="card"><h3>عدد الموظفين</h3><p>${Object.keys(usersData).length}</p></div>
-    <div class="card"><h3>أفضل أداء</h3><p>${summary[0]?.u||'-'}</p></div>
-<div class="card">
-  <h3>💰 العمولة</h3>
-  <p>${commission.toLocaleString()} دينار</p>
-</div>
+  const bestEmp    = userStats[0];
+  const worstEmp   = [...userStats].sort((a,b)=>a.score-b.score)[0];
+  const mostRet    = [...userStats].sort((a,b)=>parseFloat(b.retRate)-parseFloat(a.retRate))[0];
+
+  const content = document.getElementById("mainContent");
+  content.innerHTML = `
+
+    <!-- INSIGHTS -->
+    <div class="insights">
+      <div class="insight-card insight-highlight">
+        <div class="insight-icon">🏆</div>
+        <h4>أفضل موظف</h4>
+        <div class="insight-val">${bestEmp?.name || "-"}</div>
+        <div class="insight-sub">نقاط: ${bestEmp?.score || 0} · تسليم ${bestEmp?.delRate||0}%</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">⚠️</div>
+        <h4>يحتاج متابعة</h4>
+        <div class="insight-val">${worstEmp?.name || "-"}</div>
+        <div class="insight-sub">نقاط: ${worstEmp?.score || 0} · راجع ${worstEmp?.retRate||0}%</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🔁</div>
+        <h4>أعلى نسبة راجع</h4>
+        <div class="insight-val">${mostRet?.name || "-"}</div>
+        <div class="insight-sub">${mostRet?.retRate||0}% من الطالع</div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card c-total">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-val">${totalOrders.toLocaleString()}</div>
+        <div class="kpi-lbl">إجمالي الطلبات</div>
+        <span class="kpi-badge badge-blue">${users.length} موظف</span>
+      </div>
+      <div class="kpi-card c-fixed">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-val">${userStats.reduce((s,u)=>s+u.fixed,0).toLocaleString()}</div>
+        <div class="kpi-lbl">مثبت / قيد المعالجة</div>
+        <span class="kpi-badge badge-gray">${totalTransit} قيد التوصيل</span>
+      </div>
+      <div class="kpi-card c-done">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-val">${totalDone.toLocaleString()}</div>
+        <div class="kpi-lbl">تم التسليم</div>
+        <span class="kpi-badge badge-green">${totalOrders ? ((totalDone/totalOrders)*100).toFixed(1) : 0}% نسبة التسليم</span>
+      </div>
+      <div class="kpi-card c-transit">
+        <div class="kpi-icon">🚚</div>
+        <div class="kpi-val">${totalTransit.toLocaleString()}</div>
+        <div class="kpi-lbl">قيد التوصيل</div>
+        <span class="kpi-badge badge-yellow">في الطريق</span>
+      </div>
+      <div class="kpi-card c-return">
+        <div class="kpi-icon">🔁</div>
+        <div class="kpi-val">${totalRet.toLocaleString()}</div>
+        <div class="kpi-lbl">راجع + تم استلام الراجع</div>
+        <span class="kpi-badge badge-yellow">${(totalDone+totalRet) ? ((totalRet/(totalDone+totalRet))*100).toFixed(1) : 0}% من الطالع</span>
+      </div>
+      <div class="kpi-card c-reject">
+        <div class="kpi-icon">❌</div>
+        <div class="kpi-val">${totalRej.toLocaleString()}</div>
+        <div class="kpi-lbl">رفض</div>
+        <span class="kpi-badge badge-red">${totalOrders ? ((totalRej/totalOrders)*100).toFixed(1) : 0}% من الكل</span>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-row">
+      <div class="chart-card">
+        <h3>📊 المقارنة بين الموظفين <span>(تسليم / راجع / رفض)</span></h3>
+        <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>🍩 توزيع الحالات <span>الكلي</span></h3>
+        <div class="chart-wrap"><canvas id="chartDoughnut"></canvas></div>
+      </div>
+    </div>
+
+    <!-- RANKING TABLE -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>🏅 ترتيب الموظفين</h3>
+        <div class="sort-pills">
+          <button class="sort-pill ${sortKey==='score'?'active':''}" onclick="setSort('score')">نقاط الأداء</button>
+          <button class="sort-pill ${sortKey==='done'?'active':''}"  onclick="setSort('done')">التسليم</button>
+          <button class="sort-pill ${sortKey==='ret'?'active':''}"   onclick="setSort('ret')">الراجع %</button>
+          <button class="sort-pill ${sortKey==='rej'?'active':''}"   onclick="setSort('rej')">الرفض %</button>
+          <button class="sort-pill ${sortKey==='total'?'active':''}" onclick="setSort('total')">الإجمالي</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th>الموظف</th>
+            <th>نقاط الأداء</th>
+            <th>الإجمالي</th>
+            <th>مثبت</th>
+            <th>قيد التوصيل</th>
+            <th>تم التسليم</th>
+<th>راجع (إجمالي)</th>
+            <th>رفض</th>
+            <th>% التسليم</th>
+            <th>% الراجع</th>
+            <th>% الرفض</th>
+            <th>العمولة</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${userStats.map((u, i) => `
+          <tr class="${i===0?'top-1':i===1?'top-2':i===2?'top-3':''}">
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar" style="background:${u.color}">${u.name[0]}</div>
+                <div>
+                  <div class="emp-cell-name">${u.name}</div>
+                  <div class="emp-cell-sub">${u.bestProduct?.[0]||'-'}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="score-circle" style="border-color:${scoreColor(u.score)};color:${scoreColor(u.score)}">${u.score}</div>
+            </td>
+            <td><b>${u.total}</b></td>
+            <td>${u.fixed}</td>
+            <td>${u.transit}</td>
+            <td style="color:#065F46;font-weight:700">${u.done}</td>
+     <td style="color:#9A3412;font-weight:700">${u.totalRet}<br><small style="color:var(--muted);font-size:10px;font-weight:400">${u.ret} راجع · ${u.retDone} مستلم</small></td>
+            <td style="color:#991B1B;font-weight:700">${u.rej}</td>
+            <td>
+              <div class="bar-cell">
+                <div class="mini-bar-wrap"><div class="mini-bar" style="width:${u.delRate}%;background:#10B981"></div></div>
+                <span class="bar-val" style="color:#065F46">${u.delRate}%</span>
+              </div>
+            </td>
+            <td>
+              <div class="bar-cell">
+                <div class="mini-bar-wrap"><div class="mini-bar" style="width:${Math.min(parseFloat(u.retRate)*2,100)}%;background:#F59E0B"></div></div>
+                <span class="bar-val" style="color:#92400E">${u.retRate}%</span>
+              </div>
+            </td>
+            <td>
+              <div class="bar-cell">
+                <div class="mini-bar-wrap"><div class="mini-bar" style="width:${Math.min(parseFloat(u.rejRate)*2,100)}%;background:#EF4444"></div></div>
+                <span class="bar-val" style="color:#991B1B">${u.rejRate}%</span>
+              </div>
+            </td>
+            <td style="font-weight:700;color:var(--navy)">${u.commission.toLocaleString()}</td>
+          </tr>`).join("")}
+        </tbody>
+        <tfoot>
+          <tr style="background:#F8FAFC;font-weight:700">
+      <td colspan="2" style="text-align:right;padding:12px 16px">💰 إجمالي العمولات:</td>
+            <td></td><td></td><td></td>
+            <td>${totalDone.toLocaleString()}</td>
+<td>${totalRet.toLocaleString()}</td>
+            <td>${totalRej.toLocaleString()}</td>
+            <td></td><td></td><td></td>
+            <td style="color:var(--navy);font-size:15px">${totalCommission.toLocaleString()} د.ع</td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>
+
+    <!-- COMMISSION EDITOR -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>💰 إعداد العمولات</h3>
+        <p>عمولة كل موظف بالدينار لكل طلب مُسلَّم</p>
+      </div>
+      <div class="comm-grid">
+        ${userStats.map(u => `
+        <div class="comm-item">
+          <div class="comm-avatar" style="background:${u.color}">${u.name[0]}</div>
+          <div class="comm-name">${u.name}</div>
+          <input class="comm-input" type="number" id="rate_${CSS.escape(u.name)}" value="${commissionRates[u.name]||250}" min="0">
+        </div>`).join("")}
+      </div>
+      <button class="save-btn" onclick="saveCommissions()">💾 حفظ العمولات</button>
+    </div>
   `;
 
-  tbody.innerHTML="";
-  tipsBox.innerHTML=`<h3 style="color:var(--blue)">💡 توصيات عامة</h3>
-  <p>تم عرض ${summary.length} موظف.</p>
-  <p>أعلى نسبة إنجاز: <b>${summary[0]?.u}</b> (${summary[0]?.rate}%)</p>`;
+  // charts
+  const barCtx = document.getElementById("chartBar")?.getContext("2d");
+  if(barCtx) {
+    if(chartBar) chartBar.destroy();
+    chartBar = new Chart(barCtx, {
+      type: "bar",
+      data: {
+        labels: userStats.map(u => u.name),
+        datasets: [
+          { label:"تم التسليم",backgroundColor:"#10B981", data: userStats.map(u=>u.done) },
+          { label:"راجع",      backgroundColor:"#F59E0B", data: userStats.map(u=>u.totalRet) },
+          { label:"رفض",       backgroundColor:"#EF4444", data: userStats.map(u=>u.rej) },
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:"bottom", labels:{ font:{family:"Tajawal"}, boxWidth:12 } } },
+        scales:{ x:{ stacked:false, ticks:{ font:{family:"Tajawal"} } }, y:{ ticks:{ font:{family:"Tajawal"} } } }
+      }
+    });
+  }
+
+  const dCtx = document.getElementById("chartDoughnut")?.getContext("2d");
+  if(dCtx) {
+    if(chartDoughnut) chartDoughnut.destroy();
+    chartDoughnut = new Chart(dCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["تم التسليم","قيد التوصيل","راجع","رفض","مثبت"],
+        datasets:[{ data:[totalDone,totalTransit,totalRet,totalRej,userStats.reduce((s,u)=>s+u.fixed,0)],
+          backgroundColor:["#10B981","#F59E0B","#FF6B2D","#EF4444","#64748B"],
+          borderWidth:2, borderColor:"#fff" }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, cutout:"65%",
+        plugins:{ legend:{ position:"bottom", labels:{ font:{family:"Tajawal"}, boxWidth:12 } } }
+      }
+    });
+  }
 }
 
-function renderSingleUser(filtered,user){
-const counts={
-  مثبت:0,
-  "قيد التوصيل":0,
-  "تم التسليم":0,
-  "راجع":0,
-  "تم استلام الراجع":0,
-  رفض:0,
-  total:0
+/* ══════════════════════════
+   RENDER SINGLE EMPLOYEE
+══════════════════════════ */
+function renderSingle(filtered, userName) {
+  const st = parseEmployee(filtered);
+  const commission = st.done * (commissionRates[userName] || 250);
+  const userIndex = [...new Set(allOrders.map(o=>o.fixedBy||"غير محدد"))].indexOf(userName);
+  const color = colorFor(userName, userIndex);
+
+  // orders list sorted by date
+  const sorted = [...filtered].sort((a,b) => new Date(b.updatedAt||b.orderDate||0) - new Date(a.updatedAt||a.orderDate||0));
+
+  const content = document.getElementById("mainContent");
+  content.innerHTML = `
+
+    <!-- EMPLOYEE BANNER -->
+    <div class="emp-banner" style="background:linear-gradient(135deg,${color} 0%,var(--navy) 60%)">
+      <div class="emp-banner-avatar" style="background:rgba(255,255,255,.15)">${userName[0]}</div>
+      <div class="emp-banner-info">
+        <h2>${userName}</h2>
+        <p>${st.total} طلب إجمالي · أفضل منتج: ${st.bestProduct?.[0]||"-"} (${st.bestProduct?.[1]||0})</p>
+      </div>
+      <div class="emp-banner-score">
+        <div class="score-num">${st.score}</div>
+        <div class="score-lbl">نقاط الأداء / 100</div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card c-total">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-val">${st.total}</div>
+        <div class="kpi-lbl">إجمالي الطلبات</div>
+      </div>
+      <div class="kpi-card c-fixed">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-val">${st.fixed}</div>
+        <div class="kpi-lbl">مثبت / قيد المعالجة</div>
+        <span class="kpi-badge badge-gray">${st.transit} قيد التوصيل</span>
+      </div>
+      <div class="kpi-card c-done">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-val">${st.done}</div>
+        <div class="kpi-lbl">تم التسليم</div>
+        <span class="kpi-badge badge-green">${st.delRate}%</span>
+      </div>
+      <div class="kpi-card c-return">
+        <div class="kpi-icon">🔁</div>
+        <div class="kpi-val">${st.ret}</div>
+        <div class="kpi-lbl">راجع</div>
+        <span class="kpi-badge ${parseFloat(st.retRate)>20?'badge-red':'badge-yellow'}">${st.retRate}% من الطالع</span>
+      </div>
+      <div class="kpi-card c-return" style="border-right-color:#8B5CF6">
+        <div class="kpi-icon">📬</div>
+        <div class="kpi-val">${st.retDone}</div>
+        <div class="kpi-lbl">تم استلام الراجع</div>
+        <span class="kpi-badge badge-blue">مكتمل</span>
+      </div>
+      <div class="kpi-card c-reject">
+        <div class="kpi-icon">❌</div>
+        <div class="kpi-val">${st.rej}</div>
+        <div class="kpi-lbl">رفض</div>
+        <span class="kpi-badge ${parseFloat(st.rejRate)>10?'badge-red':'badge-gray'}">${st.rejRate}%</span>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="insights">
+      <div class="insight-card insight-highlight">
+        <div class="insight-icon">💰</div>
+        <h4>العمولة المستحقة</h4>
+        <div class="insight-val">${commission.toLocaleString()} د.ع</div>
+        <div class="insight-sub">${commissionRates[userName]||250} د.ع × ${st.done} طلب مُسلَّم</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🔥</div>
+        <h4>أفضل منتج</h4>
+        <div class="insight-val" style="font-size:14px">${st.bestProduct?.[0]||"-"}</div>
+        <div class="insight-sub">${st.bestProduct?.[1]||0} طلب</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📍</div>
+        <h4>أكثر مدينة</h4>
+        <div class="insight-val" style="font-size:14px">${st.bestCity?.[0]||"-"}</div>
+        <div class="insight-sub">${st.bestCity?.[1]||0} طلب</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-row">
+      <div class="chart-card">
+        <h3>🍩 توزيع الحالات</h3>
+        <div class="chart-wrap"><canvas id="chartDoughnut"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>📊 مقارنة النسب <span>(%)</span></h3>
+        <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ORDERS TABLE -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>📋 تفاصيل الطلبات</h3>
+        <p>${filtered.length} طلب</p>
+      </div>
+      <div class="orders-wrap">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>#</th><th>الكود</th><th>المنتج</th><th>السعر</th>
+              <th>المدينة</th><th>الحالة</th><th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.slice(0,200).map((o, i) => {
+              const dt = new Date(o.updatedAt||o.orderDate||0);
+              const st2 = o.status?.trim()||"";
+              const badge = st2==="تم التسليم"  ?"s-done"
+                          : st2==="قيد التوصيل" ?"s-transit"
+                          : st2==="راجع"         ?"s-return"
+                          : st2==="تم استلام الراجع"?"s-ret-done"
+                          : st2==="رفض"          ?"s-reject"
+                          : st2==="مثبت"         ?"s-fixed"
+                          : "s-other";
+              return `<tr>
+                <td>${i+1}</td>
+                <td style="font-family:monospace;font-size:11px">${o.code||"-"}</td>
+                <td style="text-align:right;font-weight:600">${o.productName||"-"}</td>
+                <td>${(o.price||0).toLocaleString()}</td>
+                <td>${o.city||"-"}</td>
+                <td><span class="status-badge ${badge}">${st2||"-"}</span></td>
+                <td style="font-size:11px;color:var(--muted)">${dt.getFullYear()>2000?dt.toLocaleDateString("ar-EG"):"-"}</td>
+              </tr>`;
+            }).join("")}
+            ${sorted.length>200?`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:12px">... و ${sorted.length-200} طلب آخر</td></tr>`:""}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // doughnut
+  const dCtx = document.getElementById("chartDoughnut")?.getContext("2d");
+  if(dCtx) {
+    if(chartDoughnut) chartDoughnut.destroy();
+    chartDoughnut = new Chart(dCtx, {
+      type:"doughnut",
+      data:{
+        labels:["تم التسليم","قيد التوصيل","راجع","تم استلام الراجع","رفض","مثبت"],
+        datasets:[{ data:[st.done,st.transit,st.ret,st.retDone,st.rej,st.fixed],
+          backgroundColor:["#10B981","#F59E0B","#FF6B2D","#8B5CF6","#EF4444","#64748B"],
+          borderWidth:2, borderColor:"#fff" }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, cutout:"62%",
+        plugins:{ legend:{ position:"bottom", labels:{ font:{family:"Tajawal"}, boxWidth:12 } } }
+      }
+    });
+  }
+
+  // bar (rates)
+  const bCtx = document.getElementById("chartBar")?.getContext("2d");
+  if(bCtx) {
+    if(chartBar) chartBar.destroy();
+    chartBar = new Chart(bCtx, {
+      type:"bar",
+      data:{
+        labels:["% التسليم","% الراجع","% الرفض"],
+        datasets:[{ label:"النسبة %",
+          data:[parseFloat(st.delRate), parseFloat(st.retRate), parseFloat(st.rejRate)],
+          backgroundColor:["#10B981","#F59E0B","#EF4444"],
+          borderRadius:6
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:"y",
+        plugins:{ legend:{ display:false } },
+        scales:{
+          x:{ max:100, ticks:{ callback:v=>v+"%" } },
+          y:{ ticks:{ font:{family:"Tajawal",size:13} } }
+        }
+      }
+    });
+  }
+}
+
+/* ── SORT ── */
+window.setSort = function(key) {
+  sortKey = key;
+  render();
 };
-  filtered.forEach(o=>{const st=(o.status||"").trim();counts[st]=(counts[st]||0)+1;counts.total++;});
-  const delivered=counts["تم التسليم"]||0;
 
-  const rejected=counts.رفض||0;
-  const rate=counts.total?((delivered/counts.total)*100).toFixed(1):0;
-const returned=(counts["راجع"]||0) + (counts["تم استلام الراجع"]||0);
-
-// الطالع
-const outgoing = (counts["قيد التوصيل"]||0)
-               + (counts["تم التسليم"]||0)
-               + (counts["راجع"]||0)
-               + (counts["تم استلام الراجع"]||0);
-
-const returnRate=outgoing?((returned/outgoing)*100).toFixed(1):0;
-const rejectRate=counts.total?((rejected/counts.total)*100).toFixed(1):0;
-  const commission=(delivered*(commissionRates[user]||250));
-// حساب أفضل منتج
-const productCount = {};
-
-filtered.forEach(o=>{
-  if(o.productName){
-    productCount[o.productName] = (productCount[o.productName] || 0) + 1;
-  }
-});
-
-let bestProduct = "-";
-let max = 0;
-
-for(const p in productCount){
-  if(productCount[p] > max){
-    max = productCount[p];
-    bestProduct = p;
-  }
-}
-
-// عرضها
-document.getElementById("extraInfo").innerHTML = `
-  <h3 style="color:#043B64">🔥 أفضل منتج</h3>
-  <p style="font-size:18px;font-weight:bold">${bestProduct}</p>
-  <p>عدد الطلبات: ${max}</p>
-`;
-cards.innerHTML=`
-  <div class="card"><h3>📊 الإجمالي</h3><p>${counts.total}</p></div>
-
-  <div class="card"><h3>📦 مثبت</h3><p>${counts.مثبت}</p></div>
-
-  <div class="card"><h3>🚚 قيد التوصيل</h3><p>${counts["قيد التوصيل"]||0}</p></div>
-
-  <div class="card"><h3>✅ تم التسليم</h3><p>${delivered}</p></div>
-
-<div class="card">
-  <h3>🔁 راجع</h3>
-  <p>${returned}</p>
-  <small>${returnRate}%</small>
-</div>
-
-<div class="card">
-  <h3>❌ رفض</h3>
-  <p>${rejected}</p>
-  <small>${rejectRate}%</small>
-</div>
-
-  <div class="card"><h3>💰 العمولة</h3><p>${commission.toLocaleString()} دينار</p></div>
-`;
-
-  const ctx=document.getElementById('mainChart').getContext('2d');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{
-    type:'doughnut',
-    data:{
-      labels:['تم التسليم','راجع','رفض'],
-      datasets:[{data:[delivered,returned,rejected],backgroundColor:['#198754','#FF6B2D','#DC3545']}]
-    },
-options:{
-  responsive:true,
-  maintainAspectRatio:false,
-  plugins:{legend:{position:'bottom'}}
-}
+/* ── COMMISSIONS ── */
+window.saveCommissions = function() {
+  const inputs = document.querySelectorAll(".comm-input");
+  inputs.forEach(inp => {
+    const name = inp.id.replace("rate_","");
+    commissionRates[name] = Number(inp.value) || 0;
   });
+  localStorage.setItem("commRates", JSON.stringify(commissionRates));
+  toast("✅ تم حفظ العمولات بنجاح", "success");
+  render();
+};
 
-  tbody.innerHTML="";
-  filtered.sort((a,b)=>new Date(b.updatedAt||b.orderDate)-new Date(a.updatedAt||a.orderDate))
-  .forEach((o,i)=>{
-    const d=toDateObj(o.updatedAt||o.orderDate);
-    tbody.innerHTML+=`<tr><td>${i+1}</td><td>${o.code||'-'}</td><td>${o.productName||'-'}</td>
-    <td>${o.price||0}</td><td>${o.city||'-'}</td><td>${o.status||'-'}</td><td>${d?d.toLocaleString():'-'}</td><td>${o.fixedBy||'-'}</td></tr>`;
-  });
-
-  tipsBox.innerHTML=`<h3 style="color:var(--blue)">💡 أداء الموظف</h3>
-  <p>عدد الطلبات: <b>${counts.total}</b></p>
-  <p>تم التسليم: <b>${delivered}</b> | الراجع: <b>${returned}</b> | الرفض: <b>${rejected}</b></p>
-  <p>نسبة الإنجاز: <b>${rate}%</b> | نسبة الراجع: <b>${returnRate}%</b></p>
-  <p>💰 العمولة الكلية: <b>${commission.toLocaleString()} دينار</b></p>
-  ${rate>85?'<p style="color:#198754">🏆 أداء ممتاز!</p>':''}
-  ${returnRate>20?'<p style="color:#DC3545">⚠️ نسبة الراجع مرتفعة.</p>':''}`;
+/* ── TOAST ── */
+function toast(msg, type="info") {
+  const c = document.getElementById("toastContainer");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
+
+/* ── EMPTY ── */
+function renderEmpty() {
+  document.getElementById("mainContent").innerHTML = `
+    <div class="empty-state">
+      <div class="e-icon">📭</div>
+      <p>لا توجد طلبات في قاعدة البيانات</p>
+    </div>`;
+}
+
+/* ── MOBILE SIDEBAR ── */
+document.getElementById("menuToggle").onclick = () => {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebarOverlay").classList.toggle("open");
+};
+document.getElementById("sidebarOverlay").onclick = () => {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarOverlay").classList.remove("open");
+};
 </script>
 </body>
 </html>
