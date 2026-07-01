@@ -1346,6 +1346,9 @@ async function deductStockForOrder(productsDetailed) {
 if (status === "مثبت" || status === "بانتظار البضاعة") {
   order.fixedBy = userName;
 }
+if (status === "رفض") {
+  order.rejectedBy = userName;
+}
 
         // 🔢 إنشاء رقم طلب متسلسل
         const counterRef = ref(db, "testOrderCounter");

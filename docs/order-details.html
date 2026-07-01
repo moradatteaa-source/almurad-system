@@ -1188,7 +1188,8 @@ area: selectedArea,
           updatedAt: timeNow,
    enterIndex: Date.now(),
         source: document.querySelector('#sourceButtons .source-btn.active')?.dataset?.value || state.orderData?.source || '',
-    ...(state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {}))
+...(state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {})),
+...(state.orderData?.rejectedBy ? { rejectedBy: state.orderData.rejectedBy } : (newStatus === 'رفض' ? { rejectedBy: userName } : {}))
         };
 
         const oldPath = state.currentPath;

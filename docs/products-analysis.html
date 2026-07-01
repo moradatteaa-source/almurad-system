@@ -912,9 +912,9 @@ const rows = Object.entries(PS).sort((a,b)=>b[1].orderIds.size-a[1].orderIds.siz
 
   const th = t => ({ text:fix(t), bold:true, color:'white', fillColor:'#0f0c29', fontSize:9, alignment:'center' });
 
-  const tableHeader = [
+const tableHeader = [
     'المنتج','الطلبات','القطع','مسلّم','راجع',
-    'المبيعات','الشراء','التوصيل','الإعلان',
+    'المبيعات','الشراء','التوصيل','الإعلان','الربح الصافي',
     'الربح%','التقييم','التشجيع','المصدر'
   ].map(th);
 
@@ -937,6 +937,8 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
       {text:fmt(d.buy),         alignment:'center', fontSize:9},
       {text:fmt(delivCost),     alignment:'center', fontSize:9},
       {text:fmt(adIQD),         alignment:'center', fontSize:9},
+      {text:estMark+fmt(Math.round(profit)), alignment:'center', fontSize:9, bold:true,
+       color:profit>=0?'#166534':'#991b1b'},
       {text:estMark+margin+'%', alignment:'center', fontSize:9, bold:true,
        color:profit>=0?'#166534':'#991b1b'},
       {text:fix(cfg.label),     alignment:'center', fontSize:9, bold:true},
@@ -955,9 +957,11 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
     {text:fmt(totBuy),alignment:'center',bold:true,fontSize:9},
     {text:fmt(totDel),alignment:'center',bold:true,fontSize:9},
     {text:fmt(totAd),alignment:'center',bold:true,fontSize:9},
+{text:fmt(Math.round(lastStats.totProfit)),alignment:'center',bold:true,fontSize:9,
+     color:parseFloat(totMargin)>=0?'#166534':'#991b1b'},
     {text:totMargin+'%',alignment:'center',bold:true,fontSize:9,
      color:parseFloat(totMargin)>=0?'#166534':'#991b1b'},
-    {text:fix(rows.length+' منتج'),alignment:'center',bold:true,fontSize:9,colSpan:3},{},{},
+    {text:fix(rows.length+' منتج'),alignment:'center',bold:true,fontSize:9,colSpan:4},{},{},{},
   ];
 
   const estimateBanner = isEstimateMode ? [{
@@ -978,7 +982,7 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
   content:[
       {
         columns:[
-          { image: await fetch('almurad-logo.png').then(r=>r.blob()).then(b=>new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b);})), width:70, alignment:'left', margin:[0,0,0,0] },
+...(logoData ? [{ image: logoData, width:70, alignment:'left', margin:[0,0,0,0] }] : [{ text:'', width:70 }]),
           { stack:[
             {text:fix('📣 تقرير أداء الإعلانات'), fontSize:18, bold:true, color:'#0f0c29', alignment:'right'},
             {text:fix('المراد — نظام المعلنين • ')+nowFull, fontSize:10, color:'#6b7280', alignment:'right'},
@@ -1002,7 +1006,7 @@ const orders=d.orderIds.size, delivCost=orders*delCost;
       {
         table:{
           headerRows:1,
-          widths:['13%','5%','5%','5%','5%','8%','8%','7%','7%','6%','7%','10%','9%'],
+         widths:['12%','5%','4%','4%','4%','7%','7%','6%','6%','7%','5%','6%','9%','8%'],
           body:[tableHeader, ...tableRows, footerRow]
         },
         layout:{
