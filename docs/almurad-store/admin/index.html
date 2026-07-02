@@ -485,6 +485,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <div class="sb-item" onclick="goPage('categories',this)">🏷️ الفئات</div>
       <div class="sb-item" onclick="goPage('slider',this)">🖼️ البنرات والسلايدر</div>
       <div class="sb-item" onclick="goPage('delivery',this)">🚚 التوصيل والخصومات</div>
+      <div class="sb-item" onclick="goPage('weborders',this)">🌐 طلبات الموقع <span class="badge" id="webOrdersBadge">0</span></div>
       <div class="sb-label">الإعدادات</div>
       <div class="sb-item" onclick="goPage('settings',this)">⚙️ إعدادات المتجر</div>
     </nav>
@@ -683,7 +684,32 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 
   </div>
 </div>
-  </main>
+<!-- WEB ORDERS PAGE -->
+    <div class="page" id="page-weborders">
+      <div class="sec-head">
+        <div class="sec-title">🌐 طلبات الموقع الإلكتروني</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="cat-filter" id="woStatusFilter" onchange="filterWebOrders()">
+            <option value="">كل الحالات</option>
+            <option value="جديد">✨ جديد</option>
+            <option value="مثبت">📌 مثبت</option>
+            <option value="قيد التجهيز">📦 قيد التجهيز</option>
+            <option value="قيد التوصيل">🛵 قيد التوصيل</option>
+            <option value="تم التسليم">✅ تم التسليم</option>
+            <option value="راجع">↩️ راجع</option>
+            <option value="رفض">❌ رفض</option>
+          </select>
+          <button class="btn btn-navy btn-sm" onclick="loadWebOrders()">🔄 تحديث</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="search-box"><span class="si">🔍</span><input type="text" id="woSearch" placeholder="بحث باسم أو رقم الهاتف أو المنتج..." oninput="filterWebOrders()"></div>
+      </div>
+      <div id="woStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
+      <div id="woGrid"></div>
+    </div>
+
+</main>
 </div>
 
 <!-- MODAL: ADD/EDIT PRODUCT -->
@@ -920,7 +946,7 @@ if (localStorage.getItem('admin_logged')==='1') {
 // ══════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════
-const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',delivery:'التوصيل والخصومات',settings:'إعدادات المتجر'};
+const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',delivery:'التوصيل والخصومات',settings:'إعدادات المتجر',weborders:'طلبات الموقع'};
 window.goPage = (id, el) => {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
@@ -933,7 +959,7 @@ window.goPage = (id, el) => {
   if(id==='categories') renderCats();
   if(id==='slider') renderSlides();
   if(id==='settings') loadSettings();
-  if(id==='delivery') loadDeliveryPage();
+if(id==='weborders') loadWebOrders();
   if(id==='dashboard') loadDash();
 };
 window.toggleSb = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobOverlay').classList.toggle('show'); };
@@ -1650,7 +1676,171 @@ window.saveDiscounts = async () => {
   });
   toast('✅ تم حفظ إعدادات الخصومات','s');
 };
+// ══════════════════════════════════════
+// WEB ORDERS
+// ══════════════════════════════════════
+const WO_STATUSES = [
+  {key:'جديد',emoji:'✨',color:'#3b82f6'},
+  {key:'مثبت',emoji:'📌',color:'#10b981'},
+  {key:'قيد المعالجة',emoji:'⚙️',color:'#8b5cf6'},
+  {key:'قيد التجهيز',emoji:'📦',color:'#f59e0b'},
+  {key:'بانتظار البضاعة',emoji:'🚚',color:'#f97316'},
+  {key:'قيد التوصيل',emoji:'🛵',color:'#0ea5e9'},
+  {key:'تم التسليم',emoji:'✅',color:'#22c55e'},
+  {key:'راجع',emoji:'↩️',color:'#ef4444'},
+  {key:'تم استلام الراجع',emoji:'📥',color:'#a855f7'},
+  {key:'رفض',emoji:'❌',color:'#6b7280'},
+];
 
+let allWebOrders = [];
+let filteredWebOrders = [];
+
+async function loadWebOrders() {
+  document.getElementById('woGrid').innerHTML = `<div class="loading-state"><div class="spin">⏳</div><p style="margin-top:12px;">جاري تحميل الطلبات...</p></div>`;
+  
+  const results = await Promise.all(
+    WO_STATUSES.map(async s => {
+      try {
+        const snap = await get(ref(db, `ordersTest/${s.key}`));
+        if (!snap.exists()) return [];
+        return Object.entries(snap.val())
+          .filter(([id]) => id !== '_meta')
+          .map(([id, val]) => ({...val, _id: id, _status: s.key}))
+          .filter(o => o.source === 'الموقع الإلكتروني' || o.code === 'WEB');
+      } catch { return []; }
+    })
+  );
+  
+  allWebOrders = results.flat().sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  document.getElementById('webOrdersBadge').textContent = allWebOrders.length;
+  renderWoStats();
+  filterWebOrders();
+}
+
+function renderWoStats() {
+  const counts = {};
+  WO_STATUSES.forEach(s => counts[s.key] = 0);
+  allWebOrders.forEach(o => { counts[o._status] = (counts[o._status]||0)+1; });
+  
+  document.getElementById('woStats').innerHTML = WO_STATUSES
+    .filter(s => counts[s.key] > 0)
+    .map(s => `
+      <div style="background:#fff;border-radius:12px;padding:14px;text-align:center;border:1.5px solid var(--border);box-shadow:var(--shadow);">
+        <div style="font-size:20px;margin-bottom:4px;">${s.emoji}</div>
+        <div style="font-size:22px;font-weight:900;color:${s.color};">${counts[s.key]}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;">${s.key}</div>
+      </div>`).join('');
+}
+
+function filterWebOrders() {
+  const q = document.getElementById('woSearch').value.toLowerCase().trim();
+  const st = document.getElementById('woStatusFilter').value;
+  
+  filteredWebOrders = allWebOrders.filter(o => {
+    if(st && o._status !== st) return false;
+    if(q){
+      const txt = `${o.advertiser||''} ${o.phone1||''} ${o.phone2||''} ${o.productName||''} ${o.orderNumber||''}`.toLowerCase();
+      if(!txt.includes(q)) return false;
+    }
+    return true;
+  });
+  renderWoGrid();
+}
+function renderWoGrid() {
+  const grid = document.getElementById('woGrid');
+  if(!filteredWebOrders.length){
+    grid.innerHTML = `<div class="empty-state"><div class="ei">🌐</div><p>لا توجد طلبات</p></div>`;
+    return;
+  }
+  
+  grid.innerHTML = filteredWebOrders.map(o => {
+    const st = WO_STATUSES.find(s=>s.key===o._status)||{emoji:'❓',color:'#999'};
+    const date = o.orderDate ? new Date(o.orderDate).toLocaleDateString('ar-EG',{year:'numeric',month:'short',day:'numeric'}) : '';
+    const time = o.orderDate ? new Date(o.orderDate).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '';
+    const prods = o.productsDetailed && Array.isArray(o.productsDetailed)
+      ? o.productsDetailed.map(p=>`${p.name} ×${p.qty}`).join(' | ')
+      : (o.productName || '');
+    const imgs = o.productsDetailed?.flatMap(p => p.img ? [p.img] : []) || [];
+
+    return `
+    <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:14px;overflow:hidden;">
+      <div style="background:var(--navy);padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="color:#fff;font-weight:900;font-size:16px;">#${o.orderNumber||o._id}</div>
+        <div style="background:${st.color};color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">${st.emoji} ${o._status}</div>
+        <div style="color:rgba(255,255,255,.6);font-size:12px;margin-right:auto;">${date} ${time}</div>
+        ${imgs.length ? `<button onclick="showOrderImgs(${JSON.stringify(imgs).replace(/"/g,'&quot;')})" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Tajawal',sans-serif;">🖼️ الصور (${imgs.length})</button>` : ''}
+      </div>
+      <div style="padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">👤 الزبون</div>
+          <div style="font-weight:800;color:var(--navy);">${o.advertiser||'-'}</div>
+          <div style="font-size:13px;color:var(--muted);direction:ltr;">${o.phone1||''} ${o.phone2?'/ '+o.phone2:''}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">📍 العنوان</div>
+          <div style="font-weight:700;color:var(--navy);">${o.city||''}</div>
+          <div style="font-size:13px;color:var(--muted);">${o.address||''}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">🛍️ المنتجات</div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);line-height:1.6;">${prods||'-'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">💰 المبلغ</div>
+          <div style="font-size:18px;font-weight:900;color:var(--orange);">IQD ${Number(o.totalPrice||o.price||0).toLocaleString()}</div>
+          ${o.deliveryPrice?`<div style="font-size:12px;color:var(--muted);">توصيل: ${Number(o.deliveryPrice).toLocaleString()} د.ع</div>`:''}
+        </div>
+      </div>
+      ${o.notes?`<div style="padding:8px 18px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--border);">📝 ${o.notes}</div>`:''}
+      <div style="padding:10px 18px;border-top:1px solid var(--border);background:#f7fafc;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--muted);">تغيير الحالة:</span>
+        <select onchange="changeWoStatus('${o._id}','${o._status}',this.value)" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:13px;background:#fff;color:var(--text);cursor:pointer;">
+          ${WO_STATUSES.map(s=>`<option value="${s.key}" ${s.key===o._status?'selected':''}>${s.emoji} ${s.key}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.changeWoStatus = async (orderId, oldStatus, newStatus) => {
+  if(oldStatus === newStatus) return;
+  if(!confirm(`تغيير الحالة من "${oldStatus}" إلى "${newStatus}"؟`)) return;
+  
+  try {
+    const orderSnap = await get(ref(db, `ordersTest/${oldStatus}/${orderId}`));
+    if(!orderSnap.exists()) return toast('❌ الطلب غير موجود','e');
+    
+    const orderData = orderSnap.val();
+    orderData.status = newStatus;
+    orderData.updatedAt = new Date().toISOString();
+    
+    await set(ref(db, `ordersTest/${newStatus}/${orderId}`), orderData);
+    await set(ref(db, `ordersTest/${newStatus}/${orderId}/statusHistory/${newStatus}`), {
+      time: Date.now(), by: 'admin-store'
+    });
+    await remove(ref(db, `ordersTest/${oldStatus}/${orderId}`));
+    
+    toast(`✅ تم تغيير الحالة إلى "${newStatus}"`, 's');
+    loadWebOrders();
+  } catch(e) {
+    toast('❌ حدث خطأ','e');
+    console.error(e);
+  }
+};
+window.showOrderImgs = (imgs) => {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;overflow-y:auto;';
+  ov.onclick = e => { if(e.target===ov) ov.remove(); };
+  ov.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:700px;">
+      <div style="color:#fff;font-size:16px;font-weight:700;">🖼️ صور المنتجات (${imgs.length})</div>
+      <button onclick="this.closest('div').parentElement.remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;width:100%;max-width:700px;">
+      ${imgs.map(img=>`<img src="${img}" style="width:100%;border-radius:12px;object-fit:cover;aspect-ratio:4/5;background:#222;" loading="lazy">`).join('')}
+    </div>`;
+  document.body.appendChild(ov);
+};
 // ── INIT ──
 if(localStorage.getItem('admin_logged')==='1') loadAll();
 </script>
