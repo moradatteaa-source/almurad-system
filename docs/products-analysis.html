@@ -682,8 +682,8 @@ if (selSource.length && !selSource.includes(orderSource)) continue;
 const wKey = p.replace(/\s+/g, '_');
 const buyPrice = Number(warehouse[wKey]?.buyPrice || warehouse[p]?.buyPrice || 0);
 
-        totalQty += qty;
-        if (isDelivered) totalSales += sellPrice * qty;
+     totalQty += qty;
+        if (isDelivered) totalSales += sellPrice;
         totalBuy += buyPrice * qty;
 if (!productStats[p]) {
           productStats[p] = { orderIds: new Set(), qty: 0, sales: 0, buy: 0, delivered: 0, returned: 0, srcMap: {} };
@@ -693,8 +693,8 @@ if (!productStats[p]) {
         if (orderSrc) productStats[p].srcMap[orderSrc] = (productStats[p].srcMap[orderSrc]||0) + 1;
         productStats[p].orderIds.add(orderId + '_' + status);
         productStats[p].qty += qty;
-        if (isDelivered) {
-          productStats[p].sales += sellPrice * qty;
+    if (isDelivered) {
+          productStats[p].sales += sellPrice;
           productStats[p].delivered += qty;
         }
         if (isReturned) productStats[p].returned += qty;
@@ -703,11 +703,11 @@ if (!productStats[p]) {
     }
   }
 
-  // ── Calculate totals ──
-  const totalDeliveryCost = totalOrders * deliveryCostPerOrder;
+// ── Calculate totals ──
+  const totalDeliveryCost = Object.values(productStats).reduce((s, d) => s + d.orderIds.size * deliveryCostPerOrder, 0);
   const totalAdCost = Object.keys(productStats).reduce((s, p) => s + (productAds[p] || 0), 0);
-  const rawProfit = totalSales - totalBuy - totalDeliveryCost - totalAdCost;
-  const returnLoss = rawProfit * (returnRatePct / 100);
+const rawProfit = totalSales - totalBuy - totalDeliveryCost - totalAdCost;
+  const returnLoss = totalReturned > 0 ? rawProfit * (returnRatePct / 100) : 0;
   const netProfit = rawProfit - returnLoss;
   const profitMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
 
@@ -795,8 +795,8 @@ function renderTable(stats, deliveryCostPerOrder, exchangeRate, returnRatePct, t
     const deliveryCost = orders * deliveryCostPerOrder;
     const adIQD = productAds[p] || 0;
     const adUSD = exchangeRate ? (adIQD / exchangeRate) : 0;
-    const rawProfit = d.sales - d.buy - deliveryCost - adIQD;
-    const returnLoss = rawProfit * (returnRatePct / 100);
+const rawProfit = d.sales - d.buy - deliveryCost - adIQD;
+    const returnLoss = d.returned > 0 ? rawProfit * (returnRatePct / 100) : 0;
     const netProfit = rawProfit - returnLoss;
     const margin = d.sales > 0 ? ((netProfit / d.sales) * 100).toFixed(1) : 0;
 
@@ -855,6 +855,7 @@ return `
 window.updateAd = function(product, usdVal) {
   const exchangeRate = Number(document.getElementById('exchangeRate').value) || 1400;
   productAds[product] = (Number(usdVal) || 0) * exchangeRate;
+  applyFilter();
 };
 
 // ═══ EXPORT EXCEL ═══
@@ -866,7 +867,6 @@ window.exportExcel = function() {
   XLSX.writeFile(wb, `almurad-profit-${new Date().toISOString().split('T')[0]}.xlsx`);
   toast('تم تصدير Excel ✅', 'success');
 };
-
 window.exportPDF = async function() {
   if(!lastStats){ toast('اضغط "عرض النتائج" أولاً','e'); return; }
   const {PS,delCost,exRate,retRate,totSales,totBuy,totDel,totAd,totMargin,
@@ -920,10 +920,12 @@ const tableHeader = [
     'الربح%','التقييم','التشجيع','المصدر'
   ].map(th);
 
-  const tableRows = rows.map(([p,d]) => {
+const tableRows = rows.map(([p,d]) => {
 const orders=d.orderIds.size, delivCost=orders*delCost;
-    const adIQD=(productAds[p]||0)*exRate;
-    const profit=d.sales-d.buy-delivCost-adIQD;
+const adIQD=(productAds[p]||0);
+    const rawProfit=d.sales-d.buy-delivCost-adIQD;
+    const returnLoss = d.returned > 0 ? rawProfit * (retRate / 100) : 0;
+    const profit = rawProfit - returnLoss;
     const margin=d.sales>0?((profit/d.sales)*100).toFixed(1):'—';
     const cfg=RATING[getRating(profit,d.sales)];
     const srcText=Object.entries(d.srcMap||{}).sort((a,b)=>b[1]-a[1])
@@ -1029,7 +1031,7 @@ fillColor:(row)=>{
             const [,d]=rows[row-1]||[];
             if(!d) return null;
             const orders=d.orderIds.size;
-            const adIQD=(productAds[rows[row-1]?.[0]]||0)*exRate;
+           const adIQD=(productAds[rows[row-1]?.[0]]||0);
             const profit=d.sales-d.buy-(orders*delCost)-adIQD;
           return profit<0?'#fff7ed':(row%2===0?'#fafaf8':null);
           },
