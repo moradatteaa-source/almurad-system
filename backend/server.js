@@ -81,12 +81,18 @@ app.get("/api/print-labels-pdf", async (req, res) => {
       return res.status(404).json({ success: false, msg: errMsg });
     }
 
-    const pdfBuffer = await page.pdf({
+    // ملاحظة مهمة (2026-09-16): نسخ Puppeteer الحديثة (v22+) صارت ترجع
+    // page.pdf() كنوع Uint8Array بدل Buffer التقليدي. express ما يتعرف
+    // على Uint8Array كملف ثنائي فيحوّله تلقائياً لنص JSON (شكل
+    // {"0":37,"1":80,...} — كل بايت رقم منفصل!) بدل ما يرسله كملف حقيقي،
+    // فيطلع حجم الملف كبير جداً وما ينفتح أصلاً كـPDF. الحل: نغلفه بـ
+    // Buffer.from() صراحة قبل الإرسال حتى يتعرف عليه express كملف ثنائي.
+    const pdfBuffer = Buffer.from(await page.pdf({
       width: "80mm",
       height: "120mm",
       printBackground: true,
       margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
-    });
+    }));
 
     res.set("Content-Type", "application/pdf");
     res.send(pdfBuffer);
