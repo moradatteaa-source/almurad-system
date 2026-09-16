@@ -2,12 +2,25 @@
   "functions": {
     "source": "backend/functions"
   },
-  "hosting": {
-    "public": "docs/almurad-store",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  }
+  "hosting": [
+    {
+      "target": "admin",
+      "public": "docs",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "almurad-store/**"
+      ]
+    },
+    {
+      "target": "store",
+      "public": "docs/almurad-store",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ]
+    }
+  ]
 }

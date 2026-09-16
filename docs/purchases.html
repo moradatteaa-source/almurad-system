@@ -449,6 +449,16 @@ button.action:active { transform: scale(0.97); }
 }
 
 /* ─── WHOLESALERS POPUP ─── */
+/* ─── CART PULSE EFFECT ─── */
+@keyframes cartPulse {
+  0%   { transform: scale(1);   background: var(--orange); }
+  30%  { transform: scale(1.35); background: var(--success); }
+  100% { transform: scale(1);   background: var(--orange); }
+}
+
+header .header-actions button.cart-flash {
+  animation: cartPulse 0.5s ease;
+}
 #wholesalersPopup .popup-box {
   max-width: 750px;
 }
@@ -552,12 +562,37 @@ button.action:active { transform: scale(0.97); }
     </div>
   </div>
 </div>
-
+<div class="popup-overlay" id="barcodeCartPopup">
+  <div class="popup-box" style="max-width:650px;">
+    <h3>🛒 سلة الباركود</h3>
+<div style="overflow-x:auto;max-height:50vh;">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead>
+          <tr style="background:#043B64;color:white;">
+            <th style="padding:8px;width:35%;">المنتج</th>
+            <th style="padding:8px;width:25%;">الباركود</th>
+            <th style="padding:8px;width:20%;">العدد</th>
+            <th style="padding:8px;width:20%;">حذف</th>
+          </tr>
+        </thead>
+        <tbody id="barcodeCartTable">
+          <tr><td colspan="4">🚫 السلة فارغة</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="action" style="background:var(--success);flex:1;" onclick="printBarcodeCart()">🖨️ طباعة الكل</button>
+      <button class="action" style="background:#e53e3e;flex:1;" onclick="clearBarcodeCart()">🗑 تفريغ السلة</button>
+      <button class="action" style="background:#718096;flex:1;" onclick="closeBarcodeCart()">❌ إغلاق</button>
+    </div>
+  </div>
+</div>
   <header>
     <h2>🧾 نظام المشتريات - شركة المراد</h2>
 <div class="header-actions">
   <button onclick="openPurchasePopup()">➕ إضافة شراء</button>
   <button onclick="openWholesalersPopup()">🏬 تجار الجملة</button>
+  <button onclick="openBarcodeCart()">🛒 سلة الباركود (<span id="cartCount">0</span>)</button>
 </div>
   </header>
 
@@ -582,13 +617,6 @@ button.action:active { transform: scale(0.97); }
       <button onclick="downloadFullExcel()">📊 تقرير Excel شامل</button>
     </div>
 
-    <h3>📊 الإحصائيات</h3>
-    <div class="stat-cards">
-      <div class="stat-card">عدد الفواتير<span id="totalInvoices">0</span></div>
-      <div class="stat-card">إجمالي الكميات<span id="totalQty">0</span></div>
-      <div class="stat-card">إجمالي المبالغ<span id="totalAmount">0</span></div>
-      <div class="stat-card">آخر عملية<span id="lastPurchase">-</span></div>
-    </div>
     <div class="table-wrapper">
 <table>
 
@@ -600,15 +628,16 @@ button.action:active { transform: scale(0.97); }
           <th>المتغير</th>
           <th>الكمية</th>
           <th>السعر</th>
-          <th>الإجمالي</th>
-          <th>المورد</th>
+<th>الإجمالي</th>
+<th>عدد المنتجات</th>
+<th>المورد</th>
           <th>المشتري</th>
           <th>خيارات</th>
         </tr>
       </thead>
-      <tbody id="purchaseTable">
-        <tr><td colspan="10">لا توجد عمليات بعد</td></tr>
-      </tbody>
+    <tbody id="purchaseTable">
+  <tr><td colspan="11">لا توجد عمليات بعد</td></tr>
+</tbody>
     </table>
     </div>
   </div>
@@ -658,16 +687,17 @@ button.action:active { transform: scale(0.97); }
   <label>اسم المنتج:</label>
 
   <!-- 🔍 خانة البحث -->
-  <input 
+<input 
     type="text" 
     id="productSearchInput" 
     placeholder="اكتب للبحث عن المنتج..." 
-    style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;"
+    style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;font-size:16px;"
     oninput="filterProductOptions()"
+    onfocus="filterProductOptions()"
   >
 
-  <!-- 🔽 قائمة المنتجات -->
-  <select id="existingProductSelect" size="6" style="width:100%;padding:8px;border-radius:6px;"></select>
+<!-- 🔽 قائمة المنتجات -->
+  <div id="existingProductSelect" style="width:100%;border:1.5px solid #ccc;border-radius:8px;max-height:240px;overflow-y:auto;display:none;background:white;-webkit-overflow-scrolling:touch;"></div>
 
 <div id="variantContainer" class="variants-container" style="margin-top:10px;"></div>
   <button class="action" id="addOldVariantBtn" onclick="addOldVariant()" style="margin-top:8px;">
@@ -715,6 +745,34 @@ button.action:active { transform: scale(0.97); }
 <hr class="section-divider">
       <div class="invoice-section">
         <h4>📦 منتجات الفاتورة</h4>
+                <div style="margin-bottom:14px;padding:12px;background:#eef6ff;border:1.5px dashed var(--blue-light);border-radius:10px;">
+          <label style="margin-bottom:8px;">📤 أو ارفعي ملف Excel جاهز بكل منتجات الطلبية دفعة وحدة:</label>
+          <input type="file" id="purchaseExcelFile" accept=".xlsx,.xls" onchange="previewExcelFile()" style="margin-bottom:8px;">
+          <button class="action" type="button" style="background:var(--blue-light);" onclick="downloadPurchaseSampleExcel()">📋 تحميل نموذج الملف</button>
+
+          <div id="excelPreviewContainer" style="display:none;margin-top:14px;">
+            <p style="font-weight:700;color:var(--blue);margin-bottom:8px;">👁️ معاينة الملف قبل الإضافة:</p>
+            <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                  <tr style="background:#043B64;color:white;">
+                    <th style="padding:6px;">المنتج</th>
+                    <th style="padding:6px;">المتغير</th>
+                    <th style="padding:6px;">الكمية</th>
+                    <th style="padding:6px;">السعر</th>
+                    <th style="padding:6px;">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody id="excelPreviewBody"></tbody>
+              </table>
+            </div>
+            <p id="excelPreviewSummary" style="font-size:12px;color:var(--text-muted);margin:8px 0;"></p>
+            <div style="display:flex;gap:8px;">
+              <button class="action" type="button" style="background:var(--success);" onclick="confirmExcelImport()">✅ تأكيد وإضافة للفاتورة</button>
+              <button class="action" type="button" style="background:#718096;" onclick="cancelExcelPreview()">❌ إلغاء</button>
+            </div>
+          </div>
+        </div>
         <div style="overflow-x:auto;">
 <table id="invoiceItemsTable">
 <thead>
@@ -751,6 +809,7 @@ button.action:active { transform: scale(0.97); }
 import { update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getCached, invalidateCache } from "./sharedCache.js";
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
   authDomain: "almurad-system.firebaseapp.com",
@@ -763,6 +822,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+function toKey(name) {
+  return String(name).trim()
+    .replace(/[.#$\[\]\/]/g, "_")
+    .replace(/\s+/g, "_");
+}
 async function generateBarcode() {
   const counterRef = ref(db, "barcodeCounter/last");
   const { runTransaction } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js");
@@ -784,6 +848,7 @@ const newVariantContainer = document.getElementById("newVariantContainer");
 
 let suppliers = {};
 let warehouseProducts = {};
+let productNameToKey = {};
 let purchases = [];
 let invoiceItems = [];
 /* =========================
@@ -895,17 +960,18 @@ window.filterWholesalers = () => {
 
 /* =========================
    📦 تحميل الموردين
+   ملاحظة: كانت onValue حية تعيد التحميل مع كل كتابة — قائمة الموردين
+   صغيرة وتتغير نادراً (إضافة مورد جديد بس)، فتحويلها لقراءة عند الطلب
+   (مع كاش 75 ثانية) + استدعاء صريح بعد أي إضافة مورد كافي تماماً.
 ========================= */
-function loadSuppliers() {
-  const refSup = ref(db, "suppliers");
-  onValue(refSup, (snap) => {
-    supplierSelect.innerHTML = `<option value="">اختر المورد...</option>`;
-    if (!snap.exists()) return;
-    suppliers = snap.val();
-    Object.keys(suppliers).forEach((id) => {
-      const s = suppliers[id];
-      supplierSelect.innerHTML += `<option value="${id}">${s.name}</option>`;
-    });
+async function loadSuppliers() {
+  const data = await getCached(db, "suppliers");
+  supplierSelect.innerHTML = `<option value="">اختر المورد...</option>`;
+  if (!data) return;
+  suppliers = data;
+  Object.keys(suppliers).forEach((id) => {
+    const s = suppliers[id];
+    supplierSelect.innerHTML += `<option value="${id}">${s.name}</option>`;
   });
 }
 
@@ -933,7 +999,9 @@ alert("✅ تم حفظ المورد بنجاح");
 // إغلاق نافذة المورد
 supplierPopup.style.display = "none";
 
-// تحديث الموردين
+// تحديث الموردين — لازم نلغي الكاش أول حتى ما نرجع نجيب نسخة قديمة
+// ما فيها المورد الجديد (خصوصاً لو تم تحميل الموردين قبل أقل من 75 ثانية)
+invalidateCache("suppliers");
 loadSuppliers();
 
 // الرجوع لنافذة الشراء وتحديد المورد الجديد
@@ -960,16 +1028,19 @@ async function loadExistingProducts() {
   const snapshot = await get(ref(db, "warehouse"));
   const select = document.getElementById("existingProductSelect");
   allProductNames = [];
+  productNameToKey = {};
   select.innerHTML = "";
 
   if (snapshot.exists()) {
     const data = snapshot.val();
-    warehouseProducts = data;   // 🔥 هذا أهم سطر
-    for (const [name] of Object.entries(data)) {
-      allProductNames.push(name);
+    warehouseProducts = data;
+    for (const [key, p] of Object.entries(data)) {
+      const displayName = p.name || key;
+      allProductNames.push(displayName);
+      productNameToKey[displayName] = key;
       const option = document.createElement("option");
-      option.value = name;
-      option.textContent = name;
+      option.value = displayName;
+      option.textContent = displayName;
       select.appendChild(option);
     }
   }
@@ -989,31 +1060,26 @@ window.filterProductOptions = function () {
     : allProductNames;
 
   if (filtered.length === 0) {
-    const opt = document.createElement("option");
-    opt.textContent = "🚫 لا توجد نتائج مطابقة";
-    opt.disabled = true;
-    select.appendChild(opt);
+    select.innerHTML = `<div style="padding:14px;text-align:center;color:#999;font-size:13px;">🚫 لا توجد نتائج مطابقة</div>`;
   } else {
     filtered.forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      select.appendChild(opt);
+      const item = document.createElement("div");
+      item.textContent = name;
+      item.style.cssText = "padding:12px 14px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px;color:#1a202c;";
+      // نمنع فقدان التركيز (blur) قبل ما يسجل الضغطة على الموبايل
+      item.addEventListener("touchstart", () => {}, { passive: true });
+      item.onmousedown = e => e.preventDefault();
+      item.onclick = () => {
+        inputEl.value = name;
+        select.style.display = "none";
+        loadProductVariants(name);
+      };
+      select.appendChild(item);
     });
   }
 
-  // ✅ نظهر المنسدلة إذا فيها نتائج
-  select.style.display = filtered.length > 0 ? "block" : "none";
-
-select.onchange = function () {
-  const selectedName = select.value;
-
-  inputEl.value = selectedName;
-  select.style.display = "none";
-
-  loadProductVariants(selectedName);
-};
-
+  // ✅ نظهر القائمة دائماً عند الكتابة أو الفتح
+  select.style.display = "block";
 };
 
 
@@ -1108,7 +1174,8 @@ function loadProductVariants(selectedName) {
   const variantContainer = document.getElementById("variantContainer");
   variantContainer.innerHTML = "";
 
-  const prod = warehouseProducts[selectedName];
+  const key = productNameToKey[selectedName] || selectedName;
+  const prod = warehouseProducts[key];
   if (!prod) return;
 
   // 🟢 إذا بي متغيرات
@@ -1170,7 +1237,8 @@ window.addOldVariant = function () {
   div.className = "variant-item";
 
 const productName = document.getElementById("productSearchInput").value;
-const firstVariant = Object.keys(warehouseProducts[productName]?.stock || {})[0] || "";
+const productKey = productNameToKey[productName] || productName;
+const firstVariant = Object.keys(warehouseProducts[productKey]?.stock || {})[0] || "";
 const dimension = firstVariant.split("|")[0]?.trim() || "";
 
 div.innerHTML = `
@@ -1206,7 +1274,8 @@ if (inputPrice !== "" && !isNaN(inputPrice)) {
   price = parseFloat(inputPrice);
 } else {
   // 🔥 نجيب السعر القديم من المنتج
-  const product = warehouseProducts[name];
+  const productKey2 = productNameToKey[name] || name;
+  const product = warehouseProducts[productKey2];
 
   if (product?.buyPrice) {
     price = product.buyPrice;
@@ -1363,7 +1432,94 @@ window.removeInvoiceItem = function(i) {
   invoiceItems.splice(i,1);
   renderInvoiceItems();
 };
+let excelParsedRows = [];
 
+window.previewExcelFile = async function () {
+  const fileInput = document.getElementById("purchaseExcelFile");
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const XLSX = await import("https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs");
+  const data = await file.arrayBuffer();
+  const wbData = XLSX.read(data);
+  const sheet = wbData.Sheets[wbData.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+  if (!rows.length) { alert("⚠️ الملف فارغ أو غير صحيح"); return; }
+
+  excelParsedRows = [];
+  rows.forEach(r => {
+    const product = String(r["اسم المنتج"] ?? r["المنتج"] ?? r["Product"] ?? "").trim();
+    if (!product) return;
+
+    const variant = String(r["المتغير"] ?? r["Variant"] ?? "").trim() || "-";
+    const qty = parseFloat(r["الكمية"] ?? r["Quantity"] ?? 0) || 0;
+    const price = parseFloat(r["السعر"] ?? r["سعر الشراء"] ?? r["Price"] ?? 0) || 0;
+    const sellPos = parseFloat(r["سعر البيع حضوري"] ?? r["SellPos"] ?? 0) || 0;
+    const sellOnline = parseFloat(r["سعر البيع أونلاين"] ?? r["SellOnline"] ?? 0) || 0;
+
+    if (qty <= 0) return;
+
+    excelParsedRows.push({
+      product, variant, quantity: qty, price,
+      sellPricePos: sellPos, sellPriceOnline: sellOnline,
+      subtotal: qty * price
+    });
+  });
+
+  if (excelParsedRows.length === 0) {
+    alert("⚠️ ماكو صف صالح بالملف - تأكدي من أسماء الأعمدة والكمية");
+    document.getElementById("excelPreviewContainer").style.display = "none";
+    return;
+  }
+
+  renderExcelPreview();
+};
+
+function renderExcelPreview() {
+  const tbody = document.getElementById("excelPreviewBody");
+  tbody.innerHTML = excelParsedRows.map(it => `
+    <tr>
+      <td style="padding:6px;text-align:center;">${it.product}</td>
+      <td style="padding:6px;text-align:center;">${it.variant}</td>
+      <td style="padding:6px;text-align:center;">${it.quantity}</td>
+      <td style="padding:6px;text-align:center;">${it.price}</td>
+      <td style="padding:6px;text-align:center;">${it.subtotal}</td>
+    </tr>`).join("");
+
+  const totalQty = excelParsedRows.reduce((a,b)=>a+b.quantity,0);
+  const totalAmount = excelParsedRows.reduce((a,b)=>a+b.subtotal,0);
+  document.getElementById("excelPreviewSummary").textContent =
+    `عدد المنتجات: ${excelParsedRows.length} | إجمالي الكمية: ${totalQty} | الإجمالي: ${totalAmount.toLocaleString("en-US")} د.ع`;
+
+  document.getElementById("excelPreviewContainer").style.display = "block";
+}
+
+window.confirmExcelImport = function () {
+  if (excelParsedRows.length === 0) return;
+  invoiceItems.push(...excelParsedRows);
+  renderInvoiceItems();
+  cancelExcelPreview();
+  alert(`✅ تم إضافة ${excelParsedRows.length} منتج للفاتورة`);
+};
+
+window.cancelExcelPreview = function () {
+  excelParsedRows = [];
+  document.getElementById("excelPreviewContainer").style.display = "none";
+  document.getElementById("purchaseExcelFile").value = "";
+};
+
+window.downloadPurchaseSampleExcel = async function () {
+  const XLSX = await import("https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs");
+  const rows = [
+    { "اسم المنتج": "تيشيرت قطن", "المتغير": "اللون | أحمر", "الكمية": 20, "السعر": 5000, "سعر البيع حضوري": 8000, "سعر البيع أونلاين": 9000 },
+    { "اسم المنتج": "حقيبة ظهر", "المتغير": "", "الكمية": 30, "السعر": 12000, "سعر البيع حضوري": 18000, "سعر البيع أونلاين": 20000 }
+  ];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "نموذج");
+  XLSX.writeFile(wb, "نموذج-فاتورة-شراء.xlsx");
+};
 
 /* =========================
    💾 حفظ عملية شراء
@@ -1427,6 +1583,8 @@ await set(idRef, {
 document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
 closePurchasePopup();
 
+invalidateCache("purchases");
+await loadPurchases();
 window.isSaving = false;
 }; // إغلاق savePurchase
 
@@ -1493,15 +1651,15 @@ function renderFilteredPurchases(list) {
   table.innerHTML = "";
 
   if (!list.length) {
-    table.innerHTML = `<tr><td colspan="10">🚫 لا توجد نتائج مطابقة</td></tr>`;
+    table.innerHTML = `<tr><td colspan="11">🚫 لا توجد نتائج مطابقة</td></tr>`;
     return;
   }
 
-  list.forEach((p, i) => {
+list.forEach((p, i) => {
     const first = p.items?.[0] || {};
-    const dateStr = new Date(p.date).toLocaleString("en-GB"); // يعرض تاريخ ووقت معًا
+    const dateStr = new Date(p.date).toLocaleString("en-GB");
     table.innerHTML += `
-      <tr>
+      <tr onclick="toggleInvoiceDetails('${p.id}')" style="cursor:pointer;">
         <td>${i + 1}</td>
         <td>${dateStr}</td>
         <td>${first.product || "-"}</td>
@@ -1509,21 +1667,59 @@ function renderFilteredPurchases(list) {
         <td>${p.totalQty}</td>
         <td>${first.price || "-"}</td>
 <td>${(p.finalTotalAmount ?? p.totalAmount).toLocaleString("en-US")}</td>
+        <td>${p.items?.length || 0}</td>
         <td>${p.supplierName}</td>
         <td>${p.buyer}</td>
 <td>
   ${canShare()
-    ? `<button onclick="shareInvoice('${p.id}')">📤 مشاركة</button>`
-    : `<button onclick="printInvoice('${p.id}')">🖨️ طباعة</button>`
+    ? `<button onclick="event.stopPropagation();shareInvoice('${p.id}')">📤 مشاركة</button>`
+    : `<button onclick="event.stopPropagation();printInvoice('${p.id}')">🖨️ طباعة</button>`
   }
   ${p.status === "received"
     ? `<span style="color:#27ae60;font-weight:bold;display:block;">✅ مستلم: ${p.receivedBy}<br><span style="font-size:12px;font-weight:normal;">${p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-GB") : ""}</span></span>`
     : p.status === "rejected"
     ? `<span style="color:#c0392b;font-weight:bold;display:block;">❌ مرفوض: ${p.rejectedBy}</span>`
-    : `<button onclick="receivePurchase('${p.id}')" style="background:#27ae60;color:white;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;margin-left:4px;">✅ استلام</button>
-       <button onclick="rejectPurchase('${p.id}')" style="background:#e67e22;color:white;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;">❌ رفض</button>`
+    : `<button onclick="event.stopPropagation();receivePurchase('${p.id}')" style="background:#27ae60;color:white;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;margin-left:4px;">✅ استلام</button>
+       <button onclick="event.stopPropagation();rejectPurchase('${p.id}')" style="background:#e67e22;color:white;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;">❌ رفض</button>`
   }
 </td>
+      </tr>
+      <tr id="details-${p.id}" style="display:none;background:#f7fafc;">
+        <td colspan="11" style="padding:0;">
+          <div style="padding:10px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="background:#e2e8f0;">
+                  <th style="padding:6px;">المنتج</th>
+                  <th style="padding:6px;">المتغير</th>
+                  <th style="padding:6px;">الكمية</th>
+                  <th style="padding:6px;">سعر البيع حضوري</th>
+                  <th style="padding:6px;">الإجمالي</th>
+                  <th style="padding:6px;">خيارات</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(p.items || []).map((it, idx) => {
+                  const wkey = toKey(it.product);
+                  const sellPos = warehouseProducts[wkey]?.prices?.pos || it.sellPricePos || 0;
+                  return `
+                  <tr onclick="event.stopPropagation()">
+                    <td>${it.product}</td>
+                    <td>${it.variant}</td>
+                    <td>${it.quantity}</td>
+                    <td>${sellPos}</td>
+                    <td>${(sellPos * it.quantity).toLocaleString("en-US")}</td>
+             <td>
+<input type="number" min="1" value="1" id="cartQty-${p.id}-${idx}" style="width:70px;text-align:center;font-size:15px;padding:4px;">
+                      <button onclick="addToBarcodeCart('${it.product}','${it.variant}', document.getElementById('cartQty-${p.id}-${idx}').value, ${sellPos})">🖨</button>
+                      <button onclick="deleteInvoiceItem('${p.id}', ${idx})">🗑</button>
+                    </td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </td>
       </tr>`;
   });
 
@@ -1539,22 +1735,25 @@ function canShare() {
 
 /* =========================
    🧾 تحميل المشتريات
+   ملاحظة (تحسين استهلاك فايربيس): كانت onValue تعيد تحميل *كامل* شجرة
+   purchases مع كل إضافة/استلام/رفض/تعديل/حذف فاتورة شراء — حولناها
+   لقراءة عند الطلب (كاش 75 ثانية) + تحديث دوري كل دقيقتين، مع استدعاء
+   صريح وإلغاء كاش فوري بعد كل عملية كتابة حتى تبقى الشاشة فورية تماماً
+   زي ما كانت بالضبط.
 ========================= */
-function loadPurchases() {
-  const refP = ref(db, "purchases");
-  onValue(refP, (snap) => {
-    purchaseTable.innerHTML = "";
-    purchases = [];
-    if (!snap.exists()) return;
-    const data = snap.val();
+async function loadPurchases() {
+  const data = await getCached(db, "purchases");
+  purchaseTable.innerHTML = "";
+  purchases = [];
+  if (!data) return;
 
 Object.keys(data).reverse().forEach((id, i) => {
       const p = data[id];
       purchases.push({ id, ...p });
       const dateStr = new Date(p.date).toLocaleDateString("en-GB");
       const first = p.items?.[0] || {};
-      purchaseTable.innerHTML += `
-        <tr>
+  purchaseTable.innerHTML += `
+        <tr onclick="toggleInvoiceDetails('${id}')" style="cursor:pointer;">
           <td>${i + 1}</td>
           <td>${dateStr}</td>
           <td>${first.product || "-"}</td>
@@ -1562,9 +1761,10 @@ Object.keys(data).reverse().forEach((id, i) => {
           <td>${p.totalQty}</td>
           <td>${first.price || "-"}</td>
 <td>${(p.finalTotalAmount ?? p.totalAmount).toLocaleString("en-US")}</td>
+          <td>${p.items?.length || 0}</td>
           <td>${p.supplierName}</td>
           <td>${p.buyer}</td>
-<td>
+<td onclick="event.stopPropagation()">
   ${canShare()
     ? `<button onclick="shareInvoice('${id}')">📤 مشاركة</button>`
     : `<button onclick="printInvoice('${id}')">🖨️ طباعة</button>`
@@ -1578,28 +1778,83 @@ Object.keys(data).reverse().forEach((id, i) => {
   }
   <button onclick="deletePurchase('${id}')" style="background:#c0392b;color:white;border:none;padding:5px 8px;border-radius:6px;margin-right:4px;cursor:pointer;">🗑 حذف</button>
 </td>
+        </tr>
+        <tr id="details-${id}" style="display:none;background:#f7fafc;">
+          <td colspan="11" style="padding:0;">
+            <div style="padding:10px;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                  <tr style="background:#e2e8f0;">
+                    <th style="padding:6px;">المنتج</th>
+                    <th style="padding:6px;">المتغير</th>
+                    <th style="padding:6px;">الكمية</th>
+                    <th style="padding:6px;">سعر البيع حضوري</th>
+                    <th style="padding:6px;">الإجمالي</th>
+                    <th style="padding:6px;">خيارات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(p.items || []).map((it, idx) => {
+                    const wkey = toKey(it.product);
+                    const sellPos = warehouseProducts[wkey]?.prices?.pos || it.sellPricePos || 0;
+                    return `
+                    <tr onclick="event.stopPropagation()">
+                      <td>${it.product}</td>
+                      <td>${it.variant}</td>
+                      <td>${it.quantity}</td>
+                      <td>${sellPos}</td>
+                      <td>${(sellPos * it.quantity).toLocaleString("en-US")}</td>
+                      <td>
+<input type="number" min="1" value="1" id="cartQty-${id}-${idx}" style="width:70px;text-align:center;font-size:15px;padding:4px;">
+<button onclick="addToBarcodeCart('${it.product}','${it.variant}', document.getElementById('cartQty-${id}-${idx}').value, ${sellPos})">🖨</button>                        <button onclick="deleteInvoiceItem('${id}', ${idx})">🗑</button>
+                      </td>
+                    </tr>`;
+                  }).join("")}
+                </tbody>
+              </table>
+            </div>
+          </td>
         </tr>`;
     });
 
 
     updateStats(purchases);
+    saveFullPurchasesStats(purchases);
     window.purchases = purchases; // ✅ أضف هذا السطر هنا فقط
-  });
 }
 
 /* =========================
    📊 الإحصائيات
 ========================= */
 function updateStats(list) {
-  document.getElementById("totalInvoices").textContent = list.length;
-  document.getElementById("totalQty").textContent = list.reduce((a, b) => a + b.totalQty, 0);
-  document.getElementById("totalAmount").textContent = list
-  .reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount), 0)
-
+  const elInv = document.getElementById("totalInvoices");
+  if (elInv) elInv.textContent = list.length;
+  const elQty = document.getElementById("totalQty");
+  if (elQty) elQty.textContent = list.reduce((a, b) => a + b.totalQty, 0);
+  const elAmt = document.getElementById("totalAmount");
+  if (elAmt) elAmt.textContent = list
+    .reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount), 0)
     .toLocaleString("en-US");
-  document.getElementById("lastPurchase").textContent = list.length
+  const elLast = document.getElementById("lastPurchase");
+  if (elLast) elLast.textContent = list.length
     ? new Date(list.at(-1).date).toLocaleDateString("en-GB")
     : "-";
+}
+
+async function saveFullPurchasesStats(list) {
+  try {
+    const totalInvoices = list.length;
+    const totalQty = list.reduce((a, b) => a + (b.totalQty || 0), 0);
+    const totalAmount = list.reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount ?? 0), 0);
+    const lastDate = list.length ? list.at(-1)?.date : null;
+    await set(ref(db, "stats/purchases"), {
+      totalInvoices,
+      totalQty,
+      totalAmount,
+      lastPurchaseDate: lastDate || null,
+      lastUpdate: new Date().toISOString()
+    });
+  } catch (e) { console.error("purchases stats save error:", e); }
 }
 
 // ✅ دالة تصحيح النص العربي بدون فراغات زايدة
@@ -1911,6 +2166,18 @@ loadSuppliers();
 loadProducts();
 loadPurchases();
 window.purchases = purchases;
+// تحديث دوري بدل الاستماع اللحظي لكل كتابة (التحديث الفوري بعد أي عملية
+// حفظ/استلام/رفض/تعديل/حذف يصير بالاستدعاء الصريح داخل كل دالة كتابة)
+setInterval(loadSuppliers, 120000);
+setInterval(loadPurchases, 120000);
+
+// ✅ إغلاق قائمة المنتجات عند الضغط خارجها (مهم للموبايل)
+document.addEventListener("click", (e) => {
+  const dropdown = document.getElementById("existingProductSelect");
+  if (dropdown && !e.target.closest("#existingProductDiv")) {
+    dropdown.style.display = "none";
+  }
+});
 window.deletePurchase = async function(id){
 
   const confirmDelete = confirm("⚠️ هل تريد حذف هذه الفاتورة؟");
@@ -1921,6 +2188,8 @@ window.deletePurchase = async function(id){
 
     await remove(ref(db,"purchases/" + id));
 
+    invalidateCache("purchases");
+    await loadPurchases();
     alert("✅ تم حذف الفاتورة");
 
   }catch(err){
@@ -1951,10 +2220,9 @@ let snap = null;
 
 if (warehouseSnap.exists()) {
   const allProducts = warehouseSnap.val();
-  // نبحث عن المنتج بالاسم
   productKey = Object.keys(allProducts).find(k =>
     allProducts[k].name === it.product ||
-    k === it.product.replace(/[.#$[\]]/g, "_")
+    k === toKey(it.product)
   );
   if (productKey) {
     productRef = ref(db, "warehouse/" + productKey);
@@ -1963,8 +2231,7 @@ if (warehouseSnap.exists()) {
 }
 
 if (!productRef) {
-  // منتج جديد — نسوي مفتاح جديد
-  productKey = it.product.replace(/[.#$[\]]/g, "_");
+  productKey = toKey(it.product);
   productRef = ref(db, "warehouse/" + productKey);
 }
       const variant = it.variant === "-" ? "default" : it.variant;
@@ -1988,19 +2255,39 @@ if (snap && snap.exists()) {
         await update(productRef, updatesObj);
 } else {
         const newBarcode = await generateBarcode();
-        await set(ref(db, "warehouse/" + productKey), {
-          name: it.product,
-          buyPrice: it.price,
-          prices: {
-            pos: it.sellPricePos || 0,
-            online: it.sellPriceOnline || 0
-          },
-          stock: { [variant]: Number(it.quantity) },
-          barcodes: { [variant]: newBarcode },
-          totalQty: Number(it.quantity),
-          createdAt: new Date().toISOString(),
-          lastUpdate: new Date().toISOString()
-        });
+        // ✅ نقرأ البيانات القديمة أولاً قبل أي كتابة
+        const existingSnap = await get(ref(db, "warehouse/" + productKey));
+        if (existingSnap.exists()) {
+          // المنتج موجود — نضيف الكمية فقط بدون مسح
+          const existingData = existingSnap.val();
+          const oldStock = existingData.stock || {};
+          const oldQty = Number(oldStock[variant] || 0);
+          const newStock = { ...oldStock, [variant]: oldQty + Number(it.quantity) };
+          const newTotal = Object.values(newStock).reduce((s, v) => s + (Number(v) || 0), 0);
+          await update(ref(db, "warehouse/" + productKey), {
+            [`stock/${variant}`]: oldQty + Number(it.quantity),
+            totalQty: newTotal,
+            lastUpdate: new Date().toISOString()
+          });
+          if (!existingData.barcodes?.[variant]) {
+            await update(ref(db, `warehouse/${productKey}/barcodes`), { [variant]: newBarcode });
+          }
+        } else {
+          // المنتج غير موجود فعلاً — ننشئه من الصفر
+          await set(ref(db, "warehouse/" + productKey), {
+            name: it.product,
+            buyPrice: it.price,
+            prices: {
+              pos: it.sellPricePos || 0,
+              online: it.sellPriceOnline || 0
+            },
+            stock: { [variant]: Number(it.quantity) },
+            barcodes: { [variant]: newBarcode },
+            totalQty: Number(it.quantity),
+            createdAt: new Date().toISOString(),
+            lastUpdate: new Date().toISOString()
+          });
+        }
       }
     }
 
@@ -2010,6 +2297,8 @@ if (snap && snap.exists()) {
       receivedAt: new Date().toISOString()
     });
 
+    invalidateCache("purchases");
+    await loadPurchases();
     alert(`✅ تم الاستلام وإضافة المخزون بواسطة: ${userName}`);
 
   } catch (err) {
@@ -2037,6 +2326,8 @@ window.rejectPurchase = async function(id) {
       rejectReason: reason || ""
     });
 
+    invalidateCache("purchases");
+    await loadPurchases();
     alert(`✅ تم تسجيل الرفض بواسطة: ${userName}`);
 
   } catch (err) {
@@ -2044,10 +2335,217 @@ window.rejectPurchase = async function(id) {
     alert("❌ حدث خطأ أثناء الرفض");
   }
 };
+/* ===== طي/فتح تفاصيل الفاتورة ===== */
+window.toggleInvoiceDetails = function (id) {
+  const row = document.getElementById("details-" + id);
+  if (!row) return;
+  row.style.display = row.style.display === "none" ? "table-row" : "none";
+};
+
+/* ===== حذف/تعديل منتج داخل فاتورة ===== */
+window.deleteInvoiceItem = async function (purchaseId, idx) {
+  if (!confirm("⚠️ حذف هذا المنتج من الفاتورة؟")) return;
+  const p = purchases.find(x => x.id === purchaseId);
+  if (!p) return;
+  p.items.splice(idx, 1);
+  const totalQty = p.items.reduce((a, b) => a + b.quantity, 0);
+  const totalAmount = p.items.reduce((a, b) => a + b.subtotal, 0);
+  const finalTotalAmount = totalAmount + (p.deliveryFee || 0);
+  await update(ref(db, "purchases/" + purchaseId), { items: p.items, totalQty, totalAmount, finalTotalAmount });
+  invalidateCache("purchases");
+  await loadPurchases();
+  alert("✅ تم حذف المنتج من الفاتورة");
+};
+
+window.editInvoiceItem = async function (purchaseId, idx) {
+  const p = purchases.find(x => x.id === purchaseId);
+  if (!p) return;
+  const it = p.items[idx];
+  const newQty = parseFloat(prompt("الكمية الجديدة:", it.quantity));
+  if (isNaN(newQty) || newQty <= 0) return;
+  const newPrice = parseFloat(prompt("السعر الجديد:", it.price));
+  if (isNaN(newPrice) || newPrice < 0) return;
+  it.quantity = newQty;
+  it.price = newPrice;
+  it.subtotal = newQty * newPrice;
+  const totalQty = p.items.reduce((a, b) => a + b.quantity, 0);
+  const totalAmount = p.items.reduce((a, b) => a + b.subtotal, 0);
+  const finalTotalAmount = totalAmount + (p.deliveryFee || 0);
+  await update(ref(db, "purchases/" + purchaseId), { items: p.items, totalQty, totalAmount, finalTotalAmount });
+  invalidateCache("purchases");
+  await loadPurchases();
+  alert("✅ تم تعديل المنتج");
+};
+
+/* ===== سلة الباركود ===== */
+let barcodeCart = []; // { key, product, variant, code, qty, price }
+
+function updateCartCount() {
+  const total = barcodeCart.reduce((a, b) => a + b.qty, 0);
+  const el = document.getElementById("cartCount");
+  if (el) el.textContent = total;
+}
+
+function flashCartButton() {
+  const btn = document.getElementById("cartCount")?.closest("button");
+  if (!btn) return;
+  btn.classList.remove("cart-flash");
+  // إعادة تشغيل الأنيميشن حتى لو ضغط بسرعة أكثر من مرة
+  void btn.offsetWidth;
+  btn.classList.add("cart-flash");
+  setTimeout(() => btn.classList.remove("cart-flash"), 500);
+}
+
+function renderBarcodeCart() {
+  const tbody = document.getElementById("barcodeCartTable");
+  if (!tbody) return;
+  if (barcodeCart.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4">🚫 السلة فارغة</td></tr>`;
+    return;
+  }
+tbody.innerHTML = barcodeCart.map((c, i) => `
+    <tr>
+      <td style="word-break:break-word;overflow-wrap:break-word;padding:6px;">${c.product}${c.variant !== "default" ? " - " + c.variant : ""}</td>
+      <td style="direction:ltr;word-break:break-all;padding:6px;">${c.code}</td>
+      <td style="padding:6px;"><input type="number" min="1" value="${c.qty}" style="width:100%;max-width:60px;text-align:center;" onchange="updateCartQty(${i}, this.value)"></td>
+      <td style="padding:6px;"><button onclick="removeFromBarcodeCart(${i})" style="background:#e53e3e;color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;">🗑</button></td>
+    </tr>`).join("");
+}
+
+window.updateCartQty = function (i, val) {
+  const qty = parseInt(val) || 1;
+  barcodeCart[i].qty = qty;
+  updateCartCount();
+};
+
+window.removeFromBarcodeCart = function (i) {
+  const item = barcodeCart[i];
+  if (!item) return;
+  if (!confirm(`⚠️ حذف "${item.product}" من سلة الباركود؟`)) return;
+  barcodeCart.splice(i, 1);
+  renderBarcodeCart();
+  updateCartCount();
+};
+
+window.clearBarcodeCart = function () {
+  if (barcodeCart.length && !confirm("تفريغ السلة بالكامل؟")) return;
+  barcodeCart = [];
+  renderBarcodeCart();
+  updateCartCount();
+};
+
+window.openBarcodeCart = function () {
+  document.getElementById("barcodeCartPopup").style.display = "flex";
+  renderBarcodeCart();
+};
+window.closeBarcodeCart = function () {
+  document.getElementById("barcodeCartPopup").style.display = "none";
+};
+
+// إضافة منتج للسلة — يعمل حتى لو المنتج لسا غير مستلم بالمخزن
+window.addToBarcodeCart = async function (productName, variant, qtyRaw, priceRaw) {
+  const qty = parseInt(qtyRaw) || 1;
+  if (qty <= 0) return alert("⚠️ أدخل عدد صحيح");
+  const price = parseFloat(priceRaw) || 0;
+
+  const key = toKey(productName);
+  const vkey = (!variant || variant === "-") ? "default" : variant;
+
+  await loadProducts(); // تحديث آخر نسخة من المخزن
+  let product = warehouseProducts[key];
+  let code;
+
+  if (product && product.barcodes?.[vkey]) {
+    // ✅ الباركود موجود مسبقاً بالمخزن — نستخدمه كما هو
+    code = product.barcodes[vkey];
+
+  } else if (product) {
+    // المنتج موجود بس هذا المتغير بالذات ما إله باركود بعد
+    code = await generateBarcode();
+    await update(ref(db, `warehouse/${key}/barcodes`), { [vkey]: code });
+    if (!product.barcodes) product.barcodes = {};
+    product.barcodes[vkey] = code;
+
+  } else {
+    // 🆕 المنتج غير موجود إطلاقاً بالمخزن (الفاتورة لسا ماتستلمت)
+    // ننشئ له سجل مبدئي بكمية صفر بنفس الباركود، حتى إذا استلمنا الفاتورة لاحقاً
+    // يستخدم نفس الباركود بدون تضارب
+    code = await generateBarcode();
+    const now = new Date().toISOString();
+    const stub = {
+      name: productName,
+      buyPrice: 0,
+      prices: { pos: price, online: 0 },
+      stock: { [vkey]: 0 },
+      barcodes: { [vkey]: code },
+      totalQty: 0,
+      createdAt: now,
+      lastUpdate: now
+    };
+    await set(ref(db, "warehouse/" + key), stub);
+    warehouseProducts[key] = stub;
+    product = stub;
+  }
+
+  const existing = barcodeCart.find(c => c.key === key && c.variant === vkey);
+  if (existing) existing.qty += qty;
+  else barcodeCart.push({ key, product: productName, variant: vkey, code, qty, price: product.prices?.pos || price });
+
+updateCartCount();
+  flashCartButton();
+};
+
+// طباعة كل السلة بملف PDF واحد
+window.printBarcodeCart = async function () {
+  if (barcodeCart.length === 0) return alert("⚠️ السلة فارغة");
+
+  const res = await fetch("Tajawal-Regular.ttf");
+  const buffer = await res.arrayBuffer();
+  const binary = Array.from(new Uint8Array(buffer)).map(b => String.fromCharCode(b)).join("");
+  const base64 = btoa(binary);
+  pdfMake.vfs = pdfMake.vfs || {};
+  pdfMake.vfs["Tajawal-Regular.ttf"] = base64;
+  pdfMake.fonts = {
+    Tajawal: { normal: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf", italics: "Tajawal-Regular.ttf", bolditalics: "Tajawal-Regular.ttf" }
+  };
+
+  const content = [];
+  barcodeCart.forEach(c => {
+    for (let n = 0; n < c.qty; n++) {
+      const canvas = document.createElement("canvas");
+      try {
+        JsBarcode(canvas, String(c.code), { format: "CODE128", width: 1, height: 18, margin: 0, displayValue: false });
+      } catch (e) { return; }
+      const img = canvas.toDataURL("image/png");
+      const label = c.variant !== "default" ? `${c.product} – ${c.variant}` : c.product;
+
+      content.push({
+        stack: [
+          { text: fixArabicText(label), fontSize: label.length > 30 ? 7 : label.length > 20 ? 8 : 9, bold: true, alignment: "center", margin: [0, 0, 0, 1] },
+          { text: String(c.price), fontSize: 20, bold: true, alignment: "center", margin: [0, 0, 0, 1] },
+          { image: img, width: 72, alignment: "center", margin: [0, 1, 0, 1] },
+          { text: fixArabicText("سنتر المراد"), fontSize: 9, bold: true, alignment: "center", margin: [0, 1, 0, 0] }
+        ],
+        pageBreak: "after"
+      });
+    }
+  });
+
+  if (content.length === 0) return alert("❌ لا توجد باركودات صالحة للطباعة");
+  delete content[content.length - 1].pageBreak;
+
+  pdfMake.createPdf({
+    pageSize: { width: 108, height: 85 },
+    pageMargins: [4, 3, 4, 3],
+    defaultStyle: { font: "Tajawal" },
+    pageDirection: "rtl",
+    content
+  }).download(`باركودات-${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}.pdf`);
+};
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script>
 
 </script>

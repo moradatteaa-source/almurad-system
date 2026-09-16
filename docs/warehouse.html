@@ -281,6 +281,82 @@ body {
   font-size: 12px;
   font-weight: 700;
 }
+.badge-barcode-yes {
+  background: #f0fff4;
+  color: var(--success);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge-barcode-no {
+  background: #fff5f5;
+  color: var(--danger);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btn-warn { background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d; }
+.btn-warn:hover { background: #fde68a; }
+.quick-scan-input {
+  width: 130px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--orange);
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  direction: ltr;
+  text-align: center;
+  outline: none;
+}
+.quick-scan-input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(4,59,100,0.12);
+}
+/* ─── QUICK LINK BARCODE MODAL ─── */
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  transition: all var(--transition);
+}
+.link-row.done {
+  border-color: var(--success);
+  background: #f0fff4;
+}
+.link-row .link-label {
+  flex: 0 0 140px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--navy);
+}
+.link-row input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  direction: ltr;
+  text-align: left;
+  outline: none;
+}
+.link-row input:focus { border-color: var(--orange); }
+.link-row input:disabled { background: #f0fff4; color: var(--success); font-weight: 700; border-color: var(--success); }
+.link-row .check-mark { font-size: 18px; color: var(--success); display: none; }
+.link-row.done .check-mark { display: block; }
+.link-progress {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  text-align: center;
+  font-weight: 700;
+}
 .qty-total {
   font-size: 18px;
   font-weight: 800;
@@ -562,37 +638,6 @@ body {
   </div>
 </header>
 
-<!-- ─── STATS ─── -->
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-icon blue">📦</div>
-    <div>
-      <div class="stat-label">عدد المنتجات</div>
-      <div class="stat-value" id="statProducts">-</div>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon orange">🧮</div>
-    <div>
-      <div class="stat-label">الكمية الكلية</div>
-      <div class="stat-value" id="statQty">-</div>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon green">💰</div>
-    <div>
-      <div class="stat-label">رأس المال (شراء)</div>
-      <div class="stat-value" id="statBuy">-</div>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon purple">💸</div>
-    <div>
-      <div class="stat-label">قيمة البيع الحضوري</div>
-      <div class="stat-value" id="statSell">-</div>
-    </div>
-  </div>
-</div>
 
 <!-- ─── UPLOAD ─── -->
 <div class="upload-section">
@@ -606,13 +651,14 @@ body {
 <div class="toolbar">
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="بحث باسم المنتج..." oninput="applyFilters()">
+    <input type="text" id="searchInput" placeholder="بحث باسم المنتج..." oninput="onSearchInput()">
   </div>
   <div class="filter-pills">
     <button class="pill active" id="pill-all" onclick="setAuditFilter('all')">📦 الكل</button>
     <button class="pill" id="pill-audited" onclick="setAuditFilter('audited')">✅ مجرود</button>
     <button class="pill" id="pill-not" onclick="setAuditFilter('not')">❌ غير مجرود</button>
     <button class="pill" id="pill-low" onclick="setAuditFilter('low')">⚠️ كمية منخفضة</button>
+    <button class="pill" id="pill-nobarcode" onclick="setAuditFilter('nobarcode')">🚫 بدون باركود</button>
   </div>
 </div>
 
@@ -630,11 +676,12 @@ body {
         <th>قيمة المخزون</th>
         <th>آخر تحديث</th>
         <th>الجرد</th>
+        <th>الباركود</th>
         <th>الإجراءات</th>
       </tr>
     </thead>
     <tbody id="tableBody">
-      <tr class="loading-row"><td colspan="10">⏳ جارٍ تحميل البيانات...</td></tr>
+      <tr class="loading-row"><td colspan="11">⏳ جارٍ تحميل البيانات...</td></tr>
     </tbody>
   </table>
 </div>
@@ -816,6 +863,57 @@ body {
 </div>
 </div>
 
+<!-- ──────────────────────────────────────────────
+     MODAL: ربط باركود سريع (للمنتجات الناقصة)
+     ────────────────────────────────────────────── -->
+<div class="overlay" id="linkBarcodeModal">
+<div class="modal" style="max-width:480px;">
+  <div class="modal-header">
+    <span class="modal-title">🔗 ربط باركود سريع</span>
+    <button class="modal-close" onclick="closeModal('linkBarcodeModal')">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:15px;font-weight:800;color:var(--navy);margin-bottom:4px;" id="linkBarcodeProductName"></p>
+    <p class="link-progress" id="linkBarcodeProgress"></p>
+    <div id="linkBarcodeRows"></div>
+  </div>
+  <div class="modal-footer" style="justify-content:space-between;">
+    <span style="font-size:12px;color:var(--text-muted);" id="linkBarcodeQueueInfo"></span>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="skipLinkBarcode()" style="color:var(--text-muted);border:1.5px solid var(--border);">⏭ تخطي</button>
+      <button class="btn btn-ghost" onclick="closeModal('linkBarcodeModal')" style="color:var(--text-muted);border:1.5px solid var(--border);">إغلاق</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     MODAL: مطابقة أعمدة الإكسل عند الاستيراد
+     ────────────────────────────────────────────── -->
+<div class="overlay" id="importMapModal">
+<div class="modal" style="max-width:760px;">
+  <div class="modal-header">
+    <span class="modal-title">🧩 مطابقة أعمدة الملف مع بيانات المخزن</span>
+    <button class="modal-close" onclick="closeModal('importMapModal')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="background:#eef6ff;border:1px solid #bfe0ff;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13px;line-height:2;color:#0a5a96;">
+      💡 راجع كل صف، إذا التخمين غلط افتح القائمة واختر العمود الصحيح بنفسك.
+    </div>
+    <div id="importFieldsContainer"></div>
+    <hr class="section-divider">
+    <div class="section-title">👁️ معاينة (أول 3 صفوف)</div>
+    <div style="overflow-x:auto;">
+      <table class="variants-mini-table" id="importPreviewTable"></table>
+    </div>
+    <p id="importSummaryLine" style="font-size:12px;color:var(--text-muted);margin-top:10px;"></p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal('importMapModal')" style="color:var(--text-muted);border:1.5px solid var(--border);">إلغاء</button>
+    <button class="btn btn-primary" onclick="confirmImportMapping()">✅ تأكيد ورفع المنتجات</button>
+  </div>
+</div>
+</div>
 
 <!-- ─── SCRIPTS ─── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
@@ -861,6 +959,11 @@ let addQtyVariantKey = null;
 let addQtyOperation = "add";  // add | sub | set
 let auditProductKey = null;
 let auditVariantKey = null;
+let linkQueue = [];           // قائمة انتظار "ربط باركود سريع"
+let linkQueueIndex = -1;
+let excelHeaders = [];
+let excelRows = [];
+let excelFieldMap = {};
 // ── PAGINATION ──
 const PAGE_SIZE = 20;
 let lastKey = null;
@@ -892,7 +995,27 @@ function calcTotal(stock) {
   if (!stock || typeof stock !== "object") return 0;
   return Object.values(stock).reduce((s, v) => s + (Number(v) || 0), 0);
 }
-
+async function updateWarehouseStatsFull() {
+  try {
+    const snap = await get(ref(db, "warehouse"));
+    const all = snap.exists() ? snap.val() : {};
+    let totalProducts = 0, totalQty = 0, totalBuy = 0, totalSell = 0;
+    for (const p of Object.values(all)) {
+      const qty = calcTotal(p.stock);
+      totalProducts++;
+      totalQty += qty;
+      totalBuy += qty * (p.buyPrice || 0);
+      totalSell += qty * (p.prices?.pos || 0);
+    }
+    // ملاحظة: البطاقات انحذفت من هذي الصفحة، فهذا الجزء يتخطى تحديث الواجهة
+    // ويكتفي بحفظ الأرقام بقاعدة البيانات ليستخدمها قسم المحاسبة
+    await set(ref(db, "stats/warehouse"), {
+      totalProducts, totalQty, totalBuy, totalSell,
+      lastUpdate: new Date().toISOString()
+    });
+  } catch (e) { console.error("stats error", e); }
+}
+window.updateWarehouseStatsFull = updateWarehouseStatsFull;
 // ════════════════════════════════════════════════════════
 //  TOAST
 // ════════════════════════════════════════════════════════
@@ -931,7 +1054,7 @@ async function loadWarehouse(reset = false) {
     lastKey = null;
     allLoaded = false;
     document.getElementById("tableBody").innerHTML =
-      `<tr class="loading-row"><td colspan="10">⏳ جاري التحميل...</td></tr>`;
+      `<tr class="loading-row"><td colspan="11">⏳ جاري التحميل...</td></tr>`;
     document.getElementById("mobileCards").innerHTML =
       `<div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>`;
   }
@@ -964,7 +1087,7 @@ async function resetAndReload() {
 
   // جلب كل المخزن دفعة وحدة بعد أي تعديل
   document.getElementById("tableBody").innerHTML =
-    `<tr class="loading-row"><td colspan="10">⏳ جاري التحميل...</td></tr>`;
+    `<tr class="loading-row"><td colspan="11">⏳ جاري التحميل...</td></tr>`;
   document.getElementById("mobileCards").innerHTML =
     `<div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>`;
 
@@ -976,8 +1099,8 @@ async function resetAndReload() {
   }
   allLoaded = true;
   renderAll();
+  updateWarehouseStatsFull();
 }
-
 // ════════════════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════════════════
@@ -985,26 +1108,12 @@ function renderAll() {
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
   if (q && fullWarehouseCache) return;
 
-  // حساب الإحصائيات
-  let totalProducts = 0, totalQty = 0, totalBuy = 0, totalSell = 0;
-  for (const [k, p] of Object.entries(warehouseData)) {
-    const qty = calcTotal(p.stock);
-    totalProducts++;
-    totalQty += qty;
-    totalBuy += qty * (p.buyPrice || 0);
-    totalSell += qty * (p.prices?.pos || 0);
-  }
-  document.getElementById("statProducts").textContent = fmt(totalProducts);
-  document.getElementById("statQty").textContent = fmt(totalQty);
-  document.getElementById("statBuy").textContent = fmt(totalBuy) + " د.ع";
-  document.getElementById("statSell").textContent = fmt(totalSell) + " د.ع";
+  const source = (auditFilter === "nobarcode" && fullWarehouseCache) ? fullWarehouseCache : warehouseData;
 
-  // ترتيب: الأحدث أولاً
-  const sorted = Object.entries(warehouseData).sort((a, b) => {
+  const sorted = Object.entries(source).sort((a, b) => {
     return new Date(b[1].lastUpdate || 0) - new Date(a[1].lastUpdate || 0);
   });
 
-  // فلترة
   const query = document.getElementById("searchInput").value.toLowerCase().trim();
   const filtered = sorted.filter(([k, p]) => {
     const name = (p.name || k).toLowerCase();
@@ -1013,23 +1122,18 @@ function renderAll() {
     if (auditFilter === "audited" && !p.lastAudit) return false;
     if (auditFilter === "not" && p.lastAudit) return false;
     if (auditFilter === "low" && qty > 5) return false;
+    if (auditFilter === "nobarcode" && !hasMissingBarcode(p)) return false;
     return true;
   });
 
   renderDesktopTable(filtered);
   renderMobileCards(filtered);
-
-  // حفظ الإحصائيات (مرة واحدة بدون onValue)
-  set(ref(db, "stats/warehouse"), {
-    totalProducts, totalQty, totalBuy, totalSell,
-    lastUpdate: new Date().toISOString()
-  }).catch(() => {});
 }
 
 function renderDesktopTable(list) {
   const tbody = document.getElementById("tableBody");
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="padding:40px;text-align:center;color:var(--text-muted);">لا توجد نتائج</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="padding:40px;text-align:center;color:var(--text-muted);">لا توجد نتائج</td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(([k, p], i) => {
@@ -1041,6 +1145,9 @@ function renderDesktopTable(list) {
     let rowClass = "";
     if (!audited) rowClass = "row-warning";
     if (qty <= 0) rowClass = "row-danger";
+
+    const missingBarcode = hasMissingBarcode(p);
+    const missingVariants = getMissingBarcodeVariants(p);
 
     const variantsHTML = Object.entries(p.stock || {}).map(([vk, vqty]) => {
       const label = vk === "default" ? "الكمية الإجمالية" : vk;
@@ -1065,13 +1172,21 @@ function renderDesktopTable(list) {
           ? `<span class="badge-audit-yes">✅ مجرود</span>`
           : `<span class="badge-audit-no">❌ غير مجرود</span>`}
         </td>
+        <td>${
+          missingVariants.length === 0
+            ? `<span class="badge-barcode-yes">✅ موجود</span>`
+            : missingVariants.length === 1
+              ? `<input class="quick-scan-input" data-key="${k}" data-variant="${missingVariants[0]}" placeholder="امسح هنا" onkeydown="handleQuickScan(event)">`
+              : `<span class="badge-barcode-no">🚫 ناقص (${missingVariants.length})</span>`
+        }</td>
         <td>
           <div class="action-group">
             <button class="btn btn-primary btn-sm" onclick="openAddQty('${k}')">➕</button>
             <button class="btn btn-navy btn-sm" onclick="openEditModal('${k}')">✏️</button>
             <button class="btn btn-success btn-sm" onclick="openAuditModal('${k}')">📊</button>
             <button class="btn btn-dark btn-sm" onclick="printBarcodes('${k}')">🖨</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${k}')">🗑</button>
+            ${missingVariants.length > 1 ? `<button class="btn btn-warn btn-sm" onclick="openLinkBarcodeModal('${k}')">🔗</button>` : ""}
+                        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${k}')">🗑</button>
           </div>
         </td>
       </tr>`;
@@ -1093,6 +1208,9 @@ function renderMobileCards(list) {
     let border = "";
     if (!audited) border = "border-right: 4px solid var(--warning);";
     if (qty <= 0) border = "border-right: 4px solid var(--danger);";
+
+    const missingBarcode = hasMissingBarcode(p);
+    const missingVariants = getMissingBarcodeVariants(p);
 
     const variantsHTML = Object.entries(p.stock || {}).map(([vk, vqty]) => {
       const label = vk === "default" ? "إجمالي" : vk;
@@ -1129,6 +1247,16 @@ function renderMobileCards(list) {
             <span>${audited ? '<span class="badge-audit-yes">✅ مجرود</span>' : '<span class="badge-audit-no">❌ غير مجرود</span>'}</span>
           </div>
           <div class="card-row">
+            <span class="card-label">الباركود</span>
+             <span>${
+               missingVariants.length === 0
+                 ? '<span class="badge-barcode-yes">✅ موجود</span>'
+                 : missingVariants.length === 1
+                   ? `<input class="quick-scan-input" data-key="${k}" data-variant="${missingVariants[0]}" placeholder="امسح هنا" onkeydown="handleQuickScan(event)">`
+                   : `<span class="badge-barcode-no">🚫 ناقص (${missingVariants.length})</span>`
+             }</span>
+          </div>
+          <div class="card-row">
             <span class="card-label">آخر تحديث</span>
             <span class="card-val">${fmtDate(p.lastUpdate)}</span>
           </div>
@@ -1138,6 +1266,7 @@ function renderMobileCards(list) {
           <button class="btn btn-navy btn-sm" onclick="openEditModal('${k}')">✏️ تعديل</button>
           <button class="btn btn-success btn-sm" onclick="openAuditModal('${k}')">📊 جرد</button>
           <button class="btn btn-dark btn-sm" onclick="printBarcodes('${k}')">🖨 باركود</button>
+          ${missingBarcode ? `<button class="btn btn-warn btn-sm" onclick="openLinkBarcodeModal('${k}')">🔗 ربط باركود</button>` : ""}
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${k}')">🗑 حذف</button>
         </div>
       </div>`;
@@ -1147,12 +1276,23 @@ function renderMobileCards(list) {
 // ════════════════════════════════════════════════════════
 //  FILTERS
 // ════════════════════════════════════════════════════════
-window.setAuditFilter = function(f) {
+window.setAuditFilter = async function(f) {
   auditFilter = f;
-  ["all","audited","not","low"].forEach(x => {
+  ["all","audited","not","low","nobarcode"].forEach(x => {
     document.getElementById("pill-" + x)?.classList.toggle("active", x === f);
   });
+  if (f === "nobarcode" && !fullWarehouseCache) {
+    toast("🔍 جاري تحميل كل المنتجات...", "info", 2000);
+    const snap = await get(ref(db, "warehouse"));
+    fullWarehouseCache = snap.exists() ? snap.val() : {};
+  }
   applyFilters();
+};
+
+let searchDebounceTimer = null;
+window.onSearchInput = function() {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => applyFilters(), 350);
 };
 
 window.applyFilters = async function() {
@@ -1170,7 +1310,9 @@ window.applyFilters = async function() {
   }
   // فلترة من الكاش
   const filtered = Object.entries(fullWarehouseCache).filter(([k, p]) => {
-    return (p.name || k).toLowerCase().includes(q);
+    if (!(p.name || k).toLowerCase().includes(q)) return false;
+    if (auditFilter === "nobarcode" && !hasMissingBarcode(p)) return false;
+    return true;
   });
   renderDesktopTable(filtered);
   renderMobileCards(filtered);
@@ -1393,16 +1535,20 @@ if (!name) return toast("أدخل اسم المنتج", "error");
   if (currentMode === "simple") {
     const qty = parseInt(document.getElementById("fQty").value) || 0;
     stock = { default: qty };
-    if (!barcodes["default"]) {
-      barcodes["default"] = manualBarcode || await generateBarcode();
+    if (manualBarcode) {
+      barcodes["default"] = manualBarcode;              // ✅ يمسح القديم ويحط الجديد الي كتبتيه
+    } else if (!barcodes["default"]) {
+      barcodes["default"] = await generateBarcode();    // بس إذا ماكتبتي شي وماكو باركود أصلاً، يولّد وحدة جديدة
     }
   } else {
     if (variants.length === 0) return toast("أضف متغيراً واحداً على الأقل", "error");
     for (const v of variants) {
       const vk = buildVariantKey(v);
       stock[vk] = v.qty;
-      if (!barcodes[vk]) {
-        barcodes[vk] = manualBarcode || await generateBarcode();
+      if (manualBarcode) {
+        barcodes[vk] = manualBarcode;                    // ✅ يمسح القديم ويحط الجديد الي كتبتيه
+      } else if (!barcodes[vk]) {
+        barcodes[vk] = await generateBarcode();
       }
     }
   }
@@ -1599,7 +1745,175 @@ await update(ref(db), updates);
   await resetAndReload();
   toast("✅ تم إعادة تعيين الجرد لكل المنتجات", "info");
 };
+// ════════════════════════════════════════════════════════
+//  MISSING BARCODES
+// ════════════════════════════════════════════════════════
+function hasMissingBarcode(p) {
+  const stockKeys = Object.keys(p.stock || {});
+  if (!stockKeys.length) return false;
+  const barcodes = p.barcodes || {};
+  return stockKeys.some(k => !barcodes[k]);
+}
+window.hasMissingBarcode = hasMissingBarcode;
 
+function getMissingBarcodeVariants(p) {
+  const stockKeys = Object.keys(p.stock || {});
+  const barcodes = p.barcodes || {};
+  return stockKeys.filter(k => !barcodes[k]);
+}
+
+function getProductByKey(key) {
+  return warehouseData[key] || fullWarehouseCache?.[key];
+}
+window.handleQuickScan = async function(event) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const input = event.target;
+  const code = input.value.trim();
+  if (!code) return;
+  const key = input.dataset.key;
+  const variantKey = input.dataset.variant;
+  const p = getProductByKey(key);
+  if (!p) return;
+  input.disabled = true;
+  try {
+    await update(ref(db, "warehouse/" + key + "/barcodes"), { [variantKey]: code });
+  } catch (e) {
+    toast("❌ فشل حفظ الباركود لـ " + (p.name || key), "error");
+    input.disabled = false;
+    return;
+  }
+
+  // تحديث الكاش المحلي فقط (بدون إعادة رسم كل القائمة)
+  if (!p.barcodes) p.barcodes = {};
+  p.barcodes[variantKey] = code;
+  if (fullWarehouseCache?.[key]) {
+    if (!fullWarehouseCache[key].barcodes) fullWarehouseCache[key].barcodes = {};
+    fullWarehouseCache[key].barcodes[variantKey] = code;
+  }
+
+  // نحدد ترتيب كل خانات المسح الظاهرة حالياً بالشاشة
+  const allInputs = Array.from(document.querySelectorAll(".quick-scan-input"));
+  const currentIndex = allInputs.indexOf(input);
+
+  // نبدل هذي الخانة بس بشارة "موجود" بمكانها، بدون لمس أي شي ثاني بالصفحة
+  input.outerHTML = '<span class="badge-barcode-yes">✅ موجود</span>';
+
+  toast("✅ " + (p.name || key) + " ← " + code, "success", 1200);
+
+  // ننتقل للخانة اللي بعدها مباشرة (مو أول وحدة بالقائمة)
+  const nextInput = allInputs[currentIndex + 1];
+  if (nextInput && document.body.contains(nextInput)) {
+    nextInput.focus();
+  }
+};
+// ════════════════════════════════════════════════════════
+//  ربط باركود سريع (بحث + مسح مباشر، بدون كاميرا/OCR)
+// ════════════════════════════════════════════════════════
+window.openLinkBarcodeModal = function(key) {
+  const source = fullWarehouseCache || warehouseData;
+  linkQueue = Object.keys(source).filter(k => hasMissingBarcode(source[k] || {}));
+  linkQueueIndex = linkQueue.indexOf(key);
+  if (linkQueueIndex < 0) { linkQueue = [key]; linkQueueIndex = 0; }
+  openModal("linkBarcodeModal");
+  renderLinkBarcodeModal();
+};
+
+function renderLinkBarcodeModal() {
+  const key = linkQueue[linkQueueIndex];
+  const p = getProductByKey(key);
+  if (!p) { advanceLinkQueue(); return; }
+
+  document.getElementById("linkBarcodeProductName").textContent = p.name || key;
+  document.getElementById("linkBarcodeQueueInfo").textContent =
+    `${linkQueueIndex + 1} / ${linkQueue.length}`;
+
+  const missing = getMissingBarcodeVariants(p);
+  const totalVariants = Object.keys(p.stock || {}).length;
+  document.getElementById("linkBarcodeProgress").textContent =
+    missing.length ? `باقي ${missing.length} من ${totalVariants} بدون باركود` : "✅ كل المتغيرات مربوطة";
+
+  const rowsBox = document.getElementById("linkBarcodeRows");
+  rowsBox.innerHTML = missing.map(vk => {
+    const label = vk === "default" ? "الكمية الإجمالية" : vk;
+    return `
+      <div class="link-row" id="linkrow-${vk}">
+        <span class="link-label">${label}</span>
+        <input type="text" placeholder="امسح الباركود هنا..." data-variant="${vk}" data-key="${key}"
+               onkeydown="handleLinkBarcodeKey(event)">
+        <span class="check-mark">✅</span>
+      </div>`;
+  }).join("");
+
+  const firstInput = rowsBox.querySelector("input");
+  if (firstInput) setTimeout(() => firstInput.focus(), 60);
+  else advanceLinkQueue();
+}
+
+window.handleLinkBarcodeKey = function(e) {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  saveLinkBarcodeField(e.target);
+};
+
+async function saveLinkBarcodeField(input) {
+  const code = input.value.trim();
+  if (!code) return;
+  const key = input.dataset.key;
+  const variantKey = input.dataset.variant;
+  const p = getProductByKey(key);
+  if (!p) return;
+
+  try {
+    await update(ref(db, "warehouse/" + key + "/barcodes"), { [variantKey]: code });
+  } catch (e) {
+    toast("❌ فشل حفظ الباركود", "error");
+    return;
+  }
+
+  if (!p.barcodes) p.barcodes = {};
+  p.barcodes[variantKey] = code;
+  if (fullWarehouseCache?.[key] && fullWarehouseCache[key] !== p) {
+    if (!fullWarehouseCache[key].barcodes) fullWarehouseCache[key].barcodes = {};
+    fullWarehouseCache[key].barcodes[variantKey] = code;
+  }
+
+  const row = document.getElementById(`linkrow-${variantKey}`);
+  if (row) {
+    row.classList.add("done");
+    input.disabled = true;
+  }
+
+  renderAll();
+
+  const rowsBox = document.getElementById("linkBarcodeRows");
+  const nextInput = rowsBox.querySelector("input:not(:disabled)");
+  if (nextInput) {
+    setTimeout(() => nextInput.focus(), 60);
+    document.getElementById("linkBarcodeProgress").textContent =
+      `باقي ${rowsBox.querySelectorAll("input:not(:disabled)").length} بدون باركود`;
+  } else {
+    toast("✅ تم ربط جميع باركودات: " + (p.name || key));
+    setTimeout(advanceLinkQueue, 500);
+  }
+}
+
+window.skipLinkBarcode = function() { advanceLinkQueue(); };
+
+function advanceLinkQueue() {
+  linkQueueIndex++;
+  while (linkQueueIndex < linkQueue.length) {
+    const p = getProductByKey(linkQueue[linkQueueIndex]);
+    if (p && hasMissingBarcode(p)) break;
+    linkQueueIndex++;
+  }
+  if (linkQueueIndex >= linkQueue.length) {
+    closeModal("linkBarcodeModal");
+    toast("🎉 خلصت! ماكو منتجات ناقصة باركود بالقائمة الحالية", "info");
+    return;
+  }
+  renderLinkBarcodeModal();
+}
 // ════════════════════════════════════════════════════════
 //  BARCODE SCAN
 // ════════════════════════════════════════════════════════
@@ -1743,56 +2057,130 @@ pdfMake.createPdf({
 // ════════════════════════════════════════════════════════
 //  EXCEL UPLOAD
 // ════════════════════════════════════════════════════════
+const IMPORT_FIELDS = [
+  { key:"name",       label:"اسم المنتج",              required:true,  keywords:["اسم المنتج","اسم","المنتج","name"] },
+  { key:"buyPrice",   label:"سعر الشراء",               required:true,  keywords:["سعر الشراء","الشراء","تكلفة","cost"] },
+  { key:"sellPos",    label:"سعر البيع الحضوري",        required:false, keywords:["الحضوري","حضوري","pos"] },
+  { key:"sellOnline", label:"سعر البيع أونلاين",        required:false, keywords:["اونلاين","أونلاين","online"] },
+  { key:"qty",        label:"الكمية",                    required:true,  keywords:["الكمية","كمية","qty"] },
+  { key:"vType1",     label:"نوع المتغير الأول",         required:false, keywords:["نوع المتغير 1","اللون","type1"] },
+  { key:"vVal1",      label:"قيمة المتغير الأول",        required:false, keywords:["قيمة المتغير 1","val1"] },
+  { key:"vType2",     label:"نوع المتغير الثاني",        required:false, keywords:["نوع المتغير 2","القياس","type2"] },
+  { key:"vVal2",      label:"قيمة المتغير الثاني",       required:false, keywords:["قيمة المتغير 2","val2"] },
+];
+
+function normalizeHeader(s){ return String(s||"").trim().toLowerCase().replace(/\s+/g," "); }
+
+function autoMatchColumns(headers) {
+  const norm = headers.map(normalizeHeader);
+  const used = new Set(); const map = {};
+  for (const f of IMPORT_FIELDS) {
+    let bestIdx=-1, bestScore=0;
+    norm.forEach((h,idx)=>{
+      if (used.has(idx) || !h) return;
+      for (const kw of f.keywords) {
+        const k = normalizeHeader(kw); if(!k) continue;
+        let score=0;
+        if(h===k) score=100; else if(h.includes(k)) score=60+k.length; else if(k.includes(h)) score=40+h.length;
+        if(score>bestScore){bestScore=score;bestIdx=idx;}
+      }
+    });
+    if(bestIdx>=0 && bestScore>=40){ map[f.key]=bestIdx; used.add(bestIdx); } else map[f.key]=-1;
+  }
+  return map;
+}
+
 window.uploadExcel = async function() {
   const file = document.getElementById("excelFile").files[0];
   if (!file) return toast("اختر ملف Excel أولاً", "error");
-
   const wbData = XLSX.read(await file.arrayBuffer());
-  const rows = XLSX.utils.sheet_to_json(wbData.Sheets[wbData.SheetNames[0]]);
-  if (!rows.length) return toast("الملف فارغ أو غير صحيح", "error");
+  const raw = XLSX.utils.sheet_to_json(wbData.Sheets[wbData.SheetNames[0]], { header:1, defval:"" });
+  if (!raw.length) return toast("الملف فارغ أو غير صحيح", "error");
+  excelHeaders = (raw[0]||[]).map(h=>String(h??"").trim());
+  excelRows = raw.slice(1).filter(r=>r.some(c=>String(c??"").trim()!==""));
+  if (!excelHeaders.some(h=>h)) return toast("ما لكيت أسماء أعمدة بأول صف", "error");
+  if (!excelRows.length) return toast("ماكو بيانات بالملف", "error");
+  excelFieldMap = autoMatchColumns(excelHeaders);
+  buildImportMapping();
+  openModal("importMapModal");
+};
+
+function buildImportMapping() {
+  const container = document.getElementById("importFieldsContainer");
+  container.innerHTML = IMPORT_FIELDS.map(f=>{
+    const opts = [`<option value="-1">— تجاهل —</option>`].concat(
+      excelHeaders.map((h,idx)=>`<option value="${idx}" ${excelFieldMap[f.key]===idx?"selected":""}>${h||"(عمود بدون اسم #"+(idx+1)+")"}</option>`)
+    ).join("");
+    return `<div class="form-group" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="min-width:220px;font-size:13px;font-weight:700;">${f.label} ${f.required?'<span style="color:var(--danger);">* إجباري</span>':'(اختياري)'}</div>
+      <select class="form-control" id="map_${f.key}" onchange="onMappingChange('${f.key}')" style="flex:1;min-width:180px;">${opts}</select>
+    </div>`;
+  }).join("");
+  renderImportPreview();
+}
+
+window.onMappingChange = function(fieldKey){
+  excelFieldMap[fieldKey] = parseInt(document.getElementById("map_"+fieldKey).value);
+  renderImportPreview();
+};
+
+function getMappedValue(row, fieldKey) {
+  const idx = excelFieldMap[fieldKey];
+  if (idx===undefined || idx<0) return "";
+  return row[idx]!==undefined && row[idx]!==null ? String(row[idx]).trim() : "";
+}
+
+function renderImportPreview() {
+  const table = document.getElementById("importPreviewTable");
+  const sample = excelRows.slice(0,3);
+  const body = sample.map(r=>{
+    const name=getMappedValue(r,"name")||"—", buy=getMappedValue(r,"buyPrice")||"0",
+      pos=getMappedValue(r,"sellPos")||"0", online=getMappedValue(r,"sellOnline")||"0",
+      qty=getMappedValue(r,"qty")||"0";
+    return `<tr><td>${name}</td><td>${buy}</td><td>${pos}</td><td>${online}</td><td>${qty}</td></tr>`;
+  }).join("");
+  table.innerHTML = `<thead><tr><th>الاسم</th><th>شراء</th><th>حضوري</th><th>أونلاين</th><th>كمية</th></tr></thead><tbody>${body}</tbody>`;
+  document.getElementById("importSummaryLine").textContent = `إجمالي الصفوف: ${excelRows.length}`;
+}
+
+window.confirmImportMapping = async function() {
+  IMPORT_FIELDS.forEach(f=>{
+    const sel=document.getElementById("map_"+f.key);
+    if(sel) excelFieldMap[f.key]=parseInt(sel.value);
+  });
+  const missing = IMPORT_FIELDS.filter(f=>f.required && excelFieldMap[f.key]<0);
+  if (missing.length) return toast(`اختر عمود لـ: ${missing[0].label}`, "error");
 
   const grouped = {};
-  for (const r of rows) {
-    const name = String(r["اسم المنتج"] || "").trim();
+  for (const r of excelRows) {
+    const name = getMappedValue(r,"name");
     if (!name) continue;
     const k = toKey(name);
-    const buy = parseFloat(r["سعر الشراء"]) || 0;
-    const sellPos = parseFloat(r["سعر البيع الحضوري"]) || 0;
-    const sellOnline = parseFloat(r["سعر البيع اونلاين"]) || 0;
-    const qty = parseInt(r["الكمية"]) || 0;
-    const t1 = String(r["نوع المتغير 1"] || "").trim();
-    const v1 = String(r["قيمة المتغير 1"] || "").trim();
-    const t2 = String(r["نوع المتغير 2"] || "").trim();
-    const v2 = String(r["قيمة المتغير 2"] || "").trim();
-
-    const vkey = [t1, v1, t2, v2].filter(Boolean).join(" | ") || "default";
-
-    if (!grouped[k]) {
-      grouped[k] = { name, buy, sellPos, sellOnline, stock: {}, barcodes: {} };
-    }
+    const buy = parseFloat(getMappedValue(r,"buyPrice"))||0;
+    const sellPos = parseFloat(getMappedValue(r,"sellPos"))||0;
+    const sellOnline = parseFloat(getMappedValue(r,"sellOnline"))||0;
+    const qty = parseInt(getMappedValue(r,"qty"))||0;
+    const t1=getMappedValue(r,"vType1"), v1=getMappedValue(r,"vVal1");
+    const t2=getMappedValue(r,"vType2"), v2=getMappedValue(r,"vVal2");
+    const vkey = [t1,v1,t2,v2].filter(Boolean).join(" | ") || "default";
+    if (!grouped[k]) grouped[k] = { name, buy, sellPos, sellOnline, stock:{}, barcodes:{} };
     grouped[k].stock[vkey] = qty;
-
-    // الاحتفاظ بالباركودات الموجودة
     const existing = warehouseData[k]?.barcodes?.[vkey];
     grouped[k].barcodes[vkey] = existing || await generateBarcode();
   }
 
-  let count = 0;
-  for (const [k, d] of Object.entries(grouped)) {
-    await set(ref(db, "warehouse/" + k), {
-      name: d.name,
-      buyPrice: d.buy,
-      prices: { pos: d.sellPos, online: d.sellOnline },
-      stock: d.stock,
-      barcodes: d.barcodes,
-      totalQty: calcTotal(d.stock),
-      lastUpdate: new Date().toISOString(),
-      createdAt: warehouseData[k]?.createdAt || new Date().toISOString()
+  let count=0;
+  for (const [k,d] of Object.entries(grouped)) {
+    await set(ref(db,"warehouse/"+k), {
+      name:d.name, buyPrice:d.buy, prices:{pos:d.sellPos, online:d.sellOnline},
+      stock:d.stock, barcodes:d.barcodes, totalQty:calcTotal(d.stock),
+      lastUpdate:new Date().toISOString(), createdAt: warehouseData[k]?.createdAt || new Date().toISOString()
     });
     count++;
   }
-
-  toast(`✅ تم رفع ${count} منتج من Excel`);
+  toast(`✅ تم رفع ${count} منتج`);
+  closeModal("importMapModal");
+  await resetAndReload();
 };
 
 // ════════════════════════════════════════════════════════
@@ -1851,8 +2239,8 @@ new IntersectionObserver(entries => {
   if (entries[0].isIntersecting && !allLoaded && !isLoadingMore)
     loadWarehouse();
 }, { threshold: 0.1 }).observe(sentinel);
-
 loadWarehouse(true);
+updateWarehouseStatsFull();
 </script>
 </body>
 </html>

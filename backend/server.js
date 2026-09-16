@@ -7,6 +7,8 @@ import { updatePrimeStatusesFromFirebase } from "./services/shipping/primeServic
 import * as primeService   from "./services/shipping/primeService.js";
 import * as waseetService  from "./services/shipping/waseetService.js";
 import { updateWaseetStatuses } from "./services/shipping/waseetService.js";
+import * as jenniService   from "./services/shipping/jenniService.js";
+import { updateJenniStatusesFromFirebase } from "./services/shipping/jenniService.js";
 import { db } from "./firebase.js";
 import { ref, get, update } from "firebase/database";
 import express   from "express";
@@ -15,6 +17,7 @@ import cors      from "cors";
 import cron      from "node-cron";
 import path      from "path";
 import { fileURLToPath } from "url";
+import puppeteer from "puppeteer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -31,7 +34,72 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.get("/", (_, res) => res.send("✅ AlMurad Server is running"));
 
 // ============================================================
-// 1) رفع طلب — وسيط أو برايم
+// 📄 توليد PDF حقيقي بجودة الطباعة لوصولات الشحن (زر "مشاركة" بالموبايل)
+// ────────────────────────────────────────────────────────
+// ليش بالسيرفر ومو بالمتصفح مباشرة؟ لأن أي متصفح موبايل (آيفون/أندرويد)
+// ما يسمح لكود الصفحة يبني ملف مباشر للمشاركة إلا إذا كان: (أ) صورة
+// مصوّرة (html2canvas) — نتيجتها ضبابية دائماً ومحدودة السرعة بأعداد
+// كبيرة، أو (ب) عبر نافذة الطباعة الأصلية للنظام — ما نقدر نفتحها
+// ونشاركها مباشرة بضغطة وحدة بدون تدخل يدوي. الحل: نولّد الـPDF هنا
+// بالسيرفر عبر Puppeteer (كروم حقيقي بالخلفية) اللي يفتح labels-print.html
+// (نفس تصميم الليبل تماماً من labelTemplate.js) ويصدّرها PDF بنص عربي
+// حقيقي حاد 100% (مو صورة) — بعدها الموبايل بس يجيب هذا الملف الجاهز
+// ويشاركه فوراً. أسرع بكثير من التصوير بالموبايل حتى لمئات الوصولات،
+// لأنه رندر حقيقي بالسيرفر مو تصوير DOM بجهاز ضعيف.
+let sharedBrowser = null;
+async function getSharedBrowser() {
+  if (!sharedBrowser || !sharedBrowser.isConnected()) {
+    sharedBrowser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+  return sharedBrowser;
+}
+
+app.get("/api/print-labels-pdf", async (req, res) => {
+  const { logId, orderId, receiptNum } = req.query;
+  if (!logId && !orderId) {
+    return res.status(400).json({ success: false, msg: "لازم تمرر logId أو orderId" });
+  }
+
+  const qs = logId
+    ? `logId=${encodeURIComponent(logId)}`
+    : `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  const url = `${baseUrl}/labels-print.html?${qs}`;
+
+  let page;
+  try {
+    const browser = await getSharedBrowser();
+    page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
+    await page.waitForFunction("window.__labelsReady === true", { timeout: 30000 });
+
+    const errMsg = await page.evaluate(() => window.__labelsError || null);
+    if (errMsg) {
+      return res.status(404).json({ success: false, msg: errMsg });
+    }
+
+    const pdfBuffer = await page.pdf({
+      width: "80mm",
+      height: "120mm",
+      printBackground: true,
+      margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
+    });
+
+    res.set("Content-Type", "application/pdf");
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("❌ print-labels-pdf:", err.message);
+    res.status(500).json({ success: false, msg: err.message });
+  } finally {
+    if (page) await page.close();
+  }
+});
+
+// ============================================================
+// 1) رفع طلب — وسيط أو برايم أو Jenni
 // ============================================================
 app.post("/api/create-order", async (req, res) => {
   try {
@@ -39,14 +107,16 @@ app.post("/api/create-order", async (req, res) => {
 
     if (!orderId)         return res.status(400).json({ success: false, msg: "orderId مطلوب" });
     if (!shippingCompany) return res.status(400).json({ success: false, msg: "shippingCompany مطلوب" });
-    if (!["waseet","prime"].includes(shippingCompany))
-      return res.status(400).json({ success: false, msg: "shippingCompany: waseet أو prime فقط" });
+    if (!["waseet","prime","jenni"].includes(shippingCompany))
+      return res.status(400).json({ success: false, msg: "shippingCompany: waseet أو prime أو jenni فقط" });
 
     console.log(`📦 رفع ${orderId} على ${shippingCompany}`);
 
     let result;
     if (shippingCompany === "prime") {
       result = await primeService.createPrimeOrderFromFirebase(orderId);
+    } else if (shippingCompany === "jenni") {
+      result = await jenniService.createJenniOrderFromFirebase(orderId);
     } else {
       result = await waseetService.sendOrdersToWaseet(
         [{ id: orderId }],
@@ -85,6 +155,7 @@ app.get("/debug/run", async (_, res) => {
   try {
     await updateWaseetStatuses();
     await updatePrimeStatusesFromFirebase();
+    await updateJenniStatusesFromFirebase();
     res.send("✅ تم التحديث");
   } catch (err) { res.send("❌ " + err.message); }
 });
@@ -125,17 +196,40 @@ app.get("/myip", async (_, res) => {
 });
 
 // ============================================================
-// 3) Cron — كل 5 دقائق
+// 3) Cron — كل 15 دقيقة
+// ملاحظة (تحسين استهلاك فايربيس، 2026-09-16):
+// كانت هذي تشتغل كل 5 دقائق على مدار الساعة (288 مرة باليوم) بدون أي علاقة
+// بوجود نشاط فعلي، وكل تشغيلة كانت تسوي 6 قراءات كاملة لفروع الطلبات
+// (updateWaseetStatuses وupdatePrimeStatusesFromFirebase كل وحدة تقرا نفس
+// الفروع الثلاثة "قيد التجهيز/قيد التوصيل/راجع" لحالها). صار عدلين:
+// 1) نقرا الفروع الثلاثة مرة وحدة هنا ونمررها للدالتين (نص القراءات: 3 بدل 6).
+// 2) تباعد الكرون لكل 15 دقيقة بدل 5 (ثلث عدد التشغيلات باليوم).
+// النتيجة: تقريباً سدس الاستهلاك السابق لهذا الجزء. تأخير تحديث حالة
+// الشحن التلقائي يصير حتى 15 دقيقة بدل 5 — ما يأثر على أي عملية حية لأن
+// هذا تحديث تلقائي بالخلفية بس، مو إجراء يسوّيه موظف وينتظر نتيجته فوراً.
 // ============================================================
+const STATUS_BRANCHES = ["قيد التجهيز", "قيد التوصيل", "راجع"];
+
+async function fetchOrderStatusBranches() {
+  const branches = {};
+  for (const status of STATUS_BRANCHES) {
+    const snap = await get(ref(db, `ordersTest/${status}`));
+    branches[status] = snap.exists() ? snap.val() : null;
+  }
+  return branches;
+}
+
 let isUpdating = false;
 
-cron.schedule("*/5 * * * *", async () => {
+cron.schedule("*/15 * * * *", async () => {
   if (isUpdating) { console.log("⚠️ Cron skipped — still running"); return; }
   isUpdating = true;
   const timeout = setTimeout(() => { isUpdating = false; }, 300000);
   try {
-    await updateWaseetStatuses();
-    await updatePrimeStatusesFromFirebase();
+    const branches = await fetchOrderStatusBranches();
+    await updateWaseetStatuses(branches);
+    await updatePrimeStatusesFromFirebase(branches);
+    await updateJenniStatusesFromFirebase(branches);
     console.log("✅ Cron done:", new Date().toISOString());
   } catch (err) {
     console.error("❌ Cron error:", err.message);

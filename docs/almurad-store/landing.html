@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>جاري التحميل...</title>
+<link rel="icon" type="image/png" href="almushtari-logo.png">
+
+<link rel="preconnect" href="https://firebasedatabase.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!-- Meta Pixel Code - اختبار مؤقت -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1047807694833160');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1047807694833160&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+<style>
+:root{
+  --pr:#FF6B2D;--pr2:#ff8c5a;--pr3:#e55a1e;
+  --nv:#043B64;--nv2:#032d4e;
+  --gd:#2DB6A3;
+  --cr:#FFFBF4;--cr2:#F5ECD7;
+  --tx:#1a202c;--mu:#718096;--br:#e5dcc8;
+  --sh:0 2px 20px rgba(4,59,100,0.08);
+  --sh2:0 10px 40px rgba(4,59,100,0.14);
+  --t:0.25s cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;}
+input,select,button{font-size:16px!important;}
+
+.topmini{background:var(--nv);padding:10px 16px;text-align:center;}
+.topmini span{color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;}
+
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
+.card{
+  background:#fff;border-radius:26px;overflow:hidden;
+  box-shadow:var(--sh2);border:1px solid var(--br);
+}
+@media(min-width:769px){.card{display:grid;grid-template-columns:1fr 1fr;}}
+
+.img-side{
+  background:linear-gradient(135deg,var(--cr2),#fff);
+  position:relative;padding:24px;min-height:280px;
+  display:flex;align-items:center;justify-content:center;
+}
+.img-side img{width:100%;max-width:440px;border-radius:18px;object-fit:contain;
+  opacity:0;transition:opacity .35s ease;background:var(--cr2);aspect-ratio:4/5;}
+.img-side img.loaded{opacity:1;}
+.badge-new{
+  position:absolute;top:20px;left:20px;
+  background:linear-gradient(135deg,var(--pr),var(--pr3));color:#fff;
+  padding:8px 18px;border-radius:30px;font-size:13px;font-weight:800;
+  box-shadow:0 4px 16px rgba(255,107,45,.35);z-index:2;display:none;
+}
+
+.info-side{padding:32px 28px 28px;}
+@media(max-width:480px){.info-side{padding:24px 18px 20px;}}
+.p-name{font-size:34px;font-weight:900;color:var(--nv);line-height:1.15;margin-bottom:6px;min-height:1.15em;}
+@media(max-width:480px){.p-name{font-size:26px;}}
+.p-tagline{font-size:15px;color:var(--mu);line-height:1.8;margin-bottom:18px;min-height:1.5em;}
+
+.skel{background:linear-gradient(90deg,#eee 25%,#f5f5f5 50%,#eee 75%);background-size:200% 100%;animation:skAnim 1.3s infinite;border-radius:8px;}
+@keyframes skAnim{to{background-position:-200% 0;}}
+.skel-line{height:16px;width:70%;margin-bottom:8px;}
+
+.feats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;min-height:90px;}
+@media(max-width:480px){.feats{grid-template-columns:repeat(2,1fr);gap:12px;}}
+.feat{text-align:center;}
+.feat-ico{
+  width:52px;height:52px;margin:0 auto 8px;border-radius:16px;
+  background:var(--cr2);display:flex;align-items:center;justify-content:center;font-size:24px;
+}
+.feat-t{font-size:11.5px;font-weight:700;color:var(--nv);line-height:1.4;}
+
+.price-box{
+  background:linear-gradient(135deg,var(--nv),var(--nv2));border-radius:18px;
+  padding:20px 22px;margin:20px 0;text-align:center;color:#fff;min-height:96px;
+}
+.price-lbl{font-size:12px;opacity:.7;font-weight:700;margin-bottom:6px;}
+.price-row{display:flex;align-items:baseline;justify-content:center;gap:12px;flex-wrap:wrap;}
+.price-now{font-size:38px;font-weight:900;color:var(--gd);}
+.price-old{font-size:18px;font-weight:700;text-decoration:line-through;opacity:.5;}
+.price-cur{font-size:14px;opacity:.75;}
+
+.form-title{font-size:16px;font-weight:800;color:var(--nv);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.fg{margin-bottom:12px;}
+.fl{display:block;font-size:12.5px;font-weight:700;color:var(--mu);margin-bottom:6px;}
+.fi{
+  width:100%;padding:14px 16px;border:2px solid var(--br);border-radius:13px;
+  font-family:'Tajawal',sans-serif;font-size:15px;color:var(--tx);background:#fbf8f2;
+  outline:none;transition:var(--t);
+}
+.fi:focus{border-color:var(--pr);background:#fff;box-shadow:0 0 0 4px rgba(255,107,45,.1);}
+.err-msg{color:#e53e3e;font-size:12px;font-weight:700;margin-top:5px;display:none;}
+
+.order-btn{
+  width:100%;background:linear-gradient(135deg,var(--pr),var(--pr3));color:#fff;
+  border:none;border-radius:15px;padding:17px;margin-top:6px;
+  font-family:'Tajawal',sans-serif;font-size:17px;font-weight:800;cursor:pointer;
+  transition:var(--t);display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 6px 24px rgba(255,107,45,.35);
+}
+.order-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,107,45,.45);}
+.order-btn:disabled{background:#ccc;box-shadow:none;cursor:not-allowed;transform:none;}
+.order-btn small{font-weight:400;opacity:.85;}
+
+.privacy-note{text-align:center;font-size:11.5px;color:var(--mu);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:5px;}
+
+.trust-row{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  padding:22px 20px;background:var(--cr2);border-top:1px solid var(--br);
+}
+@media(max-width:480px){.trust-row{gap:6px;padding:18px 14px;}}
+.trust-item{text-align:center;}
+.trust-ico{font-size:26px;margin-bottom:6px;}
+.trust-t{font-size:11px;font-weight:700;color:var(--nv);line-height:1.3;}
+
+.succ-wrap{display:none;text-align:center;padding:60px 24px;}
+.succ-wrap.show{display:block;}
+.succ-icon{
+  width:96px;height:96px;background:linear-gradient(135deg,var(--gd),var(--pr));
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 22px;font-size:48px;
+}
+.succ-wrap h2{font-size:24px;font-weight:900;color:var(--nv);margin-bottom:10px;}
+.succ-wrap p{font-size:14px;color:var(--mu);line-height:1.9;max-width:340px;margin:0 auto;}
+.succ-num{
+  display:inline-block;background:linear-gradient(135deg,var(--nv),var(--nv2));color:var(--gd);
+  padding:10px 26px;border-radius:30px;font-size:18px;font-weight:800;margin:18px 0;
+}
+
+.nf-wrap{display:none;text-align:center;padding:100px 20px;}
+.nf-wrap .ei{font-size:60px;margin-bottom:16px;}
+.nf-wrap h2{font-size:20px;font-weight:800;color:var(--nv);margin-bottom:8px;}
+.nf-wrap p{color:var(--mu);font-size:14px;}
+
+.tw{position:fixed;bottom:20px;right:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{padding:13px 20px;border-radius:13px;color:#fff;font-size:13.5px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.18);animation:tst .3s ease;max-width:360px;text-align:center;}
+@keyframes tst{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+.toast.e{background:linear-gradient(135deg,#e53e3e,#c53030);}
+.toast.s{background:linear-gradient(135deg,#38a169,#276749);}
+
+.foot-note{text-align:center;color:var(--mu);font-size:11.5px;margin-top:20px;}
+</style>
+</head>
+<body>
+
+<div id="pageRoot">
+  <div class="topmini"><span>🔥 عرض محدود — الكمية محدودة</span></div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="img-side">
+        <div class="badge-new" id="badgeEl"></div>
+        <img id="mainImg" alt="المنتج" width="440" height="550">
+      </div>
+
+      <div class="info-side">
+        <div class="p-name skel skel-line" id="pName" style="width:80%;height:34px;"></div>
+        <div class="p-tagline skel skel-line" id="pTagline" style="width:60%;"></div>
+
+        <div class="feats" id="featsRow"></div>
+
+        <div class="price-box">
+          <div class="price-lbl">السعر شامل التوصيل</div>
+          <div class="price-row">
+            <span class="price-now"><span id="priceNow">···</span></span>
+            <span class="price-old" id="priceOldWrap" style="display:none;"><span id="priceOld"></span></span>
+          </div>
+          <div class="price-cur">دينار عراقي</div>
+        </div>
+
+        <div id="orderFormWrap">
+          <div class="form-title">📋 أكمل معلوماتك واطلب الآن</div>
+
+          <div class="fg">
+            <input class="fi" id="fName" placeholder="👤 الاسم الكامل">
+            <div class="err-msg" id="errName">أدخل اسمك الكامل</div>
+          </div>
+          <div class="fg">
+            <input class="fi" id="fPhone" type="tel" placeholder="📞 رقم الهاتف" style="direction:ltr;text-align:right;">
+            <div class="err-msg" id="errPhone">أدخل رقم هاتف صحيح</div>
+          </div>
+          <div class="fg">
+            <input class="fi" id="fCity" placeholder="📍 المحافظة" list="govList">
+            <datalist id="govList">
+              <option>بغداد</option><option>كربلاء</option><option>الانبار</option>
+              <option>الحلة - بابل</option><option>البصرة</option><option>دهوك</option>
+              <option>ديالى</option><option>اربيل</option><option>كركوك</option>
+              <option>العمارة - ميسان</option><option>السماوة - المثنى</option><option>النجف</option>
+              <option>نينوى</option><option>الديوانية - القادسية</option><option>صلاح الدين</option>
+              <option>السليمانية</option><option>الناصرية - ذي قار</option><option>الكوت - واسط</option>
+            </datalist>
+            <div class="err-msg" id="errCity">أدخل المحافظة</div>
+          </div>
+          <div class="fg">
+            <input class="fi" id="fAddr" placeholder="🏠 العنوان التفصيلي (أقرب نقطة دالة)">
+            <div class="err-msg" id="errAddr">أدخل عنوانك</div>
+          </div>
+
+          <button class="order-btn" id="submitBtn">
+            🛍️ أطلب الآن <small>— الدفع عند الاستلام</small>
+          </button>
+          <div class="privacy-note">🔒 معلوماتك آمنة ولا تُشارك مع أي جهة</div>
+        </div>
+
+        <div class="succ-wrap" id="succWrap">
+          <div class="succ-icon">✅</div>
+          <h2>تم استلام طلبك!</h2>
+          <div class="succ-num" id="succNum">#000000</div>
+          <p>راح يتواصل معك فريقنا قريباً لتأكيد الطلب والترتيب للتوصيل. شكراً لثقتك فينا 💙</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="trust-row">
+      <div class="trust-item"><div class="trust-ico">🛡️</div><div class="trust-t" id="g1">···</div></div>
+      <div class="trust-item"><div class="trust-ico">🚚</div><div class="trust-t" id="g2">···</div></div>
+      <div class="trust-item"><div class="trust-ico">✅</div><div class="trust-t" id="g3">···</div></div>
+    </div>
+  </div>
+
+  <div class="foot-note">© 2026 متجر المراد</div>
+</div>
+
+<div class="nf-wrap" id="nfWrap">
+  <div class="ei">🔍</div>
+  <h2>هذه الصفحة غير متوفرة حالياً</h2>
+  <p>تأكد من الرابط أو تواصل معنا</p>
+</div>
+
+<div class="tw" id="tw"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const fb = initializeApp({
+  apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain:"almurad-system.firebaseapp.com",
+  databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId:"almurad-system",
+  storageBucket:"almurad-system.firebasestorage.app",
+  messagingSenderId:"911755824405",
+  appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+});
+const db = getDatabase(fb);
+
+function toast(msg,type='e'){
+  const w=document.getElementById('tw');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+
+function injectFacebookPixel(id){
+  if(!id) return;
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  window.fbq('init', id);
+  window.fbq('track', 'PageView');
+}
+function fbTrack(event, params){
+  if(window.fbq) window.fbq('track', event, params||{});
+}
+
+function injectTikTokPixel(id){
+  if(!id) return;
+  !function (w, d, t) {
+    w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<e.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=i+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+    ttq.load(id);
+    ttq.page();
+  }(window, document, 'ttq');
+}
+function ttTrack(event, params){
+  if(window.ttq) window.ttq.track(event, params||{});
+}
+
+const params = new URLSearchParams(location.search);
+const pageId = params.get('id');
+const CACHE_KEY = pageId ? `_lp_cache_${pageId}` : null;
+
+window._landingData = null;
+window._storeSettings = null;
+
+async function init(){
+  if(!pageId){ showNotFound(); return; }
+
+  if(CACHE_KEY){
+    try{
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if(cached){
+        const l = JSON.parse(cached);
+        window._landingData = l;
+        renderPage(l);
+      }
+    }catch(e){}
+  }
+
+  try{
+    const lSnap = await get(ref(db,'landingPages/'+pageId));
+
+    if(!lSnap.exists() || lSnap.val().active===false){
+      if(!window._landingData) showNotFound();
+      return;
+    }
+
+    const l = lSnap.val();
+    window._landingData = l;
+    renderPage(l);
+    document.title = l.title || 'متجر المراد';
+
+    if(CACHE_KEY){
+      try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify(l)); }catch(e){}
+    }
+
+    get(ref(db,'storeSettings')).then(sSnap=>{
+      const settings = sSnap.exists() ? sSnap.val() : {};
+      window._storeSettings = settings;
+
+      const fbId = l.useCustomPixel ? (l.fbPixelId||'') : (settings.fbPixelId||'');
+      const ttId = l.useCustomPixel ? (l.ttPixelId||'') : (settings.ttPixelId||'');
+      injectFacebookPixel(fbId);
+      injectTikTokPixel(ttId);
+      fbTrack('ViewContent',{content_name:l.title||'', value:l.price||0, currency:'IQD'});
+      ttTrack('ViewContent',{content_name:l.title||'', value:l.price||0, currency:'IQD'});
+    }).catch(()=>{});
+
+  }catch(e){
+    console.error(e);
+    if(!window._landingData) showNotFound();
+  }
+}
+
+function showNotFound(){
+  document.getElementById('pageRoot').style.display='none';
+  document.getElementById('nfWrap').style.display='block';
+}
+
+function renderPage(l){
+  const img = document.getElementById('mainImg');
+  if(l.mainImage && img.src !== l.mainImage){
+    img.setAttribute('fetchpriority','high');
+    img.setAttribute('loading','eager');
+    img.setAttribute('decoding','async');
+    img.onload = () => img.classList.add('loaded');
+    img.src = l.mainImage;
+  }
+
+  const nameEl = document.getElementById('pName');
+  nameEl.textContent = l.productName || l.title || '';
+  nameEl.classList.remove('skel','skel-line');
+  nameEl.style.width=''; nameEl.style.height='';
+
+  const tagEl = document.getElementById('pTagline');
+  tagEl.textContent = l.tagline || '';
+  tagEl.classList.remove('skel','skel-line');
+  tagEl.style.width='';
+
+  if(l.badge){
+    document.getElementById('badgeEl').textContent = l.badge;
+    document.getElementById('badgeEl').style.display='block';
+  }
+
+  const feats = l.features || [];
+  document.getElementById('featsRow').innerHTML = feats.map(f=>`
+    <div class="feat">
+      <div class="feat-ico">${f.icon||'✅'}</div>
+      <div class="feat-t">${f.title||''}</div>
+    </div>`).join('');
+
+  document.getElementById('priceNow').textContent = Number(l.price||0).toLocaleString('en-US');
+  if(l.oldPrice && l.oldPrice > l.price){
+    document.getElementById('priceOld').textContent = Number(l.oldPrice).toLocaleString('en-US');
+    document.getElementById('priceOldWrap').style.display='inline';
+  }
+
+  document.getElementById('g1').textContent = l.guarantee1 || 'ضمان 7 أيام';
+  document.getElementById('g2').textContent = l.guarantee2 || 'توصيل سريع';
+  document.getElementById('g3').textContent = l.guarantee3 || 'منتج أصلي 100%';
+}
+
+let submitting = false;
+
+function clearErrors(){
+  document.querySelectorAll('.err-msg').forEach(e=>e.style.display='none');
+  document.querySelectorAll('.fi').forEach(e=>e.style.borderColor='var(--br)');
+}
+function showErr(fieldId, errId){
+  document.getElementById(fieldId).style.borderColor='#e53e3e';
+  document.getElementById(errId).style.display='block';
+}
+
+async function computeDelivery(city){
+  let s = window._storeSettings;
+  if(!s){
+    try{
+      const snap = await get(ref(db,'storeSettings'));
+      s = snap.exists() ? snap.val() : {};
+      window._storeSettings = s;
+    }catch(e){ s = {}; }
+  }
+  const prices = s.deliveryPrices || {};
+  if(prices[city] !== undefined) return Number(prices[city]);
+  return Number(s.defaultDelivery || 5000);
+}
+
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  if(submitting) return;
+  clearErrors();
+
+  const name  = document.getElementById('fName').value.trim();
+  const phone = document.getElementById('fPhone').value.trim();
+  const city  = document.getElementById('fCity').value.trim();
+  const addr  = document.getElementById('fAddr').value.trim();
+
+  let ok = true;
+  if(!name){ showErr('fName','errName'); ok=false; }
+  if(!phone || phone.length<10){ showErr('fPhone','errPhone'); ok=false; }
+  if(!city){ showErr('fCity','errCity'); ok=false; }
+  if(!addr){ showErr('fAddr','errAddr'); ok=false; }
+  if(!ok) return;
+
+  const l = window._landingData;
+  if(!l) return toast('حدث خطأ، أعد تحميل الصفحة');
+
+  submitting = true;
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ جاري إرسال طلبك...';
+
+  fbTrack('InitiateCheckout',{value:l.price||0, currency:'IQD'});
+  ttTrack('InitiateCheckout',{value:l.price||0, currency:'IQD'});
+
+  try{
+    const delivery = await computeDelivery(city);
+
+    let orderNum = 1001;
+    try{
+      const cs = await get(ref(db,'orderCounter'));
+      orderNum = (cs.exists() && cs.val() > 1000) ? cs.val()+1 : 1001;
+      await set(ref(db,'orderCounter'), orderNum);
+    }catch(e){
+      orderNum = Math.floor(1000 + Math.random()*9000);
+    }
+
+    const now = new Date();
+    const total = Number(l.price||0) + delivery;
+
+    const order = {
+      phone1: phone,
+      phone2: '',
+      source: 'صفحة هبوط',
+      code: 'WEB',
+      landingPageId: pageId,
+      address: addr,
+      city: city,
+      area: city,
+      productName: l.productName || l.title || '',
+      price: total,
+      totalPrice: total,
+      deliveryPrice: delivery,
+      quantity: 1,
+      productsDetailed: [{
+        name: l.productName || l.title || '',
+        price: Number(l.price||0),
+        qty: 1,
+        img: l.mainImage || '',
+        variants: {}
+      }],
+      extraProducts: [],
+      status: 'جديد',
+      statusHistory: {},
+      receiptNum: '',
+      notes: `طلب من صفحة هبوط: ${l.title||pageId}`,
+      advertiser: name,
+      orderNumber: orderNum,
+      orderDate: now.toISOString(),
+      updatedAt: now.toISOString(),
+      updatedBy: 'landing-page',
+      createdAt: now.getTime(),
+      enterIndex: now.getTime(),
+    };
+
+    await set(ref(db, `ordersTest/جديد/${orderNum}`), order);
+    await set(ref(db, `ordersTest/جديد/_meta`), { lastModified: Date.now() });
+    await set(ref(db, `ordersTest/جديد/${orderNum}/statusHistory/جديد`), { time: Date.now(), by: 'landing-page' });
+
+    fbTrack('Purchase',{value:total, currency:'IQD'});
+    ttTrack('CompletePayment',{value:total, currency:'IQD'});
+
+    document.getElementById('orderFormWrap').style.display='none';
+    document.getElementById('succNum').textContent = `#${orderNum}`;
+    document.getElementById('succWrap').classList.add('show');
+    window.scrollTo({top:0, behavior:'smooth'});
+
+  }catch(e){
+    console.error(e);
+    toast('❌ حدث خطأ، حاول مرة أخرى');
+    btn.disabled = false;
+    btn.innerHTML = '🛍️ أطلب الآن <small>— الدفع عند الاستلام</small>';
+  }finally{
+    submitting = false;
+  }
+});
+
+init();
+</script>
+</body>
+</html>

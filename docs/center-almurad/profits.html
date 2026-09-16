@@ -80,6 +80,21 @@ html, body {
 
 <body>
 
+<script>
+  const enteredCode = prompt("🔒 أدخل رمز الدخول للأرباح:");
+  if (enteredCode !== "0099") {
+    document.write(`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Tahoma;background:#f4f6fa;color:#e74c3c;text-align:center;padding:20px;">
+        <div style="font-size:50px;margin-bottom:12px;">🚫</div>
+        <div style="font-size:18px;font-weight:bold;">الرمز غير صحيح</div>
+        <div style="font-size:14px;color:#888;margin-top:8px;">لا تملك صلاحية الدخول لهذه الصفحة</div>
+        <button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;background:#043B64;color:white;border:none;border-radius:6px;cursor:pointer;font-family:Tahoma;font-size:14px;">🔄 إعادة المحاولة</button>
+      </div>
+    `);
+    throw new Error("Access denied - wrong code");
+  }
+</script>
+
 <header>💰 الأرباح</header>
 
 <div class="container">

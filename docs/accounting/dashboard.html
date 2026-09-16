@@ -263,6 +263,9 @@ box-shadow:0 4px 12px rgba(0,0,0,0.2);
 <span class="nav-icon">📦</span> الطلبات
 </div>
 <div class="nav-section">الإدارة</div>
+<div class="nav-item" onclick="showPage('inventory')">
+<span class="nav-icon">🏬</span> المخزون والمشتريات
+</div>
 <div class="nav-item" onclick="showPage('settings')">
 <span class="nav-icon">⚙️</span> الإعدادات
 </div>
@@ -469,6 +472,71 @@ style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-fa
 </div>
 </div>
 
+<!-- PAGE: INVENTORY & PURCHASES -->
+<div class="page" id="page-inventory">
+
+<div class="section-title">🏬 إحصائيات المخزن</div>
+<div class="kpi-grid" id="warehouseKpiGrid">
+<div class="kpi-card" style="--accent:var(--blue)">
+<div class="kpi-icon" style="--icon-bg:#eff6ff">📦</div>
+<div class="kpi-label">عدد المنتجات</div>
+<div class="kpi-value" id="inv-products">—</div>
+<div class="kpi-sub">إجمالي المنتجات بالمخزن</div>
+</div>
+<div class="kpi-card" style="--accent:var(--orange)">
+<div class="kpi-icon" style="--icon-bg:#fff3ed">🧮</div>
+<div class="kpi-label">الكمية الكلية</div>
+<div class="kpi-value" id="inv-qty">—</div>
+<div class="kpi-sub">إجمالي القطع بالمخزن</div>
+</div>
+<div class="kpi-card" style="--accent:var(--green)">
+<div class="kpi-icon" style="--icon-bg:#ecfdf5">💰</div>
+<div class="kpi-label">رأس المال (شراء)</div>
+<div class="kpi-value" id="inv-buy">—</div>
+<div class="kpi-sub">قيمة المخزون بسعر الشراء</div>
+</div>
+<div class="kpi-card" style="--accent:var(--purple)">
+<div class="kpi-icon" style="--icon-bg:#f5f3ff">💸</div>
+<div class="kpi-label">قيمة البيع الحضوري</div>
+<div class="kpi-value" id="inv-sell">—</div>
+<div class="kpi-sub">قيمة المخزون بسعر البيع</div>
+</div>
+</div>
+
+<div class="section-title" style="margin-top:28px;">🧾 إحصائيات المشتريات</div>
+<div class="kpi-grid" id="purchasesKpiGrid">
+<div class="kpi-card" style="--accent:#0891b2">
+<div class="kpi-icon" style="--icon-bg:#ecfeff">🧾</div>
+<div class="kpi-label">عدد فواتير المشتريات</div>
+<div class="kpi-value" id="pur-invoices">—</div>
+<div class="kpi-sub">إجمالي عدد الفواتير</div>
+</div>
+<div class="kpi-card" style="--accent:var(--amber)">
+<div class="kpi-icon" style="--icon-bg:#fffbeb">📊</div>
+<div class="kpi-label">إجمالي كميات المشتريات</div>
+<div class="kpi-value" id="pur-qty">—</div>
+<div class="kpi-sub">مجموع القطع المشتراة</div>
+</div>
+<div class="kpi-card" style="--accent:var(--red)">
+<div class="kpi-icon" style="--icon-bg:#fef2f2">💵</div>
+<div class="kpi-label">إجمالي مبالغ المشتريات</div>
+<div class="kpi-value" id="pur-amount">—</div>
+<div class="kpi-sub">إجمالي المصروف على الشراء</div>
+</div>
+<div class="kpi-card" style="--accent:var(--muted)">
+<div class="kpi-icon" style="--icon-bg:#f1f5f9">🕐</div>
+<div class="kpi-label">آخر عملية شراء</div>
+<div class="kpi-value" id="pur-last" style="font-size:18px;">—</div>
+<div class="kpi-sub">تاريخ آخر فاتورة</div>
+</div>
+</div>
+
+<div style="margin-top:20px;font-size:12px;color:var(--muted);text-align:center;">
+آخر تحديث للبيانات: <span id="inv-lastUpdate">—</span>
+</div>
+
+</div>
+
 </div><!-- content -->
 </main><!-- main -->
 
@@ -514,7 +582,7 @@ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
 document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
 document.getElementById('page-'+p).classList.add('active');
 event.currentTarget.classList.add('active');
-const titles={dashboard:'لوحة التحكم',analytics:'التحليلات',orders:'الطلبات',settings:'الإعدادات'};
+const titles={dashboard:'لوحة التحكم',analytics:'التحليلات',orders:'الطلبات',inventory:'المخزون والمشتريات',settings:'الإعدادات'};
 document.getElementById('pageTitle').textContent=titles[p]||p;
 };
 
@@ -779,6 +847,9 @@ renderOrdersTable(allOrders);
 document.getElementById('totalOrdersCount').textContent=fmt(allOrders.length);
 document.getElementById('lastUpdate').textContent='آخر تحديث: '+new Date().toLocaleTimeString('ar-IQ');
 
+// INVENTORY & PURCHASES STATS
+await loadInventoryPurchasesStats();
+
 }catch(e){
 console.error(e);
 showAlert('❌ خطأ في تحميل البيانات',false);
@@ -789,6 +860,38 @@ setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden')
 
 function destroyChart(id){
 if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}
+}
+
+async function loadInventoryPurchasesStats(){
+try{
+const [whSnap, purSnap] = await Promise.all([
+  get(ref(db,"stats/warehouse")),
+  get(ref(db,"stats/purchases"))
+]);
+
+const wh = whSnap.exists() ? whSnap.val() : {};
+const pur = purSnap.exists() ? purSnap.val() : {};
+
+document.getElementById('inv-products').textContent = fmt(wh.totalProducts);
+document.getElementById('inv-qty').textContent = fmt(wh.totalQty);
+document.getElementById('inv-buy').textContent = fmt(wh.totalBuy)+' د.ع';
+document.getElementById('inv-sell').textContent = fmt(wh.totalSell)+' د.ع';
+
+document.getElementById('pur-invoices').textContent = fmt(pur.totalInvoices);
+document.getElementById('pur-qty').textContent = fmt(pur.totalQty);
+document.getElementById('pur-amount').textContent = fmt(pur.totalAmount)+' د.ع';
+document.getElementById('pur-last').textContent = pur.lastPurchaseDate
+  ? new Date(pur.lastPurchaseDate).toLocaleDateString('ar-IQ')
+  : '—';
+
+const lastUpd = wh.lastUpdate || pur.lastUpdate;
+document.getElementById('inv-lastUpdate').textContent = lastUpd
+  ? new Date(lastUpd).toLocaleString('ar-IQ')
+  : '—';
+
+}catch(e){
+console.error('inventory stats error:', e);
+}
 }
 
 function renderOrdersTable(orders){

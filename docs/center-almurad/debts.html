@@ -412,7 +412,7 @@ html, body { touch-action: manipulation; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getDatabase, ref, onValue, update
+  getDatabase, ref, onValue, update, get
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /* ══ FIREBASE ══ */
@@ -448,19 +448,25 @@ function formatDate(createdAt) {
   return new Date(ts).toLocaleString("ar-EG");
 }
 
-/* ══ LOAD ══ */
-function loadDebts() {
-  onValue(ref(rtdb, "posInvoices"), (snapshot) => {
-    invoices = [];
-    if (snapshot.exists()) {
-      Object.entries(snapshot.val()).forEach(([id, inv]) => {
-        if (inv.type === "credit" && inv.rest > 0) {
-          invoices.push({ id, ...inv });
-        }
-      });
-    }
-    renderDebts();
-  });
+/* ══ LOAD ══
+   ملاحظة (تحسين استهلاك فايربيس): كانت onValue تعيد تحميل *كامل* شجرة
+   posInvoices مع كل عملية بيع/إرجاع بالكاشير من أي موظف — هذه صفحة ديون
+   (تقارير) فقط، ما تحتاج تحدث لحظياً. صارت تجيب البيانات مرة عند الفتح
+   وتحدثها كل دقيقتين بدل الاستماع اللحظي لكل كتابة بكل النظام.
+   (ملاحظة تقنية: هذه الصفحة تستخدم نسخة فايربيس 10.7.1 بخلاف باقي
+   الصفحات (10.13.0) فما استخدمنا هنا ملف sharedCache.js المشترك تجنباً
+   لخلط نسختين مختلفتين من SDK على نفس كائن db — الحل هنا مستقل ومحلي). */
+async function loadDebts() {
+  const snapshot = await get(ref(rtdb, "posInvoices"));
+  invoices = [];
+  if (snapshot.exists()) {
+    Object.entries(snapshot.val()).forEach(([id, inv]) => {
+      if (inv.type === "credit" && inv.rest > 0) {
+        invoices.push({ id, ...inv });
+      }
+    });
+  }
+  renderDebts();
 }
 
 /* ══ RENDER ══ */
@@ -656,9 +662,14 @@ window.pay = async function(key) {
 
   input.value = "";
   showToast("✅ تم تسديد " + f(totalPaid) + " بنجاح", "success");
+  // مهم: قبل كان onValue الحي يحدث الشاشة تلقائياً بعد أي كتابة. هسه
+  // بعد ما حولناها لتحديث دوري (كل دقيقتين)، لازم نحدث يدوياً فوراً بعد
+  // التسديد حتى الموظف يشوف النتيجة فوراً بدون أي تأخير محسوس.
+  await loadDebts();
 };
 
 loadDebts();
+setInterval(loadDebts, 120000); // تحديث كل دقيقتين بدل الاستماع اللحظي لكل عملية بيع/إرجاع
 </script>
 
 </body>

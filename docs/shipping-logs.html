@@ -1,192 +1,291 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>سجلات الشحن</title>
+  <!-- تصميم الليبل (QR + HTML/CSS) مشترك مع labels-print.html عبر هذين
+       الملفين، حتى الطباعة المباشرة وملف الـPDF (من السيرفر) يطلعوا بنفس
+       التصميم بالضبط دائماً -->
+  <script src="qrcode-lib.js"></script>
+  <script src="labelTemplate.js"></script>
 
-  <!-- خط تجوال -->
   <style>
     @font-face {
       font-family: 'Tajawal';
       src: url('Tajawal-Regular.ttf');
     }
 
-    body {
-      font-family: 'Tajawal', sans-serif;
-      margin: 0;
-      background: #f4f4f4;
+    :root {
+      --navy: #043B64;
+      --navy-deep: #032c4d;
+      --navy-soft: #0a4d7d;
+      --orange: #FF6B2D;
+      --orange-soft: #fff1ea;
+      --green: #0f9d58;
+      --green-bg: #e3f9ec;
+      --red: #d93025;
+      --red-bg: #fde9e8;
+      --bg: #f2f4f7;
+      --card-shadow: 0 3px 14px rgba(4, 59, 100, 0.09);
+      --card-shadow-hover: 0 8px 22px rgba(4, 59, 100, 0.15);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --waseet: #e63946;
+      --prime: #8e44ad;
+      --jenni: #e67e22;
     }
 
-    /* هيدر ثابت */
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Tajawal', 'Segoe UI', sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: #1c2b36;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* هيدر ثابت بلمسة براند المراد */
     header {
-      background: #043B64;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
       color: #fff;
-      padding: 14px;
+      padding: 16px 14px;
+      padding-top: calc(16px + env(safe-area-inset-top, 0px));
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
       position: fixed;
-      top: 0;
-      right: 0;
-      left: 0;
+      top: 0; right: 0; left: 0;
       z-index: 9999;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
     }
 
     .back-arrow {
       position: absolute;
-      right: 15px;
-      top: 50%;
+      right: 16px;
+      top: calc(50% + env(safe-area-inset-top, 0px) / 2);
       transform: translateY(-50%);
       font-size: 22px;
       cursor: pointer;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      transition: background 0.15s;
     }
+    .back-arrow:active { background: rgba(255,255,255,0.15); }
 
     .page {
-      padding: 90px 15px 20px;
+      padding: 86px 14px 30px;
+      padding-top: calc(86px + env(safe-area-inset-top, 0px));
+      max-width: 620px;
+      margin: 0 auto;
     }
 
-    /* كارت السجل */
-    .log-card {
-      background: white;
-      padding: 16px;
-      border-radius: 14px;
-      margin-bottom: 15px;
-      border: 1px solid #e0e0e0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      cursor: pointer;
-    }
-
-    .print-btn {
-      color: #5a3cff;
+    /* ══════════════ حالات فارغة / تحميل ══════════════ */
+    .state-box {
+      text-align: center;
+      color: #7a8a97;
+      padding: 50px 20px;
       font-size: 15px;
-      margin-top: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
     }
-
-    /* كارت الطلب */
-    .order-card {
-      background: white;
-      padding: 14px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      margin-bottom: 14px;
+    .state-box .state-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+    .spinner {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 3px solid #dbe4ea; border-top-color: var(--navy);
+      margin: 0 auto 12px; animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .status-success {
-      background: #d5ffd5;
-      color: #008000;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: bold;
-      display: inline-block;
-      margin-bottom: 6px;
-    }
-
-    .status-fail {
-      background: #ffd2d2;
-      color: #b00000;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: bold;
-      display: inline-block;
-      margin-bottom: 6px;
-    }
-
-    /* صندوق ملخص الشحنة */
-    .summary-box {
+    /* ══════════════ كارت السجل (القائمة الرئيسية) ══════════════ */
+    .log-card {
       background: #fff;
-      padding: 18px;
-      border-radius: 14px;
-      border: 1px solid #ddd;
+      padding: 16px 16px 14px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 14px;
+      box-shadow: var(--card-shadow);
+      cursor: pointer;
+      border-right: 5px solid var(--navy);
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .log-card:active { transform: scale(0.99); box-shadow: var(--card-shadow-hover); }
+
+    .log-card-top {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+
+    .provider-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 14px; font-weight: 800; color: #fff;
+      padding: 5px 12px; border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .log-date { font-size: 12.5px; color: #8a97a3; white-space: nowrap; }
+
+    .log-meta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px; font-size: 13px; color: #5a6773;
+    }
+
+    .stat-chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .stat-chip {
+      font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .stat-chip.total { background: #eef2f6; color: var(--navy); }
+    .stat-chip.success { background: var(--green-bg); color: var(--green); }
+    .stat-chip.fail { background: var(--red-bg); color: var(--red); }
+
+    .log-card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 12px; padding-top: 11px; border-top: 1px solid #eef1f4;
+    }
+
+    .details-link {
+      color: var(--navy); font-size: 14.5px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .print-action {
+      color: var(--orange); font-size: 14.5px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 10px; background: var(--orange-soft);
+      transition: opacity 0.15s;
+    }
+    .print-action:active { opacity: 0.7; }
+    .print-action.disabled {
+      color: #b3bcc4; background: #f1f3f5; cursor: not-allowed; pointer-events: none;
+    }
+    .print-action.busy { opacity: 0.55; pointer-events: none; }
+    .print-action.share-action { color: var(--green); background: var(--green-bg); }
+
+    /* ══════════════ صفحة التفاصيل ══════════════ */
+    .summary-box {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-soft) 100%);
+      color: #fff;
+      padding: 20px 18px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      box-shadow: var(--card-shadow);
+    }
+    .summary-provider {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 18px; font-weight: 800; margin-bottom: 4px;
+    }
+    .summary-sub { text-align: center; font-size: 12.5px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+    .summary-row {
+      display: flex; justify-content: space-around;
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.18);
+    }
+    .summary-row .label { font-size: 12.5px; color: rgba(255,255,255,0.75); }
+    .summary-row .value { font-size: 21px; font-weight: 800; }
+    .value.green { color: #6be3a0; }
+    .value.red { color: #ff9d95; }
+
+    .section-title {
+      font-size: 15.5px; font-weight: 800; color: var(--navy);
+      margin: 4px 0 12px; display: flex; align-items: center; gap: 6px;
+    }
+
+    /* كارت الطلب داخل التفاصيل */
+    .order-card {
+      background: #fff;
+      padding: 14px 14px 42px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--card-shadow);
       margin-bottom: 12px;
+      position: relative;
+    }
+    .order-number { font-size: 16.5px; font-weight: 800; color: var(--orange); margin-bottom: 6px; }
+    .order-tracking { font-size: 13.5px; color: #55636e; }
+    .order-reason { margin-top: 6px; color: var(--red); font-size: 13.5px; }
+
+    .status-pill {
+      position: absolute; top: 13px; left: 13px;
+      padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 800;
+    }
+    .status-pill.success { background: var(--green-bg); color: var(--green); }
+    .status-pill.fail { background: var(--red-bg); color: var(--red); }
+
+    .order-print-btn {
+      position: absolute; bottom: 10px; left: 14px;
+      color: var(--orange); display: flex; align-items: center; gap: 6px;
+      font-size: 14.5px; font-weight: 700; cursor: pointer;
+      padding: 5px 10px; border-radius: 8px; background: var(--orange-soft);
+    }
+    .order-print-btn.busy { opacity: 0.55; pointer-events: none; }
+
+    /* ══════════════ توست تنبيه بسيط بدل alert() المزعجة ══════════════ */
+    #toastBox {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+      z-index: 99999; display: flex; flex-direction: column; gap: 8px; align-items: center;
+      pointer-events: none; width: calc(100% - 32px); max-width: 420px;
+    }
+    .toast {
+      background: #1c2b36; color: #fff; font-size: 14px; font-weight: 600;
+      padding: 12px 18px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      opacity: 0; transform: translateY(10px); transition: opacity 0.2s, transform 0.2s;
       text-align: center;
     }
+    .toast.warn { background: #7a4a00; }
+    .toast.error { background: #7a1f1a; }
+    .toast.show { opacity: 1; transform: translateY(0); }
 
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 14px;
-      padding-top: 10px;
-      border-top: 1px solid #eee;
+    @media (max-width: 380px) {
+      .log-card-footer { flex-wrap: wrap; gap: 8px; }
+      header { font-size: 17px; }
     }
 
-    .label { font-size: 13px; color: #555; }
-    .value { font-size: 20px; font-weight: bold; }
+    /* ════════════════════════════════════════════════════════
+       🏷️ ليبل الشحن — تصميم موحّد لكل شركات التوصيل
+       تُستخدم هذه الأنماط فقط لعرض/تصوير الوصل قبل مشاركته بالموبايل.
+       الطباعة الفعلية (اللابتوب) تتم داخل إطار iframe منعزل تماماً بنسخته
+       الخاصة من نفس الأنماط (LABEL_STYLE_CSS بالسكربت)، فما تحتاج ظهورها هنا.
+       ════════════════════════════════════════════════════════ */
+    #printArea { display: none; }
+    #printArea.capturing { display: block; position: fixed; top: 0; left: -99999px; }
 
-    .green { color: green; }
-    .red { color: red; }
-    .blue { color: #043B64; }
-@media print {
-  body {
-    width: 80mm;
-    height: 120mm;
-    margin: 0;
-    padding: 0;
-  }
-}
-
-@page {
-  size: 80mm 120mm;
-  margin: 0;
-}
-@media print {
-  body {
-    width: 80mm;
-    height: 120mm;
-    margin: 0;
-    padding: 0;
-    font-size: 10px; /* حجم الخط العام بالفاتورة */
-  }
-
-  h1, h2, h3 {
-    font-size: 11px;
-  }
-
-  .label {
-    font-size: 9px;
-  }
-
-  .value {
-    font-size: 11px;
-    font-weight: bold;
-  }
-
-  .summary-box {
-    padding: 8px;
-  }
-
-  .order-card {
-    padding: 6px;
-  }
-}
-@media print {
-  body {
-    font-size: 9px !important;
-  }
-
-  * {
-    font-size: 9px !important;
-    line-height: 1.2 !important;
-  }
-
-  .value {
-    font-size: 10px !important;
-  }
-
-  h1, h2, h3 {
-    font-size: 10px !important;
-  }
-}
-
+    .label-page {
+      width: 80mm; height: 120mm; box-sizing: border-box;
+      overflow: hidden; position: relative;
+      font-family: 'Tajawal', sans-serif; color: #000;
+      background: #fff;
+    }
+    .label-page-inner {
+      width: 80mm; box-sizing: border-box; padding: 3mm;
+      transform-origin: top right;
+    }
+    .label-top { display: flex; justify-content: space-between; align-items: center; }
+    .label-almurad img { width: 20mm; height: auto; }
+    .label-courier { text-align: center; }
+    .label-courier img { width: 16mm; height: auto; }
+    .label-courier-fallback {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16mm; height: 10mm; border-radius: 2mm; color: #fff;
+      font-size: 8px; font-weight: 700;
+    }
+    .label-branch-code { font-size: 8px; font-weight: 700; margin-top: 1mm; }
+    .label-receipt-title { text-align: center; font-size: 11px; font-weight: 700; margin-top: 0.5mm; }
+    .label-meta-row { display: flex; justify-content: space-between; font-size: 10px; margin-top: 1mm; }
+    .label-qr-wrap { text-align: center; margin-top: 0.5mm; margin-bottom: 0.5mm; }
+    .label-qr { width: 27mm; height: 27mm; object-fit: contain; }
+    .label-page hr { margin: 1.5mm 0; border: none; border-top: 1px solid #000; }
+    .label-boxes { display: flex; gap: 2mm; }
+    .label-box {
+      flex: 1; border: 1px solid #000; border-radius: 1mm;
+      padding: 1.5mm; font-size: 9px; line-height: 1.55;
+    }
+    .label-box b { display: block; margin-bottom: 0.8mm; font-size: 9.5px; }
+    .label-notes {
+      border: 1px solid #000; border-radius: 1mm; padding: 1.5mm;
+      margin-top: 1.5mm; font-size: 9px; line-height: 1.5;
+    }
+    .label-notes b { display: block; margin-bottom: 0.5mm; }
+    .label-table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-top: 1.5mm; }
+    .label-table th, .label-table td { border: 1px solid #000; padding: 1mm; text-align: center; }
+    .label-page-num { text-align: center; font-size: 10px; margin-top: 2mm; }
   </style>
 </head>
 
@@ -200,16 +299,27 @@
 
 <!-- صفحة السجلات -->
 <div id="logsPage" class="page">
-  <div id="logsList">جاري التحميل...</div>
+  <div id="logsList">
+    <div class="state-box"><span class="spinner"></span>جاري تحميل السجلات...</div>
+  </div>
 </div>
 
 <!-- صفحة التفاصيل -->
 <div id="detailsPage" class="page" style="display:none;">
   <div id="summaryBox"></div>
-  <h3 style="margin:5px 0 15px;">الطلبات</h3>
+  <div class="section-title">📦 الطلبات داخل هذه الدفعة</div>
   <div id="ordersList"></div>
 </div>
 
+<!-- 🧾 منطقة مخفية تُستخدم فقط لتحويل الوصل إلى صورة عند المشاركة بالموبايل -->
+<div id="printArea"></div>
+
+<!-- 🖨️ إطار مخفي منفصل تماماً عن الصفحة — تتم فيه الطباعة الفعلية باللابتوب.
+     كونه مستند مستقل 100% (بلا أي علاقة بمحتوى الصفحة الحالية)، يستحيل
+     معه أن تختلط طباعة الوصل بأي محتوى آخر من صفحة سجلات الشحن. -->
+<iframe id="printFrame" style="position:fixed; width:0; height:0; border:0; top:-9999px; left:-9999px;" aria-hidden="true"></iframe>
+
+<div id="toastBox"></div>
 
 <script type="module">
 
@@ -237,12 +347,57 @@ const ordersList = document.getElementById("ordersList");
 const backBtn = document.getElementById("backBtn");
 const headerTitle = document.getElementById("headerTitle");
 
+// ══════════════ توست بسيط بدل alert() ══════════════
+function toast(message, type = "info") {
+  const box = document.getElementById("toastBox");
+  const el = document.createElement("div");
+  el.className = "toast" + (type === "warn" ? " warn" : type === "error" ? " error" : "");
+  el.textContent = message;
+  box.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 250);
+  }, 3200);
+}
+
+// توست تقدّم يبقى ظاهر ونقدر نحدّث نصه حي (بدل ما يختفي وحده بعد 3 ثواني)
+// — يُستخدم بالعمليات الطويلة (تجهيز مشاركة PDF لدفعة كبيرة) حتى يبين
+// للمستخدم إن الصفحة شغالة فعلياً ومو "علّقت"، ويعرف كم بقي تقريباً.
+function showProgressToast(message) {
+  const box = document.getElementById("toastBox");
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+  box.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  return {
+    update(msg) { el.textContent = msg; },
+    close() {
+      el.classList.remove("show");
+      setTimeout(() => el.remove(), 250);
+    },
+  };
+}
+
+// ملاحظة: COURIER_LOGO/COURIER_LABEL/COURIER_COLOR أصبحت بملف labelTemplate.js
+// المشترك (محمّل بالأعلى) — نفس المفاتيح المستخدمة بكل النظام (send-shipping.html وغيره)
+// عكسي: نص المزوّد المخزّن بالسجل (log.provider) → مفتاح الشركة
+const PROVIDER_KEY_BY_LABEL = { "الوسيط": "waseet", "برايم": "prime", "Jenni": "jenni" };
+
+function courierKeyFromProvider(provider) {
+  return PROVIDER_KEY_BY_LABEL[provider] || null;
+}
+function courierColorFromProvider(provider) {
+  const key = courierKeyFromProvider(provider);
+  return (key && COURIER_COLOR[key]) || "#043B64";
+}
 
 // تحميل السجلات
 async function loadLogs() {
   const snapshot = await get(ref(db, "shippingLogs"));
   if (!snapshot.exists()) {
-    logsList.innerHTML = "لا توجد سجلات شحن";
+    logsList.innerHTML = `<div class="state-box"><span class="state-icon">📭</span>لا توجد سجلات شحن بعد</div>`;
     return;
   }
 
@@ -250,65 +405,69 @@ async function loadLogs() {
   const logs = snapshot.val();
 
   Object.entries(logs)
-    .sort((a,b)=> b[0]-a[0])
+    .sort((a, b) => b[0] - a[0])
     .forEach(([logId, log]) => {
 
-     const card = document.createElement("div");
-card.className = "log-card";
+      const courierColor = courierColorFromProvider(log.provider);
+      const hasSuccess = Number(log.successCount) > 0;
 
-card.innerHTML = `
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-      
-      <!-- التاريخ يسار أعلى -->
-      <div style="font-size:13px; color:#555;">
-        ${new Date(log.createdAt).toLocaleString()}
-      </div>
+      const card = document.createElement("div");
+      card.className = "log-card";
+      card.style.borderRightColor = courierColor;
 
-      <!-- اسم الشركة -->
-      <div style="font-size:17px; font-weight:bold; color:#043B64;">
-        ${log.provider}
-      </div>
-  </div>
+      card.innerHTML = `
+        <div class="log-card-top">
+          <span class="provider-chip" style="background:${courierColor}">🚚 ${escHtml(log.provider || "غير محدد")}</span>
+          <span class="log-date">${formatDate(log.createdAt)}</span>
+        </div>
 
-  <!-- عدد الطلبات -->
-  <div style="margin-top:6px; font-size:14px; color:#333; text-align:right;">
-      إجمالي الطلبات: ${log.total}
-  </div>
+        <div class="log-meta-row">
+          <span>تم الرفع بواسطة: <b>${escHtml(log.uploadedBy || "غير محدد")}</b></span>
+        </div>
 
-  <!-- تم الرفع بواسطة -->
-  <div style="margin-top:3px; font-size:13px; color:#777; text-align:right;">
-تم الرفع بواسطة: ${log.uploadedBy || "غير محدد"}
-  </div>
+        <div class="stat-chips">
+          <span class="stat-chip total">📦 الإجمالي: ${log.total ?? 0}</span>
+          <span class="stat-chip success">✅ نجح: ${log.successCount ?? 0}</span>
+          <span class="stat-chip fail">❌ فشل: ${log.failCount ?? 0}</span>
+        </div>
 
-  <!-- خط فاصل صغير -->
-  <div style="margin:10px 0; height:1px; background:#eee;"></div>
+        <div class="log-card-footer">
+          <div class="details-link"><span style="font-size:17px;">❯</span> عرض التفاصيل</div>
+          <div class="print-action ${hasSuccess ? "" : "disabled"}" data-log-print
+               title="${hasSuccess ? "طباعة كل الوصولات الناجحة بهذه الدفعة" : "لا توجد طلبات ناجحة بهذه الدفعة لطباعتها"}">
+            <span style="font-size:17px;">🖨️</span> طباعة الكل
+          </div>
+          <div class="print-action share-action ${hasSuccess ? "" : "disabled"}" data-log-share
+               title="${hasSuccess ? "مشاركة كل الوصولات كملف PDF واحد (واتساب/تلي/الخ)" : "لا توجد طلبات ناجحة بهذه الدفعة لمشاركتها"}">
+            <span style="font-size:17px;">📤</span> مشاركة
+          </div>
+        </div>
+      `;
 
-  <!-- الأسفل: زر التفاصيل يسار + طباعة يمين -->
-  <div style="display:flex; justify-content:space-between; align-items:center;">
+      const printEl = card.querySelector("[data-log-print]");
+      if (hasSuccess) {
+        printEl.onclick = (e) => { e.stopPropagation(); handlePrintInvoice(logId, printEl); };
+      } else {
+        printEl.onclick = (e) => { e.stopPropagation(); toast("لا توجد طلبات ناجحة بهذه الدفعة لطباعتها", "warn"); };
+      }
 
-      <!-- عرض التفاصيل -->
-      <div style="color:#0066ff; font-size:15px; cursor:pointer;">
-        <span style="font-size:18px;">❯</span> عرض التفاصيل
-      </div>
+      const shareEl = card.querySelector("[data-log-share]");
+      if (hasSuccess) {
+        shareEl.onclick = (e) => { e.stopPropagation(); handleShareInvoice(logId, shareEl); };
+      } else {
+        shareEl.onclick = (e) => { e.stopPropagation(); toast("لا توجد طلبات ناجحة بهذه الدفعة لمشاركتها", "warn"); };
+      }
 
-      <!-- زر الطباعة -->
-   <div onclick="event.stopPropagation(); printInvoice('${logId}')"
-     style="color:#5a3cff; font-size:15px; cursor:pointer; display:flex; align-items:center; gap:5px;">
-  طباعة <span style="font-size:18px;">🖨️</span>
-</div>
-
-
-  </div>
-`;
-
-
-      card.onclick = (e) => {
-        if (e.target.classList.contains("print-btn")) return;
-        openDetails(logId, log);
-      };
+      card.onclick = () => openDetails(logId, log);
 
       logsList.appendChild(card);
     });
+}
+
+function formatDate(ts) {
+  if (!ts) return "—";
+  try { return new Date(ts).toLocaleString("ar-IQ", { dateStyle: "medium", timeStyle: "short" }); }
+  catch { return new Date(ts).toLocaleString(); }
 }
 
 loadLogs();
@@ -322,136 +481,55 @@ async function openDetails(id, log) {
   backBtn.style.display = "block";
   headerTitle.textContent = "تفاصيل سجل الشحنة";
 
- summaryBox.innerHTML = `
-  <div class="summary-box">
+  const courierColor = courierColorFromProvider(log.provider);
 
-    <div style="font-size:17px; font-weight:bold;">${log.provider}</div>
-
-    <!-- معرف الشحنة -->
-    <div style="margin-top:6px; font-size:14px; color:#043B64;">
-      معرف الشحنة: ${id}
-    </div>
-
-    <!-- تم الرفع بواسطة -->
-    <div style="margin-top:4px; font-size:13px; color:#777;">
-تم الرفع بواسطة: ${log.uploadedBy || "غير محدد"}
-    </div>
-
-    <div style="color:#555; margin-top:6px;">
-      ${new Date(log.createdAt).toLocaleString()}
-    </div>
+  summaryBox.innerHTML = `
+    <div class="summary-provider">🚚 ${escHtml(log.provider || "غير محدد")}</div>
+    <div class="summary-sub">معرف الدفعة: ${escHtml(id)} • تم الرفع بواسطة ${escHtml(log.uploadedBy || "غير محدد")}</div>
+    <div class="summary-sub">${formatDate(log.createdAt)}</div>
 
     <div class="summary-row">
-      <div>
-        <div class="value blue">${log.total}</div>
-        <div class="label">إجمالي</div>
-      </div>
-      <div>
-        <div class="value green">${log.successCount}</div>
-        <div class="label">نجح</div>
-      </div>
-      <div>
-        <div class="value red">${log.failCount}</div>
-        <div class="label">فشل</div>
-      </div>
+      <div><div class="value">${log.total ?? 0}</div><div class="label">إجمالي</div></div>
+      <div><div class="value green">${log.successCount ?? 0}</div><div class="label">نجح</div></div>
+      <div><div class="value red">${log.failCount ?? 0}</div><div class="label">فشل</div></div>
     </div>
+  `;
+  summaryBox.style.background = `linear-gradient(135deg, ${courierColor} 0%, var(--navy-deep) 100%)`;
 
-  </div>
-`;
-
+  ordersList.innerHTML = `<div class="state-box"><span class="spinner"></span>جاري تحميل الطلبات...</div>`;
 
   const snapshot = await get(ref(db, `shippingLogs/${id}/orders`));
   const data = snapshot.exists() ? snapshot.val() : {};
 
   ordersList.innerHTML = "";
 
-Object.values(data).forEach(order => {
+  const entries = Object.values(data);
+  if (!entries.length) {
+    ordersList.innerHTML = `<div class="state-box"><span class="state-icon">📭</span>لا توجد طلبات بهذه الدفعة</div>`;
+    return;
+  }
 
-  const card = document.createElement("div");
-  card.className = "order-card";
-  card.style.position = "relative";
-  card.style.padding = "16px 14px 45px";
-  card.style.borderRadius = "14px";
+  entries.forEach(order => {
+    const isSuccess = order.status === "success";
 
+    const card = document.createElement("div");
+    card.className = "order-card";
 
-  // 🔶 طلب رقم (#) أعلى الكارت بلون برتقالي
-  const orderNumberHTML = `
-    <div style="
-      font-size:17px;
-      font-weight:bold;
-      color:#FF6B2D;
-      margin-bottom:8px;
-    ">
-      طلب #${order.orderId}
-    </div>
-  `;
+    card.innerHTML = `
+      <div class="order-number">طلب #${escHtml(order.orderId)}</div>
+      <div class="status-pill ${isSuccess ? "success" : "fail"}">${isSuccess ? "نجح" : "فشل"}</div>
+      ${order.receiptNum ? `<div class="order-tracking">رقم التتبع: <b>${escHtml(order.receiptNum)}</b></div>` : ""}
+      ${(!isSuccess && order.reason) ? `<div class="order-reason">السبب: ${escHtml(order.reason)}</div>` : ""}
+      ${isSuccess ? `<div class="order-print-btn" data-order-print><span style="font-size:17px;">🖨️</span><span>طباعة</span></div>` : ""}
+    `;
 
+    if (isSuccess) {
+      const btn = card.querySelector("[data-order-print]");
+      btn.onclick = (e) => { e.stopPropagation(); handlePrintSingleOrder(order.orderId, order.receiptNum || "", btn); };
+    }
 
-  // الحالة (نجح / فشل)
-  const statusBadge = order.status === "success"
-    ? `<div style="
-        background:#d5ffd5;
-        color:#008000;
-        padding:4px 14px;
-        border-radius:20px;
-        font-size:13px;
-        font-weight:bold;
-        position:absolute;
-        top:14px;
-        left:14px;
-      ">نجح</div>`
-    : `<div style="
-        background:#ffd2d2;
-        color:#b00000;
-        padding:4px 14px;
-        border-radius:20px;
-        font-size:13px;
-        font-weight:bold;
-        position:absolute;
-        top:14px;
-        left:14px;
-      ">فشل</div>`;
-
-const printBtn = order.status === "success" ? `
-  <div onclick="event.stopPropagation(); printSingleOrder('${order.orderId}', '${order.receiptNum || ""}')"
-       style="
-         position:absolute;
-         bottom:10px;
-         left:14px;
-         color:#5a3cff;
-         display:flex;
-         align-items:center;
-         gap:6px;
-         font-size:15px;
-         cursor:pointer;
-       ">
-    <span style="font-size:18px;">🖨️</span>
-    <span>طباعة</span>
-  </div>
-` : "";
-
-
-
-  // السبب فقط إذا فشل
-  const reasonHTML = order.status === "fail" && order.reason
-    ? `<div style="margin-top:6px; color:#b00000; font-size:14px;">السبب: ${order.reason}</div>`
-    : "";
-
-
-  // محتوى الكارت
-  card.innerHTML = `
-    ${orderNumberHTML}
-    ${statusBadge}
-    ${order.receiptNum ? `<div style="font-size:14px; color:#444;">التتبع: ${order.receiptNum}</div>` : ""}
-    ${reasonHTML}
-    ${printBtn}
-  `;
-
-  ordersList.appendChild(card);
-});
-
-
-
+    ordersList.appendChild(card);
+  });
 }
 
 
@@ -467,433 +545,249 @@ backBtn.onclick = () => {
 document.getElementById("mainBackArrow").onclick = () => {
   window.location.href = "send-shipping.html";
 };
-function drawBoxWithText(doc, title, text, x, y, width) {
-  const padding = 2;
-  const lineHeight = 4;
 
-  const lines = doc.splitTextToSize(text || "-", width - padding * 2);
-  const boxHeight = lines.length * lineHeight + padding * 2 + 6;
+// ════════════════════════════════════════════════════════
+// 🏷️ محرك طباعة ليبل الشحن — نسخة كاملة معاد تصميمها (2026-09-16)
+// ────────────────────────────────────────────────────────
+// جولة إصلاحات سابقة استخدمت `visibility:hidden` + تراكب فوق الصفحة
+// الأصلية لطباعة الليبل، وتبيّن إنها هشة: أي محتوى مخفي (قائمة السجلات
+// الكاملة مثلاً) يبقى محجوز المساحة فعلياً، فيتحول لعشرات/مئات الصفحات
+// الفارغة عند الطباعة، وأي فرق بحجم المحتوى بين الطلبات يفيض لصفحات
+// زايدة إذا مقاس الورقة كان أصغر من اللازم أو يترك فراغ كبير إذا أكبر.
+//
+// الحل النهائي: نطبع داخل <iframe> مخفي منفصل 100% عن مستند الصفحة
+// (له DOM ونمط CSS خاص به بالكامل) — فمهما كان محتوى صفحة سجلات الشحن
+// (قصير أو طويل)، مستحيل يدخل ضمن الطباعة لأنه غير موجود أصلاً بمستند
+// الإطار. وبدل مقاس ورقة ثابت (كان 120mm ثم 200mm، وكلاهما إما يقصّر
+// أو يفيض)، نقيس فعلياً ارتفاع أطول وصل بهذي الدفعة بعد رسمه، ونضبط
+// طول الصفحة (@page) على هذا الارتفاع بالضبط + هامش أمان بسيط. هيچي
+// الوصل القصير ما يترك فراغ كبير، والوصل الطويل ما يفيض لصفحة زايدة،
+// بعرض 80mm ثابت (نفس مقاس رول الطابعة الحرارية) دائماً.
+// ════════════════════════════════════════════════════════
 
-  doc.rect(x, y, width, boxHeight);
+// ملاحظة: escHtml أصبحت بملف labelTemplate.js المشترك (محمّل بالأعلى)
 
-  doc.setFontSize(9);
-  doc.text(title, x + padding, y + 4);
-
-  doc.setFontSize(8);
-  doc.text(lines, x + padding, y + 9);
-
-  return boxHeight;
+// 🔎 بحث عن الطلب الكامل بكل شجرة ordersTest (الطلب ينتقل بين حالات كثيرة
+// بعد رفعه للتوصيل، فما نكدر نعتمد حالة ثابتة أو حالة الشحنة success/fail
+// نفسها كحالة طلب حقيقية — هذا كان خطأ بالنسخة السابقة يخلي كل بحث يفشل
+// بالمسار السريع ويرجع دائماً للفحص الكامل)
+//
+// ⚠️ إصلاح أداء مهم جداً — هذا كان السبب الحقيقي وراء بطء طباعة الدفعة
+// الكاملة (خصوصاً بالموبايل): كانت كل عملية طباعة دفعة تسحب شجرة
+// "ordersTest" كاملة من فايربيس من جديد لكل طلب منفرد بالدفعة (لو الدفعة
+// فيها 28 طلب، يصير 28 عملية تحميل كاملة للشجرة الواحدة تلو الأخرى!).
+// هسه نسحب الشجرة مرة وحدة بس بغض النظر عن عدد الطلبات، ونبحث بالذاكرة.
+async function fetchAllOrdersTree() {
+  const fullSnap = await get(ref(db, "ordersTest"));
+  return fullSnap.exists() ? fullSnap.val() : {};
 }
 
-function generateReceiptHTML(order, pageNumber) {
-  return `
-<div style="width:80mm; min-height:120mm; padding:2mm; box-sizing:border-box; font-family:'Tajawal', sans-serif;">
+// ملاحظة: findOrderInTree/buildLabelHTML/attachLogoFallback أصبحت بملف
+// labelTemplate.js المشترك (محمّل بالأعلى) — نفس التصميم بالضبط يُستخدم
+// أيضاً بصفحة labels-print.html لتوليد PDF بالسيرفر (زر "مشاركة")
 
-<!-- السطر العلوي: شعار المراد + QR + شعار الوسيط -->
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0mm;">
-
-  <!-- شعار المراد -->
-<img src="almurad-logo.png" style="width:20mm; height:auto; margin-top:-2mm;">
-
-  <!-- QR كود -->
-<div style="display:flex; justify-content:center; align-items:center; width:100%;">
-  <img 
-    src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${order.receiptNum}" 
-    style="width:20mm; height:20mm; margin-top:2mm;"
-  >
-</div>
-
-
-
-  <!-- شعار الوسيط -->
-  <div style="text-align:center;">
-    <img src="alwaseet-logo.png" style="width:15mm; height:auto;">
-    <div style="font-size:9px; margin-top:1mm; font-weight:bold;">KRK9</div>
-  </div>
-
-</div>
-
-<!-- رقم الوصل -->
-<div style="
-  text-align:center; 
-  font-size:11px; 
-  margin-top:3mm; 
-  font-weight:bold;">
-  رقم الوصل: ${order.receiptNum || "--"}
-</div>
-
-<!-- التاريخ + رقم الطلب -->
-<div style="display:flex; justify-content:space-between; margin-top:0mm; font-size:11px;">
-  <div>التاريخ: ${new Date().toLocaleDateString()}</div>
-  <div>طلب رقم: ${order.id}</div>
-</div>
-
-<hr style="margin:2mm 0 1mm;">
-
-<!-- الصندوقين -->
-<div style="display:flex; gap:2mm; margin-top:0mm;">
-
-  <div style="flex:1; border:1px solid #000; padding:2mm; border-radius:3px; font-size:10px;">
-    <b>تفاصيل الطلب</b><br>
-    مجموع السعر: ${order.totalPrice} د.ع<br>
-    عدد القطع: ${order.totalQty}<br>
-    نوع البضاعة: ${order.totalProducts}
-  </div>
-
-  <div style="flex:1; border:1px solid #000; padding:2mm; border-radius:3px; font-size:10px;">
-    <b>عنوان الشحن</b><br>
-    الشركة: AL-MURAD<br>
-    المحافظة: ${order.city || ""}<br>
-    المنطقة: ${order.area || ""}<br>
-    أقرب نقطة: ${order.address || ""}<br>
-    اسم الزبون: ${order.advertiser || ""}
-  </div>
-
-</div>
-const notesText = order.notes ? order.notes.trim() : "لا توجد";
-
-<!-- 🔥🔥 مربع الملاحظات فوق الجدول -->
-<div style="
-  border:1px solid #000;
-  padding:2mm;
-  border-radius:3px;
-  margin-top:2mm;
-  font-size:10px;
-">
-  <b>ملاحظات:</b><br>
-${notesText}
-
-</div>
-
-<!-- جدول المنتجات -->
-<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2mm;">
-  <thead>
-    <tr style="border-top:1px solid #000;">
-      <th style="border:1px solid #000;">#</th>
-      <th style="border:1px solid #000;">المنتج</th>
-      <th style="border:1px solid #000;">المتغير</th>
-      <th style="border:1px solid #000;">الكمية</th>
-      <th style="border:1px solid #000;">السعر</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    ${
-     cleanProducts.map((p, i)=>`
-
-        <tr>
-          <td style="border:1px solid #000; text-align:center;">${i+1}</td>
-<td style="border:1px solid #000;">
-  ${p.name && p.name !== notesText ? p.name : "-"}
-</td>
-          <td style="border:1px solid #000;">
-            ${p.variants ? Object.entries(p.variants).map(([k,v])=>`${k}: ${v}`).join(" | ") : ""}
-          </td>
-          <td style="border:1px solid #000; text-align:center;">${p.qty}</td>
-       <td style="border:1px solid #000;">
-  ${p.name && p.name.trim() !== notesText ? p.name : "-"}
-</td>
-
-        </tr>
-      `).join("")
-    }
-  </tbody>
-</table>
-
-<!-- رقم الصفحة -->
-<div style="text-align:center; font-size:11px; margin-top:3mm;">
-  ${pageNumber}
-</div>
-
-</div>
-`;
+// لبحث عن طلب منفرد وحيد (مو دفعة) — يسحب الشجرة مرة وحدة وينتهي
+async function findOrder(orderId) {
+  const tree = await fetchAllOrdersTree();
+  return findOrderInTree(tree, orderId);
 }
 
-async function drawReceipt(doc, order, muradLogo, waseetLogo, qrBase64) {
-let y = 6;
-
-// ===== HEADER =====
-doc.addImage(waseetLogo, "PNG", 5, y, 14, 14);
-doc.addImage(qrBase64, "PNG", 33, y, 14, 14);
-doc.addImage(muradLogo, "PNG", 60, y, 14, 14);
-
-y += 18;
-
-// ===== INFO LINE =====
-doc.setFontSize(7);
-doc.text(`رقم الوصل: ${order.receiptNum}`, 40, y, { align: "center" });
-doc.text(`طلب رقم: ${order.id}`, 5, y, { align: "left" });
-doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 75, y, { align: "right" });
-
-y += 3;
-doc.setLineWidth(0.5);
-doc.line(5, y, 75, y);
-y += 3;
-
-// ===== BOXES =====
-const boxHeight = 30;
-
-// يمين – تفاصيل الطلب
-doc.rect(42, y, 33, boxHeight);
-doc.setFontSize(7);
-doc.text("تفاصيل الطلب", 58, y + 4, { align: "center" });
-doc.text(`مجموع السعر: ${order.totalPrice} د.ع`, 74, y + 10, { align: "right" });
-doc.text(`عدد القطع: ${order.totalQty}`, 74, y + 15, { align: "right" });
-doc.text(`نوع البضاعة: ${order.totalProducts}`, 74, y + 20, { align: "right" });
-
-// يسار – عنوان الشحن
-doc.rect(5, y, 33, boxHeight);
-doc.text("عنوان الشحن", 22, y + 4, { align: "center" });
-doc.text(`الشركة: AL-MURAD`, 7, y + 10, { align: "left" });
-doc.text(`المحافظة: ${order.city}`, 7, y + 15, { align: "left" });
-doc.text(`المنطقة: ${order.area}`, 7, y + 20, { align: "left" });
-doc.text(`أقرب نقطة: ${order.address}`, 7, y + 25, { align: "left" });
-
-y += boxHeight + 3;
-
-// ===== NOTES =====
-doc.rect(5, y, 70, 12);
-doc.text("ملاحظات:", 70, y + 4, { align: "right" });
-doc.setFontSize(7);
-doc.text(order.notes || "-", 7, y + 9, { align: "left" });
-
-y += 15;
-
-// ===== TABLE =====
-doc.setFontSize(7);
-
-// header row
-doc.rect(5, y, 6, 6);   // #
-doc.rect(11, y, 34, 6); // المنتج
-doc.rect(45, y, 12, 6); // المتغير
-doc.rect(57, y, 9, 6);  // الكمية
-doc.rect(66, y, 9, 6);  // السعر
-
-doc.text("#", 8, y + 4, { align: "center" });
-doc.text("المنتج", 28, y + 4, { align: "center" });
-doc.text("المتغير", 51, y + 4, { align: "center" });
-doc.text("الكمية", 61, y + 4, { align: "center" });
-doc.text("السعر", 71, y + 4, { align: "center" });
-
-y += 6;
-
-// row
-doc.rect(5, y, 6, 6);
-doc.rect(11, y, 34, 6);
-doc.rect(45, y, 12, 6);
-doc.rect(57, y, 9, 6);
-doc.rect(66, y, 9, 6);
-
-doc.text("1", 8, y + 4, { align: "center" });
-doc.text(order.totalProducts, 44, y + 4, { align: "right" });
-doc.text("-", 51, y + 4, { align: "center" });
-doc.text(order.totalQty.toString(), 61, y + 4, { align: "center" });
-doc.text(order.totalPrice.toString(), 71, y + 4, { align: "center" });
-
-
-  // ملاحظات
-  doc.setFontSize(12);
-  doc.text("الملاحظات", 5, y);
-  y += 5;
-
-  doc.setFontSize(9);
-  doc.text(order.notes || "لا توجد", 5, y);
-}
-async function findOrder(db, orderId) {
-  const statuses = [
-    "مثبت", "قيد التجهيز", "قيد التوصيل", "قيد المعالجة",
-    "new", "جديد", "تم التسليم", "راجع", "رفض",
-    "بانتظار البضاعة", "تم استلام الراجع"
-  ];
-  for (const status of statuses) {
-    const snap = await get(ref(db, `ordersTest/${status}/${orderId}`));
-    if (snap.exists()) return snap;
-  }
-  return { exists: () => false, val: () => null };
+// 📱 بالموبايل: نشارك الوصل مباشرة (واتساب/تلي/الخ) عبر مشاركة النظام.
+// 💻 باللابتوب/الحاسوب: نطبع عبر إطار iframe منعزل (بلا أي تغيير بتجربة الطباعة نفسها).
+function isMobileDevice() {
+  const ua = navigator.userAgent || "";
+  return /Android|iPhone|iPad|iPod/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua));
 }
 
-// ========== 1) طباعة جميع الطلبات في السجل ==========
-window.printInvoice = async function (logId) {
-  const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
-  if (!snap.exists()) {
-    alert("لا توجد طلبات للطباعة");
-    return;
-  }
+// ملاحظة: انتظار تحميل الصور أصبح waitForLabelImages بملف labelTemplate.js المشترك
 
-const ordersRefs = Object.values(snap.val());
-const orders = [];
+// ملاحظة: fitLabelPagesToBox (تصغير الوصولات الطويلة تلقائياً) أصبحت
+// بملف labelTemplate.js المشترك (محمّل بالأعلى) — تُستخدم هنا وبصفحة
+// labels-print.html (توليد PDF) بنفس المنطق بالضبط.
 
-for (const o of ordersRefs) {
-const fullSnap = await findOrder(db, o.orderId);
-  if (fullSnap.exists()) {
-    const fullOrder = fullSnap.val();
-    fullOrder.id = o.orderId;
-    fullOrder.receiptNum = o.receiptNum;
-    orders.push(fullOrder);
-  }
-}
-  const { jsPDF } = window.jspdf;
+// ملاحظة مهمة (2026-09-16): حذفنا تماماً مسار "تصوير الوصل" (html2canvas)
+// ومولّد PDF اليدوي اللي كانا هنا سابقاً — سبب مشكلتين حقيقيتين اشتكى
+// منهم المستخدم: (1) بطء شديد بالدفعات الكبيرة (تصوير كل وصل صورة تلو
+// الأخرى بجهاز موبايل ضعيف)، و(2) وضوح أقل من جودة الطباعة الحقيقية
+// (صورة مرسومة، مو نص حقيقي). الحل الصحيح: توليد PDF بجودة الطباعة
+// الحقيقية صار مسؤولية السيرفر (Puppeteer + labels-print.html) — شوف
+// handleShareInvoice وhandlePrintSingleOrder بالأسفل. ما نحتاج html2canvas
+// نهائياً هنا بعد اليوم.
 
-const doc = new jsPDF({
-  unit: "mm",
-  format: [80, 120],
-  orientation: "portrait",
-  compress: true
-});
+// يطبع الليبلات داخل إطار iframe منعزل تماماً، بمقاس ثابت 80×120mm دائماً
+// (مقاس الليبل الفعلي بالطابعة الحرارية — ثابت من البداية، ما نحتاج نقيس
+// أي شي قبل تحديده متل قبل، وهذا وحده يسرّع الطباعة).
+function printLabelsIsolated(labelsHTML) {
+  const frame = document.getElementById("printFrame");
+  const doc = frame.contentWindow.document;
 
+  doc.open();
+  // ⚠️ مهم جداً — سبب مشكلة "الكود يطلع نص بالصفحة" اللي صارت فعلياً:
+  // ممنوع نكتب هنا نص وسوم الصفحة الكاملة (فتح/إغلاق head أو body أو html)
+  // بشكلها الحرفي الكامل، حتى لو مجرد قيمة نصية بجافاسكربت وموب وسم HTML
+  // حقيقي. أدوات التطوير المحلية مثل Live Server تفتش بسذاجة بالملف الخام
+  // عن نص إغلاق الجسم لتحقن سكربت التحديث التلقائي، وتنطبق غلط على وجوده
+  // هنا (بمنتصف نص جافاسكربت)، فتقطع وسم السكربت الحقيقي بمنتصفه ويطلع
+  // كل الكود بعدها كنص ظاهر بالصفحة. الحل: نكتب بس المحتوى ووسم التنسيق،
+  // بدون أي غلاف صفحة كامل — المتصفح يكمّله تلقائياً بنفسه.
+  //
+  // <base> هنا يحل مشكلة "الشعارات ما تطلع بالطباعة": مستند iframe فارغ
+  // مكتوب بـ doc.write ماله عنوان (URL) مضمون يرتبط بمجلد الصفحة الأصلية،
+  // فمسارات الصور النسبية (alwaseet-logo.png، almurad-logo.png...) ممكن
+  // تفشل بالتحميل. بإضافة <base href="عنوان الصفحة الحالية">، نضمن أي
+  // مسار نسبي يتحل دائماً بنفس مجلد الصفحة الأصلية، بغض النظر عن أي فرق
+  // بسلوك المتصفح حول عنوان iframe فارغ.
+  doc.write(`<!DOCTYPE html><base href="${location.href}"><meta charset="UTF-8"><style>${LABEL_STYLE_CSS}</style>${labelsHTML}`);
+  doc.close();
 
-  // الخط
- doc.addFileToVFS("Cairo-Regular.ttf", cairoBase64);
-doc.addFont("Cairo-Regular.ttf", "Cairo", "normal");
-doc.setFont("Cairo");
+  const pageStyle = doc.createElement("style");
+  pageStyle.textContent = `@page { size: 80mm 120mm; margin: 0; }`;
+  doc.head.appendChild(pageStyle);
 
+  attachLogoFallback(doc.body);
 
-  // تحميل الصور مرة واحدة فقط
-const muradLogo = await convertToBase64("almurad-logo.png");
-  const waseetLogo = await convertToBase64("alwaseet-logo.png");
-
-  let firstPage = true;
-
-  for (let order of orders) {
-    if (!firstPage) {
-      doc.addPage([80, 120]);
-    }
-    firstPage = false;
-
-    // تهيئة
-    order.id = order.orderId;
-    order.totalPrice = order.totalPrice || 0;
-    order.totalQty = order.totalQty || 0;
-    order.totalProducts = order.totalProducts || "";
-    order.productsDetailed = order.productsDetailed || [];
-    order.receiptNum = order.receiptNum || "";
-
-    // QR واحد لكل وصل
-    const qrBase64 = await generateQRBase64(order.receiptNum);
-
-    await drawReceipt(doc, order, muradLogo, waseetLogo, qrBase64);
-  }
-
-  doc.save(`All_Receipts_${logId}.pdf`);
-};
-
-
-
-// ========== 2) طباعة وصل واحد ==========
-window.printSingleOrder = async function (orderId, receiptNum) {
-const snap = await findOrder(db, orderId);
-  if (!snap.exists()) {
-    alert("الطلب غير موجود في قاعدة البيانات");
-    return;
-  }
-  const order = snap.val();
-  order.id = orderId;
-  order.receiptNum = receiptNum || order.receiptNum || "";
-  order.totalPrice = order.totalPrice || 0;
-  order.totalQty = order.totalQty || 0;
-  order.totalProducts = order.totalProducts || "";
-  await printRealPDF(order);
-};
-
-async function printRealPDF(order) {
-  console.log("🔥 النسخة الجديدة من printRealPDF تعمل!");
-
-  const { jsPDF } = window.jspdf;
-const doc = new jsPDF({
-  unit: "mm",
-  format: [80, 120],
-  orientation: "portrait",
-  compress: true
-});
-
-
-  // تحميل خط عربي
-  doc.addFileToVFS("Amiri-Regular.ttf", cairoBase64);
-  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-  doc.setFont("Amiri"); // ← ضروري
-
-  // ---------------- تحميل الشعارين ----------------
-const muradLogo = await convertToBase64("almurad-logo.png");
-  const waseetLogo = await convertToBase64("alwaseet-logo.png");
-
-
-  // ---------------- QR ----------------
-  const qrBase64 = await generateQRBase64(order.receiptNum);
-
-  let y = 6;
-
-// شعار المراد المضغوط
-const imgProps = doc.getImageProperties(muradLogo);
-const ratio = imgProps.width / imgProps.height;
-doc.addImage(muradLogo, "PNG", 5, y, 20, 20 / ratio);
-
-
-
-
-  // QR
-doc.addImage(qrBase64, "PNG", 28, y-1, 18, 18);
-
-  y += 26;
-
-doc.setFont("Amiri", "normal");
-  doc.setFontSize(12);
-  doc.text(`رقم الوصل: ${order.receiptNum}`, 5, y);
-  y += 6;
-
-doc.setFont("Amiri", "normal");
-  doc.setFontSize(11);
-  doc.text(`رقم الطلب: ${order.id}`, 5, y); y += 5;
-  doc.text(`التاريخ: ${new Date().toLocaleDateString()}`, 5, y); y += 7;
-
-  doc.line(5, y, 75, y);
-  y += 6;
-
-  doc.setFontSize(12);
-  doc.text("تفاصيل الطلب", 5, y); 
-  y += 6;
-
-  doc.setFontSize(10);
-  doc.text(`إجمالي السعر: ${order.totalPrice} د.ع`, 5, y); y += 5;
-  doc.text(`عدد القطع: ${order.totalQty}`, 5, y); y += 5;
-  doc.text(`نوع البضاعة: ${order.totalProducts}`, 5, y); y += 8;
-
-  doc.setFontSize(12);
-  doc.text("عنوان الشحن", 5, y); 
-  y += 6;
-
-  doc.setFontSize(10);
-  doc.text(`المحافظة: ${order.city}`, 5, y); y += 5;
-  doc.text(`المنطقة: ${order.area}`, 5, y); y += 5;
-  doc.text(`العنوان: ${order.address}`, 5, y); y += 5;
-  doc.text(`الاسم: ${order.advertiser}`, 5, y); y += 8;
-
-
-}
-
-
-
-async function convertToBase64(url) {
-  const blob = await fetch(url).then(r => r.blob());
-  return await new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
+  waitForLabelImages(doc.body).then(() => {
+    fitLabelPagesToBox(doc.querySelectorAll(".label-page"));
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
   });
 }
 
+// ========== 1) طباعة/مشاركة جميع الطلبات الناجحة بدفعة كاملة ==========
+async function handlePrintInvoice(logId, btnEl) {
+  if (btnEl) btnEl.classList.add("busy");
+  try {
+    const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
+    if (!snap.exists()) { toast("لا توجد طلبات للطباعة بهذا السجل", "warn"); return; }
 
-// 🔥 دالة إنشاء QR Base64 (خفيفة + محلية)
-function generateQRBase64(text) {
-  const qr = qrcode(0, 'L'); // أخف مستوى
-  qr.addData(text || "");
-  qr.make();
-  return qr.createDataURL(2); // واضح + خفيف
+    // ✅ فقط الطلبات الناجحة فعلياً تصير وصل — الفاشلة ما إلها رقم وصل
+    // حقيقي أصلاً وكانت تسبب صفحات فاضية زايدة بالملف المطبوع
+    const stubs = Object.values(snap.val()).filter(s => s?.status === "success");
+    if (!stubs.length) { toast("لا توجد طلبات ناجحة بهذا السجل لطباعتها", "warn"); return; }
+
+    // ✅ سحب شجرة الطلبات مرة وحدة بس لكل الدفعة (بدل ما نسحبها من جديد
+    // لكل طلب) — هذا وحده يختصر وقت التحضير من ثواني/دقائق لأجزاء الثانية
+    // مهما كان عدد الطلبات بالدفعة
+    const tree = await fetchAllOrdersTree();
+    const orders = [];
+    for (const stub of stubs) {
+      if (!stub?.orderId) continue;
+      const full = findOrderInTree(tree, stub.orderId);
+      if (full) orders.push({ ...full, receiptNum: stub.receiptNum || full.receiptNum });
+    }
+
+    if (!orders.length) {
+      toast("تعذر إيجاد أي طلب من هذا السجل بقاعدة البيانات الحالية (ربما انحذفت الطلبات لاحقاً)", "error");
+      return;
+    }
+
+    const html = orders.map((o, i) => buildLabelHTML(o, `${i + 1} / ${orders.length}`)).join("");
+    // ✅ الطباعة تفتح دائماً عبر نافذة الطباعة الأصلية بالمتصفح فوراً، بغض
+    // النظر عن نوع الجهاز أو عدد الوصولات (حتى لو 80+) — ما فيها أي تصوير
+    // للوصولات، فسرعتها ثابتة دائماً ومستقلة عن العدد. زر "مشاركة" المنفصل
+    // هو اللي يجيب ملف PDF جاهز من السيرفر للمشاركة المباشرة إذا احتجتها.
+    printLabelsIsolated(html);
+  } catch (err) {
+    console.error(err);
+    toast("صار خطأ غير متوقع أثناء تحضير الطباعة", "error");
+  } finally {
+    if (btnEl) btnEl.classList.remove("busy");
+  }
 }
+window.printInvoice = (logId) => handlePrintInvoice(logId, null);
 
+// ========== 1ب) مشاركة كل وصولات الدفعة كملف PDF واحد (زر "مشاركة") ==========
+// المنفصل بمستوى السجل/الدفعة نفسها فقط — ماله علاقة بطباعة/مشاركة طلب
+// مفرد. ملاحظة مهمة (2026-09-16): ما نبني الـPDF بالمتصفح نهائياً — نطلبه
+// جاهز من السيرفر (نفس تصميم الوصل بالضبط، عبر labels-print.html وPuppeteer
+// بملف backend/server.js)، فيطلع بجودة الطباعة الحقيقية (نص عربي حاد،
+// مو صورة مصوّرة) وسريع حتى لمئات الوصولات لأنه رندر حقيقي بالسيرفر
+// مو تصوير DOM بجهاز موبايل ضعيف. الموبايل بس يجيب الملف الجاهز ويشاركه.
+async function handleShareInvoice(logId, btnEl) {
+  if (btnEl) btnEl.classList.add("busy");
+  const progress = showProgressToast("جاري تجهيز ملف PDF للمشاركة...");
+  try {
+    const res = await fetch(`/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
+    if (!res.ok) {
+      let msg = "تعذر توليد ملف الوصولات";
+      try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+      toast(msg, "error");
+      return;
+    }
+    const pdfBlob = await res.blob();
+    const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
+
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [pdfFile] }))) {
+      try {
+        await navigator.share({ files: [pdfFile], title: "وصولات الشحن - نظام المراد" });
+        return; // ✅ تمت المشاركة
+      } catch (err) {
+        if (err?.name === "AbortError") return; // المستخدم سكّر شاشة المشاركة بنفسه
+        console.warn("⚠️ تعذرت مشاركة ملف PDF مباشرة، رح ننزله كملف بدلها:", err.message);
+      }
+    }
+
+    // احتياط: تنزيل ملف PDF مباشرة إذا المشاركة غير مدعومة/فشلت (الحاسوب غالباً)
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `وصولات-${logId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast("تم تحميل ملف PDF بكل الوصولات (المشاركة المباشرة غير مدعومة بهذا الجهاز)", "info");
+  } catch (err) {
+    console.error(err);
+    toast("صار خطأ غير متوقع أثناء تجهيز ملف المشاركة — تأكد إن السيرفر شغال", "error");
+  } finally {
+    progress.close();
+    if (btnEl) btnEl.classList.remove("busy");
+  }
+}
+window.shareInvoice = (logId) => handleShareInvoice(logId, null);
+
+// ========== 2) طباعة/مشاركة وصل طلب واحد ==========
+// نفس فكرة زر "مشاركة" بالأعلى: بالموبايل نجيب PDF جاهز من السيرفر (وصل
+// واحد بس) ونشاركه مباشرة؛ إذا تعذر (الحاسوب، أو السيرفر ما يجاوب) نرجع
+// للطباعة العادية عبر iframe (نفس ما كانت من قبل — بلا أي تغيير هناك).
+async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
+  if (btnEl) btnEl.classList.add("busy");
+  try {
+    const full = await findOrder(orderId);
+    if (!full) { toast("الطلب غير موجود في قاعدة البيانات", "error"); return; }
+    if (receiptNum) full.receiptNum = receiptNum;
+    const labelHTML = buildLabelHTML(full, "1 / 1");
+
+    if (isMobileDevice() && navigator.share) {
+      try {
+        const qs = `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
+        const res = await fetch(`/api/print-labels-pdf?${qs}`);
+        if (res.ok) {
+          const pdfBlob = await res.blob();
+          const pdfFile = new File([pdfBlob], `وصل-${receiptNum || orderId}.pdf`, { type: "application/pdf" });
+          if (!navigator.canShare || navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({ files: [pdfFile], title: "وصل الشحن - نظام المراد" });
+            return; // ✅ تمت المشاركة
+          }
+        }
+      } catch (err) {
+        if (err?.name === "AbortError") return; // المستخدم سكّر شاشة المشاركة بنفسه
+        console.warn("⚠️ تعذرت مشاركة PDF الوصل، رح نطبع بالطريقة العادية:", err.message);
+      }
+    }
+
+    printLabelsIsolated(labelHTML);
+  } catch (err) {
+    console.error(err);
+    toast("صار خطأ غير متوقع أثناء تحضير الطباعة", "error");
+  } finally {
+    if (btnEl) btnEl.classList.remove("busy");
+  }
+}
+window.printSingleOrder = (orderId, receiptNum) => handlePrintSingleOrder(orderId, receiptNum, null);
 
 </script>
-<!-- 🧾 منطقة الطباعة بالنسبة للوصل -->
-<div id="printArea" style="display:none;"></div>
 
 </body>
-</html> 
+</html>

@@ -487,6 +487,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <div class="sb-item" onclick="goPage('delivery',this)">🚚 التوصيل والخصومات</div>
       <div class="sb-item" onclick="goPage('weborders',this)">🌐 طلبات الموقع <span class="badge" id="webOrdersBadge">0</span></div>
       <div class="sb-label">الإعدادات</div>
+      <div class="sb-item" onclick="goPage('landing',this)">🎯 صفحات الهبوط <span class="badge" id="landingBadge">0</span></div>
+      <div class="sb-item" onclick="goPage('pixels',this)">📡 بكسلات التتبع</div>
       <div class="sb-item" onclick="goPage('settings',this)">⚙️ إعدادات المتجر</div>
     </nav>
     <div class="sb-foot">
@@ -674,6 +676,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
     </div>
 
     <!-- كلمة المرور -->
+    <!-- كلمة المرور -->
     <div class="setting-card">
       <h4>🔐 تغيير كلمة المرور</h4>
       <div class="fg"><label class="fl">كلمة المرور الحالية</label><input class="fi" type="password" id="oldPw"></div>
@@ -707,6 +710,41 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       </div>
       <div id="woStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
       <div id="woGrid"></div>
+    </div>
+
+    <!-- LANDING PAGES -->
+    <div class="page" id="page-landing">
+      <div class="sec-head">
+        <div class="sec-title">🎯 صفحات الهبوط</div>
+        <button class="btn btn-orange" onclick="openAddLanding()">➕ صفحة هبوط جديدة</button>
+      </div>
+      <div class="slider-admin-grid" id="landingGrid"></div>
+    </div>
+
+    <!-- PIXELS PAGE -->
+    <div class="page" id="page-pixels">
+      <div class="sec-head"><div class="sec-title">📡 بكسلات التتبع (فيسبوك وتيك توك)</div></div>
+      <div style="background:#ebf4ff;border:1px solid #bee3f8;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#2b6cb0;line-height:1.9;">
+        📌 هذه البكسلات تنطبق تلقائياً على <strong>كل صفحات الهبوط</strong> اللي ما حددتلها بكسل خاص بيها.
+        تكدر تحدد بكسل مختلف لصفحة معينة من داخل نفس الصفحة بقسم "🎯 صفحات الهبوط".
+      </div>
+      <div class="settings-grid">
+        <div class="setting-card">
+          <h4>📘 Facebook Pixel</h4>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+            تكدر تلقى الـ Pixel ID من <strong>Meta Events Manager</strong> — رقم يتكون من 15-16 خانة.
+          </div>
+          <div class="fg"><label class="fl">Facebook Pixel ID</label><input class="fi" id="sFbPixel" placeholder="1234567890123456" style="direction:ltr;"></div>
+        </div>
+        <div class="setting-card">
+          <h4>🎵 TikTok Pixel</h4>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+            تكدر تلقى الـ Pixel ID من <strong>TikTok Ads Manager > Assets > Events</strong> — يبدأ بحرف C غالباً.
+          </div>
+          <div class="fg"><label class="fl">TikTok Pixel ID</label><input class="fi" id="sTtPixel" placeholder="CXXXXXXXXXXXXXXXXXXX" style="direction:ltr;"></div>
+        </div>
+      </div>
+      <button class="btn btn-orange" style="margin-top:20px;" onclick="saveTrackingPixels()">💾 حفظ البكسلات العامة</button>
     </div>
 
 </main>
@@ -875,6 +913,81 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 </div>
+<!-- MODAL: ADD/EDIT LANDING PAGE -->
+<div class="overlay" id="landingModal">
+<div class="modal" style="max-width:700px;">
+  <div class="modal-head">
+    <h3 id="landingModalTitle">➕ صفحة هبوط جديدة</h3>
+    <button class="modal-x" onclick="closeLandingModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="fr2">
+      <div class="fg"><label class="fl">عنوان الصفحة (داخلي، للإدارة فقط) *</label><input class="fi" id="lTitle" placeholder="هبوط - خلاط عصير محمول"></div>
+      <div class="fg"><label class="fl">الرابط (بالإنكليزي، بدون مسافات)</label><input class="fi" id="lSlug" placeholder="blendgo" style="direction:ltr;"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">اسم المنتج البارز (يظهر كبير)</label><input class="fi" id="lProductName" placeholder="BlendGo"></div>
+      <div class="fg"><label class="fl">وسم (اختياري)</label><input class="fi" id="lBadge" placeholder="جديد"></div>
+    </div>
+    <div class="fg"><label class="fl">الوصف التحفيزي تحت اسم المنتج</label><input class="fi" id="lTagline" placeholder="خلاط عصير محمول — طازج. صحي. معك في كل مكان"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">السعر (د.ع) *</label><input class="fi" type="number" id="lPrice" placeholder="35000"></div>
+      <div class="fg"><label class="fl">السعر قبل الخصم (اختياري، يظهر مشطوب)</label><input class="fi" type="number" id="lOldPrice" placeholder="45000"></div>
+    </div>
+    <hr class="fdiv">
+    <div class="fsec">🖼️ الصورة الرئيسية للمنتج</div>
+    <div style="display:flex;gap:8px;">
+      <input class="fi" id="lMainImage" placeholder="https://رابط-الصورة.jpg" style="direction:ltr;flex:1;">
+      <button class="btn btn-navy btn-sm" onclick="pickImg('lMainImage','lMainImageFile')">📁 رفع</button>
+      <input type="file" id="lMainImageFile" accept="image/*" style="display:none" onchange="uploadSlideImg(this,'lMainImage')">
+    </div>
+    <hr class="fdiv">
+    <div class="fsec">✨ مزايا المنتج (تظهر كأيقونات بصف واحد)</div>
+    <div class="fr3" style="margin-bottom:8px;">
+      <div class="fg"><label class="fl">إيموجي</label><input class="fi" id="lFeatIcon" placeholder="🔋" style="text-align:center;font-size:20px;"></div>
+      <div class="fg" style="grid-column:span 2;"><label class="fl">نص المزية</label>
+        <div style="display:flex;gap:8px;">
+          <input class="fi" id="lFeatTitle" placeholder="بطارية تدوم حتى 15 كوب" style="flex:1;">
+          <button class="btn btn-success btn-sm" onclick="addFeature()">➕</button>
+        </div>
+      </div>
+    </div>
+    <div id="featuresList" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <hr class="fdiv">
+    <div class="fsec">🛡️ شارات الثقة (تظهر أسفل الصفحة)</div>
+    <div class="fr3">
+      <div class="fg"><label class="fl">شارة 1</label><input class="fi" id="lG1t" placeholder="ضمان 7 أيام"></div>
+      <div class="fg"><label class="fl">شارة 2</label><input class="fi" id="lG2t" placeholder="توصيل سريع"></div>
+      <div class="fg"><label class="fl">شارة 3</label><input class="fi" id="lG3t" placeholder="منتج أصلي 100%"></div>
+    </div>
+    <hr class="fdiv">
+    <div class="fg"><label class="fl">واتساب مخصص لهذه الصفحة (اختياري)</label><input class="fi" id="lWhatsapp" placeholder="9647XXXXXXXXX" style="direction:ltr;"></div>
+    <hr class="fdiv">
+    <div class="fsec">🎯 بكسلات التتبع (فيسبوك وتيك توك)</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <input type="checkbox" id="lUseCustomPixel" onchange="togglePixelFields()" style="width:18px;height:18px;">
+      <label style="font-size:13px;font-weight:700;color:var(--navy);">استخدام بكسل مختلف لهذه الصفحة (غير بكسل المتجر العام)</label>
+    </div>
+    <div id="customPixelFields" style="display:none;">
+      <div class="fr2">
+        <div class="fg"><label class="fl">Facebook Pixel ID</label><input class="fi" id="lFbPixel" placeholder="1234567890123456" style="direction:ltr;"></div>
+        <div class="fg"><label class="fl">TikTok Pixel ID</label><input class="fi" id="lTtPixel" placeholder="CXXXXXXXXXXXXXXXXXXX" style="direction:ltr;"></div>
+      </div>
+    </div>
+    <hr class="fdiv">
+    <div style="display:flex;gap:8px;align-items:center;background:#f0fff4;padding:12px;border-radius:10px;border:1px solid #c6f6d5;">
+      <input type="checkbox" id="lActive" checked style="width:18px;height:18px;cursor:pointer;">
+      <label style="font-size:14px;font-weight:700;color:#276749;">✅ الصفحة مفعّلة ومتاحة للزوار</label>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeLandingModal()">إلغاء</button>
+    <button class="btn btn-orange" onclick="saveLanding()">💾 حفظ صفحة الهبوط</button>
+  </div>
+</div>
+</div>
+
+<!-- CROP MODAL -->
 <!-- CROP MODAL -->
 <div class="overlay" id="cropModal">
 <div class="modal" style="max-width:600px;">
@@ -937,16 +1050,14 @@ window.logout = () => {
   localStorage.removeItem('admin_logged');
   location.reload();
 };
-// auto login
-if (localStorage.getItem('admin_logged')==='1') {
-  document.getElementById('loginPage').style.display='none';
-  document.getElementById('adminLayout').style.display='flex';
-}
-
+// تم إلغاء صفحة تسجيل الدخول
+document.getElementById('loginPage').style.display='none';
+document.getElementById('adminLayout').style.display='flex';
+loadAll();
 // ══════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════
-const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',delivery:'التوصيل والخصومات',settings:'إعدادات المتجر',weborders:'طلبات الموقع'};
+const titles = {dashboard:'لوحة التحكم',products:'المنتجات',categories:'الفئات',slider:'البنرات والسلايدر',delivery:'التوصيل والخصومات',settings:'إعدادات المتجر',weborders:'طلبات الموقع',landing:'صفحات الهبوط',pixels:'بكسلات التتبع'};
 window.goPage = (id, el) => {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
@@ -960,6 +1071,8 @@ window.goPage = (id, el) => {
   if(id==='slider') renderSlides();
   if(id==='settings') loadSettings();
 if(id==='weborders') loadWebOrders();
+  if(id==='landing') renderLandingPages();
+    if(id==='pixels') loadSettings();
   if(id==='dashboard') loadDash();
 };
 window.toggleSb = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobOverlay').classList.toggle('show'); };
@@ -974,6 +1087,9 @@ let allSlides = {};
 let editProdKey = null;
 let editCatKey = null;
 let editSlideKey = null;
+let allLanding = {};
+let editLandingKey = null;
+let landingFeatures = [];
 let prodImages = []; // {url, storageRef, isNew, file}
 let prodVariants = []; // {type, val, qty}
 
@@ -981,7 +1097,7 @@ let prodVariants = []; // {type, val, qty}
 // LOAD ALL
 // ══════════════════════════════════════
 async function loadAll() {
-  await Promise.all([loadProds(), loadCats(), loadSlides()]);
+await Promise.all([loadProds(), loadCats(), loadSlides(), loadLandingPages()]);
   loadDash();
 }
 
@@ -1000,7 +1116,174 @@ async function loadSlides() {
   const snap = await get(ref(db,'storeSlides'));
   allSlides = snap.exists() ? snap.val() : {};
 }
+async function loadLandingPages() {
+  const snap = await get(ref(db,'landingPages'));
+  allLanding = snap.exists() ? snap.val() : {};
+  document.getElementById('landingBadge').textContent = Object.keys(allLanding).length;
+}
 
+function renderLandingPages() {
+  const grid = document.getElementById('landingGrid');
+  const entries = Object.entries(allLanding).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+  if(!entries.length){
+    grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);">ما عندك صفحات هبوط بعد<br>أنشئ وحدة جديدة من الزر أعلاه</div>`;
+    return;
+  }
+  grid.innerHTML = entries.map(([slug,l])=>`
+    <div class="slide-admin-card">
+      <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;background:#f0f4f8;flex-shrink:0;">
+        ${l.mainImage?`<img src="${l.mainImage}" style="width:100%;height:100%;object-fit:cover;">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;">🎯</div>'}
+      </div>
+      <div class="slide-info">
+        <div class="slide-title-text">${l.title||slug} ${l.active===false?'• ⛔ معطّلة':''}</div>
+        <div class="slide-sub-text">IQD ${Number(l.price||0).toLocaleString()} • /landing.html?id=${slug}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="copyLandingLink('${slug}')">🔗 نسخ</button>
+      <button class="btn btn-navy btn-sm" onclick="window.open('https://almurad.store/landing.html?id=${slug}','_blank')">👁️</button>
+      <button class="btn btn-navy btn-sm" onclick="openEditLanding('${slug}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteLanding('${slug}')">🗑</button>
+    </div>`).join('');
+}
+
+window.copyLandingLink = (slug) => {
+  const url = `https://almurad.store/landing.html?id=${slug}`;
+  navigator.clipboard.writeText(url).then(()=>toast('✅ تم نسخ الرابط','s'));
+};
+
+window.openAddLanding = () => {
+  editLandingKey = null; landingFeatures = [];
+  document.getElementById('landingModalTitle').textContent = '➕ صفحة هبوط جديدة';
+  ['lTitle','lSlug','lBadge','lProductName','lTagline','lPrice','lOldPrice','lMainImage',
+   'lG1t','lG2t','lG3t','lWhatsapp','lFbPixel','lTtPixel'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('lActive').checked = true;
+  document.getElementById('lUseCustomPixel').checked = false;
+  togglePixelFields();
+  document.getElementById('featuresList').innerHTML='';
+  document.getElementById('landingModal').classList.add('open');
+};
+
+window.openEditLanding = (slug) => {
+  const l = allLanding[slug]; if(!l) return;
+  editLandingKey = slug;
+  landingFeatures = l.features ? [...l.features] : [];
+  document.getElementById('landingModalTitle').textContent = `✏️ تعديل: ${l.title||slug}`;
+  document.getElementById('lTitle').value = l.title||'';
+  document.getElementById('lSlug').value = slug;
+  document.getElementById('lBadge').value = l.badge||'';
+  document.getElementById('lProductName').value = l.productName||'';
+  document.getElementById('lTagline').value = l.tagline||'';
+  document.getElementById('lPrice').value = l.price||'';
+  document.getElementById('lOldPrice').value = l.oldPrice||'';
+  document.getElementById('lMainImage').value = l.mainImage||'';
+  document.getElementById('lG1t').value = l.guarantee1||'ضمان 7 أيام';
+  document.getElementById('lG2t').value = l.guarantee2||'توصيل سريع';
+  document.getElementById('lG3t').value = l.guarantee3||'منتج أصلي 100%';
+  document.getElementById('lWhatsapp').value = l.whatsapp||'';
+  document.getElementById('lActive').checked = l.active !== false;
+  document.getElementById('lUseCustomPixel').checked = !!l.useCustomPixel;
+  document.getElementById('lFbPixel').value = l.fbPixelId||'';
+  document.getElementById('lTtPixel').value = l.ttPixelId||'';
+  togglePixelFields();
+  renderFeaturesList();
+  document.getElementById('landingModal').classList.add('open');
+};
+
+window.closeLandingModal = () => document.getElementById('landingModal').classList.remove('open');
+
+window.togglePixelFields = () => {
+  const show = document.getElementById('lUseCustomPixel').checked;
+  document.getElementById('customPixelFields').style.display = show?'block':'none';
+};
+
+window.addFeature = () => {
+  const icon = document.getElementById('lFeatIcon').value.trim() || '✅';
+  const title = document.getElementById('lFeatTitle').value.trim();
+  if(!title) return toast('اكتب نص المزية أولاً','e');
+  landingFeatures.push({icon, title});
+  document.getElementById('lFeatIcon').value='';
+  document.getElementById('lFeatTitle').value='';
+  renderFeaturesList();
+};
+window.removeFeature = (i) => { landingFeatures.splice(i,1); renderFeaturesList(); };
+function renderFeaturesList(){
+  document.getElementById('featuresList').innerHTML = landingFeatures.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7fafc;border-radius:8px;border:1px solid var(--border);">
+      <span style="font-size:13px;font-weight:700;color:var(--navy);flex:1;">${f.icon} ${f.title}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeFeature(${i})">🗑</button>
+    </div>`).join('');
+}
+
+function slugify(s){
+  return s.trim().toLowerCase()
+    .replace(/[^\u0600-\u06FFa-z0-9\s-]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-');
+}
+
+window.saveLanding = async () => {
+  const title = document.getElementById('lTitle').value.trim();
+  let slug = document.getElementById('lSlug').value.trim();
+  const price = parseFloat(document.getElementById('lPrice').value)||0;
+  if(!title) return toast('أدخل عنوان الصفحة','e');
+  if(!price) return toast('أدخل سعر المنتج','e');
+  if(!slug) slug = title;
+  slug = slugify(slug);
+  if(!slug) return toast('الرابط غير صالح، جرب اسم آخر','e');
+
+  const key = editLandingKey || slug;
+  if(!editLandingKey && allLanding[key]) return toast('يوجد صفحة هبوط بنفس الرابط، غيّره','e');
+
+  const data = {
+    title,
+    badge: document.getElementById('lBadge').value.trim(),
+    productName: document.getElementById('lProductName').value.trim(),
+    tagline: document.getElementById('lTagline').value.trim(),
+    price,
+    oldPrice: parseFloat(document.getElementById('lOldPrice').value)||0,
+    mainImage: document.getElementById('lMainImage').value.trim(),
+    features: landingFeatures,
+    guarantee1: document.getElementById('lG1t').value.trim()||'ضمان 7 أيام',
+    guarantee2: document.getElementById('lG2t').value.trim()||'توصيل سريع',
+    guarantee3: document.getElementById('lG3t').value.trim()||'منتج أصلي 100%',
+    whatsapp: document.getElementById('lWhatsapp').value.trim(),
+    active: document.getElementById('lActive').checked,
+    useCustomPixel: document.getElementById('lUseCustomPixel').checked,
+    fbPixelId: document.getElementById('lFbPixel').value.trim(),
+    ttPixelId: document.getElementById('lTtPixel').value.trim(),
+    createdAt: allLanding[key]?.createdAt || Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  if(editLandingKey && editLandingKey !== key) await remove(ref(db,'landingPages/'+editLandingKey));
+  await set(ref(db,'landingPages/'+key), data);
+  allLanding[key] = data;
+  if(editLandingKey && editLandingKey !== key) delete allLanding[editLandingKey];
+
+  toast(editLandingKey?'✅ تم تعديل صفحة الهبوط':'✅ تم إنشاء صفحة الهبوط','s');
+  closeLandingModal();
+  renderLandingPages();
+  document.getElementById('landingBadge').textContent = Object.keys(allLanding).length;
+};
+
+window.deleteLanding = async (slug) => {
+  const l = allLanding[slug];
+  if(!confirm(`حذف صفحة "${l?.title||slug}"؟ لا يمكن التراجع.`)) return;
+  await remove(ref(db,'landingPages/'+slug));
+  delete allLanding[slug];
+  toast('🗑 تم حذف صفحة الهبوط','i');
+  renderLandingPages();
+  document.getElementById('landingBadge').textContent = Object.keys(allLanding).length;
+};
+
+window.saveTrackingPixels = async () => {
+  await update(ref(db,'storeSettings'), {
+    fbPixelId: document.getElementById('sFbPixel').value.trim(),
+    ttPixelId: document.getElementById('sTtPixel').value.trim(),
+  });
+  toast('✅ تم حفظ البكسلات','s');
+};
 // ══════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════
@@ -1469,6 +1752,8 @@ async function loadSettings() {
   if(s.telegram) document.getElementById('sTelegram').value=s.telegram;
   if(s.facebook) document.getElementById('sFacebook').value=s.facebook;
   if(s.tiktok) document.getElementById('sTiktok').value=s.tiktok;
+  if(s.fbPixelId) document.getElementById('sFbPixel').value=s.fbPixelId;
+  if(s.ttPixelId) document.getElementById('sTtPixel').value=s.ttPixelId;
 }
 window.saveColors=async()=>{
   await update(ref(db,'storeSettings'),{
@@ -1841,8 +2126,7 @@ window.showOrderImgs = (imgs) => {
     </div>`;
   document.body.appendChild(ov);
 };
-// ── INIT ──
-if(localStorage.getItem('admin_logged')==='1') loadAll();
+
 </script>
 </body>
 </html>

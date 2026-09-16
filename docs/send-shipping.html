@@ -80,6 +80,37 @@
       height: 100%; background: linear-gradient(90deg, #043B64, #2980b9);
       transition: width 0.3s; border-radius: 10px;
     }
+
+    /* تحديد الطلبات */
+    .select-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; flex-wrap: wrap; gap: 6px;
+    }
+    #selectedInfo { font-size: 13px; color: #666; font-weight: 600; }
+    .select-bar .mini-btn {
+      background: none; border: 1.5px solid #043B64; color: #043B64;
+      font-weight: 700; font-size: 12px; cursor: pointer;
+      padding: 5px 10px; border-radius: 8px;
+    }
+    .select-bar .mini-btn:active { transform: scale(0.97); }
+    .orders-list {
+      max-height: 340px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .order-row {
+      display: flex; align-items: center; gap: 10px;
+      background: #fafbfc; border: 1.5px solid #e3e7ea; border-radius: 10px;
+      padding: 10px 12px; font-size: 13px; cursor: pointer;
+    }
+    .order-row.checked { border-color: #043B64; background: #f0f7ff; }
+    .order-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+    .order-row .row-id { font-weight: 800; color: #043B64; white-space: nowrap; }
+    .order-row .row-info {
+      flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: #555;
+    }
+    .order-row .row-price { font-weight: 700; color: #333; white-space: nowrap; font-size: 12px; }
+    .empty-msg { text-align: center; color: #999; font-size: 13px; padding: 14px 0; }
   </style>
 </head>
 
@@ -91,36 +122,6 @@
   <span>إرسال الشحنة</span>
 </header>
 
-<!-- نموذج الطباعة (مخفي) -->
-<div id="printArea" style="display:none; font-family: 'Tajawal', sans-serif;">
-  <div style="width:100%; max-width:380px; margin:auto; padding:20px; border:1px solid #000;">
-    <h3 style="text-align:center; margin:0 0 10px;">Shipping Label</h3>
-    <div style="font-size:14px; line-height:1.6;">
-      <b>Order Nr:</b> <span id="p_orderId"></span><br>
-      <b>Tracking Nr:</b> <span id="p_tracking"></span><br>
-      <b>Date:</b> <span id="p_date"></span><br><br>
-      <b>Shipping Address:</b><br>
-      <span id="p_name"></span><br>
-      <span id="p_city"></span><br>
-      <span id="p_region"></span><br>
-      <span id="p_phone"></span><br><br>
-      <b>Sender:</b><br>eng-murad-organization<br><br>
-      <b>Total:</b> <span id="p_total"></span> د.ع<br>
-      <b>Items Quantity:</b> <span id="p_qty"></span><br>
-    </div>
-    <table style="width:100%; margin-top:15px; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="border:1px solid #000; padding:5px;">Item</th>
-          <th style="border:1px solid #000; padding:5px;">Qty</th>
-          <th style="border:1px solid #000; padding:5px;">Price</th>
-        </tr>
-      </thead>
-      <tbody id="p_items"></tbody>
-    </table>
-  </div>
-</div>
-
 <div class="container">
 
   <!-- إعدادات الرفع -->
@@ -130,6 +131,7 @@
     <select id="shippingCompany">
     <option value="waseet" selected>🚚 الوسيط</option>
 <option value="prime">🚀 برايم</option>
+<option value="jenni">📦 Jenni</option>
     </select>
 
     <div class="stats">
@@ -145,6 +147,21 @@
         <div class="stat-num" id="failCount" style="color:#e74c3c;">0</div>
         <div class="stat-label">فاشل</div>
       </div>
+    </div>
+  </div>
+
+  <!-- تحديد الطلبات -->
+  <div class="card">
+    <div class="card-title">📋 حدد الطلبات المراد رفعها</div>
+    <div class="select-bar">
+      <span id="selectedInfo">المحدد: 0 من 0</span>
+      <span style="display:flex; gap:6px;">
+        <button type="button" class="mini-btn" id="selectAllBtn">تحديد الكل</button>
+        <button type="button" class="mini-btn" id="selectNoneBtn">إلغاء التحديد</button>
+      </span>
+    </div>
+    <div id="ordersList" class="orders-list">
+      <div class="empty-msg">جاري التحميل...</div>
     </div>
   </div>
 
@@ -190,6 +207,7 @@ const db  = getDatabase(app);
 // متغيرات
 // ============================================================
 let readyOrders = [];
+let selectedOrderIds = new Set();
 let successCount = 0;
 let failCount    = 0;
 let orderResults = [];
@@ -253,10 +271,61 @@ async function loadOrders() {
       addLog("ℹ️ لا توجد طلبات بحالة 'مثبت' جاهزة للرفع", "warn");
     }
 
+    // تحديد الكل افتراضياً في كل مرة تتحدث فيها القائمة
+    selectedOrderIds = new Set(readyOrders.map(o => o.id));
+    renderOrderList();
+
   } catch (err) {
     addLog(`❌ خطأ في تحميل الطلبات: ${err.message}`, "err");
   }
 }
+
+// ============================================================
+// عرض قائمة الطلبات القابلة للتحديد
+// ============================================================
+function renderOrderList() {
+  const box = document.getElementById("ordersList");
+
+  if (readyOrders.length === 0) {
+    box.innerHTML = `<div class="empty-msg">لا توجد طلبات جاهزة حالياً</div>`;
+    updateSelectedInfo();
+    return;
+  }
+
+  box.innerHTML = readyOrders.map(o => `
+    <label class="order-row ${selectedOrderIds.has(o.id) ? "checked" : ""}" data-row="${o.id}">
+      <input type="checkbox" data-id="${o.id}" ${selectedOrderIds.has(o.id) ? "checked" : ""}>
+      <span class="row-id">#${o.id}</span>
+      <span class="row-info">${o.productName || "بدون اسم"}${o.advertiser ? " — 🏢 " + o.advertiser : ""}</span>
+      <span class="row-price">${Number(o.totalPrice || o.price || 0).toLocaleString("en-US")} د.ع</span>
+    </label>
+  `).join("");
+
+  box.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = cb.dataset.id;
+      if (cb.checked) selectedOrderIds.add(id); else selectedOrderIds.delete(id);
+      cb.closest(".order-row").classList.toggle("checked", cb.checked);
+      updateSelectedInfo();
+    });
+  });
+
+  updateSelectedInfo();
+}
+
+function updateSelectedInfo() {
+  document.getElementById("selectedInfo").textContent =
+    `المحدد: ${selectedOrderIds.size} من ${readyOrders.length}`;
+}
+
+document.getElementById("selectAllBtn").onclick = () => {
+  selectedOrderIds = new Set(readyOrders.map(o => o.id));
+  renderOrderList();
+};
+document.getElementById("selectNoneBtn").onclick = () => {
+  selectedOrderIds = new Set();
+  renderOrderList();
+};
 
 loadOrders();
 
@@ -268,6 +337,14 @@ document.getElementById("startUpload").onclick = async () => {
     addLog("⚠️ لا توجد طلبات مثبتة للرفع", "warn");
     return;
   }
+
+  // فقط الطلبات المحددة فعلياً بالقائمة (يسمح بتقسيم الرفع بين أكثر من شركة)
+  const toUpload = readyOrders.filter(o => selectedOrderIds.has(o.id));
+  if (toUpload.length === 0) {
+    addLog("⚠️ اختر طلب واحد على الأقل قبل الرفع", "warn");
+    return;
+  }
+
 successCount = 0;
   failCount    = 0;
   orderResults = [];
@@ -275,11 +352,16 @@ successCount = 0;
   setLoading(true);
 
   const selectedCompany = document.getElementById("shippingCompany").value;
+  const companyLabel = selectedCompany === "prime" ? "برايم" : selectedCompany === "jenni" ? "Jenni" : "الوسيط";
   addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  addLog(`🚚 شركة الشحن: ${selectedCompany === "prime" ? "برايم" : "الوسيط"}`);
-  addLog(`📦 عدد الطلبات: ${readyOrders.length}`);
+  addLog(`🚚 شركة الشحن: ${companyLabel}`);
+  addLog(`📦 عدد الطلبات المحددة: ${toUpload.length} من أصل ${readyOrders.length}`);
 
   try {
+    // ملاحظة: نستخدم هنا نطاقاً محلياً (shadowing) يقصر متغير readyOrders
+    // على الطلبات المحددة فقط داخل هذا الـ try، بدون أي تعديل على الفروع
+    // الثلاثة أدناه (الوسيط/برايم/Jenni) التي تستخدم الاسم نفسه.
+    const readyOrders = toUpload;
 
     // ==========================
     // 🟢 الوسيط
@@ -375,11 +457,13 @@ if (selectedCompany === "waseet") {
           if (data.success) {
             successCount++;
             addLog(`✔ الطلب #${order.id} — وصل برايم: ${data.shipmentNo}`, "ok");
+            orderResults.push({ orderId: order.id, receiptNum: data.shipmentNo || "", status: "success" });
           } else {
             failCount++;
             // ✅ عرض سبب الفشل بشكل واضح
             const reason = data.msg || data.error || JSON.stringify(data);
             addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+            orderResults.push({ orderId: order.id, receiptNum: "", status: "fail", reason });
           }
 
         } catch (err) {
@@ -391,6 +475,61 @@ if (selectedCompany === "waseet") {
         updateStats();
 
         // تأخير بسيط بين الطلبات لتجنب الحمل الزائد
+        if (i < readyOrders.length - 1) await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    // ==========================
+    // 📦 Jenni
+    // ==========================
+    else if (selectedCompany === "jenni") {
+
+      addLog("🔄 بدء رفع الطلبات إلى Jenni...");
+
+      for (let i = 0; i < readyOrders.length; i++) {
+        const order = readyOrders[i];
+        addLog(`⏳ رفع الطلب #${order.id} (${i + 1}/${readyOrders.length})...`);
+
+        try {
+          const response = await fetch("https://almurad.onrender.com/api/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId:         order.id,
+              shippingCompany: "jenni"
+            })
+          });
+
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            const text = await response.text();
+            failCount++;
+            addLog(`✖ الطلب #${order.id} — استجابة غير صالحة من السيرفر: ${text.slice(0, 100)}`, "err");
+            setProgress(successCount + failCount, readyOrders.length);
+            updateStats();
+            continue;
+          }
+
+          const data = await response.json();
+
+          if (data.success) {
+            successCount++;
+            addLog(`✔ الطلب #${order.id} — وصل Jenni: ${data.shipmentNo}`, "ok");
+            orderResults.push({ orderId: order.id, receiptNum: data.shipmentNo || "", status: "success" });
+          } else {
+            failCount++;
+            const reason = data.msg || data.error || JSON.stringify(data);
+            addLog(`✖ الطلب #${order.id} — فشل: ${reason}`, "err");
+            orderResults.push({ orderId: order.id, receiptNum: "", status: "fail", reason });
+          }
+
+        } catch (err) {
+          failCount++;
+          addLog(`✖ الطلب #${order.id} — خطأ شبكة: ${err.message}`, "err");
+        }
+
+        setProgress(successCount + failCount, readyOrders.length);
+        updateStats();
         if (i < readyOrders.length - 1) await new Promise(r => setTimeout(r, 300));
       }
     }
@@ -410,7 +549,7 @@ if (selectedCompany === "waseet") {
       const ordersObj = {};
       orderResults.forEach((o, i) => { ordersObj[i] = o; });
       await set(ref(db, `shippingLogs/${logId}`), {
-        provider: selectedCompany === "waseet" ? "الوسيط" : "برايم",
+        provider: companyLabel,
         createdAt: Date.now(),
         total: successCount + failCount,
         successCount,

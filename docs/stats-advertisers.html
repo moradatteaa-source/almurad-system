@@ -228,6 +228,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+  import { getWarehouseCached, getOrdersCached } from "./sharedCache.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -271,15 +272,16 @@ document.addEventListener("change", (e) => {
   }
 });
 async function loadData() {
-  const ordersSnap = await get(ref(db, "ordersTest"));
-  if (ordersSnap.exists()) {
+  // ✅ يمر عبر الذاكرة المؤقتة المشتركة (sharedCache.js) بدل تحميل مباشر —
+  // هذي صفحة تقارير/تحليل بس، ما تحتاج دقة أقل من دقيقة، فتستفيد من أي
+  // نسخة حديثة سبق وحمّلتها صفحة ثانية بنفس الجلسة بدون طلب جديد لفايربيس.
+  const ordersData = await getOrdersCached(db);
+  if (ordersData && Object.keys(ordersData).length > 0) {
     allOrders = [];
     const statusSet = new Set();
 
-    ordersSnap.forEach(statusSnap => {
-      const statusName = statusSnap.key;
+    for (const [statusName, val] of Object.entries(ordersData)) {
       statusSet.add(statusName);
-      const val = statusSnap.val();
 
       if (typeof val === "object" && val !== null) {
         Object.values(val).forEach(order => {
@@ -289,7 +291,7 @@ async function loadData() {
           }
         });
       }
-    });
+    }
 
     // ✅ نبني قائمة الحالات تلقائياً من Firebase
     const statusContainer = document.getElementById("statusCheckboxes");
@@ -301,8 +303,8 @@ async function loadData() {
 
   console.log("✅ عدد الطلبات:", allOrders.length);
 
-  const warehouseSnap = await get(ref(db, "warehouse"));
-  if (warehouseSnap.exists()) warehouse = warehouseSnap.val();
+  const warehouseData = await getWarehouseCached(db);
+  if (warehouseData) warehouse = warehouseData;
 
 populateAdvertisers();
   populateSources();

@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "almurad-system"
-  }
+  },
+  "targets": {
+    "almurad-system": {
+      "hosting": {
+        "admin": [
+          "almurad-admin"
+        ],
+        "store": [
+          "almurad-system"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

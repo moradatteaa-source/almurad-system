@@ -210,19 +210,30 @@ export async function createPrimeOrderFromFirebase(orderId) {
 // ============================================================
 // 🔵 تحديث حالات الشحن → يسحب من ordersTest/قيد التوصيل + قيد التجهيز
 // ============================================================
-export async function updatePrimeStatusesFromFirebase() {
+export async function updatePrimeStatusesFromFirebase(preloadedBranches = null) {
   const token = await loginToPrime();
   if (!token) { console.log("❌ Prime login failed"); return; }
 
   // ✅ المسارات التي نتابع فيها طلبات Prime
+  // ملاحظة (تحسين استهلاك فايربيس): نفس الفروع الثلاثة تقرأها أيضاً
+  // updateWaseetStatuses بملف waseetService.js — بدل ما كل وحدة تقرا لحالها
+  // (6 قراءات كاملة كل تشغيلة كرون)، server.js يقرا الفروع مرة وحدة ويمررها
+  // للدالتين. إذا استدعيت هذي الدالة لحالها (مثل /debug/run) تشتغل بنفس
+  // الطريقة القديمة تماماً.
 const pathsToWatch = ["قيد التجهيز", "قيد التوصيل", "راجع"];
   let primeOrders = [];
 
   for (const status of pathsToWatch) {
-    const snap = await get(ref(db, `ordersTest/${status}`));
-    if (!snap.exists()) continue;
+    let branchData;
+    if (preloadedBranches && Object.prototype.hasOwnProperty.call(preloadedBranches, status)) {
+      branchData = preloadedBranches[status];
+    } else {
+      const snap = await get(ref(db, `ordersTest/${status}`));
+      branchData = snap.exists() ? snap.val() : null;
+    }
+    if (!branchData) continue;
 
-    const entries = Object.entries(snap.val())
+    const entries = Object.entries(branchData)
       .filter(([id, o]) => o.shippingCompany === "prime" && o.receiptNum && id !== "_meta")
       .map(([id, o]) => ({
         id,

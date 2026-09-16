@@ -188,6 +188,9 @@ const data = await pushToWaseet(od, token, cityId, regionId, phone);
           ...od,
           status:          "قيد التجهيز",
           receiptNum:      data.data.qr_id,
+          // ✅ نخزّن رابط الكيو آر الحقيقي اللي يرجعه الوسيط مباشرة على الطلب نفسه
+          // (مو بس بسجل الرفع)، حتى يضل متوفر لأي طباعة لاحقة حتى لو انحذف السجل
+          ...(data.data.qr_link ? { qrLink: data.data.qr_link } : {}),
           shippingCompany: "waseet",
           lastUpdateBy:    "waseet-api",
           lastStatusAt:    now,
@@ -223,16 +226,28 @@ const data = await pushToWaseet(od, token, cityId, regionId, phone);
 // ============================================================
 // تحديث الحالات تلقائياً — يُستدعى من الكرون في server.js
 // ============================================================
-export async function updateWaseetStatuses() {
+export async function updateWaseetStatuses(preloadedBranches = null) {
   const token = await loginToWaseet();
   if (!token) { console.log("❌ Waseet login failed"); return; }
 
   // جمع طلبات الوسيط من المسارات المراقبة
+  // ملاحظة (تحسين استهلاك فايربيس): هذي الدالة و updatePrimeStatusesFromFirebase
+  // كانتا كل وحدة تقرا نفس الفروع الثلاثة (قيد التجهيز/قيد التوصيل/راجع) بشكل
+  // منفصل — يعني كل تشغيلة كرون (كل 5 دقائق، 288 مرة باليوم) كانت تسوي 6 قراءات
+  // كاملة بدل 3. السيرفر (server.js) هسه يقرا الفروع مرة وحدة ويمررها هنا
+  // كـ preloadedBranches. إذا استدعيت هذي الدالة لحالها (مثل /debug/run) بدون
+  // تمرير شي، تشتغل بنفس الطريقة القديمة تماماً (قراءة مباشرة).
   let orders = [];
   for (const status of WATCH) {
-    const snap = await get(ref(db, `ordersTest/${status}`));
-    if (!snap.exists()) continue;
-    Object.entries(snap.val()).forEach(([id, o]) => {
+    let branchData;
+    if (preloadedBranches && Object.prototype.hasOwnProperty.call(preloadedBranches, status)) {
+      branchData = preloadedBranches[status];
+    } else {
+      const snap = await get(ref(db, `ordersTest/${status}`));
+      branchData = snap.exists() ? snap.val() : null;
+    }
+    if (!branchData) continue;
+    Object.entries(branchData).forEach(([id, o]) => {
       if (id === "_meta")              return;
       if (o.shippingCompany !== "waseet") return;
       if (!o.receiptNum)               return;

@@ -701,6 +701,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, set, get, update, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { citiesData, allCities } from "./citiesData.js";
+import { getWarehouseCached } from "./sharedCache.js";
     // ⚙️ إعدادات الفايربيس
     const firebaseConfig = {
       apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -722,6 +723,9 @@ import { citiesData, allCities } from "./citiesData.js";
     let allProducts = [];
     let warehouseCache = {};
     let isSaving = false;
+    let dropdownsInitialized = false;
+    const statusOptions = ["جديد", "مثبت", "قيد المعالجة", "بانتظار البضاعة", "رفض"];
+    
 
     // 🔘 تحديد مصدر الطلب
     document.addEventListener("click", (e) => {
@@ -821,13 +825,38 @@ input.addEventListener("focus", () => {
     }
 
     // 📦 تحميل المنتجات من المخزن
-    onValue(ref(db, "warehouse"), (snap) => {
-      if (snap.exists()) {
-        warehouseCache = snap.val();
-   allProducts = Object.values(warehouseCache).map(p => p.name).filter(Boolean);
-        setupDropdowns();
+    // ⚠️ ملاحظة مهمة: onValue هذا كان يشتغل بشكل حي (real-time) — أي تغيير بسيط
+    // بعقدة "warehouse" (مثلاً خصم كمية عند تثبيت طلب من أي موظف آخر) كان
+    // يعيد استدعاء setupDropdowns() عند كل الموظفين المفتوح عندهم الفورم،
+    // فتنمسح قيم المحافظة/المنطقة/الحالة/المنتج المختارة فجأة.
+    // كان تم حل مشكلة "انمسحت القيم" ببناء القوائم مرة وحدة فقط (initDropdownsOnce)
+    // وتحديث allProducts بنفس المرجع (in place) — بس هذا ما حل المشكلة الأصلية:
+    // كل كتابة على أي منتج بأي مكان بالمخزن (من أي موظف) كانت تعيد تحميل
+    // *كامل* شجرة المخزن لكل نموذج "إضافة طلب" مفتوح — وهذا يصير مئات
+    // المرات باليوم مع كل تثبيت/تعديل طلب. القائمة هذي (اسماء المنتجات
+    // للبحث) ما تحتاج تنحدث لحظياً، يكفي كل دقيقتين — الكمية الفعلية
+    // للمخزون تتفحص بشكل حي ودقيق 100% عند التثبيت الفعلي بدالة
+    // deductStockForOrder وبفحص الكمية قبل الحفظ (get() مباشر بدون كاش،
+    // ما تغيرت إطلاقاً) فما فيه أي خطر بيع كمية غير موجودة.
+    async function refreshWarehouseCache() {
+      const data = await getWarehouseCached(db);
+      if (data) {
+        warehouseCache = data;
+        const freshProducts = Object.values(warehouseCache).map(p => p.name).filter(Boolean);
+        allProducts.length = 0;
+        allProducts.push(...freshProducts);
+
+        initDropdownsOnce();
       }
-    });
+    }
+    refreshWarehouseCache();
+    setInterval(refreshWarehouseCache, 120000);
+
+    function initDropdownsOnce() {
+      if (dropdownsInitialized) return;
+      setupDropdowns();
+      dropdownsInitialized = true;
+    }
 
     // 🔄 تحميل متغيرات المنتج
     async function loadVariantsForProduct(container, productName, productObj) {
@@ -836,14 +865,20 @@ input.addEventListener("focus", () => {
       variantsDiv.className = "variants-container";
       variantsDiv.style.marginTop = "10px";
 
-   const allSnap = await get(ref(db, "warehouse"));
-      if (!allSnap.exists()) return;
+   // ملاحظة: عرض المتغيرات بالقائمة المنسدلة فقط — الفحص الفعلي والدقيق
+      // للكمية المتاحة يصير عند التثبيت الفعلي (get() مباشر بدون كاش)، فاستخدام
+      // بيانات مخزّنة مؤقتاً هنا (حتى 75 ثانية) آمن 100% ولا يأثر على الدقة.
+      const warehouseDataForVariants = await getWarehouseCached(db);
+      if (!warehouseDataForVariants) return;
       let stock = {};
-      for (const val of Object.values(allSnap.val())) {
+      for (const val of Object.values(warehouseDataForVariants)) {
         if ((val.name || "").trim() === productName.trim()) { stock = val.stock || {}; break; }
       }
+      // ✅ نعرض كل المتغيرات حتى لو الكمية صفر بالمخزن — بس التثبيت يبقى ممنوع
+      // (يتحقق منه لاحقاً عند اختيار حالة "مثبت"). هذا يخلي الموظف يقدر يسجل
+      // الطلب بحالة "بانتظار البضاعة" حتى إذا المنتج/المتغير خلص من المخزن.
       const activeKeys = Object.entries(stock)
-        .filter(([key, val]) => Number(val) > 0 && key !== "إجمالي الكمية" && key !== "default")
+        .filter(([key]) => key !== "إجمالي الكمية" && key !== "default")
         .map(([key]) => key);
 
       if (activeKeys.length === 0) return;
@@ -1101,9 +1136,14 @@ const mainQty = parseInt(document.getElementById("quantity").value) || "";
       });
       productDiv.appendChild(productDropdown);
 
-      // ✅ الحالات مع "جديد" كافتراضي
-      const statusOptions = ["جديد", "مثبت", "قيد المعالجة", "بانتظار البضاعة", "رفض"];
-   const statusDropdown = createDropdown(statusOptions, "", () => {});
+        // ✅ الحالات مع "جديد" كافتراضي — القائمة فقط، بدون كتابة يدوية
+      const statusDropdown = createDropdown(statusOptions, "", () => {});
+      const statusInput = statusDropdown.querySelector("input");
+      if (statusInput) {
+        statusInput.readOnly = true;
+        statusInput.style.cursor = "pointer";
+        statusInput.style.backgroundColor = "#f8fafc";
+      }
       statusDiv.appendChild(statusDropdown);
     }
 
@@ -1124,6 +1164,11 @@ const mainQty = parseInt(document.getElementById("quantity").value) || "";
       const area = document.querySelector("#area input")?.value.trim();
       const address = document.getElementById("address").value.trim();
       const status = document.querySelector("#status input")?.value.trim() || "جديد";
+
+      // ✅ تحقق صارم: الحالة يجب أن تطابق إحدى القيم المسموحة حصراً
+      if (!statusOptions.includes(status)) {
+        errors.push(`❌ حالة الطلب "${status}" غير صحيحة — يجب اختيارها من القائمة فقط`);
+      }
 
       const strictStatuses = ["مثبت", "قيد التوصيل", "تم التسليم"];
 
@@ -1257,6 +1302,12 @@ async function deductStockForOrder(productsDetailed) {
         return;
       }
 
+      // ✅ إعادة محاولة تلقائية: لاحظنا إن الحفظ يفشل أول مرة وينجح بالمحاولة
+      // الثانية — هذا نمط معروف لعدم اكتمال اتصال Firebase بعد بلحظة فتح
+      // الصفحة أو الضغط على حفظ بسرعة. بدل ما الموظف يضطر يضغط حفظ مرتين
+      // يدوياً، نخلي النظام يعيد المحاولة تلقائياً مرة وحدة قبل ما يطلع خطأ.
+      const maxAttempts = 2;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
         const mainName = document.querySelector("#product input")?.value || "";
@@ -1385,7 +1436,7 @@ if (status === "مثبت") {
               if (!hasV) {
                 const cur = Number(stock.default || 0);
                 if (cur < item.qty) {
-                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}`);
+                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}\n💡 استخدم حالة "بانتظار البضاعة" بدلاً من "مثبت"`);
                   ok = false; break;
                 }
               } else {
@@ -1402,7 +1453,7 @@ if (status === "مثبت") {
                 }
                 const cur = Number(stock[mKey] || 0);
                 if (cur < item.qty) {
-                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}`);
+                  alert(`❌ الكمية غير كافية: ${name}\nالمتاح: ${cur} | المطلوب: ${item.qty}\n💡 استخدم حالة "بانتظار البضاعة" بدلاً من "مثبت"`);
                   ok = false; break;
                 }
               }
@@ -1420,13 +1471,12 @@ if (status === "مثبت") {
 if (status === "مثبت") {
   await deductStockForOrder(productsDetailed);
 }
-        // 📝 تسجيل الهستوري
+// 📝 تسجيل الهستوري
         if (status) {
-          await set(ref(db, `${ordersPath}/${orderNumber}/statusHistory/${status}`), {
-            time: Date.now(), by: userName
+          await set(ref(db, `${ordersPath}/${orderNumber}/statusHistory/${encodeURIComponent(status)}`), {
+            time: new Date().toISOString(), by: userName
           });
         }
-
         // ✅ عرض رسالة النجاح
         document.getElementById("savedMsg").style.display = "block";
         
@@ -1434,13 +1484,28 @@ if (status === "مثبت") {
           window.location.href = "dashboard.html";
         }, 1200);
 
+        break; // 🔒 نجح الحفظ — لازم نخرج من حلقة إعادة المحاولة فوراً حتى
+               // ما يتكرر الحفظ (تسجيل الطلب مرتين برقمين مختلفين)
+
       } catch (error) {
-        console.error("❌ خطأ في الحفظ:", error);
-        alert("❌ حدث خطأ أثناء حفظ الطلب. يرجى المحاولة مرة أخرى.");
+        console.error(`❌ خطأ في الحفظ (محاولة ${attempt}/${maxAttempts}):`, error);
+
+        if (attempt < maxAttempts) {
+          // 🔁 إعادة محاولة تلقائية بصمت بعد فاصل قصير، بدون إزعاج الموظف
+          saveBtn.innerHTML = `<span class="loading-spinner"></span> إعادة المحاولة...`;
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          continue;
+        }
+
+        // ✅ نعرض رسالة الخطأ الفعلية القادمة من Firebase (مثل صلاحيات الكتابة
+        // PERMISSION_DENIED) بدل رسالة عامة، حتى تكون معروفة فوراً بدون
+        // الحاجة لفتح أدوات المطوّر بالمتصفح.
+        alert("❌ حدث خطأ أثناء حفظ الطلب:\n\n" + (error?.message || error) + "\n\nيرجى المحاولة مرة أخرى أو إرسال هذه الرسالة للدعم الفني.");
         isSaving = false;
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalBtnText;
       }
+      } // 🔚 نهاية حلقة إعادة المحاولة
     });
 
     // 📝 تنسيق السعر والكمية
@@ -1470,8 +1535,8 @@ if (status === "مثبت") {
         }
       });
 
-      // تهيئة أولية
-      setupDropdowns();
+      // تهيئة أولية (لو البيانات ما وصلت بعد من onValue، تبنى هنا مرة وحدة)
+      initDropdownsOnce();
       updateTotals();
       
       // تعيين "جديد" كحالة افتراضية

@@ -499,11 +499,10 @@ main { padding: 24px; max-width: 1200px; margin: 0 auto; }
     <span>🗂️</span>
     الأرشيف الشهري — المراد
   </div>
-  <button class="btn-archive" id="btnArchive">
-    <span>📦</span>
-    أرشفة الشهر المنتهي
-    <button class="btn-archive" style="background:#00b894" onclick="fixWarehouseStats()">🔧 إصلاح مخزن</button>
-  </button>
+<button class="btn-archive" id="btnArchive">
+  <span>📦</span>
+  أرشفة الشهر المنتهي
+</button>
 </header>
 
 <main>
@@ -963,13 +962,16 @@ window.executeArchive = async function() {
 
     setProgress(25, `تم جمع ${Object.keys(finalOrders).length} طلب`, 'جاري حفظ الأرشيف...');
 
-    // 2. جمع المشتريات للشهر المستهدف
+    // 2. جمع المشتريات المكتملة (مستلمة/مرفوضة) للشهر المستهدف
+    const PURCHASE_FINAL_STATUSES = ["received", "rejected"];
     const purchasesSnap = await get(ref(db, 'purchases'));
     const allPurchases = purchasesSnap.exists() ? purchasesSnap.val() : {};
     const monthPurchases = {};
     Object.entries(allPurchases).forEach(([id, p]) => {
       const mk = getMonthKey(p.date || p.createdAt);
-      if (mk === targetKey) monthPurchases[id] = p;
+      if (mk === targetKey && PURCHASE_FINAL_STATUSES.includes(p.status)) {
+        monthPurchases[id] = p;
+      }
     });
 
     setProgress(40, 'جاري حفظ الأرشيف...', 'يرجى الانتظار');
@@ -1033,6 +1035,21 @@ window.executeArchive = async function() {
         const batch = Object.fromEntries(entries.slice(i, i + batchSize));
         await update(ref(db), batch);
         setProgress(80 + (i / entries.length) * 15, 'جاري الحذف...', `${i + batchSize}/${entries.length}`);
+      }
+    }
+
+      setProgress(95, 'جاري حذف المشتريات المؤرشفة...', '');
+
+    // 7. حذف المشتريات المؤرشفة من purchases نهائياً
+    const purchaseIds = Object.keys(monthPurchases);
+    if (purchaseIds.length > 0) {
+      const purchaseDeleteUpdates = {};
+      purchaseIds.forEach(id => { purchaseDeleteUpdates[`purchases/${id}`] = null; });
+      const batchSize = 50;
+      const pEntries = Object.entries(purchaseDeleteUpdates);
+      for (let i = 0; i < pEntries.length; i += batchSize) {
+        const batch = Object.fromEntries(pEntries.slice(i, i + batchSize));
+        await update(ref(db), batch);
       }
     }
 

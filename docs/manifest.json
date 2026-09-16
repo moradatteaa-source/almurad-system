@@ -1,13 +1,19 @@
 {
-  "name": "المراد",
+  "name": "نظام المراد",
   "short_name": "المراد",
-  "start_url": "/moradatteaa-source/docs/index.html",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#043B64",
   "theme_color": "#043B64",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "/moradatteaa-source/docs/apple-touch-icon.png",
+      "src": "/almurad-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
     }

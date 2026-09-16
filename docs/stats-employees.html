@@ -467,6 +467,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getOrdersCached } from "./sharedCache.js";
 
 const config = {
   apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -495,6 +496,22 @@ function colorFor(name, i) {
   let h = 0;
   for(let c of name) h = (h * 31 + c.charCodeAt(0)) % COLORS.length;
   return COLORS[h];
+}
+
+const AUTOMATED_NAMES = ["google-sheets", "system", "waseet-api", "Prime", "system-prime", "system-waseet", "fix-script", "admin"];
+
+// ✏️ ضيف هنا أي اسم موظف قديم أو حساب وهمي تريد إخفاءه من كل التقارير
+const EXCLUDED_EMPLOYEES = ["اسم الموظف الأول", "اسم الموظف الثاني"];
+function getResponsibleEmployee(o) {
+  const h = o.statusHistory || {};
+  const st = (o.status || "").trim();
+  const byStatus = h[encodeURIComponent(st)]?.by || h[st]?.by;
+  const candidates = [byStatus, o.rejectedBy, o.fixedBy, o.employeeName, o.updatedBy];
+  for (const c of candidates) {
+    const n = String(c || "").trim();
+if (n && !AUTOMATED_NAMES.includes(n) && !EXCLUDED_EMPLOYEES.includes(n)) return n;
+  }
+  return "غير محدد";
 }
 
 /* ── SCORE FORMULA ── */
@@ -552,11 +569,12 @@ if(st === "رفض")                   counts.rej++;
     if(o.productName) products[o.productName] = (products[o.productName]||0)+1;
     if(o.city)        cities[o.city]          = (cities[o.city]||0)+1;
   });
-
-  const totalRet  = counts.ret + counts.retDone;
-  const score     = calcScore(counts.done, totalRet, counts.rej, counts.total, counts.outgoing);
+const totalRet  = counts.ret + counts.retDone;
+  const score     = calcScore(totalRet, counts.rej, counts.total);
   const delRate   = counts.total   ? ((counts.done / counts.total)     * 100).toFixed(1) : "0.0";
-  const retRate   = counts.outgoing? ((totalRet    / counts.outgoing)  * 100).toFixed(1) : "0.0";
+const retRate = (counts.done + totalRet)
+  ? ((totalRet / (counts.done + totalRet)) * 100).toFixed(1)
+  : "0.0";
   const rejRate   = counts.total   ? ((counts.rej  / counts.total)     * 100).toFixed(1) : "0.0";
 
   const bestProduct = Object.entries(products).sort((a,b)=>b[1]-a[1])[0];
@@ -565,11 +583,21 @@ if(st === "رفض")                   counts.rej++;
   return { ...counts, totalRet, score, delRate, retRate, rejRate, bestProduct, bestCity };
 }
 
-/* ── FIREBASE LOAD ── */
-onValue(ref(db, "ordersTest"), snap => {
-  if(!snap.exists()){ renderEmpty(); return; }
+/* ── FIREBASE LOAD ──
+   ملاحظة مهمة (تحسين استهلاك فايربيس):
+   قبل: onValue(ref(db,"ordersTest")) كان يعيد تحميل كامل شجرة الطلبات
+   في كل مرة يصير فيها أي كتابة على أي طلب بأي مكان بالنظام (تغيير حالة،
+   إضافة طلب... الخ) — وهذا يصير مئات المرات باليوم، فيصير تحميل ضخم
+   ومتكرر جداً لنفس البيانات تقريباً. هذه الصفحة إحصائية/تقريرية بس
+   (أداء الموظفين) وما تحتاج تحدث لحظة بلحظة مع كل كتابة بالنظام.
+   بعد: نجيب البيانات مرة عند فتح الصفحة (مع كاش مشترك 75 ثانية عبر
+   sharedCache.js)، وبعدين نحدثها كل دقيقتين بس — يقلل التحميل بشكل
+   كبير جداً بدون ما يأثر على استخدام الصفحة فعلياً (فرق ثانية أو
+   دقيقتين بصفحة إحصائيات مو محسوس). */
+async function loadOrders() {
+  const raw = await getOrdersCached(db);
+  if(!raw || Object.keys(raw).length === 0){ renderEmpty(); return; }
   allOrders = [];
-  const raw = snap.val();
 
   // الهيكل: ordersTest/حالة/id → طلب
   // أو: ordersTest/id → طلب مباشرة
@@ -594,13 +622,16 @@ onValue(ref(db, "ordersTest"), snap => {
   if(allOrders.length === 0){ renderEmpty(); return; }
   buildSidebar();
   render();
-});
+}
+
+loadOrders();
+setInterval(loadOrders, 120000); // تحديث كل دقيقتين بدل الاستماع اللحظي لكل تغيير بكل النظام
 
 /* ── SIDEBAR ── */
 function buildSidebar() {
-  const users = [...new Set(allOrders.map(o => o.fixedBy || "غير محدد"))];
+const users = [...new Set(allOrders.map(o => getResponsibleEmployee(o)))];
   const userStats = users.map((u, i) => {
-    const orders = allOrders.filter(o => (o.fixedBy||"غير محدد") === u);
+    const orders = allOrders.filter(o => getResponsibleEmployee(o) === u);
     const st = parseEmployee(orders);
     return { name: u, ...st, color: colorFor(u, i) };
   }).sort((a,b) => b.score - a.score);
@@ -650,7 +681,7 @@ function getFiltered() {
     const dt = new Date(o.updatedAt || o.orderDate || Date.now());
     if(from && dt < from) return false;
     if(to   && dt > to)   return false;
-    if(selectedUser && (o.fixedBy||"غير محدد") !== selectedUser) return false;
+if(selectedUser && getResponsibleEmployee(o) !== selectedUser) return false;
     return true;
   });
 }
@@ -666,9 +697,9 @@ function render() {
    RENDER ALL EMPLOYEES
 ══════════════════════════ */
 function renderAll(filtered) {
-  const users = [...new Set(filtered.map(o => o.fixedBy||"غير محدد"))];
+const users = [...new Set(filtered.map(o => getResponsibleEmployee(o)))];
   const userStats = users.map((u, i) => {
-    const orders = filtered.filter(o => (o.fixedBy||"غير محدد") === u);
+    const orders = filtered.filter(o => getResponsibleEmployee(o) === u);
     const st = parseEmployee(orders);
     return { name: u, ...st, color: colorFor(u, i), commission: st.done * (commissionRates[u]||250) };
   });
@@ -923,7 +954,7 @@ userStats.sort((a, b) => {
 function renderSingle(filtered, userName) {
   const st = parseEmployee(filtered);
   const commission = st.done * (commissionRates[userName] || 250);
-  const userIndex = [...new Set(allOrders.map(o=>o.fixedBy||"غير محدد"))].indexOf(userName);
+const userIndex = [...new Set(allOrders.map(o=>getResponsibleEmployee(o)))].indexOf(userName);
   const color = colorFor(userName, userIndex);
 
   // orders list sorted by date

@@ -387,6 +387,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, update, onValue, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getWarehouseCached } from "./sharedCache.js";
     import { citiesData, allCities } from "./citiesData.js";
 
     const firebaseConfig = {
@@ -764,13 +765,18 @@ input.addEventListener('focus', () => {
       if (!container) return;
       container.innerHTML = '';
       try {
-   const allSnap = await get(ref(db, 'warehouse'));
-        if (!allSnap.exists()) return;
+   // عرض فقط بالقائمة المنسدلة — الفحص الفعلي الدقيق للكمية يصير عند
+   // التثبيت الفعلي بقراءة مباشرة بدون كاش (بالأسفل بدالة _adjustStock
+   // وبفحص الحفظ)، فاستخدام بيانات مخزّنة مؤقتاً هنا آمن تماماً.
+   const warehouseDataForVariants = await getWarehouseCached(db);
+        if (!warehouseDataForVariants) return;
         let stock = {};
-        for (const val of Object.values(allSnap.val())) {
+        for (const val of Object.values(warehouseDataForVariants)) {
           if ((val.name || '').trim() === productName.trim()) { stock = val.stock || {}; break; }
         }
-        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
+        // ✅ نعرض كل المتغيرات حتى لو الكمية صفر — التثبيت يبقى محظور بالتحقق
+        // اللاحق عند اختيار حالة "مثبت"، فيقدر الموظف يسجل الطلب "بانتظار البضاعة"
+        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default');
         if (!activeKeys.length) return;
 
         const savedSnap = await get(ref(db, `${state.currentPath}/selectedVariants`));
@@ -858,13 +864,15 @@ input.addEventListener('focus', () => {
       variantsDiv.className = 'variants-container';
       variantsDiv.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-color)';
       try {
-const allSnap = await get(ref(db, 'warehouse'));
-        if (!allSnap.exists()) return;
+// عرض فقط بالقائمة المنسدلة — نفس ملاحظة loadVariants أعلاه، آمن للكاش
+const warehouseDataForExtra = await getWarehouseCached(db);
+        if (!warehouseDataForExtra) return;
         let stock = {};
-        for (const val of Object.values(allSnap.val())) {
+        for (const val of Object.values(warehouseDataForExtra)) {
           if ((val.name || '').trim() === productName.trim()) { stock = val.stock || {}; break; }
         }
-        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default' && stock[k] > 0);
+        // ✅ نفس المنطق: نعرض كل المتغيرات حتى لو الكمية صفر
+        const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default');
         if (!activeKeys.length) return;
 
         const variantsMap = {};
@@ -926,24 +934,47 @@ const allSnap = await get(ref(db, 'warehouse'));
   const statusDiv = document.getElementById('status');
   if (!statusDiv) return;
 
-  const opts = ['رفض','مثبت','قيد المعالجة','بانتظار البضاعة'];
-
-  if (currentValue && !opts.includes(currentValue)) {
-    opts.unshift(currentValue);
-  }
+  // ✅ نستخدم نفس قائمة الحالات الرسمية المعتمدة بكل النظام (TEST_STATUSES)
+  // بدل قائمة جزئية منفصلة، حتى ما تصير فجوة بين الحالات المعروضة هنا
+  // والمسارات الفعلية اللي تحسبها getPathForStatus.
+  const opts = [...TEST_STATUSES];
 
   statusDiv.innerHTML = '';
 
-  statusDiv.appendChild(
-    createDropdown(opts, currentValue, (val) => {
-      // فقط تغيير القيمة (الحفظ يصير بزر حفظ)
-    })
-  );
-}
+  const statusDropdown = createDropdown(opts, currentValue, (val) => {
+    // فقط تغيير القيمة (الحفظ يصير بزر حفظ)
+  });
 
+  // ✅ منع الكتابة اليدوية — اختيار من القائمة فقط
+  const statusInput = statusDropdown.querySelector('input');
+  if (statusInput) {
+    statusInput.readOnly = true;
+    statusInput.style.cursor = 'pointer';
+    statusInput.style.backgroundColor = '#f8f9fa';
+
+    // ⚠️ لا نضيف الحالة الخاطئة كخيار ضمن opts أبداً (كان الكود القديم
+    // يسوي opts.unshift(currentValue))، بس نعرضها بصرياً هنا كتنبيه فقط
+    // حتى الموظف ينتبه ويصححها ولا تبقى "تبدو" وكأنها خيار رسمي.
+    if (currentValue && !opts.includes(currentValue)) {
+      statusInput.value = currentValue;
+      statusInput.classList.add('input-error');
+      showToast(`⚠️ حالة هذا الطلب "${currentValue}" غير معروفة بالنظام — يرجى اختيار حالة صحيحة قبل الحفظ`, 'warning', 5000);
+    }
+  }
+
+  statusDiv.appendChild(statusDropdown);
+}
     // ===== التحقق قبل الحفظ =====
 async function validateBeforeSave() {
       const statusVal = document.querySelector('#status input')?.value.trim();
+
+      // ✅ تحقق صارم: الحالة يجب أن تطابق إحدى الحالات الرسمية حصراً
+      if (!TEST_STATUSES.includes(statusVal)) {
+        document.querySelector('#status input')?.classList.add('input-error');
+        showToast(`⚠️ حالة الطلب "${statusVal}" غير صحيحة — يرجى اختيارها من القائمة فقط`, 'error', 4000);
+        return false;
+      }
+
       const requiredStatuses = ['مثبت', 'قيد التوصيل', 'تم التسليم', 'تم استلام الراجع'];
 
       // ✅ تحقق من المتغيرات دائماً عند التثبيت
@@ -1237,7 +1268,7 @@ if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
                 if (!hasV) {
                   const cur = Number(stock.default || 0);
                   if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
                     ok = false; break;
                   }
                 } else {
@@ -1254,7 +1285,7 @@ if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
                   }
                   const cur = Number(stock[mKey] || 0);
                   if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
                     ok = false; break;
                   }
                 }
@@ -1304,7 +1335,7 @@ if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
                 if (!hasV) {
                   const cur = Number(stock.default || 0);
                   if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
                     ok = false; break;
                   }
                 } else {
@@ -1321,7 +1352,7 @@ if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
                   }
                   const cur = Number(stock[mKey] || 0);
                   if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}`, 'error', 5000);
+                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
                     ok = false; break;
                   }
                 }
@@ -1443,15 +1474,18 @@ window.location.href = `orders-cards.html?status=${encodeURIComponent(lastStatus
       const loggedUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
       state.isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
 
-      // تحميل المنتجات من المستودع
-onValue(ref(db, 'warehouse'), (snap) => {
-  if (snap.exists()) {
-    state.allProducts = Object.values(snap.val())
-      .filter(p => (p.totalQty || 0) > 0)
+// تحميل المنتجات من المستودع (كل المنتجات بغض النظر عن الكمية)
+// ملاحظة: كانت onValue بـ onlyOnce:true (أي أصلاً تجيب مرة وحدة بس) —
+// استبدلناها بقراءة من الكاش المشترك لنفس النتيجة بالضبط، بس بفايدة
+// إضافية: إذا صفحة ثانية بنفس المتصفح جابت المخزون قبل أقل من 75 ثانية
+// نستخدم نفس النسخة بدل طلب جديد لفايربيس.
+getWarehouseCached(db).then((data) => {
+  if (data) {
+    state.allProducts = Object.values(data)
       .map(p => p.name)
       .filter(Boolean);
   }
-}, { onlyOnce: true });
+});
       // ربط الأحداث
       document.getElementById('saveBtn')?.addEventListener('click', handleSave);
       document.getElementById('backBtn')?.addEventListener('click', handleBack);

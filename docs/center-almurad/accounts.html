@@ -575,6 +575,7 @@ html, body { touch-action: manipulation; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getCached } from "../sharedCache.js";
 
 // ── Firebase ──
 const firebaseConfig = {
@@ -600,42 +601,65 @@ const fmt = n => Number(n || 0).toLocaleString("en-US");
 const today = () => new Date().toLocaleDateString("en-CA");
 
 // ── Clock ──
+function formatIraqTime(dateObj) {
+  // dateObj.getTime() هو أصلاً UTC ثابت — نضيف له 3 ساعات فقط لتوقيت بغداد
+  const iraqDate = new Date(dateObj.getTime() + (3 * 3600000));
+  let h = iraqDate.getUTCHours();
+  const m = String(iraqDate.getUTCMinutes()).padStart(2, "0");
+  const period = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${period}`;
+}
+
 function updateClock() {
   const now = new Date();
-  document.getElementById("liveClock").textContent =
-    now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const iraqDate = new Date(now.getTime() + (3 * 3600000));
+  let h = iraqDate.getUTCHours();
+  const m = String(iraqDate.getUTCMinutes()).padStart(2, "0");
+  const s = String(iraqDate.getUTCSeconds()).padStart(2, "0");
+  const period = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  document.getElementById("liveClock").textContent = `${h}:${m}:${s} ${period}`;
 }
 updateClock();
 setInterval(updateClock, 1000);
 
 // ── Load ──
-function loadInvoices() {
-  onValue(ref(rtdb, "posInvoices"), (snap) => {
-    allInvoices = [];
-    document.getElementById("loadingOverlay").style.display = "none";
+// ملاحظة (تحسين استهلاك فايربيس): كانت onValue تعيد تحميل *كامل* شجرة
+// posInvoices مع كل عملية بيع/إرجاع بالكاشير من أي موظف — هذه صفحة
+// تقارير/محاسبة فقط، ما تحتاج تحدث لحظياً، فصارت تجيب البيانات مرة
+// وتحدثها كل دقيقتين (عبر كاش مشترك 75 ثانية) بدل الاستماع اللحظي.
+let isFirstLoad = true;
+async function loadInvoices() {
+  const data = await getCached(rtdb, "posInvoices");
+  allInvoices = [];
+  document.getElementById("loadingOverlay").style.display = "none";
+  if (!data || Object.keys(data).length === 0) { render([]); return; }
 
-    if (!snap.exists()) { render([]); return; }
-
-    const data = snap.val();
+  {
     Object.entries(data).forEach(([key, inv]) => {
-      let ts = inv.createdAt;
-      let dateStr, timeStr;
+let ts = inv.createdAt;
+      let dateStr, timeStr, sortTs;
 
       if (typeof ts === "number") {
         const d = new Date(ts);
         dateStr = d.toLocaleDateString("en-CA");
-        timeStr = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+        timeStr = formatIraqTime(d);
+        sortTs = ts;
       } else {
         dateStr = today();
         timeStr = inv.localTime || "--:--";
+        sortTs = 0; // فاتورة بدون طابع زمني سيرفر تترتب بالأخير
       }
-
       const isReturn = inv.type === "return";
       const grand = isReturn ? -Math.abs(Number(inv.total || 0)) : Number(inv.total || 0);
       const paid  = isReturn ? -Math.abs(Number(inv.paid || 0)) : Number(inv.paid || 0);
 
-      allInvoices.push({
+allInvoices.push({
         _key: key,
+        _ts: sortTs,
         invoiceNo: inv.invoiceNo || 0,
         date: dateStr,
         time: timeStr,
@@ -649,17 +673,21 @@ function loadInvoices() {
       });
     });
 
-    allInvoices.sort((a, b) => b.invoiceNo - a.invoiceNo);
-
-    // Populate cashier select
+  allInvoices.sort((a, b) => (b._ts || 0) - (a._ts || 0));
+// Populate cashier select
     const sel = document.getElementById("cashierSelect");
     sel.innerHTML = `<option value="all">كل الكاشيرات</option>`;
     [...new Set(allInvoices.map(i => i.cashierId))].forEach(id => {
       sel.innerHTML += `<option value="${id}">${id}</option>`;
     });
 
-    applyFilters();
-  });
+    if (isFirstLoad) {
+      isFirstLoad = false;
+      quickFilter('today'); // الفلترة الافتراضية = اليوم فقط
+    } else {
+      applyFilters();
+    }
+  }
 }
 
 // ── Filters ──
@@ -1052,6 +1080,7 @@ window.applyFilters = applyFilters;
 
 // Start
 loadInvoices();
+setInterval(loadInvoices, 120000); // تحديث كل دقيقتين بدل الاستماع اللحظي لكل عملية بيع/إرجاع
 </script>
 </body>
 </html>

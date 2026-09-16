@@ -414,7 +414,7 @@ body {
   transition: background 0.15s;
 }
 #searchDropdown .drop-item:last-child { border-bottom: none; }
-#searchDropdown .drop-item:hover, 
+#searchDropdown .drop-item:hover,
 #searchDropdown .drop-item.highlighted { background: #fff7ed; }
 #searchDropdown .drop-item .dp { color: var(--accent); font-weight: 700; font-size: 13px; }
 
@@ -1087,7 +1087,29 @@ html, body { touch-action: manipulation; }
     <div id="parkedList"></div>
   </div>
 </div>
+<!-- UNMATCHED BARCODE MODAL -->
+<div class="modal-overlay" id="unmatchedModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>⚠️ باركود غير مطابق</span>
+      <button class="modal-close" onclick="closeUnmatchedModal()">✕</button>
+    </div>
+    <div style="margin-bottom:14px;font-size:13px;color:var(--text2);background:#fff7ed;padding:10px 14px;border-radius:10px;border:1px solid #fed7aa;">
+      الباركود الممسوح: <strong id="unmatchedCode" style="color:var(--red);direction:ltr;display:inline-block;"></strong>
+    </div>
+    <input id="unmatchedSearchInput" placeholder="🔍 ابحث عن اسم المنتج للربط..." autocomplete="off"
+      style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'Tajawal',sans-serif;outline:none;margin-bottom:10px;">
+    <div id="unmatchedDropdown" style="max-height:220px;overflow-y:auto;"></div>
 
+    <div id="unmatchedVariantBox" style="display:none;margin-top:12px;">
+      <label style="font-size:12px;color:var(--text2);font-weight:700;">اختر المتغير:</label>
+      <select id="unmatchedVariantSelect" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;margin-top:6px;font-family:'Tajawal',sans-serif;font-size:14px;"></select>
+      <button onclick="confirmUnmatchedLink()" style="width:100%;margin-top:12px;padding:12px;background:var(--green);color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;font-size:14px;">
+        ✅ ربط الباركود وإضافة للفاتورة
+      </button>
+    </div>
+  </div>
+</div>
 <!-- PRINT AREA -->
 <div id="printArea">
   <div style="padding:6px 10px; direction:rtl; font-family:Tajawal,Tahoma,sans-serif;">
@@ -1164,6 +1186,13 @@ let qtyBuffer = "";
 let lastEnterTime = 0;
 
 let discountIsPercent = false;
+
+// ═══════════════════════════════
+// UNMATCHED BARCODE LINKING
+// ═══════════════════════════════
+let unmatchedCode = null;
+let unmatchedSelectedProduct = null;
+
 // ═══════════════════════════════
 // UTILS
 // ═══════════════════════════════
@@ -1212,6 +1241,7 @@ addRow(); // Start with one empty row
 setupSearchBar();
 setupAddProdInput();
 setupKeyboard();
+setupUnmatchedSearch();
 
 document.getElementById("quickInput").focus();
 
@@ -1313,7 +1343,8 @@ function renderCategoryProducts() {
 
     const d = document.createElement("div");
     d.className = "prod-card";
- const icons = ["📦","🛍️","🥤","🍫","🧴","💊","🧹","🍬","🧃","🎁","🥛","🧼","🖊️","🔋","🧲"];
+
+const icons = ["📦","🛍️","🥤","🍫","🧴","💊","🧹","🍬","🧃","🎁","🥛","🧼","🖊️","🔋","🧲"];
     const iconIdx = (uiCategories[activeCategory] || []).indexOf(item) % icons.length;
     d.innerHTML = `
       <div class="pc-icon">${icons[iconIdx]}</div>
@@ -1439,7 +1470,12 @@ function setupSearchBar() {
       // Barcode?
       if (/^\d+$/.test(val)) {
         const item = barcodeIndex[val];
-        if (!item) { showToast("❌ باركود غير موجود", "error"); return; }
+        if (!item) {
+          input.value = ""; document.getElementById("quickQty").value = 1;
+          dropdown.style.display = "none";
+          openUnmatchedModal(val);
+          return;
+        }
         for (let i = 0; i < qty; i++) await addQuickProduct(item.productName, item.price);
       } else {
         const p = products.find(x => x.name === val);
@@ -1584,8 +1620,8 @@ async function loadVariants(row, productName) {
 
   const select = row.querySelector(".row-variant-select");
   const stockBadge = row.querySelector(".stock-badge");
+  const prod = products.find(x => x.name === productName);
 
- const prod = products.find(x => x.name === productName);
 const snap = await get(ref(rtdb, "warehouse/" + (prod?._key || productName)));
   if (!snap.exists()) return;
 
@@ -1808,6 +1844,7 @@ function setupKeyboard() {
   document.addEventListener("keydown", async e => {
     const el = document.activeElement;
     const inInput = el?.tagName === "INPUT" || el?.tagName === "SELECT" || el?.tagName === "TEXTAREA";
+
 const inOtherInput = inInput && el?.id !== "quickInput" && el?.id !== "quickQty";
     // Barcode scanner: collect digits, fire on Enter
     if (/^\d$/.test(e.key) && !inInput) {
@@ -1828,7 +1865,8 @@ const inOtherInput = inInput && el?.id !== "quickInput" && el?.id !== "quickQty"
     }
 
     // + / - qty mode (only when not in input)
- if (!inOtherInput) {
+
+if (!inOtherInput) {
       if (e.key === "+" || (e.key === "=" && e.shiftKey)) { e.preventDefault(); qtyMode = "+"; qtyBuffer = ""; return; }
       if (e.key === "-") { e.preventDefault(); qtyMode = "-"; qtyBuffer = ""; return; }
     }
@@ -1887,12 +1925,164 @@ function applyQtyFromKeyboard(mode, value) {
 // BARCODE
 // ═══════════════════════════════
 async function handleBarcode(code) {
-  const item = barcodeIndex[String(code).trim()];
-  if (!item) { showToast("❌ باركود غير موجود: " + code, "error"); return; }
+  const cleanCode = String(code).trim();
+  const item = barcodeIndex[cleanCode];
+  if (!item) {
+    openUnmatchedModal(cleanCode);
+    return;
+  }
   await addQuickProduct(item.productName, item.price);
   showToast("✅ " + item.productName, "success");
 }
+// ═══════════════════════════════
+// UNMATCHED BARCODE MODAL LOGIC
+// ═══════════════════════════════
+function openUnmatchedModal(code) {
+  unmatchedCode = code;
+  unmatchedSelectedProduct = null;
+  document.getElementById("unmatchedCode").textContent = code;
+  document.getElementById("unmatchedSearchInput").value = "";
+  document.getElementById("unmatchedDropdown").innerHTML = "";
+  document.getElementById("unmatchedVariantBox").style.display = "none";
+  document.getElementById("unmatchedModal").classList.add("show");
+  setTimeout(() => document.getElementById("unmatchedSearchInput").focus(), 50);
+}
 
+window.closeUnmatchedModal = function () {
+  document.getElementById("unmatchedModal").classList.remove("show");
+  unmatchedCode = null;
+  unmatchedSelectedProduct = null;
+};
+
+function setupUnmatchedSearch() {
+  const input = document.getElementById("unmatchedSearchInput");
+  const dropdown = document.getElementById("unmatchedDropdown");
+  let ddIdx = -1;
+
+  // 🛡️ نوقف أي تدخل من المستمع العام (الخاص بقارئ الباركود) أثناء الكتابة هنا
+  input.addEventListener("keydown", e => e.stopPropagation(), true);
+
+  input.addEventListener("input", () => {
+    const val = input.value.trim().toLowerCase();
+    ddIdx = -1;
+    dropdown.innerHTML = "";
+    document.getElementById("unmatchedVariantBox").style.display = "none";
+    unmatchedSelectedProduct = null;
+    if (!val) return;
+
+    const matches = products.filter(p => p.name.toLowerCase().includes(val));
+    if (!matches.length) {
+      dropdown.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px;">🚫 لا توجد نتائج</div>`;
+      return;
+    }
+
+    matches.slice(0, 20).forEach(p => {
+      const d = document.createElement("div");
+      d.style.cssText = "padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;";
+      d.innerHTML = `<span>${p.name}</span><span style="color:var(--accent);font-weight:700;font-size:12px">${f(p.price)}</span>`;
+      d.onclick = () => selectUnmatchedProduct(p, d);
+      dropdown.appendChild(d);
+    });
+  });
+
+  input.addEventListener("keydown", e => {
+    const items = dropdown.querySelectorAll("div[style*='cursor:pointer']");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      ddIdx = Math.min(ddIdx + 1, items.length - 1);
+      items.forEach((d, i) => d.style.background = i === ddIdx ? "#fff7ed" : "");
+      if (items[ddIdx]) items[ddIdx].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      ddIdx = Math.max(ddIdx - 1, 0);
+      items.forEach((d, i) => d.style.background = i === ddIdx ? "#fff7ed" : "");
+      if (items[ddIdx]) items[ddIdx].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (ddIdx >= 0 && items[ddIdx]) { items[ddIdx].click(); return; }
+      if (items.length === 1) { items[0].click(); }
+    }
+  });
+}
+async function selectUnmatchedProduct(p, el) {
+  unmatchedSelectedProduct = p;
+
+  // تمييز العنصر المختار
+  document.querySelectorAll("#unmatchedDropdown > div").forEach(x => x.style.background = "");
+  if (el) el.style.background = "#fff7ed";
+
+  const variantBox = document.getElementById("unmatchedVariantBox");
+  const select = document.getElementById("unmatchedVariantSelect");
+  select.innerHTML = "";
+
+  const snap = await get(ref(rtdb, "warehouse/" + (p._key || p.name)));
+  if (!snap.exists()) { showToast("⚠️ تعذر تحميل بيانات المنتج", "error"); return; }
+
+  const data = snap.val();
+  const stock = data.stock;
+  const variantKeys = typeof stock === "object" ? Object.keys(stock) : [];
+  const isSimple = variantKeys.length <= 1;
+
+  if (isSimple) {
+    select.innerHTML = `<option value="default">إجمالي الكمية</option>`;
+  } else {
+    variantKeys.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = `${k} (${stock[k]})`;
+      select.appendChild(opt);
+    });
+  }
+
+  variantBox.style.display = "block";
+}
+
+window.confirmUnmatchedLink = async function () {
+  if (!unmatchedSelectedProduct || !unmatchedCode) {
+    showToast("⚠️ اختر منتج أولاً", "error");
+    return;
+  }
+
+  const p = unmatchedSelectedProduct;
+  const variantKey = document.getElementById("unmatchedVariantSelect").value || "default";
+  const key = p._key || p.name;
+
+  // تحذير إذا الباركود مرتبط بمنتج ثاني حالياً
+  const existingMap = barcodeIndex[unmatchedCode];
+  if (existingMap && existingMap.productName !== p.name) {
+    if (!confirm(`⚠️ هذا الباركود مرتبط حالياً بمنتج "${existingMap.productName}".\nهل تريد استبداله وربطه بـ "${p.name}"؟`)) return;
+  }
+
+  try {
+    await update(ref(rtdb, `warehouse/${key}/barcodes`), { [variantKey]: unmatchedCode });
+  } catch (e) {
+    showToast("❌ خطأ أثناء ربط الباركود", "error");
+    return;
+  }
+
+  // تحديث الفهرس المحلي مباشرة (بدون إعادة تحميل الصفحة)
+  barcodeIndex[unmatchedCode] = { productName: p.name, variantKey, price: p.price };
+
+  showToast(`✅ تم ربط الباركود بـ "${p.name}"`, "success");
+
+  // إضافة المنتج للفاتورة
+  await addQuickProduct(p.name, p.price);
+
+  // ضبط المتغير بالصف المضاف
+  if (lastSelectedRow) {
+    const select = lastSelectedRow.querySelector(".row-variant-select");
+    if (select) {
+      select.value = variantKey;
+      select.dispatchEvent(new Event("change"));
+    }
+  }
+
+  closeUnmatchedModal();
+};
 // ═══════════════════════════════
 // PAYMENT
 // ═══════════════════════════════
@@ -1950,13 +2140,14 @@ async function saveInvoice(printAfter = false) {
     if (!name) continue;
     const qty = Number(r.querySelector(".row-qty-input")?.value || 0);
     if (qty <= 0) { showToast("الكمية غير صحيحة", "error"); isSaving = false; return; }
+
 const prod = products.find(x => x.name === name);
+
 const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
     const snap = await get(productRef);
     if (!snap.exists()) { showToast("المنتج غير موجود: " + name, "error"); isSaving = false; return; }
 
     const data = snap.val();
-    if (!isReturnMode && data.totalQty < qty) { showToast("الكمية غير كافية: " + name, "error"); isSaving = false; return; }
 
     let stock, newTotalQty;
     if (typeof data.stock === "object") {
@@ -1967,14 +2158,12 @@ const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
       if (!isSimple && !variantKey && !isReturnMode) { showToast("اختر المتغير: " + name, "error"); isSaving = false; return; }
       const key = isSimple ? "default" : variantKey;
       const currentQty = Number(stock[key] || 0);
-      if (!isReturnMode && currentQty < qty) { showToast("كمية المتغير غير كافية", "error"); isSaving = false; return; }
-      stock[key] = isReturnMode ? currentQty + qty : currentQty - qty;
-      newTotalQty = Object.values(stock).reduce((a, b) => a + Number(b || 0), 0);
+      stock[key] = isReturnMode ? currentQty + qty : Math.max(0, currentQty - qty);
+            newTotalQty = Object.values(stock).reduce((a, b) => a + Number(b || 0), 0);
     } else {
       const currentQty = Number(data.totalQty || 0);
-      if (!isReturnMode && currentQty < qty) { showToast("الكمية غير كافية", "error"); isSaving = false; return; }
-      newTotalQty = isReturnMode ? currentQty + qty : currentQty - qty;
-      stock = { default: newTotalQty };
+      newTotalQty = isReturnMode ? currentQty + qty : Math.max(0, currentQty - qty);
+            stock = { default: newTotalQty };
     }
 
     await update(productRef, { stock, totalQty: newTotalQty, lastUpdate: serverTimestamp() });
@@ -2014,8 +2203,9 @@ const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
       debtor,
       cashierId: localStorage.getItem("cashierUsername") || "unknown",
       createdAt: serverTimestamp(),
+
 localTime: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
-      
+
     });
   } catch(e) {
     showToast("❌ خطأ في الحفظ", "error");

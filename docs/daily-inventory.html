@@ -759,7 +759,12 @@ function setMsg(id, msg, type = 'info') {
 // ===== QUICK DATE =====
 window.setQuickDate = function(range) {
   const today = new Date();
-  const fmt = d => d.toISOString().slice(0,10);
+  const fmt = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   if (range === 'today') {
     document.getElementById('dateFrom').value = fmt(today);
     document.getElementById('dateTo').value = fmt(today);
@@ -884,13 +889,19 @@ const outStatuses = ['قيد التوصيل'];
         if (id === '_meta') return;
 
    // ✅ نأخذ تاريخ دخول الحالة الحالية من statusHistory
-        let dateField = null;
-        if (order.statusHistory) {
-          const hist = order.statusHistory[encodeURIComponent(status)] || order.statusHistory[status];
-          if (hist?.time) dateField = hist.time;
-        }
-        if (!dateField) dateField = order.updatedAt || order.orderDate;
-        if (!dateField) return;
+// ✅ ناخذ أحدث تاريخ موجود بـ statusHistory (بدل مطابقة اسم المفتاح)
+// لأن الطلب أصلاً موجود تحت فرع الحالة الحالية، فآخر إدخال زمنياً
+// هو منطقياً وقت الدخول لهذي الحالة — يحل مشكلة اختلاف تشفير المفاتيح
+let dateField = null;
+if (order.statusHistory) {
+  const times = Object.values(order.statusHistory)
+    .map(h => h?.time)
+    .filter(Boolean)
+    .map(t => new Date(typeof t === 'number' ? t : t).getTime())
+    .filter(t => !isNaN(t));
+  if (times.length) dateField = Math.max(...times);
+}
+if (!dateField) return; // ما نعتمد على updatedAt/orderDate لأنه تاريخ الطلب مو تاريخ التحول للحالة
 
         const orderDate = new Date(typeof dateField === 'number' ? dateField : dateField);
         if (orderDate < fromDate || orderDate > toDate) return;

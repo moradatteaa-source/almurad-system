@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>طباعة الوصولات</title>
+<!--
+  📄 صفحة مخصصة لتوليد PDF حقيقي بجودة الطباعة (نص عربي حاد وواضح 100%،
+  مو صورة/تصوير) عبر السيرفر (Puppeteer). ماكو أي واجهة استخدام هنا —
+  السيرفر بس هو اللي يفتحها بمتصفح خفي (Chromium) برابط فيه معرّف الدفعة
+  أو الطلب، وبعدها ياخذ PDF من نفس الصفحة مباشرة. تصميم الليبل نفسه مسحوب
+  بالكامل من labelTemplate.js (نفس الملف المستخدم بصفحة سجلات الشحن)
+  حتى يضل التصميم مطابق 100% بين الطباعة المباشرة وملف الـPDF دائماً.
+-->
+<style>
+  @font-face {
+    font-family: 'Tajawal';
+    src: url('Tajawal-Regular.ttf');
+  }
+  html, body { margin: 0; padding: 0; background: #fff; }
+</style>
+<script src="qrcode-lib.js"></script>
+<script src="labelTemplate.js"></script>
+<style id="labelStyle"></style>
+</head>
+<body>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+  document.getElementById("labelStyle").textContent = LABEL_STYLE_CSS;
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+    authDomain: "almurad-system.firebaseapp.com",
+    databaseURL: "https://almurad-system-default-rtdb.firebaseio.com/",
+    projectId: "almurad-system",
+    storageBucket: "almurad-system.appspot.com",
+    messagingSenderId: "911755824405",
+    appId: "1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  function fail(msg) {
+    console.error(msg);
+    window.__labelsError = msg;
+    window.__labelsReady = true;
+    document.body.innerHTML = `<div style="padding:20px;font-family:sans-serif;color:#c00">${msg}</div>`;
+  }
+
+  async function fetchAllOrdersTree() {
+    const snap = await get(ref(db, "ordersTest"));
+    return snap.exists() ? snap.val() : {};
+  }
+
+  async function run() {
+    const params = new URLSearchParams(location.search);
+    const logId = params.get("logId");
+    const orderId = params.get("orderId");
+    const receiptNumParam = params.get("receiptNum");
+
+    let orders = [];
+
+    if (logId) {
+      const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
+      if (!snap.exists()) return fail("لا توجد طلبات بهذا السجل");
+      const stubs = Object.values(snap.val()).filter(s => s?.status === "success");
+      if (!stubs.length) return fail("لا توجد طلبات ناجحة بهذا السجل");
+
+      const tree = await fetchAllOrdersTree();
+      for (const stub of stubs) {
+        if (!stub?.orderId) continue;
+        const full = findOrderInTree(tree, stub.orderId);
+        if (full) orders.push({ ...full, receiptNum: stub.receiptNum || full.receiptNum });
+      }
+      if (!orders.length) return fail("تعذر إيجاد أي طلب من هذا السجل بقاعدة البيانات الحالية");
+    } else if (orderId) {
+      const tree = await fetchAllOrdersTree();
+      const full = findOrderInTree(tree, orderId);
+      if (!full) return fail("الطلب غير موجود في قاعدة البيانات");
+      if (receiptNumParam) full.receiptNum = receiptNumParam;
+      orders = [full];
+    } else {
+      return fail("لازم تمرر logId أو orderId بالرابط");
+    }
+
+    const html = orders.map((o, i) => buildLabelHTML(o, `${i + 1} / ${orders.length}`)).join("");
+    document.body.insertAdjacentHTML("beforeend", html);
+    attachLogoFallback(document.body);
+
+    await waitForLabelImages(document.body, 3000);
+    // ✅ نفس تصغير-إذا-فاض المستخدم بالطباعة المباشرة بالضبط — وإلا أي
+    // وصل فيه منتجات/ملاحظات كثيرة ينقطع (overflow:hidden) بدل ما يصغر
+    fitLabelPagesToBox(document.querySelectorAll(".label-page"));
+    window.__labelsReady = true;
+  }
+
+  run().catch(err => fail("خطأ غير متوقع: " + err.message));
+</script>
+</body>
+</html>

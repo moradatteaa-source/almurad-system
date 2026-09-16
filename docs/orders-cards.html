@@ -153,7 +153,34 @@
       50% { box-shadow: 0 4px 20px rgba(231,76,60,0.28); }
     }
     .order-card.danger { animation: pulse 2.2s infinite; }
+/* 🧾 تمييز الطلبات بدون رقم وصل */
+.order-card.no-receipt {
+  border-color: var(--orange);
+  background: rgba(255,107,45,0.05);
+}
+.order-card.no-receipt::after { background: var(--orange); transform: scaleY(1); }
 
+.order-card.no-receipt-critical {
+  border-color: var(--red);
+  background: linear-gradient(135deg, #fff5f0, #ffffff);
+  animation: pulseNoReceipt 1.8s infinite;
+}
+.order-card.no-receipt-critical::after { background: var(--red); transform: scaleY(1); }
+@keyframes pulseNoReceipt {
+  0%,100% { box-shadow: var(--shadow); }
+  50% { box-shadow: 0 4px 22px rgba(231,76,60,0.35); }
+}
+
+.badge-noreceipt {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 4px; padding: 3px 10px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700; color: white;
+  background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15); white-space: nowrap;
+}
+.badge-noreceipt.critical {
+  background: linear-gradient(135deg, var(--red), #c0392b);
+}
     .card-right { flex: 1; min-width: 0; }
     .card-left { flex-shrink: 0; margin-right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
     .card-date { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px; }
@@ -161,6 +188,12 @@
     .card-product { color: var(--orange); font-size: 13px; font-weight: 600; }
     .card-fixer { font-size: 11px; color: var(--green); font-weight: 600; }
     .card-source {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 4px; padding: 2px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; color: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15); white-space: nowrap;
+}
+    .card-shipping-company {
   display: inline-flex; align-items: center; gap: 4px;
   margin-top: 4px; padding: 2px 9px; border-radius: 20px;
   font-size: 10px; font-weight: 700; color: white;
@@ -585,6 +618,18 @@ function getSourceBadge(source) {
   const m = SOURCE_META[source] || SOURCE_META["أخرى"];
   return `<div class="card-source" style="background:${m.color}">${m.icon} ${source}</div>`;
 }
+
+// ✅ شارة شركة الشحن — تظهر فقط بعد رفع الطلب فعلياً لإحدى الشركات
+const SHIPPING_COMPANY_META = {
+  waseet: { icon: "🚚", label: "الوسيط", color: "linear-gradient(135deg,#043B64,#085694)" },
+  prime:  { icon: "🚀", label: "برايم",  color: "linear-gradient(135deg,#8e44ad,#6c3483)" },
+  jenni:  { icon: "📦", label: "Jenni",  color: "linear-gradient(135deg,#e67e22,#d35400)" }
+};
+function getShippingCompanyBadge(company) {
+  const m = SHIPPING_COMPANY_META[company];
+  if (!m) return "";
+  return `<div class="card-shipping-company" style="background:${m.color}">${m.icon} ${m.label}</div>`;
+}
 // ════════════════════════════════════════════════════════
 // 🗄️ Cache Manager
 // ════════════════════════════════════════════════════════
@@ -881,12 +926,23 @@ async function restoreStockForOrder(order) {
 function buildCard(order) {
   const div = document.createElement("div");
   const classes = ["order-card"];
+
+  // ✅ تمييز الطلبات بدون رقم وصل — فقط بهذه الحالات الثلاث
+const NO_RECEIPT_STATUSES = ["قيد التوصيل", "راجع", "تم استلام الراجع", "تم التسليم"];
+  const noReceipt     = !order.receiptNum || String(order.receiptNum).trim() === "";
+  const flagNoReceipt = noReceipt && NO_RECEIPT_STATUSES.includes(order.status);
+
   if (isDanger(order)) classes.push("danger");
+  if (flagNoReceipt) classes.push("no-receipt-critical");
   if (S.selectedOrders.has(order.id)) classes.push("selected");
   div.className = classes.join(" ");
   div.dataset.id = order.id;
 
   const badgeClass = BADGE_CLASS[order.status] || "b-default";
+  const noReceiptBadge = flagNoReceipt
+    ? `<span class="badge-noreceipt critical">🚨 بدون رقم وصل</span>`
+    : "";
+
   div.innerHTML = `
     <div class="card-right">
       <div class="card-date">🕐 ${formatDate(getStatusTime(order))}</div>
@@ -894,8 +950,12 @@ function buildCard(order) {
         <span class="card-id">#${order.id}</span>
         <span class="card-product">${order.productName || "بدون اسم"}</span>
       </div>
-      ${order.fixedBy ? `<div class="card-fixer" style="margin-top:3px">📌 ثبت بواسطة: ${order.fixedBy}</div>` : ""}
+${order.status === "رفض"
+  ? (order.rejectedBy ? `<div class="card-fixer" style="margin-top:3px;color:var(--red)">❌ تم الرفض بواسطة: ${order.rejectedBy}</div>` : "")
+  : (order.fixedBy ? `<div class="card-fixer" style="margin-top:3px">📌 ثبت بواسطة: ${order.fixedBy}</div>` : "")}
       ${getSourceBadge(order.source)}
+      ${getShippingCompanyBadge(order.shippingCompany)}
+      ${noReceiptBadge}
     </div>
     <div class="card-left">
       <span class="card-qty">📦 ${order.totalQty || order.quantity || 1}</span>
@@ -1343,14 +1403,26 @@ if (localStorage.getItem("forceListRefresh") === "true") {
   // ✅ إخفاء أزرار الحذف والنقل للمستخدمين العاديين
   const loggedUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
   const isAdmin = loggedUser?.role === 'admin' || loggedUser?.isAdmin === true || loggedUser?.username === 'admin';
-  
+
+  // ✅ صلاحية الحذف مقصورة على حساب "مراد الكافي" فقط — حتى لو كان
+  // المستخدم أدمن بشكل عام، ما يشوف زر الحذف إلا إذا كان اسمه بالضبط
+  // "مراد الكافي". هذا شرط منفصل تماماً عن isAdmin.
+  const AUTHORIZED_DELETE_USER = 'مراد الكافي';
+  const canDelete = loggedUser?.username === AUTHORIZED_DELETE_USER
+                  || loggedUser?.displayName === AUTHORIZED_DELETE_USER
+                  || loggedUser?.name === AUTHORIZED_DELETE_USER;
+
 if (!isAdmin) {
-    document.getElementById('deleteSelectedBtn').style.display = 'none';
     document.getElementById('bulkUpdateBtn').style.display = 'none';
     document.getElementById('bulkStatus').style.display = 'none';
     // إخفاء زر التحديد كله للموظف العادي
     document.getElementById('selectModeBtn').style.display = 'none';
     document.getElementById('selectAllBtn').style.display = 'none';
+  }
+
+  // ✅ زر الحذف مخفي دائماً إلا لحساب "مراد الكافي" تحديداً
+  if (!canDelete) {
+    document.getElementById('deleteSelectedBtn').style.display = 'none';
   }
 
   await loadOrders();
@@ -1637,9 +1709,20 @@ document.getElementById("selectAllBtn").addEventListener("click", () => {
 // 🗑️ Delete Selected
 // ════════════════════════════════════════════════════════
 document.getElementById("deleteSelectedBtn").addEventListener("click", async () => {
+  // ✅ تحقق مضاعف: حتى لو ظهر الزر بأي طريقة غير متوقعة (تلاعب DOM،
+  // إعادة تفعيل يدوية...)، ما ينفذ الحذف الفعلي إلا لحساب "مراد الكافي".
+  const loggedUserCheck = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+  const AUTHORIZED_DELETE_USER = 'مراد الكافي';
+  const isAuthorized = loggedUserCheck?.username === AUTHORIZED_DELETE_USER
+                     || loggedUserCheck?.displayName === AUTHORIZED_DELETE_USER
+                     || loggedUserCheck?.name === AUTHORIZED_DELETE_USER;
+  if (!isAuthorized) {
+    showToast("❌ لا تملك صلاحية حذف الطلبات", "error");
+    return;
+  }
+
   if (!S.selectedOrders.size) { showToast("⚠️ لم تختر أي طلب", "error"); return; }
   if (!confirm(`⚠️ حذف ${S.selectedOrders.size} طلب نهائياً؟`)) return;
-
   showLoader(true);
   const now      = new Date().toISOString();
   const userName = getLoggedUser();
@@ -1766,7 +1849,15 @@ for (const id of S.selectedOrders) {
   updatedBy: userName,
   enterIndex: newPath !== dataPath ? Date.now() : (order.enterIndex || Date.now()),
   statusHistory: updatedHistory,
- fixedBy: order.fixedBy || (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? userName : undefined)
+  // ✅ إصلاح جوهري (2026-09-16): "ثبت بواسطة" يُحسب فقط لأول موظف يحوّل الطلب
+  // إلى "مثبت" أو "بانتظار البضاعة"، ويبقى ثابتاً للأبد بعدها مهما تحول الطلب
+  // من حالة لأخرى ومهما كان من ينقله (حتى لو أدمن). قبل هذا التعديل كان أي
+  // نقل جماعي (Bulk) لأي طلب إلى إحدى هذه الحالات يعيد كتابة fixedBy باسم
+  // من ضغط الزر، حتى لو كان الطلب مثبتاً مسبقاً من موظف آخر — وهذا يسبب
+  // ضياع نسبة/عمولة الموظف الحقيقي. نفس القاعدة المستخدمة أصلاً بصفحة
+  // order-details.html، لضمان التطابق بين الصفحتين.
+  ...(order.fixedBy ? {} : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {})),
+  ...(order.rejectedBy ? {} : (newStatus === 'رفض' ? { rejectedBy: userName } : {}))
 };
 
 atomicUpdate[`${newPath}/${id}`] = updatedOrder;
