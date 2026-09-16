@@ -707,7 +707,7 @@ async function handleShareInvoice(logId, btnEl) {
   if (btnEl) btnEl.classList.add("busy");
   const progress = showProgressToast("جاري تجهيز ملف PDF للمشاركة...");
   try {
-    const res = await fetch(`/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
+    const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
     if (!res.ok) {
       let msg = "تعذر توليد ملف الوصولات";
       try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
@@ -762,7 +762,7 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
     if (isMobileDevice() && navigator.share) {
       try {
         const qs = `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
-        const res = await fetch(`/api/print-labels-pdf?${qs}`);
+        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?${qs}`);
         if (res.ok) {
           const pdfBlob = await res.blob();
           const pdfFile = new File([pdfBlob], `وصل-${receiptNum || orderId}.pdf`, { type: "application/pdf" });
