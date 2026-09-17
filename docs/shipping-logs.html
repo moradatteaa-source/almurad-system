@@ -380,6 +380,58 @@ function showProgressToast(message) {
   };
 }
 
+// ✅ إصلاح جوهري (2026-09-17) — هذا كان السبب الحقيقي وراء فشل المشاركة
+// بصمت بالموبايل (خصوصاً Safari بآيفون) ورجوعها لنافذة الطباعة الناقصة
+// (A4): متصفحات الموبايل تشترط استدعاء navigator.share() مباشرة داخل
+// نفس ضغطة المستخدم، بدون أي انتظار (await) قبلها. عندنا كنا ننتظر
+// تحميل ملف الـPDF من السيرفر (fetch) قبل استدعاء navigator.share() —
+// وبهذا الوقت "ضغطة المستخدم" تكون خلصت صلاحيتها بنظر المتصفح، فيرفض
+// المشاركة بصمت (بدون رسالة خطأ حتى) ويرجع الكود يحاول الطباعة العادية
+// بدالها. الحل الاحترافي: نجهز الملف أول (fetch)، وبعدها نعرض زر "شارك
+// الآن" — وضغطة المستخدم على *هذا الزر* هي الضغطة الطازجة اللي تخلي
+// navigator.share() يشتغل صح، بكل المتصفحات بدون استثناء.
+function showShareReadyPrompt(file, shareTitle) {
+  const box = document.getElementById("toastBox");
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.style.cursor = "pointer";
+  el.style.pointerEvents = "auto";
+  el.style.background = "linear-gradient(135deg, #22c55e, #16a34a)";
+  el.textContent = "✅ الملف جاهز — اضغط هنا للمشاركة";
+  box.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+
+  let done = false;
+  const remove = () => {
+    if (!el.isConnected) return;
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 250);
+  };
+
+  el.onclick = async () => {
+    if (done) return;
+    done = true;
+    try {
+      await navigator.share({ files: [file], title: shareTitle });
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        console.warn("⚠️ تعذرت المشاركة حتى بضغطة طازجة، رح ننزل الملف بدلها:", err?.message);
+        const url = URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url; a.download = file.name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast("تعذرت المشاركة المباشرة بهذا الجهاز — تم تحميل الملف بدلها", "info");
+      }
+    } finally {
+      remove();
+    }
+  };
+
+  // تختفي تلقائياً إذا ما ضغط المستخدم خلال 25 ثانية
+  setTimeout(() => { if (!done) remove(); }, 25000);
+}
+
 // ملاحظة: COURIER_LOGO/COURIER_LABEL/COURIER_COLOR أصبحت بملف labelTemplate.js
 // المشترك (محمّل بالأعلى) — نفس المفاتيح المستخدمة بكل النظام (send-shipping.html وغيره)
 // عكسي: نص المزوّد المخزّن بالسجل (log.provider) → مفتاح الشركة
@@ -695,25 +747,33 @@ async function handlePrintInvoice(logId, btnEl) {
       const progress = showProgressToast("جاري تجهيز ملف الطباعة للمشاركة...");
       try {
         const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
+        progress.close();
         if (res.ok) {
           const pdfBlob = await res.blob();
           const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
           if (!navigator.canShare || navigator.canShare({ files: [pdfFile] })) {
-            progress.close();
-            await navigator.share({ files: [pdfFile], title: "وصولات الشحن - نظام المراد" });
-            return; // ✅ تمت المشاركة — انتهت العملية هنا
+            // ⚠️ لا نستدعي navigator.share() هنا مباشرة (بعد await fetch) —
+            // Safari بالذات يرفضها بصمت لأن "ضغطة المستخدم" خلصت صلاحيتها.
+            // نعرض زر "شارك الآن" بدالها، وضغطته هي اللي تخلي المشاركة تشتغل.
+            showShareReadyPrompt(pdfFile, "وصولات الشحن - نظام المراد");
+            return; // ✅ الملف جاهز، بانتظار ضغطة المستخدم على زر المشاركة
           }
+        } else {
+          toast("تعذر توليد ملف الطباعة من السيرفر", "error");
+          return;
         }
       } catch (err) {
-        if (err?.name === "AbortError") { progress.close(); return; } // المستخدم سكّر شاشة المشاركة بنفسه
-        console.warn("⚠️ تعذرت مشاركة PDF الطباعة، رح نطبع بالطريقة العادية:", err.message);
+        progress.close();
+        console.error("⚠️ تعذر تجهيز ملف الطباعة بالموبايل:", err.message);
+        toast("صار خطأ أثناء تجهيز ملف الطباعة — تأكد من الإنترنت وحاول مرة ثانية", "error");
+        return;
       }
-      progress.close();
     }
 
-    // 💻 اللابتوب (أو احتياط فشل المشاركة بالموبايل): طباعة فورية عبر
-    // iframe منعزل، بغض النظر عن عدد الوصولات (حتى لو 80+) — ما فيها أي
-    // تصوير للوصولات، فسرعتها ثابتة دائماً ومستقلة عن العدد.
+    // 💻 اللابتوب: طباعة فورية عبر iframe منعزل، بغض النظر عن عدد
+    // الوصولات (حتى لو 80+) — ما فيها أي تصوير للوصولات، فسرعتها ثابتة
+    // دائماً ومستقلة عن العدد. (بالموبايل ما نوصل هذا السطر إطلاقاً إلا
+    // إذا navigator.share غير مدعوم أصلاً بهذا المتصفح)
     printLabelsIsolated(html);
   } catch (err) {
     console.error(err);
@@ -746,16 +806,14 @@ async function handleShareInvoice(logId, btnEl) {
     const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
 
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [pdfFile] }))) {
-      try {
-        await navigator.share({ files: [pdfFile], title: "وصولات الشحن - نظام المراد" });
-        return; // ✅ تمت المشاركة
-      } catch (err) {
-        if (err?.name === "AbortError") return; // المستخدم سكّر شاشة المشاركة بنفسه
-        console.warn("⚠️ تعذرت مشاركة ملف PDF مباشرة، رح ننزله كملف بدلها:", err.message);
-      }
+      // ⚠️ لا نستدعي navigator.share() هنا مباشرة (بعد await fetch) — Safari
+      // بالذات يرفضها بصمت لأن "ضغطة المستخدم" خلصت صلاحيتها بهذا الوقت.
+      // نعرض زر "شارك الآن" بدالها، وضغطته الطازجة هي اللي تخلي المشاركة تشتغل.
+      showShareReadyPrompt(pdfFile, "وصولات الشحن - نظام المراد");
+      return;
     }
 
-    // احتياط: تنزيل ملف PDF مباشرة إذا المشاركة غير مدعومة/فشلت (الحاسوب غالباً)
+    // احتياط: تنزيل ملف PDF مباشرة إذا المشاركة غير مدعومة أصلاً (الحاسوب غالباً)
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -788,20 +846,30 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
     const labelHTML = buildLabelHTML(full, "1 / 1");
 
     if (isMobileDevice() && navigator.share) {
+      const progress = showProgressToast("جاري تجهيز ملف الوصل للمشاركة...");
       try {
         const qs = `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
         const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?${qs}`);
+        progress.close();
         if (res.ok) {
           const pdfBlob = await res.blob();
           const pdfFile = new File([pdfBlob], `وصل-${receiptNum || orderId}.pdf`, { type: "application/pdf" });
           if (!navigator.canShare || navigator.canShare({ files: [pdfFile] })) {
-            await navigator.share({ files: [pdfFile], title: "وصل الشحن - نظام المراد" });
-            return; // ✅ تمت المشاركة
+            // ⚠️ لا نستدعي navigator.share() هنا مباشرة — نفس ملاحظة الدفعة
+            // الكاملة أعلاه (Safari يرفضها بصمت بعد أي await). زر "شارك الآن"
+            // يضمن ضغطة طازجة تخلي المشاركة تشتغل بكل المتصفحات.
+            showShareReadyPrompt(pdfFile, "وصل الشحن - نظام المراد");
+            return;
           }
+        } else {
+          toast("تعذر توليد ملف الوصل من السيرفر", "error");
+          return;
         }
       } catch (err) {
-        if (err?.name === "AbortError") return; // المستخدم سكّر شاشة المشاركة بنفسه
-        console.warn("⚠️ تعذرت مشاركة PDF الوصل، رح نطبع بالطريقة العادية:", err.message);
+        progress.close();
+        console.error("⚠️ تعذر تجهيز ملف الوصل بالموبايل:", err.message);
+        toast("صار خطأ أثناء تجهيز الملف — تأكد من الإنترنت وحاول مرة ثانية", "error");
+        return;
       }
     }
 
