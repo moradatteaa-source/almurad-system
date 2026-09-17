@@ -60,17 +60,21 @@
     const receiptNumParam = params.get("receiptNum");
 
     let orders = [];
+    const dataToken = params.get("dataToken");
 
     // ✅ الوضع الطبيعي دائماً: السيرفر (backend/server.js) يجيب بيانات
-    // الطلبات هو نفسه من فايربيس (اتصال ثابت وسريع أصلاً عنده) ويحقنها
-    // هنا قبل ما الصفحة تفتح — فما نحتاج نتصل بفايربيس من جديد من داخل
-    // متصفح Puppeteer نفسه (كان هذا الاتصال الإضافي البطيء/غير المضمون
-    // من كروم لخوادم Google، فوق اتصال السيرفر نفسه، سبب فشل التوليد
-    // المتقطع). نرجع لطريقة الاتصال المباشر بالأسفل فقط احتياطاً، لو
-    // حدا فتح هذي الصفحة يدوياً بدون تحضير مسبق من السيرفر.
-    if (Array.isArray(window.__PRELOADED_ORDERS__)) {
-      orders = window.__PRELOADED_ORDERS__;
-      if (!orders.length) return fail("لا توجد طلبات لطباعتها");
+    // الطلبات هو نفسه من فايربيس (اتصال ثابت وسريع أصلاً عنده)، ويخزنها
+    // مؤقتاً برمز قصير العمر يوصلنا بالرابط (dataToken) — نجيبها بطلب
+    // بسيط لنفس السيرفر (سريع وموثوق لأنه نفس الاتصال اللي أصلاً ناجح
+    // بتحميل هذي الصفحة والصور) بدل ما نتصل بفايربيس من جديد من داخل
+    // متصفح Puppeteer نفسه (كان هذا الاتصال الخارجي لخوادم Google سبب
+    // فشل التوليد المتقطع). نرجع لطريقة الاتصال المباشر بالأسفل فقط
+    // احتياطاً، لو حدا فتح هذي الصفحة يدوياً بدون تحضير مسبق من السيرفر.
+    if (dataToken) {
+      const resp = await fetch(`/api/print-labels-data/${dataToken}`);
+      if (!resp.ok) return fail("تعذر جلب بيانات الطباعة (انتهت صلاحيتها أو استُخدمت من قبل)");
+      orders = await resp.json();
+      if (!Array.isArray(orders) || !orders.length) return fail("لا توجد طلبات لطباعتها");
     } else if (logId) {
       const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
       if (!snap.exists()) return fail("لا توجد طلبات بهذا السجل");

@@ -136,6 +136,33 @@ async function fetchOrdersForPrint({ logId, orderId, receiptNum }) {
   return { error: "لازم تمرر logId أو orderId" };
 }
 
+// ============================================================
+// 📮 مخزن مؤقت بذاكرة السيرفر لتمرير بيانات الطلبات لصفحة الطباعة
+// ────────────────────────────────────────────────────────
+// ⚠️ جربنا أول شي حقن البيانات مباشرة بمتصفح Puppeteer عبر
+// evaluateOnNewDocument، لكن تبين إنها ما توصل فعلياً لصفحة labels-print.html
+// (مشكلة توقيت/تنفيذ داخل كروم نفسه ما قدرنا نضمنها). الحل الأوثق: نخزن
+// بيانات كل طلب طباعة هنا برمز عشوائي قصير العمر، ونمرر الرمز بس بالرابط،
+// وصفحة الطباعة تجيب البيانات بطلب بسيط لنفس السيرفر (سريع وموثوق لأنه
+// نفس الاتصال اللي أصلاً ناجح بتحميل الصفحة والصور، عكس الاتصال الخارجي
+// بفايربيس اللي كان يفشل أحياناً). كل رمز يُستخدم مرة وحدة بس ويُحذف فوراً،
+// وفيه مهلة أمان 60 ثانية تحذفه تلقائياً حتى لو ما استخدم.
+// ============================================================
+const printDataStore = new Map();
+function storePrintData(orders) {
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  printDataStore.set(token, orders);
+  setTimeout(() => printDataStore.delete(token), 60000);
+  return token;
+}
+
+app.get("/api/print-labels-data/:token", (req, res) => {
+  const data = printDataStore.get(req.params.token);
+  printDataStore.delete(req.params.token); // ✅ استخدام مرة وحدة بس
+  if (!data) return res.status(404).json({ success: false, msg: "انتهت صلاحية بيانات الطباعة" });
+  res.json(data);
+});
+
 app.get("/api/print-labels-pdf", async (req, res) => {
   const { logId, orderId, receiptNum } = req.query;
   if (!logId && !orderId) {
@@ -147,19 +174,16 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     const { orders, error } = await fetchOrdersForPrint({ logId, orderId, receiptNum });
     if (error) return res.status(404).json({ success: false, msg: error });
 
+    const token = storePrintData(orders);
     const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const url = `${baseUrl}/labels-print.html`;
+    const url = `${baseUrl}/labels-print.html?dataToken=${token}`;
 
     const browser = await getSharedBrowser();
     page = await browser.newPage();
-    // 💉 نحقن بيانات الطلبات الجاهزة قبل ما الصفحة تفتح أصلاً — الصفحة
-    // تستخدمها مباشرة (شوف labels-print.html) بدل ما تتصل بفايربيس بنفسها
-    await page.evaluateOnNewDocument((data) => {
-      window.__PRELOADED_ORDERS__ = data;
-    }, orders);
     // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية احتياطاً — بعد إزالة اتصال فايربيس
-    // من داخل الصفحة صار التحميل محلي بالكامل (خط + صور) فسريع جداً عادةً،
-    // بس نخلي هامش أمان إضافي لأي بطء بمعالج Render المجاني.
+    // من داخل الصفحة صار التحميل محلي بالكامل (خط + صور + بيانات الطلبات
+    // بطلب واحد بسيط لنفس السيرفر) فسريع جداً عادةً، بس نخلي هامش أمان
+    // إضافي لأي بطء بمعالج Render المجاني.
     await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
     await page.waitForFunction("window.__labelsReady === true", { timeout: 60000 });
 
