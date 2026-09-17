@@ -759,7 +759,11 @@ async function handlePrintInvoice(logId, btnEl) {
             return; // ✅ الملف جاهز، بانتظار ضغطة المستخدم على زر المشاركة
           }
         } else {
-          toast("تعذر توليد ملف الطباعة من السيرفر", "error");
+          // ✅ نعرض سبب الفشل الحقيقي المرسل من السيرفر (بدل رسالة عامة
+          // ما توضح شي) — هذا يبين فوراً إذا كان السبب Timeout أو خطأ ثاني
+          let msg = "تعذر توليد ملف الطباعة من السيرفر";
+          try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+          toast(msg, "error");
           return;
         }
       } catch (err) {
@@ -862,7 +866,9 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
             return;
           }
         } else {
-          toast("تعذر توليد ملف الوصل من السيرفر", "error");
+          let msg = "تعذر توليد ملف الوصل من السيرفر";
+          try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+          toast(msg, "error");
           return;
         }
       } catch (err) {
