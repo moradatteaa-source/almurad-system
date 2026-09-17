@@ -69,6 +69,72 @@ async function getSharedBrowser() {
   }
   return sharedBrowser;
 }
+// 🔥 نشغّل كروم من أول ما السيرفر يشتغل (بدل أول طلب طباعة يوصل) — هذا
+// يشيل وقت "إقلاع كروم" (بضع ثواني) من وقت أول طلب طباعة بعد كل نشر جديد
+// أو بعد أي انهيار، فتصير كل الطلبات بنفس السرعة دائماً.
+getSharedBrowser().catch(err => console.error("❌ تعذر تشغيل كروم مسبقاً:", err.message));
+
+// 🔎 بحث عن طلب داخل شجرة ordersTest الكاملة — نفس منطق findOrderInTree
+// بملف labelTemplate.js المشترك بالضبط، بس نسخة لسيرفر Node (ملف
+// labelTemplate.js مكتوب كسكربت متصفح عادي، مو ES module، فما نقدر
+// نستورده هنا مباشرة — الدالة نفسها قصيرة فما فيها ضرر تكرارها).
+function findOrderInTreeServer(tree, orderId) {
+  for (const status of Object.keys(tree)) {
+    if (status === "_meta") continue;
+    if (tree[status] && tree[status][orderId]) {
+      return { ...tree[status][orderId], id: orderId, status };
+    }
+  }
+  return null;
+}
+
+// ============================================================
+// 📦 جلب بيانات الطلبات المطلوبة للطباعة — من السيرفر مباشرة، مو من
+// داخل متصفح Puppeteer
+// ────────────────────────────────────────────────────────
+// ⚠️ السبب الحقيقي وراء فشل الطباعة المتقطع (بالدفعة وحتى بالطلب المفرد
+// أحياناً): كانت صفحة labels-print.html تسوي اتصال فايربيس *مستقل* من
+// داخل متصفح كروم المخفي نفسه (تحميل مكتبة فايربيس من gstatic.com +
+// اتصال جديد لقاعدة البيانات + سحب شجرة ordersTest كاملة) لكل طلب طباعة
+// وحدة — هذا اتصال شبكة إضافي بطيء وغير مضمون فوق اتصال السيرفر نفسه
+// أصلاً، وبيئة Render المجانية المحدودة تخليه يبطئ أو ينقطع أحياناً
+// فيفشل التوليد كامل. الحل: السيرفر (المتصل بفايربيس أصلاً وبثبات، نفس
+// الاتصال المستخدم بالكرون) يجيب البيانات هو نفسه، وبعدين "يحقنها" جاهزة
+// بصفحة الطباعة قبل ما تفتح — فما تحتاج الصفحة تتصل بأي شي بالإنترنت
+// إطلاقاً غير تحميل الخط والصور المحلية.
+// ============================================================
+async function fetchOrdersForPrint({ logId, orderId, receiptNum }) {
+  if (logId) {
+    const logSnap = await get(ref(db, `shippingLogs/${logId}/orders`));
+    if (!logSnap.exists()) return { error: "لا توجد طلبات بهذا السجل" };
+
+    const stubs = Object.values(logSnap.val()).filter(s => s?.status === "success");
+    if (!stubs.length) return { error: "لا توجد طلبات ناجحة بهذا السجل لطباعتها" };
+
+    const treeSnap = await get(ref(db, "ordersTest"));
+    const tree = treeSnap.exists() ? treeSnap.val() : {};
+
+    const orders = [];
+    for (const stub of stubs) {
+      if (!stub?.orderId) continue;
+      const full = findOrderInTreeServer(tree, stub.orderId);
+      if (full) orders.push({ ...full, receiptNum: stub.receiptNum || full.receiptNum });
+    }
+    if (!orders.length) return { error: "تعذر إيجاد أي طلب من هذا السجل بقاعدة البيانات الحالية" };
+    return { orders };
+  }
+
+  if (orderId) {
+    const treeSnap = await get(ref(db, "ordersTest"));
+    const tree = treeSnap.exists() ? treeSnap.val() : {};
+    const full = findOrderInTreeServer(tree, orderId);
+    if (!full) return { error: "الطلب غير موجود في قاعدة البيانات" };
+    if (receiptNum) full.receiptNum = receiptNum;
+    return { orders: [full] };
+  }
+
+  return { error: "لازم تمرر logId أو orderId" };
+}
 
 app.get("/api/print-labels-pdf", async (req, res) => {
   const { logId, orderId, receiptNum } = req.query;
@@ -76,19 +142,24 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     return res.status(400).json({ success: false, msg: "لازم تمرر logId أو orderId" });
   }
 
-  const qs = logId
-    ? `logId=${encodeURIComponent(logId)}`
-    : `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const url = `${baseUrl}/labels-print.html?${qs}`;
-
   let page;
   try {
+    const { orders, error } = await fetchOrdersForPrint({ logId, orderId, receiptNum });
+    if (error) return res.status(404).json({ success: false, msg: error });
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const url = `${baseUrl}/labels-print.html`;
+
     const browser = await getSharedBrowser();
     page = await browser.newPage();
-    // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية — الدفعات الكبيرة (وصولات كثيرة)
-    // تاخذ وقت أطول برندرها على معالج Render المجاني المحدود من وصل واحد،
-    // و30 ثانية كانت تنقطع أحياناً بمنتصف دفعة كبيرة وتطلع خطأ Timeout.
+    // 💉 نحقن بيانات الطلبات الجاهزة قبل ما الصفحة تفتح أصلاً — الصفحة
+    // تستخدمها مباشرة (شوف labels-print.html) بدل ما تتصل بفايربيس بنفسها
+    await page.evaluateOnNewDocument((data) => {
+      window.__PRELOADED_ORDERS__ = data;
+    }, orders);
+    // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية احتياطاً — بعد إزالة اتصال فايربيس
+    // من داخل الصفحة صار التحميل محلي بالكامل (خط + صور) فسريع جداً عادةً،
+    // بس نخلي هامش أمان إضافي لأي بطء بمعالج Render المجاني.
     await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
     await page.waitForFunction("window.__labelsReady === true", { timeout: 60000 });
 
