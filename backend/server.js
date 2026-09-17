@@ -51,7 +51,20 @@ async function getSharedBrowser() {
   if (!sharedBrowser || !sharedBrowser.isConnected()) {
     sharedBrowser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      // ⚠️ مهم جداً — سبب فشل "طباعة الكل" (دفعة فيها وصولات كثيرة) بينما
+      // وصل واحد يشتغل عادي: كروم الافتراضي يستخدم /dev/shm (ذاكرة مشتركة)
+      // لتبديل البيانات بين تبويباته، وبيئات الاستضافة السحابية متل Render
+      // تجيب حجم /dev/shm صغير جداً (64 ميكا بس أغلب الأحيان). لما الصفحة
+      // فيها عدد كبير من الوصولات (كل وحدة فيها صورة QR + شعارات)، الذاكرة
+      // المشتركة تخلص فجأة فينهار تبويب كروم (Page crashed) — وصل واحد ما
+      // يوصلها أصلاً لأنه خفيف. الحل القياسي المعروف: --disable-dev-shm-usage
+      // يخلي كروم يستخدم /tmp العادي بدل /dev/shm المحدود، فينحل الانهيار
+      // نهائياً بغض النظر عن عدد الوصولات بالدفعة.
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
     });
   }
   return sharedBrowser;
@@ -73,8 +86,11 @@ app.get("/api/print-labels-pdf", async (req, res) => {
   try {
     const browser = await getSharedBrowser();
     page = await browser.newPage();
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
-    await page.waitForFunction("window.__labelsReady === true", { timeout: 30000 });
+    // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية — الدفعات الكبيرة (وصولات كثيرة)
+    // تاخذ وقت أطول برندرها على معالج Render المجاني المحدود من وصل واحد،
+    // و30 ثانية كانت تنقطع أحياناً بمنتصف دفعة كبيرة وتطلع خطأ Timeout.
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
+    await page.waitForFunction("window.__labelsReady === true", { timeout: 60000 });
 
     const errMsg = await page.evaluate(() => window.__labelsError || null);
     if (errMsg) {
@@ -242,6 +258,28 @@ cron.schedule("*/15 * * * *", async () => {
   } finally {
     clearTimeout(timeout);
     isUpdating = false;
+  }
+});
+
+// ============================================================
+// 4) إبقاء السيرفر صاحي دائماً (حل مشكلة "التأخير" بالطباعة من الموبايل)
+// ────────────────────────────────────────────────────────
+// خطة Render المجانية "تنيّم" السيرفر تلقائياً بعد 15 دقيقة بدون أي طلب
+// وارد له، وبعدين أول طلب يوصله بعد النوم لازم ينتظر عدة دقائق لحد ما
+// يصحى من جديد (هذا سبب تأخر الـ5 دقايق اللي صار بتجربة الموبايل).
+// الحل بدون أي ترقية مدفوعة: نخلي السيرفر نفسه يرسل طلب بسيط لنفسه كل
+// 10 دقايق (أقل من 15) — طالما فيه طلب وارد كل هالمدة، Render ما يعتبره
+// خامل أبداً وما ينيّمه، فتصير الطباعة/المشاركة من الموبايل سريعة خلال
+// ثواني دائماً، تمام متل ما صارت أول مرة لما كان صاحي فعلاً.
+// ============================================================
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || "https://almurad.onrender.com";
+
+cron.schedule("*/10 * * * *", async () => {
+  try {
+    await fetch(SELF_URL);
+    console.log("💓 Keep-alive ping:", new Date().toISOString());
+  } catch (err) {
+    console.error("❌ Keep-alive ping failed:", err.message);
   }
 });
 
