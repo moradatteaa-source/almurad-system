@@ -61,7 +61,17 @@
 
     let orders = [];
 
-    if (logId) {
+    // ✅ الوضع الطبيعي دائماً: السيرفر (backend/server.js) يجيب بيانات
+    // الطلبات هو نفسه من فايربيس (اتصال ثابت وسريع أصلاً عنده) ويحقنها
+    // هنا قبل ما الصفحة تفتح — فما نحتاج نتصل بفايربيس من جديد من داخل
+    // متصفح Puppeteer نفسه (كان هذا الاتصال الإضافي البطيء/غير المضمون
+    // من كروم لخوادم Google، فوق اتصال السيرفر نفسه، سبب فشل التوليد
+    // المتقطع). نرجع لطريقة الاتصال المباشر بالأسفل فقط احتياطاً، لو
+    // حدا فتح هذي الصفحة يدوياً بدون تحضير مسبق من السيرفر.
+    if (Array.isArray(window.__PRELOADED_ORDERS__)) {
+      orders = window.__PRELOADED_ORDERS__;
+      if (!orders.length) return fail("لا توجد طلبات لطباعتها");
+    } else if (logId) {
       const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
       if (!snap.exists()) return fail("لا توجد طلبات بهذا السجل");
       const stubs = Object.values(snap.val()).filter(s => s?.status === "success");
