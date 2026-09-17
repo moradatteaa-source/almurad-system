@@ -682,10 +682,38 @@ async function handlePrintInvoice(logId, btnEl) {
     }
 
     const html = orders.map((o, i) => buildLabelHTML(o, `${i + 1} / ${orders.length}`)).join("");
-    // ✅ الطباعة تفتح دائماً عبر نافذة الطباعة الأصلية بالمتصفح فوراً، بغض
-    // النظر عن نوع الجهاز أو عدد الوصولات (حتى لو 80+) — ما فيها أي تصوير
-    // للوصولات، فسرعتها ثابتة دائماً ومستقلة عن العدد. زر "مشاركة" المنفصل
-    // هو اللي يجيب ملف PDF جاهز من السيرفر للمشاركة المباشرة إذا احتجتها.
+
+    // ✅ ملاحظة مهمة (2026-09-17): بالموبايل، نافذة الطباعة الأصلية للمتصفح
+    // (iOS/Android) ما تدعم مقاس ورق مخصص (80×120mm) — تفرض دائماً A4 أو
+    // Letter وتقص المحتوى، وهذا قيد حقيقي بمنصة الموبايل نفسها ما نكدر
+    // نتجاوزه بكود. الحل: بالموبايل، زر "طباعة" نفسه يجيب PDF جاهز
+    // بالمقاس الصحيح من السيرفر (نفس تصميم الطباعة بالضبط) ويشاركه مباشرة
+    // (تلي/واتساب/حفظ...) بدل ما يفتح نافذة طباعة الموبايل الناقصة. إذا
+    // تعذرت المشاركة لأي سبب، نرجع للطباعة العادية عبر iframe كاحتياط.
+    // باللابتوب: ما يتغير أي شي — طباعة فورية عبر iframe متل قبل تماماً.
+    if (isMobileDevice() && navigator.share) {
+      const progress = showProgressToast("جاري تجهيز ملف الطباعة للمشاركة...");
+      try {
+        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
+        if (res.ok) {
+          const pdfBlob = await res.blob();
+          const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
+          if (!navigator.canShare || navigator.canShare({ files: [pdfFile] })) {
+            progress.close();
+            await navigator.share({ files: [pdfFile], title: "وصولات الشحن - نظام المراد" });
+            return; // ✅ تمت المشاركة — انتهت العملية هنا
+          }
+        }
+      } catch (err) {
+        if (err?.name === "AbortError") { progress.close(); return; } // المستخدم سكّر شاشة المشاركة بنفسه
+        console.warn("⚠️ تعذرت مشاركة PDF الطباعة، رح نطبع بالطريقة العادية:", err.message);
+      }
+      progress.close();
+    }
+
+    // 💻 اللابتوب (أو احتياط فشل المشاركة بالموبايل): طباعة فورية عبر
+    // iframe منعزل، بغض النظر عن عدد الوصولات (حتى لو 80+) — ما فيها أي
+    // تصوير للوصولات، فسرعتها ثابتة دائماً ومستقلة عن العدد.
     printLabelsIsolated(html);
   } catch (err) {
     console.error(err);
