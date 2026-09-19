@@ -18,6 +18,8 @@ import cron      from "node-cron";
 import path      from "path";
 import { fileURLToPath } from "url";
 import puppeteer from "puppeteer";
+import crypto    from "crypto";
+import { PDFDocument, PDFDict, PDFArray, PDFRef, PDFRawStream } from "pdf-lib";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -157,6 +159,108 @@ function storePrintData(orders) {
   return token;
 }
 
+// ============================================================
+// 🗜️ توحيد العناصر المتكررة داخل ملف PDF النهائي (شعارات...الخ)
+// ────────────────────────────────────────────────────────
+// ⚠️ سبب تضخم الحجم مع زيادة عدد الوصولات: كروم (عبر Puppeteer) يصدّر
+// كل صفحة PDF بشكل مستقل تقريباً، فينسخ الشعارات (وأي صورة/عنصر ثابت
+// يتكرر بنفس الشكل بكل وصل) نسخة كاملة جديدة لكل صفحة بدل ما "يشاور"
+// على نسخة وحدة مشتركة — يعني 41 وصل = 41 نسخة كاملة من نفس الشعار
+// بالضبط بداخل الملف! هذا يخلي حجم الملف يكبر بشكل خطي مع عدد الوصولات
+// حتى لو الشعار نفسه ما تغيّر إطلاقاً.
+//
+// الحل: بعد ما ياخذ Puppeteer الـPDF كامل، نفتحه هنا بمكتبة pdf-lib
+// ونمشي على كل "الكائنات" (objects) الداخلية بالملف (صور، خطوط...الخ)،
+// نسوي بصمة (hash) لمحتوى كل وحدة بالبايت، وأي وحدتين نفس البصمة (يعني
+// نفس المحتوى تماماً) نخليهم "يشاورون" على نسخة وحدة بس (الأولى اللي
+// لقيناها) ونحذف بقية النسخ المكررة تماماً من الملف. النتيجة: الشعار
+// (أو أي عنصر متكرر ثابت) ينخزن مرة وحدة وحدة بغض النظر عن عدد الوصولات
+// (لو صار 1000 وصل)، وحجم الملف يكبر بس بمقدار المعلومات الفعلية الجديدة
+// بكل وصل (النص + رمز QR المختلف) — تماماً متل ما طلب المستخدم.
+//
+// ✅ آمن 100%: نفس البايتات بالضبط تنخزن، بس مرجع واحد أقل تكرار — ماكو
+// أي تغيير على شكل أو جودة أي صورة أو خط بالملف النهائي.
+// ============================================================
+async function dedupPdfStreams(pdfBytes) {
+  const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
+  const context = pdfDoc.context;
+
+  const hashToCanonicalRef = new Map(); // بصمة المحتوى → أول مرجع (PDFRef) شفناه لهذا المحتوى
+  const replacements = new Map();       // "رقم_الكائن رقم_الجيل" (للنسخ المكررة) → المرجع الأصلي
+  const duplicateRefs = [];             // المراجع المكررة اللي لازم تنحذف بالنهاية
+
+  const refKey = (r) => `${r.objectNumber} ${r.generationNumber}`;
+
+  for (const [ref, obj] of context.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFRawStream)) continue; // بس الكائنات اللي فيها محتوى ثنائي (صور/خطوط...)
+
+    let bytes;
+    try {
+      bytes = obj.getContents();
+    } catch {
+      continue;
+    }
+    if (!bytes || !bytes.length) continue;
+
+    const hash = crypto.createHash("sha1").update(bytes).digest("hex");
+    const key = `${hash}|${bytes.length}`;
+
+    if (hashToCanonicalRef.has(key)) {
+      replacements.set(refKey(ref), hashToCanonicalRef.get(key));
+      duplicateRefs.push(ref);
+    } else {
+      hashToCanonicalRef.set(key, ref);
+    }
+  }
+
+  if (!replacements.size) return pdfBytes; // ماكو أي تكرار — نرجع الملف الأصلي متل ما هو
+
+  // نمشي بعمق على كل قواميس/مصفوفات الملف (حتى المتداخلة داخل بعضها، متل
+  // /Resources أو /XObject اللي غالباً تكون مضمّنة مباشرة بدون مرجع مستقل)
+  // ونبدّل أي إشارة لكائن مكرر بإشارة للنسخة الأصلية بدلها
+  function fixRefsDeep(container, seen) {
+    if (seen.has(container)) return;
+    seen.add(container);
+
+    if (container instanceof PDFDict) {
+      for (const key of container.keys()) {
+        const val = container.get(key);
+        if (val instanceof PDFRef) {
+          const rep = replacements.get(refKey(val));
+          if (rep) container.set(key, rep);
+        } else if (val instanceof PDFDict || val instanceof PDFArray) {
+          fixRefsDeep(val, seen);
+        }
+      }
+    } else if (container instanceof PDFArray) {
+      const size = container.size();
+      for (let i = 0; i < size; i++) {
+        const val = container.get(i);
+        if (val instanceof PDFRef) {
+          const rep = replacements.get(refKey(val));
+          if (rep) container.set(i, rep);
+        } else if (val instanceof PDFDict || val instanceof PDFArray) {
+          fixRefsDeep(val, seen);
+        }
+      }
+    }
+  }
+
+  const seen = new Set();
+  for (const [, obj] of context.enumerateIndirectObjects()) {
+    if (obj instanceof PDFDict) fixRefsDeep(obj, seen);
+    else if (obj instanceof PDFRawStream) fixRefsDeep(obj.dict, seen);
+    else if (obj instanceof PDFArray) fixRefsDeep(obj, seen);
+  }
+
+  // حذف النسخ المكررة نهائياً بعد ما صارت كل الإشارات إلها تشاور على
+  // النسخة الأصلية بدلها — ما راح تسبب أي مشكلة لأنه ماكو أي كائن ثاني
+  // يشاور عليها بعد الآن
+  for (const ref of duplicateRefs) context.delete(ref);
+
+  return await pdfDoc.save();
+}
+
 app.get("/api/print-labels-data/:token", (req, res) => {
   const data = printDataStore.get(req.params.token);
   printDataStore.delete(req.params.token); // ✅ استخدام مرة وحدة بس
@@ -199,12 +303,28 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     // {"0":37,"1":80,...} — كل بايت رقم منفصل!) بدل ما يرسله كملف حقيقي،
     // فيطلع حجم الملف كبير جداً وما ينفتح أصلاً كـPDF. الحل: نغلفه بـ
     // Buffer.from() صراحة قبل الإرسال حتى يتعرف عليه express كملف ثنائي.
-    const pdfBuffer = Buffer.from(await page.pdf({
+    let pdfBuffer = Buffer.from(await page.pdf({
       width: "80mm",
       height: "120mm",
       printBackground: true,
       margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
     }));
+
+    // ✅ خطوة توحيد الشعارات/العناصر المتكررة (تشرح بالتفصيل فوق دالة
+    // dedupPdfStreams) — بمحاولة try/catch منفصلة حتى لو صار أي خطأ غير
+    // متوقع فيها (مثلاً ملف PDF بصيغة ما نقدر نعالجها) نكمل ونرسل الملف
+    // الأصلي من Puppeteer بدون توحيد، بدل ما نفشل الطباعة كلها بسبب خطوة
+    // تحسين حجم إضافية
+    try {
+      const before = pdfBuffer.length;
+      const deduped = Buffer.from(await dedupPdfStreams(pdfBuffer));
+      if (deduped.length < before) {
+        pdfBuffer = deduped;
+        console.log(`🗜️ توحيد PDF: ${before} → ${deduped.length} بايت`);
+      }
+    } catch (dedupErr) {
+      console.error("⚠️ فشل توحيد عناصر PDF (تم تجاهله وإرسال الملف الأصلي):", dedupErr.message);
+    }
 
     res.set("Content-Type", "application/pdf");
     res.send(pdfBuffer);
