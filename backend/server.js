@@ -46,33 +46,34 @@ app.get("/", (_, res) => res.send("✅ AlMurad Server is running"));
 // حقيقي حاد 100% (مو صورة) — بعدها الموبايل بس يجيب هذا الملف الجاهز
 // ويشاركه فوراً. أسرع بكثير من التصوير بالموبايل حتى لمئات الوصولات،
 // لأنه رندر حقيقي بالسيرفر مو تصوير DOM بجهاز ضعيف.
-let sharedBrowser = null;
-async function getSharedBrowser() {
-  if (!sharedBrowser || !sharedBrowser.isConnected()) {
-    sharedBrowser = await puppeteer.launch({
-      headless: true,
-      // ⚠️ مهم جداً — سبب فشل "طباعة الكل" (دفعة فيها وصولات كثيرة) بينما
-      // وصل واحد يشتغل عادي: كروم الافتراضي يستخدم /dev/shm (ذاكرة مشتركة)
-      // لتبديل البيانات بين تبويباته، وبيئات الاستضافة السحابية متل Render
-      // تجيب حجم /dev/shm صغير جداً (64 ميكا بس أغلب الأحيان). لما الصفحة
-      // فيها عدد كبير من الوصولات (كل وحدة فيها صورة QR + شعارات)، الذاكرة
-      // المشتركة تخلص فجأة فينهار تبويب كروم (Page crashed) — وصل واحد ما
-      // يوصلها أصلاً لأنه خفيف. الحل القياسي المعروف: --disable-dev-shm-usage
-      // يخلي كروم يستخدم /tmp العادي بدل /dev/shm المحدود، فينحل الانهيار
-      // نهائياً بغض النظر عن عدد الوصولات بالدفعة.
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    });
-  }
-  return sharedBrowser;
+// ⚠️ ملاحظة مهمة (2026-09-19): كانت هذي متصفح كروم واحد "مشترك" يضل شغال
+// باستمرار (بفضل نبضة إبقاء السيرفر صاحي كل 10 دقايق) ويعاد استخدامه لكل
+// طلبات الطباعة. تبين إن هذا سبب عطل متقطع يزيد كل ما مر وقت أطول على
+// تشغيل السيرفر: العشرات من دورات newPage/close على نفس المتصفح، فوق ذاكرة
+// Render المجانية المحدودة (512 ميكا)، تراكم ضغط بالذاكرة تدريجياً لحد ما
+// يصير فشل عشوائي (خصوصاً بالدفعات 5+ وصل، وأحياناً حتى بأقل من هذا).
+// الحل: نشغّل متصفح كروم *جديد تماماً* لكل طلب طباعة ونقفله كامل بعدها —
+// أبطأ بثواني قليلة من متصفح جاهز مسبقاً، بس كل طلب يبلش بذاكرة نظيفة
+// 100% فينحل التدهور التدريجي نهائياً.
+async function launchPrintBrowser() {
+  return puppeteer.launch({
+    headless: true,
+    // ⚠️ مهم جداً — سبب فشل "طباعة الكل" (دفعة فيها وصولات كثيرة) بينما
+    // وصل واحد يشتغل عادي: كروم الافتراضي يستخدم /dev/shm (ذاكرة مشتركة)
+    // لتبديل البيانات بين تبويباته، وبيئات الاستضافة السحابية متل Render
+    // تجيب حجم /dev/shm صغير جداً (64 ميكا بس أغلب الأحيان). لما الصفحة
+    // فيها عدد كبير من الوصولات (كل وحدة فيها صورة QR + شعارات)، الذاكرة
+    // المشتركة تخلص فجأة فينهار تبويب كروم (Page crashed) — وصل واحد ما
+    // يوصلها أصلاً لأنه خفيف. الحل القياسي المعروف: --disable-dev-shm-usage
+    // يخلي كروم يستخدم /tmp العادي بدل /dev/shm المحدود، فينحل الانهيار
+    // نهائياً بغض النظر عن عدد الوصولات بالدفعة.
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
+  });
 }
-// 🔥 نشغّل كروم من أول ما السيرفر يشتغل (بدل أول طلب طباعة يوصل) — هذا
-// يشيل وقت "إقلاع كروم" (بضع ثواني) من وقت أول طلب طباعة بعد كل نشر جديد
-// أو بعد أي انهيار، فتصير كل الطلبات بنفس السرعة دائماً.
-getSharedBrowser().catch(err => console.error("❌ تعذر تشغيل كروم مسبقاً:", err.message));
 
 // 🔎 بحث عن طلب داخل شجرة ordersTest الكاملة — نفس منطق findOrderInTree
 // بملف labelTemplate.js المشترك بالضبط، بس نسخة لسيرفر Node (ملف
@@ -169,7 +170,7 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     return res.status(400).json({ success: false, msg: "لازم تمرر logId أو orderId" });
   }
 
-  let page;
+  let browser, page;
   try {
     const { orders, error } = await fetchOrdersForPrint({ logId, orderId, receiptNum });
     if (error) return res.status(404).json({ success: false, msg: error });
@@ -178,7 +179,7 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get("host")}`;
     const url = `${baseUrl}/labels-print.html?dataToken=${token}`;
 
-    const browser = await getSharedBrowser();
+    browser = await launchPrintBrowser();
     page = await browser.newPage();
     // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية احتياطاً — بعد إزالة اتصال فايربيس
     // من داخل الصفحة صار التحميل محلي بالكامل (خط + صور + بيانات الطلبات
@@ -211,7 +212,9 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     console.error("❌ print-labels-pdf:", err.message);
     res.status(500).json({ success: false, msg: err.message });
   } finally {
-    if (page) await page.close();
+    // ✅ نقفل المتصفح كامل (مو بس الصفحة) — كل طلب طباعة يبلش وينتهي بمتصفح
+    // نظيف تماماً، بدون أي تراكم ذاكرة بين الطلبات
+    if (browser) await browser.close().catch(() => {});
   }
 });
 
