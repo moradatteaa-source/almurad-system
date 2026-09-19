@@ -11,31 +11,40 @@
 // errorCorrectionLevel: "M" (تصحيح أخطاء ~15%) توازن جيد بين حجم الكود
 // ووضوحه على طابعة حرارية 80mm. typeNumber: 0 يخلي المكتبة تختار أصغر
 // حجم QR يكفي لطول النص تلقائياً.
-function generateQrDataUrl(value) {
+// ⚠️ ملاحظة مهمة (2026-09-19): كنا نرسمه بـ<canvas> ونحوله لصورة PNG
+// (data:image/png;base64,...)، وهذا كان يشتغل تمام باللابتوب. بس تبين إن
+// متصفح كروم المخفي بالسيرفر (Puppeteer) ما يتعامل مع صور القياسات هذي
+// بنفس كفاءة تصدير الطباعة العادي — كل وصل صار يضيف تقريباً 70-80 كيلوبايت
+// إضافية للملف بدل أقل من 3 كيلوبايت المتوقعة (36 وصل صاروا 2.8 ميكا بدل
+// أقل من 1 ميكا). كود QR أصلاً مجرد مربعات سوداء وبيضاء — نرسمه SVG (خطوط
+// متجهة نظيفة) بدل صورة نقطية، فيصير حجمه صغير جداً بأي مسار تصدير (كروم
+// عادي أو Puppeteer) لأنه مو صورة أصلاً.
+function generateQrSvg(value) {
   if (!value) return null;
   try {
     const qr = qrcode(0, "M");
     qr.addData(String(value));
     qr.make();
     const count = qr.getModuleCount();
-    const cellSize = 6;
     const margin = 4; // هامش أبيض حول الكود (مطلوب لقراءة سليمة بأي سكانر)
-    const size = (count + margin * 2) * cellSize;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = "#000";
+    const size = count + margin * 2;
+    // 📉 ندمج المربعات السوداء المتجاورة بنفس الصف بمستطيل واحد عريض بدل
+    // مربع صغير لكل وحدة — يقلّل عدد العناصر كثير (خط كامل بمستطيل وحدة
+    // بدل عشرات) فيصير الناتج أخف وأسرع برسمه.
+    let rects = "";
     for (let row = 0; row < count; row++) {
-      for (let col = 0; col < count; col++) {
+      let col = 0;
+      while (col < count) {
         if (qr.isDark(row, col)) {
-          ctx.fillRect((col + margin) * cellSize, (row + margin) * cellSize, cellSize, cellSize);
+          let runStart = col;
+          while (col < count && qr.isDark(row, col)) col++;
+          rects += `<rect x="${runStart + margin}" y="${row + margin}" width="${col - runStart}" height="1"/>`;
+        } else {
+          col++;
         }
       }
     }
-    return canvas.toDataURL("image/png");
+    return `<svg class="label-qr" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><g fill="#000">${rects}</g></svg>`;
   } catch (err) {
     console.warn("⚠️ تعذر توليد كود QR الوصل:", err.message);
     return null;
@@ -62,7 +71,7 @@ function buildLabelHTML(order, pageNum) {
   // ✅ كود QR يُبنى من رقم الوصل نفسه لكل طلب (مو رقم ثابت بالكود) — يتغير
   // تلقائياً حسب رقم الوصل الفعلي المخزّن بقاعدة البيانات لهذا الطلب بالذات
   const qrValue = order.receiptNum || order.orderNumber || order.id;
-  const qrDataUrl = generateQrDataUrl(qrValue);
+  const qrSvg = generateQrSvg(qrValue);
 
   const items = (Array.isArray(order.productsDetailed) && order.productsDetailed.length)
     ? order.productsDetailed
@@ -82,7 +91,7 @@ function buildLabelHTML(order, pageNum) {
     <div class="label-page-inner">
     <div class="label-top">
       <div class="label-almurad"><img src="almurad-logo.png" alt="AL-MURAD"></div>
-      ${qrDataUrl ? `<div class="label-qr-wrap"><img class="label-qr" src="${qrDataUrl}" alt="QR"></div>` : ""}
+      ${qrSvg ? `<div class="label-qr-wrap">${qrSvg}</div>` : ""}
       <div class="label-courier">
         <img src="${logoFile}" alt="${escHtml(label)}"
              data-fallback-color="${color}" data-fallback-label="${escHtml(label)}">
