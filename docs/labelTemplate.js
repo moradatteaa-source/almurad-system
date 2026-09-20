@@ -95,7 +95,7 @@ function buildLabelHTML(order, pageNum) {
       <div class="label-courier">
         <img src="${logoFile}" alt="${escHtml(label)}"
              data-fallback-color="${color}" data-fallback-label="${escHtml(label)}">
-        ${order.branchCode ? `<div class="label-branch-code">${escHtml(order.branchCode)}</div>` : ""}
+        <div class="label-branch-code">${escHtml(order.branchCode || "KRK9")}</div>
       </div>
     </div>
 
@@ -225,7 +225,7 @@ const LABEL_STYLE_CSS = `
   .label-courier { text-align:center; }
   .label-courier img { width:16mm; height:auto; }
   .label-courier-fallback { display:inline-flex; align-items:center; justify-content:center; width:16mm; height:10mm; border-radius:2mm; color:#fff; font-size:8px; font-weight:700; }
-  .label-branch-code { font-size:8px; font-weight:700; margin-top:1mm; }
+  .label-branch-code { font-size:13px; font-weight:900; margin-top:1mm; letter-spacing:0.5px; }
   .label-receipt-title { text-align:center; font-size:11px; font-weight:700; margin-top:0.5mm; }
   .label-meta-row { display:flex; justify-content:space-between; font-size:10px; margin-top:1mm; }
   .label-qr-wrap { text-align:center; margin-top:0.5mm; margin-bottom:0.5mm; }
@@ -239,6 +239,11 @@ const LABEL_STYLE_CSS = `
   .label-table { width:100%; border-collapse:collapse; font-size:8.5px; margin-top:1.5mm; }
   .label-table th, .label-table td { border:1px solid #000; padding:1mm; text-align:center; }
   .label-page-num { text-align:center; font-size:10px; margin-top:2mm; }
+    .label-almurad img { filter: grayscale(1) contrast(2.5) !important; }
+  .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
+  .label-receipt-title, .label-box b, .label-notes b, .label-table th { font-weight: 900 !important; }
+  .label-page hr, .label-box, .label-notes, .label-table th, .label-table td { border-color: #000 !important; }
+  .label-courier-fallback { background: #fff !important; border: 1px solid #000; }
   .label-page { page-break-after: always; }
   .label-page:last-child { page-break-after: auto; }
 `;
