@@ -519,6 +519,18 @@ function courierColorFromProvider(provider) {
   return (key && COURIER_COLOR[key]) || "#043B64";
 }
 
+// 🔥 التجهيز المسبق لملف الطباعة — نطلب من السيرفر يبني ملف الدفعة
+// بالخلفية قبل ما الموظف يضغط طباعة، حتى يكون جاهز وينزل فوراً بدل
+// انتظار 10-15 ثانية. ما ننتظر الرد (fire-and-forget)، وما نعيد الطلب
+// لنفس الدفعة مرتين بنفس الجلسة.
+const prewarmedLogs = new Set();
+function prewarmBatchPdf(logId) {
+  if (!logId || prewarmedLogs.has(logId)) return;
+  prewarmedLogs.add(logId);
+  fetch(`https://almurad.onrender.com/api/prewarm-labels-pdf?logId=${encodeURIComponent(logId)}`)
+    .catch(() => {});
+}
+
 // تحميل السجلات
 async function loadLogs() {
   const snapshot = await get(ref(db, "shippingLogs"));
@@ -579,6 +591,16 @@ async function loadLogs() {
 
       logsList.appendChild(card);
     });
+
+  // نجهّز أحدث دفعة فيها وصولات ناجحة — بالموبايل بس، لأن اللابتوب
+  // يطبع محلياً عبر iframe وما يحتاج ملف من السيرفر أصلاً. وحدة بس
+  // حتى ما نثقّل السيرفر بدفعات قديمة ما راح تنطبع.
+  if (isMobileDevice()) {
+    const newest = Object.entries(logs)
+      .sort((a, b) => b[0] - a[0])
+      .find(([, l]) => Number(l.successCount) > 0);
+    if (newest) prewarmBatchPdf(newest[0]);
+  }
 }
 
 function formatDate(ts) {
@@ -599,6 +621,10 @@ async function openDetails(id, log) {
   headerTitle.textContent = "تفاصيل سجل الشحنة";
 
   const courierColor = courierColorFromProvider(log.provider);
+
+  // غالباً الخطوة الجاية بعد فتح التفاصيل هي الطباعة — نجهّز الملف من
+  // هسه حتى يكون جاهز قبل ما يضغط
+  if (isMobileDevice() && Number(log.successCount) > 0) prewarmBatchPdf(id);
 
   summaryBox.innerHTML = `
     <div class="summary-provider">🚚 ${escHtml(log.provider || "غير محدد")}</div>

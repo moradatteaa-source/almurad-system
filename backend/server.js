@@ -261,11 +261,170 @@ async function dedupPdfStreams(pdfBytes) {
   return await pdfDoc.save();
 }
 
+// ============================================================
+// 🗂️ مخزن الملفات الجاهزة (التجهيز المسبق) + طابور التوليد
+// ────────────────────────────────────────────────────────
+// المشكلة اللي يحلها: توليد ملف الـPDF يحتاج 10-15 ثانية (تشغيل متصفح كروم
+// جديد + رسم الوصولات + تصدير)، والموظف كان ينتظرهن كل مرة يضغط طباعة.
+// الحل: نبني الملف *قبل* ما يضغط — أول ما تنرفع دفعة للتوصيل، الواجهة
+// تنادي /api/prewarm-labels-pdf وتمشي بحالها، والسيرفر يبني الملف
+// بالخلفية ويخزنه هنا جاهز. لما الموظف يضغط طباعة، الملف ينرسل فوراً.
+// إذا ما كان جاهز لأي سبب (السيرفر انطفى وصحى، انتهت المهلة...) ينبني
+// بنفس الطريقة القديمة — يعني ماكو أي خطر على الشغل الحالي.
+//
+// الطابور (runExclusive) مهم: يمنع توليد ملفين بنفس الوقت، لأن ذاكرة
+// Render المجانية (512 ميكا) ما تتحمل متصفحين كروم سوا.
+// ============================================================
+const PDF_CACHE_TTL = 30 * 60 * 1000; // صلاحية الملف الجاهز: 30 دقيقة
+const PDF_CACHE_MAX = 12;             // أقصى عدد ملفات محفوظة بالذاكرة
+const pdfCache = new Map();
+const pdfInFlight = new Map();
+
+function pdfCacheKey({ logId, orderId, receiptNum }) {
+  return logId ? `log:${logId}` : `order:${orderId}:${receiptNum || ""}`;
+}
+
+function pdfCacheGet(key) {
+  const entry = pdfCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > PDF_CACHE_TTL) { pdfCache.delete(key); return null; }
+  return entry.buffer;
+}
+
+function pdfCacheSet(key, buffer) {
+  pdfCache.set(key, { buffer, at: Date.now() });
+  // Map تحفظ ترتيب الإضافة، فأول مفتاح هو أقدم ملف — نحذفه عند التجاوز
+  while (pdfCache.size > PDF_CACHE_MAX) pdfCache.delete(pdfCache.keys().next().value);
+}
+
+let printQueue = Promise.resolve();
+function runExclusive(task) {
+  const result = printQueue.then(task, task);
+  printQueue = result.then(() => {}, () => {});
+  return result;
+}
+
+// ============================================================
+// 🧩 توليد الـPDF بالتقسيم — كل 20 وصل بمتصفح منفصل، وبعدها ندمجهن
+// ────────────────────────────────────────────────────────
+// قبل، الدفعة كلها (80 وصل مثلاً) كانت تنرسم بصفحة وحدة بمتصفح واحد،
+// فاستهلاك الذاكرة يكبر مع عدد الوصولات لحد ما ينهار السيرفر (هذا سبب
+// "حدث خطأ بالانترنت" بالدفعات الكبيرة — الاتصال ينقطع من طرف السيرفر).
+// هسه الذاكرة تبقى ثابتة مهما كان العدد: 20 وصل بس بأي لحظة، والمتصفح
+// ينقفل كامل بعد كل مجموعة. الحجم النهائي ما يتأثر (قياس فعلي)، لأن خطوة
+// dedupPdfStreams توحّد الخط والشعارات المتكررة بين المجموعات بعد الدمج.
+// ============================================================
+const LABELS_PER_CHUNK = 20;
+
+async function mergePdfBuffers(parts) {
+  if (parts.length === 1) return parts[0];
+  const out = await PDFDocument.create();
+  for (const part of parts) {
+    const src = await PDFDocument.load(part);
+    const pages = await out.copyPages(src, src.getPageIndices());
+    for (const pg of pages) out.addPage(pg);
+  }
+  return Buffer.from(await out.save());
+}
+
+async function renderChunkToPdf(orders, baseUrl) {
+  let browser;
+  try {
+    browser = await launchPrintBrowser();
+    const page = await browser.newPage();
+    const token = storePrintData(orders);
+    await page.goto(`${baseUrl}/labels-print.html?dataToken=${token}`, { waitUntil: "networkidle0", timeout: 60000 });
+    await page.waitForFunction("window.__labelsReady === true", { timeout: 60000 });
+    const errMsg = await page.evaluate(() => window.__labelsError || null);
+    if (errMsg) throw new Error(errMsg);
+    return Buffer.from(await page.pdf({
+      width: "80mm",
+      height: "120mm",
+      printBackground: true,
+      margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
+    }));
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+async function buildLabelsPdf(orders, baseUrl) {
+  // ✅ رقم الصفحة ينحسب على مستوى الدفعة كاملة قبل التقسيم، حتى يبقى
+  // الترقيم متسلسل (1/80، 2/80...) بدل ما يبلش من جديد بكل مجموعة
+  const total = orders.length;
+  const numbered = orders.map((o, i) => ({ ...o, __pageNum: `${i + 1} / ${total}` }));
+
+  const parts = [];
+  for (let i = 0; i < numbered.length; i += LABELS_PER_CHUNK) {
+    parts.push(await renderChunkToPdf(numbered.slice(i, i + LABELS_PER_CHUNK), baseUrl));
+  }
+
+  let pdfBuffer = await mergePdfBuffers(parts);
+
+  try {
+    const before = pdfBuffer.length;
+    const deduped = Buffer.from(await dedupPdfStreams(pdfBuffer));
+    if (deduped.length < before) {
+      pdfBuffer = deduped;
+      console.log(`🗜️ توحيد PDF: ${before} → ${deduped.length} بايت`);
+    }
+  } catch (dedupErr) {
+    console.error("⚠️ فشل توحيد عناصر PDF (تم تجاهله وإرسال الملف الأصلي):", dedupErr.message);
+  }
+
+  return pdfBuffer;
+}
+
+// يرجّع الملف الجاهز إذا موجود، وإلا يبنيه. إذا نفس الملف مطلوب مرتين
+// بنفس اللحظة (الموظف ضغط طباعة والتجهيز المسبق شغال) ما ننبيه مرتين —
+// الطلب الثاني ينتظر نفس العملية الأولى ويوخذ نتيجتها.
+function getOrBuildLabelsPdf({ logId, orderId, receiptNum, baseUrl }) {
+  const key = pdfCacheKey({ logId, orderId, receiptNum });
+
+  const cached = pdfCacheGet(key);
+  if (cached) return Promise.resolve(cached);
+  if (pdfInFlight.has(key)) return pdfInFlight.get(key);
+
+  const job = runExclusive(async () => {
+    const again = pdfCacheGet(key); // ممكن صار جاهز وإحنا بالطابور
+    if (again) return again;
+
+    const { orders, error } = await fetchOrdersForPrint({ logId, orderId, receiptNum });
+    if (error) { const e = new Error(error); e.notFound = true; throw e; }
+
+    const buffer = await buildLabelsPdf(orders, baseUrl);
+    pdfCacheSet(key, buffer);
+    console.log(`✅ ملف طباعة جاهز — ${key} (${orders.length} وصل، ${buffer.length} بايت)`);
+    return buffer;
+  }).finally(() => pdfInFlight.delete(key));
+
+  pdfInFlight.set(key, job);
+  return job;
+}
+
 app.get("/api/print-labels-data/:token", (req, res) => {
   const data = printDataStore.get(req.params.token);
   printDataStore.delete(req.params.token); // ✅ استخدام مرة وحدة بس
   if (!data) return res.status(404).json({ success: false, msg: "انتهت صلاحية بيانات الطباعة" });
   res.json(data);
+});
+
+// 🔥 التجهيز المسبق: تنادى من الواجهة أول ما تنرفع دفعة (أو عند فتح
+// صفحة السجلات) وترجع فوراً بدون ما تنتظر — البناء يصير بالخلفية.
+app.get("/api/prewarm-labels-pdf", (req, res) => {
+  const { logId, orderId, receiptNum } = req.query;
+  if (!logId && !orderId) {
+    return res.status(400).json({ success: false, msg: "لازم تمرر logId أو orderId" });
+  }
+
+  const key = pdfCacheKey({ logId, orderId, receiptNum });
+  if (pdfCacheGet(key)) return res.json({ success: true, status: "ready" });
+
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  getOrBuildLabelsPdf({ logId, orderId, receiptNum, baseUrl })
+    .catch(err => console.error("⚠️ فشل التجهيز المسبق:", err.message));
+
+  res.json({ success: true, status: "preparing" });
 });
 
 app.get("/api/print-labels-pdf", async (req, res) => {
@@ -274,67 +433,17 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     return res.status(400).json({ success: false, msg: "لازم تمرر logId أو orderId" });
   }
 
-  let browser, page;
   try {
-    const { orders, error } = await fetchOrdersForPrint({ logId, orderId, receiptNum });
-    if (error) return res.status(404).json({ success: false, msg: error });
-
-    const token = storePrintData(orders);
     const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const url = `${baseUrl}/labels-print.html?dataToken=${token}`;
-
-    browser = await launchPrintBrowser();
-    page = await browser.newPage();
-    // ⏱️ رفعنا المهلة من 30 إلى 60 ثانية احتياطاً — بعد إزالة اتصال فايربيس
-    // من داخل الصفحة صار التحميل محلي بالكامل (خط + صور + بيانات الطلبات
-    // بطلب واحد بسيط لنفس السيرفر) فسريع جداً عادةً، بس نخلي هامش أمان
-    // إضافي لأي بطء بمعالج Render المجاني.
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
-    await page.waitForFunction("window.__labelsReady === true", { timeout: 60000 });
-
-    const errMsg = await page.evaluate(() => window.__labelsError || null);
-    if (errMsg) {
-      return res.status(404).json({ success: false, msg: errMsg });
-    }
-
-    // ملاحظة مهمة (2026-09-16): نسخ Puppeteer الحديثة (v22+) صارت ترجع
-    // page.pdf() كنوع Uint8Array بدل Buffer التقليدي. express ما يتعرف
-    // على Uint8Array كملف ثنائي فيحوّله تلقائياً لنص JSON (شكل
-    // {"0":37,"1":80,...} — كل بايت رقم منفصل!) بدل ما يرسله كملف حقيقي،
-    // فيطلع حجم الملف كبير جداً وما ينفتح أصلاً كـPDF. الحل: نغلفه بـ
-    // Buffer.from() صراحة قبل الإرسال حتى يتعرف عليه express كملف ثنائي.
-    let pdfBuffer = Buffer.from(await page.pdf({
-      width: "80mm",
-      height: "120mm",
-      printBackground: true,
-      margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
-    }));
-
-    // ✅ خطوة توحيد الشعارات/العناصر المتكررة (تشرح بالتفصيل فوق دالة
-    // dedupPdfStreams) — بمحاولة try/catch منفصلة حتى لو صار أي خطأ غير
-    // متوقع فيها (مثلاً ملف PDF بصيغة ما نقدر نعالجها) نكمل ونرسل الملف
-    // الأصلي من Puppeteer بدون توحيد، بدل ما نفشل الطباعة كلها بسبب خطوة
-    // تحسين حجم إضافية
-    try {
-      const before = pdfBuffer.length;
-      const deduped = Buffer.from(await dedupPdfStreams(pdfBuffer));
-      if (deduped.length < before) {
-        pdfBuffer = deduped;
-        console.log(`🗜️ توحيد PDF: ${before} → ${deduped.length} بايت`);
-      }
-    } catch (dedupErr) {
-      console.error("⚠️ فشل توحيد عناصر PDF (تم تجاهله وإرسال الملف الأصلي):", dedupErr.message);
-    }
+    const cached = pdfCacheGet(pdfCacheKey({ logId, orderId, receiptNum }));
+    const pdfBuffer = cached || await getOrBuildLabelsPdf({ logId, orderId, receiptNum, baseUrl });
 
     res.set("Content-Type", "application/pdf");
+    res.set("X-Pdf-Source", cached ? "cache" : "fresh"); // للتشخيص: جاهز مسبقاً لو انبنى الآن
     res.send(pdfBuffer);
   } catch (err) {
     console.error("❌ print-labels-pdf:", err.message);
-    res.status(500).json({ success: false, msg: err.message });
-  } finally {
-    // ✅ نقفل المتصفح كامل (مو بس الصفحة) — كل طلب طباعة يبلش وينتهي بمتصفح
-    // نظيف تماماً، بدون أي تراكم ذاكرة بين الطلبات
-    if (browser) await browser.close().catch(() => {});
+    res.status(err.notFound ? 404 : 500).json({ success: false, msg: err.message });
   }
 });
 

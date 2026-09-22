@@ -122,7 +122,10 @@
       return fail("لازم تمرر logId أو orderId بالرابط");
     }
 
-    const html = orders.map((o, i) => buildLabelHTML(o, `${i + 1} / ${orders.length}`)).join("");
+    // ✅ رقم الصفحة يجي جاهز من السيرفر (__pageNum) لما تنقسم الدفعة
+    // لمجموعات، حتى يبقى الترقيم متسلسل عبر الدفعة كاملة (1/80، 2/80...)
+    // بدل ما يبلش من جديد بكل مجموعة (1/20، 1/20...)
+    const html = orders.map((o, i) => buildLabelHTML(o, o.__pageNum || `${i + 1} / ${orders.length}`)).join("");
     document.body.insertAdjacentHTML("beforeend", html);
     attachLogoFallback(document.body);
 
