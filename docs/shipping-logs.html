@@ -159,7 +159,15 @@
       color: #b3bcc4; background: #f1f3f5; cursor: not-allowed; pointer-events: none;
     }
     .print-action.busy { opacity: 0.55; pointer-events: none; }
-    .print-action.share-action { color: var(--green); background: var(--green-bg); }
+
+    /* ══════════════ بادج "تم الطباعة بواسطة..." — يبين بس إذا صار طبع فعلاً ══════════════ */
+    .printed-badge-slot:empty { display: none; }
+    .printed-badge {
+      margin-top: 10px; font-size: 12px; font-weight: 700; color: #5a6773;
+      background: #eef2f6; padding: 5px 10px; border-radius: 8px;
+      display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .printed-badge b { color: var(--navy); }
 
     /* ══════════════ صفحة التفاصيل ══════════════ */
     .summary-box {
@@ -266,7 +274,7 @@
       width: 16mm; height: 10mm; border-radius: 2mm; color: #fff;
       font-size: 8px; font-weight: 700;
     }
-    .label-branch-code { font-size: 8px; font-weight: 700; margin-top: 1mm; }
+      .label-branch-code { font-size: 13px; font-weight: 900; margin-top: 1mm; letter-spacing: 0.5px; }
     .label-receipt-title { text-align: center; font-size: 11px; font-weight: 700; margin-top: 0.5mm; }
     .label-meta-row { display: flex; justify-content: space-between; font-size: 10px; margin-top: 1mm; }
     .label-qr-wrap { text-align: center; margin-top: 0.5mm; margin-bottom: 0.5mm; }
@@ -286,6 +294,11 @@
     .label-table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-top: 1.5mm; }
     .label-table th, .label-table td { border: 1px solid #000; padding: 1mm; text-align: center; }
     .label-page-num { text-align: center; font-size: 10px; margin-top: 2mm; }
+    
+        /* ===== وضوح الطباعة الحرارية ===== */
+    .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
+    .label-receipt-title, .label-box b, .label-notes b, .label-table th { font-weight: 900 !important; }
+    .label-page hr, .label-box, .label-notes, .label-table th, .label-table td { border-color: #000 !important; }
   </style>
 </head>
 
@@ -324,7 +337,7 @@
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -390,7 +403,11 @@ function showProgressToast(message) {
 // بدالها. الحل الاحترافي: نجهز الملف أول (fetch)، وبعدها نعرض زر "شارك
 // الآن" — وضغطة المستخدم على *هذا الزر* هي الضغطة الطازجة اللي تخلي
 // navigator.share() يشتغل صح، بكل المتصفحات بدون استثناء.
-function showShareReadyPrompt(file, shareTitle) {
+// ⚠️ onSuccess (اختياري): يتنفذ بس إذا وصل الملف فعلياً للموظف — إما
+// عبر مشاركة ناجحة فعلياً (مو ملغاة) أو تحميل احتياطي إذا فشلت المشاركة
+// لأي سبب آخر غير الإلغاء. نستخدمها لتسجيل "تم الطباعة بواسطة الموظف".
+// إذا ألغى الموظف نافذة المشاركة (AbortError) ما نعتبرها طباعة فعلية.
+function showShareReadyPrompt(file, shareTitle, onSuccess) {
   const box = document.getElementById("toastBox");
   const el = document.createElement("div");
   el.className = "toast";
@@ -413,6 +430,7 @@ function showShareReadyPrompt(file, shareTitle) {
     done = true;
     try {
       await navigator.share({ files: [file], title: shareTitle });
+      onSuccess?.();
     } catch (err) {
       if (err?.name !== "AbortError") {
         console.warn("⚠️ تعذرت المشاركة حتى بضغطة طازجة، رح ننزل الملف بدلها:", err?.message);
@@ -422,6 +440,7 @@ function showShareReadyPrompt(file, shareTitle) {
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
         toast("تعذرت المشاركة المباشرة بهذا الجهاز — تم تحميل الملف بدلها", "info");
+        onSuccess?.();
       }
     } finally {
       remove();
@@ -430,6 +449,61 @@ function showShareReadyPrompt(file, shareTitle) {
 
   // تختفي تلقائياً إذا ما ضغط المستخدم خلال 25 ثانية
   setTimeout(() => { if (!done) remove(); }, 25000);
+}
+
+// ════════════════════════════════════════════════════════
+// 🖨️ تتبع "من طبع الوصل ومتى" — يظهر بس إذا صار طبع فعلاً (وإلا ما
+// يطلع أي إشعار إطلاقاً)، وينكتب اسم الموظف اللي سوى الطباعة. يشتغل
+// على مستوى الدفعة كاملة (شحنة الوصولات) وعلى مستوى الطلب المفرد
+// بالتفاصيل، ويظهر بكل من صفحة السجلات الرئيسية وصفحة التفاصيل.
+// ════════════════════════════════════════════════════════
+function currentEmployeeName() {
+  try {
+    const u = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+    return u?.username || u?.name || "غير معروف";
+  } catch {
+    return "غير معروف";
+  }
+}
+
+function printedBadgeHTML(by, at) {
+  if (!by) return "";
+  return `<div class="printed-badge">🖨️ طُبع بواسطة <b>${escHtml(by)}</b> · ${formatDate(at)}</div>`;
+}
+
+// تسجيل طباعة دفعة كاملة (زر "طباعة الكل") — يحدّث فايربيس + كائن
+// السجل بالذاكرة (نفس المرجع المستخدم بقائمة السجلات وبصفحة التفاصيل،
+// فينعكس تلقائياً بالمكانين) + بادج الكارت الظاهر حالياً إذا موجود
+async function recordBatchPrint(logId, log, btnEl) {
+  const by = currentEmployeeName();
+  const at = Date.now();
+  if (log) { log.printedBy = by; log.printedAt = at; }
+  const cardEl = btnEl?.closest(".log-card");
+  const slot = cardEl?.querySelector(".printed-badge-slot");
+  if (slot) slot.innerHTML = printedBadgeHTML(by, at);
+  const summarySlot = document.getElementById("summaryPrintedSlot");
+  if (summarySlot) summarySlot.innerHTML = printedBadgeHTML(by, at);
+  try {
+    await update(ref(db, `shippingLogs/${logId}`), { printedBy: by, printedAt: at });
+  } catch (err) {
+    console.warn("⚠️ تعذر حفظ سجل طباعة الدفعة:", err.message);
+  }
+}
+
+// تسجيل طباعة طلب مفرد (زر "طباعة" بصفحة التفاصيل) — نفس فكرة الأعلى
+// بس على مستوى الطلب الواحد داخل orders/<orderKey> بهذه الدفعة
+async function recordOrderPrint(logId, orderKey, order, btnEl) {
+  const by = currentEmployeeName();
+  const at = Date.now();
+  if (order) { order.printedBy = by; order.printedAt = at; }
+  const slot = btnEl?.closest(".order-card")?.querySelector(".printed-badge-slot");
+  if (slot) slot.innerHTML = printedBadgeHTML(by, at);
+  if (!logId || !orderKey) return; // ما نقدر نحفظ بفايربيس بدون مسار كامل (استدعاء خارجي مباشر مثلاً)
+  try {
+    await update(ref(db, `shippingLogs/${logId}/orders/${orderKey}`), { printedBy: by, printedAt: at });
+  } catch (err) {
+    console.warn("⚠️ تعذر حفظ سجل طباعة الطلب:", err.message);
+  }
 }
 
 // ملاحظة: COURIER_LOGO/COURIER_LABEL/COURIER_COLOR أصبحت بملف labelTemplate.js
@@ -483,31 +557,22 @@ async function loadLogs() {
           <span class="stat-chip fail">❌ فشل: ${log.failCount ?? 0}</span>
         </div>
 
+        <div class="printed-badge-slot">${printedBadgeHTML(log.printedBy, log.printedAt)}</div>
+
         <div class="log-card-footer">
           <div class="details-link"><span style="font-size:17px;">❯</span> عرض التفاصيل</div>
           <div class="print-action ${hasSuccess ? "" : "disabled"}" data-log-print
                title="${hasSuccess ? "طباعة كل الوصولات الناجحة بهذه الدفعة" : "لا توجد طلبات ناجحة بهذه الدفعة لطباعتها"}">
             <span style="font-size:17px;">🖨️</span> طباعة الكل
           </div>
-          <div class="print-action share-action ${hasSuccess ? "" : "disabled"}" data-log-share
-               title="${hasSuccess ? "مشاركة كل الوصولات كملف PDF واحد (واتساب/تلي/الخ)" : "لا توجد طلبات ناجحة بهذه الدفعة لمشاركتها"}">
-            <span style="font-size:17px;">📤</span> مشاركة
-          </div>
         </div>
       `;
 
       const printEl = card.querySelector("[data-log-print]");
       if (hasSuccess) {
-        printEl.onclick = (e) => { e.stopPropagation(); handlePrintInvoice(logId, printEl); };
+        printEl.onclick = (e) => { e.stopPropagation(); handlePrintInvoice(logId, printEl, log); };
       } else {
         printEl.onclick = (e) => { e.stopPropagation(); toast("لا توجد طلبات ناجحة بهذه الدفعة لطباعتها", "warn"); };
-      }
-
-      const shareEl = card.querySelector("[data-log-share]");
-      if (hasSuccess) {
-        shareEl.onclick = (e) => { e.stopPropagation(); handleShareInvoice(logId, shareEl); };
-      } else {
-        shareEl.onclick = (e) => { e.stopPropagation(); toast("لا توجد طلبات ناجحة بهذه الدفعة لمشاركتها", "warn"); };
       }
 
       card.onclick = () => openDetails(logId, log);
@@ -541,10 +606,12 @@ async function openDetails(id, log) {
     <div class="summary-sub">${formatDate(log.createdAt)}</div>
 
     <div class="summary-row">
-      <div><div class="value">${log.total ?? 0}</div><div class="label">إجمالي</div></div>
+      <div><div class="value" style="color:#fff;">${log.total ?? 0}</div><div class="label">إجمالي</div></div>
       <div><div class="value green">${log.successCount ?? 0}</div><div class="label">نجح</div></div>
       <div><div class="value red">${log.failCount ?? 0}</div><div class="label">فشل</div></div>
     </div>
+
+    <div id="summaryPrintedSlot" style="margin-top:12px; text-align:center;">${printedBadgeHTML(log.printedBy, log.printedAt)}</div>
   `;
   summaryBox.style.background = `linear-gradient(135deg, ${courierColor} 0%, var(--navy-deep) 100%)`;
 
@@ -555,13 +622,13 @@ async function openDetails(id, log) {
 
   ordersList.innerHTML = "";
 
-  const entries = Object.values(data);
+  const entries = Object.entries(data); // [orderKey, order][] — لازم نحتفظ بالمفتاح حتى نكدر نحدّث فايربيس لاحقاً (تسجيل الطباعة)
   if (!entries.length) {
     ordersList.innerHTML = `<div class="state-box"><span class="state-icon">📭</span>لا توجد طلبات بهذه الدفعة</div>`;
     return;
   }
 
-  entries.forEach(order => {
+  entries.forEach(([orderKey, order]) => {
     const isSuccess = order.status === "success";
 
     const card = document.createElement("div");
@@ -572,12 +639,13 @@ async function openDetails(id, log) {
       <div class="status-pill ${isSuccess ? "success" : "fail"}">${isSuccess ? "نجح" : "فشل"}</div>
       ${order.receiptNum ? `<div class="order-tracking">رقم التتبع: <b>${escHtml(order.receiptNum)}</b></div>` : ""}
       ${(!isSuccess && order.reason) ? `<div class="order-reason">السبب: ${escHtml(order.reason)}</div>` : ""}
+      <div class="printed-badge-slot">${printedBadgeHTML(order.printedBy, order.printedAt)}</div>
       ${isSuccess ? `<div class="order-print-btn" data-order-print><span style="font-size:17px;">🖨️</span><span>طباعة</span></div>` : ""}
     `;
 
     if (isSuccess) {
       const btn = card.querySelector("[data-order-print]");
-      btn.onclick = (e) => { e.stopPropagation(); handlePrintSingleOrder(order.orderId, order.receiptNum || "", btn); };
+      btn.onclick = (e) => { e.stopPropagation(); handlePrintSingleOrder(order.orderId, order.receiptNum || "", btn, id, orderKey, order); };
     }
 
     ordersList.appendChild(card);
@@ -663,13 +731,13 @@ function isMobileDevice() {
 // الأخرى بجهاز موبايل ضعيف)، و(2) وضوح أقل من جودة الطباعة الحقيقية
 // (صورة مرسومة، مو نص حقيقي). الحل الصحيح: توليد PDF بجودة الطباعة
 // الحقيقية صار مسؤولية السيرفر (Puppeteer + labels-print.html) — شوف
-// handleShareInvoice وhandlePrintSingleOrder بالأسفل. ما نحتاج html2canvas
+// handlePrintInvoice وhandlePrintSingleOrder بالأسفل. ما نحتاج html2canvas
 // نهائياً هنا بعد اليوم.
 
 // يطبع الليبلات داخل إطار iframe منعزل تماماً، بمقاس ثابت 80×120mm دائماً
 // (مقاس الليبل الفعلي بالطابعة الحرارية — ثابت من البداية، ما نحتاج نقيس
 // أي شي قبل تحديده متل قبل، وهذا وحده يسرّع الطباعة).
-function printLabelsIsolated(labelsHTML) {
+function printLabelsIsolated(labelsHTML, onAfterPrint) {
   const frame = document.getElementById("printFrame");
   const doc = frame.contentWindow.document;
 
@@ -698,6 +766,14 @@ function printLabelsIsolated(labelsHTML) {
 
   attachLogoFallback(doc.body);
 
+  // ⚠️ ما نقدر نعرف بالتأكيد 100% إذا الموظف "طبع فعلاً" أو "لغى نافذة
+  // الطباعة" — المتصفح ما يعطينا هذا الفرق. أقرب إشارة متوفرة هي حدث
+  // afterprint (ينطلق بعد إغلاق نافذة الطباعة، طبع أو لغى)، وهذا أفضل
+  // تقدير ممكن بدون تعقيد إضافي — يكفي لغرض "تنبيه الموظف إن الطباعة صارت".
+  if (onAfterPrint) {
+    frame.contentWindow.addEventListener("afterprint", () => onAfterPrint(), { once: true });
+  }
+
   waitForLabelImages(doc.body).then(() => {
     fitLabelPagesToBox(doc.querySelectorAll(".label-page"));
     frame.contentWindow.focus();
@@ -706,7 +782,7 @@ function printLabelsIsolated(labelsHTML) {
 }
 
 // ========== 1) طباعة/مشاركة جميع الطلبات الناجحة بدفعة كاملة ==========
-async function handlePrintInvoice(logId, btnEl) {
+async function handlePrintInvoice(logId, btnEl, log) {
   if (btnEl) btnEl.classList.add("busy");
   try {
     const snap = await get(ref(db, `shippingLogs/${logId}/orders`));
@@ -750,12 +826,14 @@ async function handlePrintInvoice(logId, btnEl) {
         progress.close();
         if (res.ok) {
           const pdfBlob = await res.blob();
-          const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
+          // ✅ اسم الملف يتضمن عدد الوصولات — حتى الموظف يعرف مباشرة من
+          // اسم الملف نفسه (بواتساب مثلاً) كم وصل بداخله بدون ما يفتحه
+          const pdfFile = new File([pdfBlob], `${orders.length}-وصل-${logId}.pdf`, { type: "application/pdf" });
           if (!navigator.canShare || navigator.canShare({ files: [pdfFile] })) {
             // ⚠️ لا نستدعي navigator.share() هنا مباشرة (بعد await fetch) —
             // Safari بالذات يرفضها بصمت لأن "ضغطة المستخدم" خلصت صلاحيتها.
             // نعرض زر "شارك الآن" بدالها، وضغطته هي اللي تخلي المشاركة تشتغل.
-            showShareReadyPrompt(pdfFile, "وصولات الشحن - نظام المراد");
+            showShareReadyPrompt(pdfFile, "وصولات الشحن - نظام المراد", () => recordBatchPrint(logId, log, btnEl));
             return; // ✅ الملف جاهز، بانتظار ضغطة المستخدم على زر المشاركة
           }
         } else {
@@ -778,7 +856,7 @@ async function handlePrintInvoice(logId, btnEl) {
     // الوصولات (حتى لو 80+) — ما فيها أي تصوير للوصولات، فسرعتها ثابتة
     // دائماً ومستقلة عن العدد. (بالموبايل ما نوصل هذا السطر إطلاقاً إلا
     // إذا navigator.share غير مدعوم أصلاً بهذا المتصفح)
-    printLabelsIsolated(html);
+    printLabelsIsolated(html, () => recordBatchPrint(logId, log, btnEl));
   } catch (err) {
     console.error(err);
     toast("صار خطأ غير متوقع أثناء تحضير الطباعة", "error");
@@ -786,69 +864,20 @@ async function handlePrintInvoice(logId, btnEl) {
     if (btnEl) btnEl.classList.remove("busy");
   }
 }
-window.printInvoice = (logId) => handlePrintInvoice(logId, null);
-
-// ========== 1ب) مشاركة كل وصولات الدفعة كملف PDF واحد (زر "مشاركة") ==========
-// المنفصل بمستوى السجل/الدفعة نفسها فقط — ماله علاقة بطباعة/مشاركة طلب
-// مفرد. ملاحظة مهمة (2026-09-16): ما نبني الـPDF بالمتصفح نهائياً — نطلبه
-// جاهز من السيرفر (نفس تصميم الوصل بالضبط، عبر labels-print.html وPuppeteer
-// بملف backend/server.js)، فيطلع بجودة الطباعة الحقيقية (نص عربي حاد،
-// مو صورة مصوّرة) وسريع حتى لمئات الوصولات لأنه رندر حقيقي بالسيرفر
-// مو تصوير DOM بجهاز موبايل ضعيف. الموبايل بس يجيب الملف الجاهز ويشاركه.
-async function handleShareInvoice(logId, btnEl) {
-  if (btnEl) btnEl.classList.add("busy");
-  const progress = showProgressToast("جاري تجهيز ملف PDF للمشاركة...");
-  try {
-    const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
-    if (!res.ok) {
-      let msg = "تعذر توليد ملف الوصولات";
-      try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
-      toast(msg, "error");
-      return;
-    }
-    const pdfBlob = await res.blob();
-    const pdfFile = new File([pdfBlob], `وصولات-${logId}.pdf`, { type: "application/pdf" });
-
-    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [pdfFile] }))) {
-      // ⚠️ لا نستدعي navigator.share() هنا مباشرة (بعد await fetch) — Safari
-      // بالذات يرفضها بصمت لأن "ضغطة المستخدم" خلصت صلاحيتها بهذا الوقت.
-      // نعرض زر "شارك الآن" بدالها، وضغطته الطازجة هي اللي تخلي المشاركة تشتغل.
-      showShareReadyPrompt(pdfFile, "وصولات الشحن - نظام المراد");
-      return;
-    }
-
-    // احتياط: تنزيل ملف PDF مباشرة إذا المشاركة غير مدعومة أصلاً (الحاسوب غالباً)
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `وصولات-${logId}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    toast("تم تحميل ملف PDF بكل الوصولات (المشاركة المباشرة غير مدعومة بهذا الجهاز)", "info");
-  } catch (err) {
-    console.error(err);
-    toast("صار خطأ غير متوقع أثناء تجهيز ملف المشاركة — تأكد إن السيرفر شغال", "error");
-  } finally {
-    progress.close();
-    if (btnEl) btnEl.classList.remove("busy");
-  }
-}
-window.shareInvoice = (logId) => handleShareInvoice(logId, null);
+window.printInvoice = (logId) => handlePrintInvoice(logId, null, null);
 
 // ========== 2) طباعة/مشاركة وصل طلب واحد ==========
-// نفس فكرة زر "مشاركة" بالأعلى: بالموبايل نجيب PDF جاهز من السيرفر (وصل
-// واحد بس) ونشاركه مباشرة؛ إذا تعذر (الحاسوب، أو السيرفر ما يجاوب) نرجع
-// للطباعة العادية عبر iframe (نفس ما كانت من قبل — بلا أي تغيير هناك).
-async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
+// ⚡ إصلاح سرعة مهم (2026-09-19): كانت هذي الدالة تسحب شجرة "ordersTest"
+// الكاملة من فايربيس وتبني labelHTML محلياً *دائماً*، حتى لو الجهاز
+// موبايل ورايح يطلب PDF جاهز من السيرفر أصلاً (اللي يبحث عن نفس الطلب
+// بنفسه من جديد هناك!) — يعني بحث مضاعف عن نفس الطلب بلا فائدة، وهذا
+// كان يبطئ طباعة الوصل المفرد بالموبايل بلا داعي. هسه: بالموبايل نطلب
+// PDF من السيرفر *مباشرة* بدون أي بحث محلي أولاً (نفس منطق "طباعة الكل"
+// بالضبط، موحّد وسريع). البحث المحلي (findOrder) صار يصير بس إذا فعلاً
+// رايحين نطبع محلياً عبر iframe (اللابتوب، أو احتياط فشل المشاركة بالموبايل).
+async function handlePrintSingleOrder(orderId, receiptNum, btnEl, logId, orderKey, order) {
   if (btnEl) btnEl.classList.add("busy");
   try {
-    const full = await findOrder(orderId);
-    if (!full) { toast("الطلب غير موجود في قاعدة البيانات", "error"); return; }
-    if (receiptNum) full.receiptNum = receiptNum;
-    const labelHTML = buildLabelHTML(full, "1 / 1");
-
     if (isMobileDevice() && navigator.share) {
       const progress = showProgressToast("جاري تجهيز ملف الوصل للمشاركة...");
       try {
@@ -862,7 +891,7 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
             // ⚠️ لا نستدعي navigator.share() هنا مباشرة — نفس ملاحظة الدفعة
             // الكاملة أعلاه (Safari يرفضها بصمت بعد أي await). زر "شارك الآن"
             // يضمن ضغطة طازجة تخلي المشاركة تشتغل بكل المتصفحات.
-            showShareReadyPrompt(pdfFile, "وصل الشحن - نظام المراد");
+            showShareReadyPrompt(pdfFile, "وصل الشحن - نظام المراد", () => recordOrderPrint(logId, orderKey, order, btnEl));
             return;
           }
         } else {
@@ -879,7 +908,13 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
       }
     }
 
-    printLabelsIsolated(labelHTML);
+    // 💻 اللابتوب (أو احتياط فشل المشاركة بالأعلى): هون بس نحتاج بيانات
+    // الطلب الكاملة محلياً لبناء الليبل ورسمه بإطار الطباعة المنعزل
+    const full = await findOrder(orderId);
+    if (!full) { toast("الطلب غير موجود في قاعدة البيانات", "error"); return; }
+    if (receiptNum) full.receiptNum = receiptNum;
+    const labelHTML = buildLabelHTML(full, "1 / 1");
+    printLabelsIsolated(labelHTML, () => recordOrderPrint(logId, orderKey, order, btnEl));
   } catch (err) {
     console.error(err);
     toast("صار خطأ غير متوقع أثناء تحضير الطباعة", "error");
@@ -887,7 +922,7 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl) {
     if (btnEl) btnEl.classList.remove("busy");
   }
 }
-window.printSingleOrder = (orderId, receiptNum) => handlePrintSingleOrder(orderId, receiptNum, null);
+window.printSingleOrder = (orderId, receiptNum) => handlePrintSingleOrder(orderId, receiptNum, null, null, null, null);
 
 </script>
 
