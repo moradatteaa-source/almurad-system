@@ -384,6 +384,9 @@
     <button id="backBtn"><span>🔙</span> رجوع للقائمة</button>
   </div>
 
+  <!-- 📦 دفتر المخزن المشترك — نفس منطق الخصم/الإرجاع بكل الصفحات -->
+  <script src="stockLedger.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, update, onValue, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -402,6 +405,9 @@ import { getWarehouseCached } from "./sharedCache.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
+    // 📦 نربط دفتر المخزن المشترك بفايربيس (stockLedger.js محمّل بالأعلى)
+    initStockLedger({ db, ref, get, update, runTransaction });
 
     // ===== الحالات المدعومة =====
     const TEST_STATUSES = [
@@ -1051,74 +1057,10 @@ const normalizedPhone = normalizeIraqiPhone(document.getElementById('phone1').va
 
       return valid;
     }
-async function _adjustStock(productsDetailed, mode) {
-  const needed = new Map();
-  for (const item of productsDetailed) {
-    if (!item.name || !item.qty) continue;
-    const name = item.name.trim().replace(/\s+/g, " ");
-    const variants = item.variants || {};
-    const variantText = Object.entries(variants)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k} | ${v}`).join(" | ");
-    const key = name + "||" + variantText;
-    needed.set(key, (needed.get(key) || 0) + item.qty);
-  }
-  if (!needed.size) return;
-
-  const allSnap = await get(ref(db, "warehouse"));
-  if (!allSnap.exists()) return;
-  const warehouse = allSnap.val();
-
-  const nameToKey = new Map();
-  for (const [key, val] of Object.entries(warehouse)) {
-    const name = (val.name || "").trim().replace(/\s+/g, " ");
-    if (name) nameToKey.set(name, key);
-  }
-
-  const normalize = t => t.split("|").map(s => s.trim()).filter(Boolean).sort().join("|");
-
-  for (const [compositeKey, qty] of needed.entries()) {
-    const [name, variantText] = compositeKey.split("||");
-    const productKey = nameToKey.get(name);
-    if (!productKey) continue;
-
-    const stock = warehouse[productKey]?.stock || {};
-    const hasVariants = Object.keys(stock).some(k => k.includes("|"));
-
-    if (!hasVariants) {
-      await runTransaction(ref(db, `warehouse/${productKey}/stock/default`), (current) => {
-        const cur = Number(current) || 0;
-        return mode === 'deduct' ? Math.max(0, cur - qty) : cur + qty;
-      });
-    } else {
-      let matchedKey = null;
-      for (const stockKey of Object.keys(stock)) {
-        if (normalize(stockKey) === normalize(variantText)) { matchedKey = stockKey; break; }
-      }
-      if (!matchedKey) continue;
-      await runTransaction(ref(db, `warehouse/${productKey}/stock/${matchedKey}`), (current) => {
-        const cur = Number(current) || 0;
-        return mode === 'deduct' ? Math.max(0, cur - qty) : cur + qty;
-      });
-    }
-
-    const updatedSnap = await get(ref(db, `warehouse/${productKey}/stock`));
-    const newTotal = Object.values(updatedSnap.val() || {})
-      .reduce((s, v) => s + (Number(v) || 0), 0);
-    await update(ref(db, `warehouse/${productKey}`), {
-      totalQty: newTotal,
-      lastUpdate: new Date().toISOString()
-    });
-  }
-}
-
-async function restoreStockForOrder(productsDetailed) {
-  await _adjustStock(productsDetailed, 'add');
-}
-
-async function deductStockForOrder(productsDetailed) {
-  await _adjustStock(productsDetailed, 'deduct');
-}
+// ملاحظة: منطق خصم/إرجاع المخزون انتقل لملف stockLedger.js المشترك
+// (محمّل بالأعلى) حتى يبقى واحد بكل الصفحات — انظر التعليق بأول ذاك
+// الملف. النسخة اللي كانت هنا ما كانت تحط علامة بالمخزن، فكانت
+// تسبب ضياع بضاعة عند النقل الجماعي من صفحة الطلبات.
 
     // ===== الحفظ الرئيسي (مع نقل ذري بدون تكرار) =====
     async function handleSave() {
@@ -1186,6 +1128,16 @@ const selectedArea = document.querySelector('#area input')?.value.trim() || stat
         const oldStatus = state.orderData?.status || '';
         const statusChanged = newStatus && newStatus !== oldStatus;
 
+        // 📦 فحص توفر الكمية *قبل* أي حفظ — كان يتفحص بعد ما ينحفظ الطلب
+        // وينتقل فعلاً، فالطلب يصير "مثبت" بدون ما تنخصم بضاعته إذا الكمية
+        // ما كافية (فرق بين المخزن والواقع). هسه إذا ما تكفي نوكف من هنا
+        // وما ننحفظ أصلاً.
+        const stockOrder = { id: state.orderId, productsDetailed: cleanedDetails };
+        if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
+          const avail = await checkStockAvailable(stockOrder);
+          if (!avail.ok) { showToast(avail.msg, 'error', 5000); showLoader(false); return; }
+        }
+
         // --- بناء كائن التاريخ المحدث ---
         const existingHistory = state.orderData?.statusHistory || {};
         const updatedHistory = statusChanged
@@ -1244,62 +1196,12 @@ area: selectedArea,
           await update(ref(db), metaUpdate);
 
 state.currentPath = newPath;
-if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
-            const warehouseSnap = await get(ref(db, 'warehouse'));
-            if (warehouseSnap.exists()) {
-              const wh = warehouseSnap.val();
-              const nToK = new Map();
-              for (const [k, v] of Object.entries(wh)) {
-                const n = (v.name || '').trim().replace(/\s+/g, ' ');
-                if (n) nToK.set(n, k);
-              }
-              const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
-              let ok = true;
-              for (const item of cleanedDetails) {
-                if (!item.name) continue;
-                const name = item.name.trim().replace(/\s+/g, ' ');
-                const pKey = nToK.get(name);
-                if (!pKey) {
-                  showToast(`⚠️ المنتج غير موجود بالمخزن: ${name}`, 'error', 4000);
-                  ok = false; break;
-                }
-                const stock = wh[pKey]?.stock || {};
-                const hasV = Object.keys(stock).some(k => k.includes('|'));
-                if (!hasV) {
-                  const cur = Number(stock.default || 0);
-                  if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
-                    ok = false; break;
-                  }
-                } else {
-                  const vText = Object.entries(item.variants || {})
-                    .sort(([a],[b]) => a.localeCompare(b))
-                    .map(([k,v]) => `${k} | ${v}`).join(' | ');
-                  let mKey = null;
-                  for (const sk of Object.keys(stock)) {
-                    if (norm(sk) === norm(vText)) { mKey = sk; break; }
-                  }
-                  if (!mKey) {
-                    showToast(`⚠️ المتغير غير موجود: ${name}`, 'error', 4000);
-                    ok = false; break;
-                  }
-                  const cur = Number(stock[mKey] || 0);
-                  if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
-                    ok = false; break;
-                  }
-                }
-              }
-              if (!ok) { showLoader(false); return; }
-            }
-            await deductStockForOrder(cleanedDetails);
-          }
-  if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
-            await restoreStockForOrder(cleanedDetails);
-          }
-          if (newStatus === 'تم استلام الراجع' && oldStatus !== 'تم استلام الراجع') {
-            await restoreStockForOrder(cleanedDetails);
-          }
+// ── خصم/إرجاع المخزون حسب الحالة الجديدة ──
+          // ✅ نقطة وحدة (stockLedger.js) تقرر: "مثبت" يخصم، و"رفض/ملغي/
+          // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
+          // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
+          // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
+          await applyStockForStatus(stockOrder, newStatus);
           state.orderData = fullOrderData;
           setupAutoRefresh(newPath);
           showToast(`✅ تم الحفظ ونقل الطلب إلى "${newStatus}"`, 'success');
@@ -1311,62 +1213,12 @@ if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
           const base = oldPath.split('/').slice(0, -1).join('/');
           await set(ref(db, `${base}/_meta/lastModified`), Date.now());
 
-if (newStatus === 'مثبت' && oldStatus !== 'مثبت') {
-            const warehouseSnap = await get(ref(db, 'warehouse'));
-            if (warehouseSnap.exists()) {
-              const wh = warehouseSnap.val();
-              const nToK = new Map();
-              for (const [k, v] of Object.entries(wh)) {
-                const n = (v.name || '').trim().replace(/\s+/g, ' ');
-                if (n) nToK.set(n, k);
-              }
-              const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
-              let ok = true;
-              for (const item of cleanedDetails) {
-                if (!item.name) continue;
-                const name = item.name.trim().replace(/\s+/g, ' ');
-                const pKey = nToK.get(name);
-                if (!pKey) {
-                  showToast(`⚠️ المنتج غير موجود بالمخزن: ${name}`, 'error', 4000);
-                  ok = false; break;
-                }
-                const stock = wh[pKey]?.stock || {};
-                const hasV = Object.keys(stock).some(k => k.includes('|'));
-                if (!hasV) {
-                  const cur = Number(stock.default || 0);
-                  if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
-                    ok = false; break;
-                  }
-                } else {
-                  const vText = Object.entries(item.variants || {})
-                    .sort(([a],[b]) => a.localeCompare(b))
-                    .map(([k,v]) => `${k} | ${v}`).join(' | ');
-                  let mKey = null;
-                  for (const sk of Object.keys(stock)) {
-                    if (norm(sk) === norm(vText)) { mKey = sk; break; }
-                  }
-                  if (!mKey) {
-                    showToast(`⚠️ المتغير غير موجود: ${name}`, 'error', 4000);
-                    ok = false; break;
-                  }
-                  const cur = Number(stock[mKey] || 0);
-                  if (cur < item.qty) {
-                    showToast(`❌ الكمية غير كافية: ${name} — المتاح ${cur} والمطلوب ${item.qty}. استخدم حالة "بانتظار البضاعة" بدلاً من التثبيت`, 'error', 5000);
-                    ok = false; break;
-                  }
-                }
-              }
-              if (!ok) { showLoader(false); return; }
-            }
-            await deductStockForOrder(cleanedDetails);
-          }
-if ((newStatus === 'رفض' || newStatus === 'ملغي') && oldStatus === 'مثبت') {
-            await restoreStockForOrder(cleanedDetails);
-          }
-          if (newStatus === 'تم استلام الراجع' && oldStatus !== 'تم استلام الراجع') {
-            await restoreStockForOrder(cleanedDetails);
-          }
+// ── خصم/إرجاع المخزون حسب الحالة الجديدة ──
+          // ✅ نقطة وحدة (stockLedger.js) تقرر: "مثبت" يخصم، و"رفض/ملغي/
+          // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
+          // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
+          // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
+          await applyStockForStatus(stockOrder, newStatus);
           state.orderData = { ...state.orderData, ...fullOrderData };
           showToast('✅ تم الحفظ بنجاح', 'success');
         }

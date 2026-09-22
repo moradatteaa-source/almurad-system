@@ -13,6 +13,9 @@
   <!-- مكتبات PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+  <!-- 📦 دفتر المخزن المشترك — نفس منطق الخصم/الإرجاع بكل الصفحات -->
+  <script src="stockLedger.js"></script>
   
   <style>
     /* ====== متغيرات التصميم ====== */
@@ -715,6 +718,9 @@ import { getWarehouseCached } from "./sharedCache.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
+    // 📦 نربط دفتر المخزن المشترك بفايربيس (stockLedger.js محمّل بالأعلى)
+    initStockLedger({ db, ref, get, update, runTransaction });
     
     // 🌐 متغيرات عامة
     let mainProductObj = {};
@@ -1216,73 +1222,11 @@ if (!normalizedPhone1) errors.push("❌ رقم الهاتف غير صحيح (ي�
       }
       return errors;
     }
-async function deductStockForOrder(productsDetailed) {
-  for (const item of productsDetailed) {
-    if (!item.name || !item.qty) continue;
+// ملاحظة: خصم المخزون انتقل لملف stockLedger.js المشترك (محمّل بالأعلى)
+// حتى يبقى منطق واحد بكل الصفحات. النسخة اللي كانت هنا ما كانت تحط
+// علامة بالمخزن، فالطلب المنشأ "مثبت" من هنا ما كان يعرف النظام إنه
+// مخصوم — فلو انتقل بعدين لحالة رفض ما ترجع بضاعته.
 
-    // البحث عن المنتج بالمخزن
-    const allSnap = await get(ref(db, "warehouse"));
-    if (!allSnap.exists()) continue;
-
-    let productKey = null;
-    let productData = null;
-
-    for (const [key, val] of Object.entries(allSnap.val())) {
-      const warehouseName = (val.name || "").trim().replace(/\s+/g, " ");
-      const orderName = (item.name || "").trim().replace(/\s+/g, " ");
-      if (warehouseName === orderName) {
-        productKey = key;
-        productData = val;
-        break;
-      }
-    }
-
-    if (!productKey || !productData) continue;
-
-    const stock = productData.stock || {};
-    const variants = item.variants || {};
-    const hasVariants = Object.keys(stock).some(k => k.includes("|"));
-
-    if (!hasVariants) {
-      // منتج بدون متغيرات
-      const current = Number(stock.default || 0);
-      const newQty = Math.max(0, current - item.qty);
-      await update(ref(db, `warehouse/${productKey}`), {
-        "stock/default": newQty,
-        totalQty: newQty,
-        lastUpdate: new Date().toISOString()
-      });
-    } else {
-      // منتج بمتغيرات — ابحث عن المفتاح المطابق
-      const variantText = Object.entries(variants)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([k, v]) => `${k} | ${v}`)
-        .join(" | ");
-
-      let matchedKey = null;
-      for (const stockKey of Object.keys(stock)) {
-        const normalize = t => t.split("|").map(s => s.trim()).filter(Boolean).sort().join("|");
-        if (normalize(stockKey) === normalize(variantText)) {
-          matchedKey = stockKey;
-          break;
-        }
-      }
-
-      if (!matchedKey) continue;
-
-      const current = Number(stock[matchedKey] || 0);
-      const newQty = Math.max(0, current - item.qty);
-      const updatedStock = { ...stock, [matchedKey]: newQty };
-      const newTotal = Object.values(updatedStock).reduce((s, v) => s + (Number(v) || 0), 0);
-
-      await update(ref(db, `warehouse/${productKey}`), {
-        [`stock/${matchedKey}`]: newQty,
-        totalQty: newTotal,
-        lastUpdate: new Date().toISOString()
-      });
-    }
-  }
-}
     // 💾 حفظ الطلب - ✅ الحفظ في المسار الصحيح حسب الحالة
     document.getElementById("saveBtn").addEventListener("click", async () => {
       if (isSaving) return;
@@ -1469,7 +1413,9 @@ if (status === "مثبت") {
 
         await set(ref(db, `${ordersPath}/${orderNumber}`), order);
 if (status === "مثبت") {
-  await deductStockForOrder(productsDetailed);
+  // ✅ نمرر رقم الطلب حتى يتسجل بدفتر المخزن إنه مخصوم — بدونه ما ترجع
+  // بضاعته إذا انتقل لاحقاً لحالة رفض أو بانتظار البضاعة
+  await deductStockForOrder({ id: orderNumber, productsDetailed });
 }
 // 📝 تسجيل الهستوري
         if (status) {
