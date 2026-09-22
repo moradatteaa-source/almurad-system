@@ -1201,7 +1201,7 @@ state.currentPath = newPath;
           // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
           // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
           // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
-          await applyStockForStatus(stockOrder, newStatus);
+          await applyStockForStatus(stockOrder, newStatus, oldStatus);
           state.orderData = fullOrderData;
           setupAutoRefresh(newPath);
           showToast(`✅ تم الحفظ ونقل الطلب إلى "${newStatus}"`, 'success');
@@ -1218,7 +1218,7 @@ state.currentPath = newPath;
           // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
           // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
           // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
-          await applyStockForStatus(stockOrder, newStatus);
+          await applyStockForStatus(stockOrder, newStatus, oldStatus);
           state.orderData = { ...state.orderData, ...fullOrderData };
           showToast('✅ تم الحفظ بنجاح', 'success');
         }

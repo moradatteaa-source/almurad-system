@@ -1757,7 +1757,7 @@ atomicUpdate[`${newPath}/${id}`] = updatedOrder;
       // يخصم، و"رفض/ملغي/بانتظار البضاعة/تم استلام الراجع" يرجّعون.
       // ما نحتاج نفحص الحالة السابقة — دفتر المخزن يعرف بنفسه إذا الطلب
       // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
-      await applyStockForStatus(updatedOrder, newStatus);
+      await applyStockForStatus(updatedOrder, newStatus, order.status);
     }
     await update(ref(db), atomicUpdate);
 

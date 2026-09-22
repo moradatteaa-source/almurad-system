@@ -119,10 +119,16 @@
   }
 
   // ── مفاتيح العلامات بالمخزن ──
+  // الحالات اللي البضاعة فيها طالعة من المخزن فعلياً — نستخدمها بس
+  // للطلبات القديمة اللي انثبتت قبل هذا النظام وماكو عندها علامة خصم
+  const STOCK_OUT_STATUSES = ["مثبت", "قيد التجهيز", "قيد التوصيل", "تم التسليم", "راجع"];
+
   const sanitize = s => String(s).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
   const deductMarker = (orderId, name, vkey) => `deduct_${sanitize(orderId)}_${sanitize(name)}_${sanitize(vkey)}`;
   // علامة قديمة من النظام السابق — نقراها بس حتى ما نرجّع بضاعة رجعت أصلاً
   const legacyReturnMarker = (orderId, name, vkey) => `return_${sanitize(orderId)}_${sanitize(name)}_${sanitize(vkey)}`;
+  // علامة نحطها لما نرجّع بضاعة طلب قديم بلا علامة خصم — تمنع تكرار الإرجاع
+  const legacyRestoredMarker = (orderId, name, vkey) => `legacyRestored_${sanitize(orderId)}_${sanitize(name)}_${sanitize(vkey)}`;
 
   // بعد أي تغيير نعيد حساب المجموع من الأرقام الفعلية بدل ما نجمع/نطرح
   // عليه — هيچي أي انحراف قديم بالمجموع ينصلح لحاله
@@ -196,7 +202,9 @@
 
   // ── إرجاع بضاعة الطلب للمخزن ──
   // آمن للتكرار: إذا الطلب مو مخصوم (أو رجع أصلاً) ما يصير شي
-  async function restoreStockForOrder(order) {
+  // prevStatus (اختياري): الحالة اللي كان بيها الطلب قبل الانتقال — نحتاجها
+  // بس للطلبات القديمة اللي انثبتت قبل هذا النظام
+  async function restoreStockForOrder(order, prevStatus) {
     ensureReady();
     const { db, ref, get, update, runTransaction } = FB;
     const orderId = order && order.id;
@@ -209,7 +217,29 @@
 
       const mark = deductMarker(orderId, name, vkey);
       const markSnap = await get(ref(db, `warehouse/${pkey}/processedOrders/${mark}`));
-      if (!markSnap.exists()) continue; // مو مخصوم — ماكو شي نرجعه
+
+      if (!markSnap.exists()) {
+        // ⚠️ طلب قديم: انثبت قبل ما يصير عدنا دفتر مخزن، فبضاعته انخصمت
+        // بدون ما تنسجل أي علامة (صفحة تفاصيل الطلب وصفحة الإضافة ما كانوا
+        // يسجلون). ما نقدر نتجاهله وإلا البضاعة ما ترجع أبداً. نعتمد على
+        // الحالة السابقة: إذا كان بحالة بضاعتها طالعة من المخزن، يعني
+        // مخصوم فعلاً ونرجّعه — مرة وحدة بس (علامة legacyRestored تمنع التكرار).
+        if (!prevStatus || !STOCK_OUT_STATUSES.includes(prevStatus)) continue;
+
+        const legacyMark = legacyRestoredMarker(orderId, name, vkey);
+        const legacyDone = await get(ref(db, `warehouse/${pkey}/processedOrders/${legacyMark}`));
+        if (legacyDone.exists()) continue;
+
+        const stockNow = (found.snap.val() || {}).stock || {};
+        const key = matchStockKey(stockNow, vkey);
+        if (!key) continue;
+
+        await runTransaction(ref(db, `warehouse/${pkey}/stock/${key}`), cur => (Number(cur) || 0) + qty);
+        await update(ref(db, `warehouse/${pkey}/processedOrders`), { [legacyMark]: qty });
+        await refreshTotal(pkey);
+        console.log(`↩️ stockLedger: رجّعنا ${qty} من "${name}" لطلب قديم #${orderId} (كان بحالة ${prevStatus})`);
+        continue;
+      }
 
       // حالة قديمة: النظام السابق خصم ورجّع وخلّى العلامتين. نشيل علامة
       // الخصم بس بدون ما نضيف كمية (البضاعة رجعت فعلاً قبل)، حتى الطلب
@@ -238,9 +268,9 @@
   const STOCK_DEDUCT_STATUSES = ["مثبت"];
 
   // نقطة وحدة تنادى بعد أي تغيير حالة — هي اللي تقرر يخصم لو يرجّع
-  async function applyStockForStatus(order, newStatus) {
+  async function applyStockForStatus(order, newStatus, prevStatus) {
     if (STOCK_DEDUCT_STATUSES.includes(newStatus)) return deductStockForOrder(order);
-    if (STOCK_RETURN_STATUSES.includes(newStatus)) return restoreStockForOrder(order);
+    if (STOCK_RETURN_STATUSES.includes(newStatus)) return restoreStockForOrder(order, prevStatus);
   }
 
   global.initStockLedger        = initStockLedger;
@@ -251,5 +281,6 @@
   global.restoreStockForOrder   = restoreStockForOrder;
   global.applyStockForStatus    = applyStockForStatus;
   global.STOCK_RETURN_STATUSES  = STOCK_RETURN_STATUSES;
+  global.STOCK_OUT_STATUSES     = STOCK_OUT_STATUSES;
   global.STOCK_DEDUCT_STATUSES  = STOCK_DEDUCT_STATUSES;
 })(window);
