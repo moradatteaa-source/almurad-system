@@ -193,9 +193,20 @@ function toast(msg, t=''){
 
 // ══════════════ دخول (نفس كلمة مرور اللوحة) ══════════════
 const DEFAULT_PW='murad2024';
+
+// الصفحة تكتب بالمخزن وترفع صور، فلازم تكون محمية متل اللوحة — نفس
+// كلمة المرور بالضبط. وإذا إنت داخل اللوحة أصلاً بنفس المتصفح ما تنطلب.
+// ⚠️ اللوحة تحفظ الكلمة بالمتصفح بس (localStorage)، فلو غيّرتها من جهاز
+// ثاني هذا المتصفح ما يعرف بالتغيير. لهذا نقبل هنا الكلمة المحفوظة
+// بالمتصفح *أو* المحفوظة بقاعدة البيانات، حتى ما تتقفل بره الصفحة.
+let dbPw = null;
+get(ref(db,'storeSettings/adminPw')).then(s=>{ if(s.exists()) dbPw=String(s.val()); }).catch(()=>{});
+
 function doLogin(){
   const pw=$('pw').value;
-  if(pw===(localStorage.getItem('admin_pw')||DEFAULT_PW)){
+  const localPw = localStorage.getItem('admin_pw')||DEFAULT_PW;
+  if(pw===localPw || (dbPw && pw===dbPw)){
+    if(dbPw && pw===dbPw) localStorage.setItem('admin_pw',dbPw); // نزامنها لهذا المتصفح
     localStorage.setItem('admin_logged','1');
     $('login').style.display='none';
     loadData();
