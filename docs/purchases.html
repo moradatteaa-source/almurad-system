@@ -2364,8 +2364,10 @@ function updateStats(list) {
   const elQty = document.getElementById("totalQty");
   if (elQty) elQty.textContent = list.reduce((a, b) => a + b.totalQty, 0);
   const elAmt = document.getElementById("totalAmount");
-  if (elAmt) elAmt.textContent = list
-    .reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount), 0)
+  // نقرّب للدينار الصحيح — كانت تطلع كسور (19,062,710.22) بكارت
+  // الإحصائيات وهذا ما ينقرا ولا يفيد بشي
+  if (elAmt) elAmt.textContent = Math.round(list
+    .reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount ?? 0), 0))
     .toLocaleString("en-US");
   const elLast = document.getElementById("lastPurchase");
   if (elLast) elLast.textContent = list.length
