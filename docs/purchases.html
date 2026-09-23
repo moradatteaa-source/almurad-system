@@ -528,6 +528,329 @@ header .header-actions button.cart-flash {
   header h2 { font-size: 14px; }
 }
 
+
+/* ════════════════════════════════════════════════════════
+   🎨 إعادة تصميم 2026-09-23
+   ────────────────────────────────────────────────────────
+   المشكلة اللي انحلّت: نافذة الشراء كانت نموذج طويل واحد بدون تقسيم،
+   المستخدم ينزل للآخر حتى يضغط حفظ، وبهاي اللحظة حقول المورد والمشتري
+   تكون طلعت برّا الشاشة — فرسالة "أكمل الحقول" تطلع وهو ما يعرف وين
+   المشكلة. هسه: رأس ثابت، أقسام مرقّمة، وتذييل ثابت فيه الملخّص وزر
+   الحفظ — يعني الحفظ والأرقام بمتناول اليد بأي لحظة.
+   ════════════════════════════════════════════════════════ */
+
+:root {
+  --ok-bg: #ecfdf5;
+  --err: #dc2626;
+  --err-bg: #fef2f2;
+  --ink-soft: #64748b;
+}
+
+/* ─── الكارت المنبثق كـ"ورقة" برأس وتذييل ثابتين ─── */
+.popup-box.sheet {
+  padding: 0;
+  max-width: 720px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;              /* التمرير يصير بالجسم بس */
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--blue);
+  color: #fff;
+  flex-shrink: 0;
+}
+.sheet-title { font-size: 16px; font-weight: 800; }
+.sheet-sub   { font-size: 12px; opacity: .75; margin-top: 2px; font-weight: 500; }
+
+.icon-btn {
+  background: rgba(255,255,255,.15);
+  border: none; color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 10px; cursor: pointer;
+  font-size: 15px; font-weight: 700; line-height: 1;
+  flex-shrink: 0; transition: .2s;
+}
+.icon-btn:hover { background: rgba(255,255,255,.28); }
+
+.sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg);
+}
+
+.sheet-foot {
+  flex-shrink: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 18px rgba(4,59,100,.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.foot-sum {
+  display: flex; gap: 16px; flex: 1; min-width: 200px;
+}
+.foot-sum > div { display: flex; flex-direction: column; line-height: 1.25; }
+.foot-sum span { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+.foot-sum b    { font-size: 15px; font-weight: 800; color: var(--text); direction: ltr; }
+.foot-sum .grand b { color: var(--success); font-size: 17px; }
+
+/* ─── أقسام النموذج ─── */
+.fsec {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.fsec-head {
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.fsec-head h4 { font-size: 14px; font-weight: 800; color: var(--blue); margin: 0; flex: 1; }
+.fsec-head .step {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--orange); color: #fff;
+  font-size: 12px; font-weight: 800;
+  display: grid; place-items: center;
+}
+.fsec-head .opt { font-size: 11px; color: var(--ink-soft); font-weight: 500; }
+.chip {
+  background: var(--blue); color: #fff;
+  border-radius: 999px; padding: 2px 10px;
+  font-size: 12px; font-weight: 800; direction: ltr;
+}
+
+.fgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.field { display: flex; flex-direction: column; }
+.field.full { grid-column: 1 / -1; }
+.field label { margin-bottom: 6px; font-size: 12.5px; color: var(--text); font-weight: 700; }
+.field .req { color: var(--err); }
+.field input, .field select, .field textarea { margin-bottom: 0; }
+
+.with-btn { display: flex; gap: 8px; align-items: stretch; }
+.with-btn select { flex: 1; min-width: 0; }
+
+/* ─── الأزرار ─── */
+.btn {
+  border: none; border-radius: 10px;
+  padding: 11px 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: .18s;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--orange); color: #fff; }
+.btn.primary:hover { background: var(--orange-dark); }
+.btn.success { background: var(--success); color: #fff; }
+.btn.success:hover { filter: brightness(1.08); }
+.btn.ghost {
+  background: #fff; color: var(--blue);
+  border: 1.5px solid var(--border);
+}
+.btn.ghost:hover { border-color: var(--orange); color: var(--orange); }
+.btn.block { width: 100%; margin-top: 12px; }
+.btn.lg { padding: 13px 26px; font-size: 15px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn-row .btn { flex: 1; }
+
+/* ─── التحقق من الحقول ─── */
+.field-error {
+  border-color: var(--err) !important;
+  background: var(--err-bg) !important;
+}
+.field-error-msg {
+  color: var(--err);
+  font-size: 12px; font-weight: 700;
+  margin-top: 5px;
+}
+.form-notice {
+  background: var(--err-bg);
+  border: 1.5px solid var(--err);
+  color: var(--err);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13.5px; font-weight: 700;
+}
+@keyframes shakeX {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.form-notice.shake { animation: shakeX .3s ease; }
+
+/* ─── قائمة المنتجات بالبحث ─── */
+.product-list {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* ─── صندوق الإكسل (مطوي افتراضياً حتى ما يزحم) ─── */
+.excel-box {
+  border: 1.5px dashed var(--blue-light);
+  border-radius: 11px;
+  background: #eef6ff;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.excel-box > summary {
+  cursor: pointer; list-style: none;
+  padding: 11px 14px;
+  font-size: 13px; font-weight: 700; color: var(--blue);
+}
+.excel-box > summary::-webkit-details-marker { display: none; }
+.excel-box > summary::after { content: " ▾"; }
+.excel-box[open] > summary::after { content: " ▴"; }
+.excel-inner { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.excel-inner input[type="file"] { margin-bottom: 0; font-size: 13px; }
+.excel-title { font-weight: 700; color: var(--blue); font-size: 13px; }
+.excel-sum { font-size: 12px; color: var(--text-muted); }
+
+/* ─── الجداول الصغيرة داخل النافذة ─── */
+.tbl-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.mini-table { width: 100%; min-width: unset; border-collapse: collapse; }
+.mini-table th {
+  background: var(--blue); color: #fff;
+  padding: 9px 7px; font-size: 12px; font-weight: 700;
+}
+.mini-table td {
+  padding: 9px 7px; font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+}
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table td button {
+  background: var(--danger); color: #fff;
+  border: none; border-radius: 7px;
+  padding: 6px 10px; cursor: pointer; font-size: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 26px 14px;
+  color: var(--text-muted);
+  font-size: 13.5px; font-weight: 600;
+  background: #f8fafc;
+  border: 1.5px dashed var(--border);
+  border-radius: 11px;
+}
+
+/* ─── الموبايل ─── */
+@media (max-width: 768px) {
+  .popup-overlay { padding: 0; align-items: stretch; }
+  .popup-box.sheet {
+    max-width: 100%;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+  .sheet-body { padding: 12px; gap: 12px; }
+  .fsec { padding: 12px; border-radius: 12px; }
+  .fgrid { grid-template-columns: 1fr; }
+
+  .sheet-foot { gap: 10px; }
+  .foot-sum { gap: 12px; width: 100%; min-width: 0; justify-content: space-between; }
+  .sheet-foot .btn.lg { width: 100%; }
+
+  .with-btn { flex-direction: column; }
+  .btn { width: 100%; }
+  .with-btn .btn, .btn-row .btn { width: auto; }
+}
+
+/* ─── جدول الفواتير كـكروت بالموبايل ─── */
+.p-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-right: 4px solid var(--orange);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.p-card.received { border-right-color: var(--success); }
+.p-card.rejected { border-right-color: var(--danger); }
+.p-card-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px; margin-bottom: 8px;
+}
+.p-card-sup { font-weight: 800; color: var(--blue); font-size: 14.5px; }
+.p-card-date { font-size: 12px; color: var(--text-muted); direction: ltr; }
+.p-card-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+.p-card-rows div { font-size: 12.5px; color: var(--text-muted); }
+.p-card-rows b { color: var(--text); font-weight: 700; direction: ltr; display: inline-block; }
+.p-card-total { font-size: 15px; font-weight: 800; color: var(--success); direction: ltr; }
+.p-card-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.p-card-acts button {
+  flex: 1; min-width: 88px;
+  border: none; border-radius: 8px; padding: 9px 8px;
+  font-family: 'Tajawal', sans-serif; font-size: 12.5px; font-weight: 700;
+  color: #fff; cursor: pointer;
+}
+.p-card-status { font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+
+#mobilePurchases { display: none; }
+@media (max-width: 768px) {
+  #mobilePurchases { display: block; }
+  .table-wrapper { display: none; }
+  .container { margin: 10px; padding: 12px; }
+  .stat-card { padding: 11px 9px; }
+}
+
+
+/* تحسينات ما بعد المعاينة */
+.field.wide { grid-column: span 2; }
+@media (max-width: 768px) { .field.wide { grid-column: 1 / -1; } }
+
+.with-btn .btn.ghost { padding: 11px 13px; flex-shrink: 0; }
+
+/* زر الحذف بالكارت: صغير وثانوي حتى ما ينضغط بالغلط */
+.p-card-acts .del {
+  flex: 0 0 46px; min-width: 46px;
+  background: #fff; color: var(--danger);
+  border: 1.5px solid #fecaca;
+}
+.p-card-acts .del:hover { background: var(--err-bg); }
+
+
+/* قسم بيانات الفاتورة: المورد بسطر كامل، والمشتري والتوصيل جنب بعض */
+.fgrid-2 { grid-template-columns: 1fr 1fr; }
+.fgrid-2 .field.wide { grid-column: 1 / -1; }
+@media (max-width: 560px) { .fgrid-2 { grid-template-columns: 1fr; } }
+
   </style>
 
 </head>
@@ -597,11 +920,21 @@ header .header-actions button.cart-flash {
   </header>
 
   <div class="container">
+
+    <!-- كروت الإحصائيات — الكود موجود بالجافاسكربت من زمان بس العناصر
+         كانت محذوفة من الصفحة، فما كانت تضهر أي أرقام -->
+    <div class="stat-cards">
+      <div class="stat-card"><span id="totalInvoices">0</span>عدد الفواتير</div>
+      <div class="stat-card"><span id="totalQty">0</span>إجمالي القطع</div>
+      <div class="stat-card"><span id="totalAmount">0</span>إجمالي المبالغ</div>
+      <div class="stat-card"><span id="lastPurchase">-</span>آخر عملية شراء</div>
+    </div>
+
     <h3>📋 فواتير المشتريات</h3>
 
     <div class="filter-bar">
-      <input type="date" id="fromDate">
-      <input type="date" id="toDate">
+      <input type="date" id="fromDate" aria-label="من تاريخ">
+      <input type="date" id="toDate" aria-label="إلى تاريخ">
       <select id="timeFilter">
         <option value="">تصفية سريعة</option>
         <option value="today">اليوم</option>
@@ -617,28 +950,30 @@ header .header-actions button.cart-flash {
       <button onclick="downloadFullExcel()">📊 تقرير Excel شامل</button>
     </div>
 
-    <div class="table-wrapper">
-<table>
+    <!-- بالموبايل نعرض كروت بدل جدول ١١ عمود يحتاج سحب يمين ويسار -->
+    <div id="mobilePurchases"></div>
 
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>التاريخ</th>
-          <th>المنتج</th>
-          <th>المتغير</th>
-          <th>الكمية</th>
-          <th>السعر</th>
-<th>الإجمالي</th>
-<th>عدد المنتجات</th>
-<th>المورد</th>
-          <th>المشتري</th>
-          <th>خيارات</th>
-        </tr>
-      </thead>
-    <tbody id="purchaseTable">
-  <tr><td colspan="11">لا توجد عمليات بعد</td></tr>
-</tbody>
-    </table>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>التاريخ</th>
+            <th>المنتج</th>
+            <th>المتغير</th>
+            <th>الكمية</th>
+            <th>السعر</th>
+            <th>الإجمالي</th>
+            <th>عدد المنتجات</th>
+            <th>المورد</th>
+            <th>المشتري</th>
+            <th>خيارات</th>
+          </tr>
+        </thead>
+        <tbody id="purchaseTable">
+          <tr><td colspan="11">لا توجد عمليات بعد</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -659,148 +994,167 @@ header .header-actions button.cart-flash {
 
   <!-- ✅ نافذة إضافة عملية شراء -->
   <div class="popup-overlay" id="purchasePopup">
-    <div class="popup-box">
-      <h3>➕ إضافة عملية شراء جديدة</h3>
-      <div class="form-grid">
-        <div>
-          <label>اسم المورد:</label>
-          <select id="supplierSelect"></select>
-          <button class="action" onclick="openSupplierPopup()">➕ إضافة مورد</button>
+    <div class="popup-box sheet">
+
+      <!-- رأس ثابت: يبقى ظاهر مهما نزل المستخدم -->
+      <div class="sheet-head">
+        <div class="sheet-head-txt">
+          <div class="sheet-title">🧾 فاتورة شراء جديدة</div>
+          <div class="sheet-sub">املأ البيانات، أضف المنتجات، ثم احفظ</div>
         </div>
-
-        <div>
-          <label>نوع المنتج:</label>
-          <select id="productType" onchange="handleProductTypeChange()">
-            <option value="">اختر...</option>
-            <option value="existing">منتج موجود</option>
-            <option value="new">منتج جديد</option>
-          </select>
-        </div>
-
-        <div>
-          <label>اسم المشتري:</label>
-          <input type="text" id="buyerName" placeholder="مراد / مقداد / رمضان">
-        </div>
-      </div>
-      <!-- ✅ منتج موجود -->
-      <div id="existingProductDiv" style="display:none;margin-top:10px;">
-  <label>اسم المنتج:</label>
-
-  <!-- 🔍 خانة البحث -->
-<input 
-    type="text" 
-    id="productSearchInput" 
-    placeholder="اكتب للبحث عن المنتج..." 
-    style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;font-size:16px;"
-    oninput="filterProductOptions()"
-    onfocus="filterProductOptions()"
-  >
-
-<!-- 🔽 قائمة المنتجات -->
-  <div id="existingProductSelect" style="width:100%;border:1.5px solid #ccc;border-radius:8px;max-height:240px;overflow-y:auto;display:none;background:white;-webkit-overflow-scrolling:touch;"></div>
-
-<div id="variantContainer" class="variants-container" style="margin-top:10px;"></div>
-  <button class="action" id="addOldVariantBtn" onclick="addOldVariant()" style="margin-top:8px;">
-    ➕ إضافة متغير جديد
-  </button>
-</div>
-
-      <!-- ✅ منتج جديد -->
-      <div id="newProductDiv" style="display:none;margin-top:10px;">
-        <!-- 🟢 الحقول الأساسية (اسم المنتج + الأسعار + الكمية) -->
-        <div id="simpleFields">
-          <label>اسم المنتج:</label>
-          <input type="text" id="simpleProductName" placeholder="اسم المنتج">
-
-          <label>سعر الشراء:</label>
-          <input type="number" id="simpleBuyPrice" placeholder="سعر الشراء">
-
- <label>سعر البيع حضوري:</label>
-<input type="number" id="simpleSellPricePos" placeholder="سعر البيع حضوري">
-
-<label>سعر البيع أونلاين:</label>
-<input type="number" id="simpleSellPriceOnline" placeholder="سعر البيع أونلاين">
-
-
-          <label>الكمية:</label>
-          <input type="number" id="simpleQty" placeholder="الكمية">
-        </div>
-
-        <!-- 🟠 هنا تظهر المتغيرات فقط إذا أضاف المستخدم -->
-        <div class="variants-container" id="newVariantContainer"></div>
-        <button class="action" onclick="addNewVariant()">➕ إضافة متغير</button>
+        <button type="button" class="icon-btn" onclick="closePurchasePopup()" aria-label="إغلاق">✕</button>
       </div>
 
-      <!-- ✅ باقي النموذج -->
-      <label>ملاحظات:</label>
-      <textarea id="notes" rows="2"></textarea>
-      <label>🚚 كلفة التوصيل (اختياري):</label>
-<input
-  type="number"
-  id="deliveryFee"
-  placeholder="مثال: 5000"
-  min="0"
-/>
+      <!-- الجسم القابل للتمرير -->
+      <div class="sheet-body">
 
-<hr class="section-divider">
-      <div class="invoice-section">
-        <h4>📦 منتجات الفاتورة</h4>
-                <div style="margin-bottom:14px;padding:12px;background:#eef6ff;border:1.5px dashed var(--blue-light);border-radius:10px;">
-          <label style="margin-bottom:8px;">📤 أو ارفعي ملف Excel جاهز بكل منتجات الطلبية دفعة وحدة:</label>
-          <input type="file" id="purchaseExcelFile" accept=".xlsx,.xls" onchange="previewExcelFile()" style="margin-bottom:8px;">
-          <button class="action" type="button" style="background:var(--blue-light);" onclick="downloadPurchaseSampleExcel()">📋 تحميل نموذج الملف</button>
+        <div id="purchaseFormNotice" class="form-notice" style="display:none;"></div>
 
-          <div id="excelPreviewContainer" style="display:none;margin-top:14px;">
-            <p style="font-weight:700;color:var(--blue);margin-bottom:8px;">👁️ معاينة الملف قبل الإضافة:</p>
-            <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
-              <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                <thead>
-                  <tr style="background:#043B64;color:white;">
-                    <th style="padding:6px;">المنتج</th>
-                    <th style="padding:6px;">المتغير</th>
-                    <th style="padding:6px;">الكمية</th>
-                    <th style="padding:6px;">السعر</th>
-                    <th style="padding:6px;">الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody id="excelPreviewBody"></tbody>
-              </table>
+        <!-- ① بيانات الفاتورة -->
+        <section class="fsec">
+          <div class="fsec-head"><span class="step">1</span><h4>بيانات الفاتورة</h4></div>
+          <div class="fgrid fgrid-2">
+            <div class="field wide">
+              <label for="supplierSelect">المورد <b class="req">*</b></label>
+              <div class="with-btn">
+                <select id="supplierSelect"></select>
+                <button type="button" class="btn ghost" onclick="openSupplierPopup()">➕ مورد</button>
+              </div>
             </div>
-            <p id="excelPreviewSummary" style="font-size:12px;color:var(--text-muted);margin:8px 0;"></p>
-            <div style="display:flex;gap:8px;">
-              <button class="action" type="button" style="background:var(--success);" onclick="confirmExcelImport()">✅ تأكيد وإضافة للفاتورة</button>
-              <button class="action" type="button" style="background:#718096;" onclick="cancelExcelPreview()">❌ إلغاء</button>
+
+            <div class="field">
+              <label for="buyerName">اسم المشتري <b class="req">*</b></label>
+              <input type="text" id="buyerName" placeholder="مراد / مقداد / رمضان">
+            </div>
+
+            <div class="field">
+              <label for="deliveryFee">🚚 كلفة التوصيل</label>
+              <input type="number" id="deliveryFee" placeholder="اختياري — مثال: 5000" min="0"
+                     oninput="updateInvoiceSummary()">
             </div>
           </div>
+        </section>
+
+        <!-- ② إضافة منتج -->
+        <section class="fsec">
+          <div class="fsec-head"><span class="step">2</span><h4>إضافة منتج</h4></div>
+
+          <div class="field">
+            <label for="productType">نوع المنتج</label>
+            <select id="productType" onchange="handleProductTypeChange()">
+              <option value="">اختر...</option>
+              <option value="existing">منتج موجود بالمخزن</option>
+              <option value="new">منتج جديد</option>
+            </select>
+          </div>
+
+          <!-- منتج موجود -->
+          <div id="existingProductDiv" style="display:none;">
+            <div class="field">
+              <label for="productSearchInput">اسم المنتج</label>
+              <input type="text" id="productSearchInput" placeholder="اكتب للبحث عن المنتج..."
+                     oninput="filterProductOptions()" onfocus="filterProductOptions()">
+              <div id="existingProductSelect" class="product-list" style="display:none;"></div>
+            </div>
+            <div id="variantContainer" class="variants-container"></div>
+            <button type="button" class="btn ghost" id="addOldVariantBtn" onclick="addOldVariant()">➕ إضافة متغير جديد</button>
+          </div>
+
+          <!-- منتج جديد -->
+          <div id="newProductDiv" style="display:none;">
+            <div id="simpleFields" class="fgrid">
+              <div class="field full">
+                <label for="simpleProductName">اسم المنتج</label>
+                <input type="text" id="simpleProductName" placeholder="اسم المنتج">
+              </div>
+              <div class="field">
+                <label for="simpleBuyPrice">سعر الشراء</label>
+                <input type="number" id="simpleBuyPrice" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="simpleQty">الكمية</label>
+                <input type="number" id="simpleQty" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="simpleSellPricePos">سعر البيع حضوري</label>
+                <input type="number" id="simpleSellPricePos" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="simpleSellPriceOnline">سعر البيع أونلاين</label>
+                <input type="number" id="simpleSellPriceOnline" placeholder="0">
+              </div>
+            </div>
+            <div class="variants-container" id="newVariantContainer"></div>
+            <button type="button" class="btn ghost" onclick="addNewVariant()">➕ إضافة متغير</button>
+          </div>
+
+          <button type="button" class="btn primary block" onclick="addItemToInvoice()">➕ أضف للفاتورة</button>
+        </section>
+
+        <!-- ③ منتجات الفاتورة -->
+        <section class="fsec">
+          <div class="fsec-head">
+            <span class="step">3</span>
+            <h4>منتجات الفاتورة</h4>
+            <span class="chip" id="invoiceCountChip">0</span>
+          </div>
+
+          <details class="excel-box">
+            <summary>📤 أو ارفع ملف Excel بكل المنتجات دفعة وحدة</summary>
+            <div class="excel-inner">
+              <input type="file" id="purchaseExcelFile" accept=".xlsx,.xls" onchange="previewExcelFile()">
+              <button type="button" class="btn ghost" onclick="downloadPurchaseSampleExcel()">📋 تحميل نموذج الملف</button>
+
+              <div id="excelPreviewContainer" style="display:none;">
+                <p class="excel-title">👁️ معاينة الملف قبل الإضافة:</p>
+                <div class="tbl-scroll">
+                  <table class="mini-table">
+                    <thead>
+                      <tr><th>المنتج</th><th>المتغير</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
+                    </thead>
+                    <tbody id="excelPreviewBody"></tbody>
+                  </table>
+                </div>
+                <p id="excelPreviewSummary" class="excel-sum"></p>
+                <div class="btn-row">
+                  <button type="button" class="btn success" onclick="confirmExcelImport()">✅ تأكيد وإضافة</button>
+                  <button type="button" class="btn ghost" onclick="cancelExcelPreview()">❌ إلغاء</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div id="invoiceEmpty" class="empty-state">📭 ما أضفت أي منتج بعد</div>
+          <div class="tbl-scroll" id="invoiceTableWrap" style="display:none;">
+            <table id="invoiceItemsTable" class="mini-table">
+              <thead>
+                <tr><th>المنتج</th><th>المتغير</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ④ ملاحظات -->
+        <section class="fsec">
+          <div class="fsec-head"><span class="step">4</span><h4>ملاحظات <span class="opt">(اختياري)</span></h4></div>
+          <textarea id="notes" rows="2" placeholder="أي ملاحظة على الفاتورة..."></textarea>
+        </section>
+
+      </div>
+
+      <!-- تذييل ثابت: الملخّص وزر الحفظ دائماً بمتناول اليد -->
+      <div class="sheet-foot">
+        <div class="foot-sum">
+          <div><span>المنتجات</span><b id="sumCount">0</b></div>
+          <div><span>الكمية</span><b id="sumQty">0</b></div>
+          <div class="grand"><span>المجموع</span><b id="sumTotal">0</b></div>
         </div>
-        <div style="overflow-x:auto;">
-<table id="invoiceItemsTable">
-<thead>
-<tr>
-<th>المنتج</th>
-<th>المتغير</th>
-<th>الكمية</th>
-<th>السعر</th>
-<th>الإجمالي</th>
-<th>حذف</th>
-</tr>
-</thead>
-
-<tbody></tbody>
-</table>
-
-</div>
-        <button class="action" onclick="addItemToInvoice()">➕ أضف للفاتورة</button>
+        <button type="button" class="btn success lg" onclick="savePurchase()">💾 حفظ الفاتورة</button>
       </div>
-      <hr class="section-divider">
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-        <button class="action" onclick="savePurchase()" style="flex:1; background:var(--success); justify-content:center;">💾 حفظ الفاتورة</button>
-        <button class="action" onclick="closePurchasePopup()" style="background:#718096; flex:1; justify-content:center;">❌ إغلاق</button>
-      </div>
-</div>
-</div>
 
-
+    </div>
+  </div>
 
   <script type="module">
 /* =========================
@@ -888,6 +1242,14 @@ document.querySelector("#invoiceItemsTable tbody").innerHTML = "";
   document.getElementById("existingProductDiv").style.display = "none";
   document.getElementById("newProductDiv").style.display = "none";
 
+  // 🧹 تنظيف التنبيهات والتمييز الأحمر من فتحة سابقة
+  showFormNotice("");
+  [supplierSelect, document.getElementById("buyerName")].forEach(clearFieldError);
+  renderInvoiceItems();
+  document.getElementById("sheetBodyTop")?.scrollIntoView();
+  const body = document.querySelector("#purchasePopup .sheet-body");
+  if (body) body.scrollTop = 0;
+
   // ✅ تحديث الموردين والمنتجات
   loadSuppliers();
   loadProducts();
@@ -964,15 +1326,22 @@ window.filterWholesalers = () => {
    صغيرة وتتغير نادراً (إضافة مورد جديد بس)، فتحويلها لقراءة عند الطلب
    (مع كاش 75 ثانية) + استدعاء صريح بعد أي إضافة مورد كافي تماماً.
 ========================= */
+// ⚠️ تُرجّع Promise — أي كود يعتمد على وجود المورد بالقائمة لازم
+// ينتظرها (await)، مو setTimeout. وتحافظ على المورد المختار حالياً
+// حتى ما ينضيع لو انندت وهي مفتوحة.
 async function loadSuppliers() {
+  const keep = supplierSelect.value;
   const data = await getCached(db, "suppliers");
-  supplierSelect.innerHTML = `<option value="">اختر المورد...</option>`;
-  if (!data) return;
-  suppliers = data;
-  Object.keys(suppliers).forEach((id) => {
-    const s = suppliers[id];
-    supplierSelect.innerHTML += `<option value="${id}">${s.name}</option>`;
-  });
+  let html = `<option value="">اختر المورد...</option>`;
+  if (data) {
+    suppliers = data;
+    Object.keys(suppliers).forEach((id) => {
+      html += `<option value="${id}">${suppliers[id].name}</option>`;
+    });
+  }
+  supplierSelect.innerHTML = html;
+  if (keep && suppliers[keep]) supplierSelect.value = keep;
+  return suppliers;
 }
 
 /* =========================
@@ -1002,13 +1371,24 @@ supplierPopup.style.display = "none";
 // تحديث الموردين — لازم نلغي الكاش أول حتى ما نرجع نجيب نسخة قديمة
 // ما فيها المورد الجديد (خصوصاً لو تم تحميل الموردين قبل أقل من 75 ثانية)
 invalidateCache("suppliers");
-loadSuppliers();
 
-// الرجوع لنافذة الشراء وتحديد المورد الجديد
-setTimeout(() => {
+// 🐞 إصلاح (2026-09-23): هنا كان السبب الحقيقي لرسالة "أكمل الحقول
+// الأساسية" اللي تطلع والفاتورة مكتملة. كان الكود:
+//     loadSuppliers();                       ← ما ينتظرها
+//     setTimeout(() => supplierSelect.value = id, 200);
+// إذا الشبكة تأخرت أكثر من ٢٠٠ جزء من الثانية (وهذا طبيعي بالموبايل)،
+// السطر يحاول يحدد مورد لسه ما موجود بالقائمة، فالقيمة تنرجع فاضية
+// بصمت. المستخدم يشوف اسم المورد قدامه ويكمّل الفاتورة، وعند الحفظ
+// يطلعله إن الحقل فاضي. هسه ننتظر القائمة توصل فعلاً وبعدين نحدد.
+await loadSuppliers();
+supplierSelect.value = id;
+if (supplierSelect.value !== id) {
+  // احتياط نادر: لو ما وصل المورد للقائمة لأي سبب، نضيفه يدوياً
+  supplierSelect.insertAdjacentHTML("beforeend", `<option value="${id}">${name}</option>`);
   supplierSelect.value = id;
-  purchasePopup.style.display = "flex";
-}, 200);
+}
+clearFieldError(supplierSelect);
+purchasePopup.style.display = "flex";
 
 };
 
@@ -1407,26 +1787,42 @@ if (!added) {
 
 
 function renderInvoiceItems() {
-
   const table = document.querySelector("#invoiceItemsTable tbody");
-  table.innerHTML = "";
-
-  invoiceItems.forEach((it, i) => {
-
-    table.innerHTML += `
+  table.innerHTML = invoiceItems.map((it, i) => `
     <tr>
       <td>${it.product}</td>
-      <td>${it.variant}</td>
+      <td>${it.variant || "-"}</td>
       <td>${it.quantity}</td>
-      <td>${it.price}</td>
-      <td>${it.subtotal}</td>
-      <td>
-        <button onclick="removeInvoiceItem(${i})">🗑</button>
-      </td>
-    </tr>
-    `;
-  });
+      <td>${Number(it.price).toLocaleString("en-US")}</td>
+      <td>${Number(it.subtotal).toLocaleString("en-US")}</td>
+      <td><button type="button" onclick="removeInvoiceItem(${i})">🗑</button></td>
+    </tr>`).join("");
+
+  // نخفي الجدول ونعرض رسالة واضحة بدل جدول فاضي بعناوين
+  const wrap = document.getElementById("invoiceTableWrap");
+  const empty = document.getElementById("invoiceEmpty");
+  if (wrap)  wrap.style.display  = invoiceItems.length ? "" : "none";
+  if (empty) empty.style.display = invoiceItems.length ? "none" : "";
+
+  updateInvoiceSummary();
 }
+
+// ملخّص حي بالشريط السفلي — المستخدم يشوف المجموع وهو يضيف، بدون
+// ما ينزل للآخر أو يحسب بنفسه
+window.updateInvoiceSummary = function () {
+  const count = invoiceItems.length;
+  const qty   = invoiceItems.reduce((a, b) => a + Number(b.quantity || 0), 0);
+  const sub   = invoiceItems.reduce((a, b) => a + Number(b.subtotal || 0), 0);
+  const fee   = parseFloat(document.getElementById("deliveryFee")?.value) || 0;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set("sumCount", count);
+  set("sumQty",   qty.toLocaleString("en-US"));
+  set("sumTotal", (sub + fee).toLocaleString("en-US"));
+  set("invoiceCountChip", count);
+
+  if (count) showFormNotice("");
+};
 
 window.removeInvoiceItem = function(i) {
   invoiceItems.splice(i,1);
@@ -1522,6 +1918,87 @@ window.downloadPurchaseSampleExcel = async function () {
 };
 
 /* =========================
+   ✅ تحقق واضح من الحقول
+   ────────────────────────
+   قبل: alert("أكمل الحقول الأساسية") — ما يكَول أي حقل، والنافذة طويلة
+   فالحقل الناقص يكون فوق برّا الشاشة والمستخدم ما يشوفه. هسه نميّز
+   الحقل بالأحمر، ننزل له، ونكتب تحته شنو ناقص بالضبط.
+========================= */
+// الرسالة تنحط بآخر حاوية الحقل (.field) حتى تطلع تحت عناصر التحكم
+// كلها — مو بنص المجموعة لو كان معاها زر
+const fieldBox = el => (el && el.closest(".field")) || (el && el.parentElement) || null;
+
+function clearFieldError(el) {
+  if (!el) return;
+  el.classList.remove("field-error");
+  const box = fieldBox(el);
+  const msg = box && box.querySelector(".field-error-msg");
+  if (msg) msg.remove();
+}
+
+function markFieldError(el, message) {
+  if (!el) return;
+  el.classList.add("field-error");
+  const box = fieldBox(el);
+  if (box && !box.querySelector(".field-error-msg")) {
+    const span = document.createElement("div");
+    span.className = "field-error-msg";
+    span.textContent = message;
+    box.appendChild(span);
+  }
+  // ننظّف التمييز أول ما يصلّح الحقل
+  const clear = () => clearFieldError(el);
+  el.addEventListener("input", clear, { once: true });
+  el.addEventListener("change", clear, { once: true });
+}
+
+function focusField(el) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }, 300);
+}
+
+// ترجّع true إذا كلشي تمام، وإلا تميّز أول حقل ناقص وتنزل له
+function validatePurchaseForm() {
+  const checks = [
+    { el: supplierSelect, ok: () => supplierSelect.value, msg: "اختر المورد من القائمة" },
+    { el: document.getElementById("buyerName"), ok: () => buyerName.value.trim(), msg: "اكتب اسم المشتري" }
+  ];
+  checks.forEach(c => clearFieldError(c.el));
+
+  const bad = checks.find(c => !c.ok());
+  if (bad) {
+    markFieldError(bad.el, bad.msg);
+    focusField(bad.el);
+    showFormNotice("⚠️ " + bad.msg);
+    return false;
+  }
+  if (invoiceItems.length === 0) {
+    showFormNotice("⚠️ ما أضفت أي منتج للفاتورة بعد");
+    const t = document.getElementById("invoiceItemsTable");
+    if (t) t.scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+  showFormNotice("");
+  return true;
+}
+
+// شريط تنبيه داخل النافذة نفسها — أوضح من alert وما يحتاج ضغط "حسناً"
+function showFormNotice(text) {
+  const box = document.getElementById("purchaseFormNotice");
+  if (!box) { if (text) alert(text); return; }
+  box.textContent = text || "";
+  box.style.display = text ? "block" : "none";
+  if (text) {
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+  }
+}
+window.showFormNotice = showFormNotice;
+window.clearFieldError = clearFieldError;
+
+/* =========================
    💾 حفظ عملية شراء
 ========================= */
 window.savePurchase = async function () {
@@ -1533,16 +2010,11 @@ window.isSaving = true;
   const deliveryFee =
   parseFloat(document.getElementById("deliveryFee")?.value) || 0;
 
-if (!supplierId || !buyer) { alert("⚠️ أكمل الحقول الأساسية."); window.isSaving = false; return; }
+if (!validatePurchaseForm()) { window.isSaving = false; return; }
   let items = [];
   let totalQty = 0;
   let totalAmount = 0;
   const type = document.getElementById("productType").value;
-if (invoiceItems.length === 0) {
-  alert("⚠️ لم تضف أي منتج للفاتورة.");
-  window.isSaving = false;
-  return;
-}
 if (type === "new") {
   items = items.length ? items : [...invoiceItems];
 } else {
@@ -1649,9 +2121,11 @@ window.filterPurchases = function () {
 function renderFilteredPurchases(list) {
   const table = document.getElementById("purchaseTable");
   table.innerHTML = "";
+  renderMobilePurchases(list);   // نفس النتائج بعرض الموبايل
 
   if (!list.length) {
     table.innerHTML = `<tr><td colspan="11">🚫 لا توجد نتائج مطابقة</td></tr>`;
+    updateStats(list);
     return;
   }
 
@@ -1818,9 +2292,67 @@ Object.keys(data).reverse().forEach((id, i) => {
     });
 
 
+    renderMobilePurchases(purchases);
     updateStats(purchases);
     saveFullPurchasesStats(purchases);
     window.purchases = purchases; // ✅ أضف هذا السطر هنا فقط
+}
+
+/* =========================
+   📱 عرض الفواتير كـكروت بالموبايل
+   ────────────────────────────────
+   جدول فيه ١١ عمود ما ينقرا بشاشة موبايل — كان لازم سحب يمين ويسار
+   حتى يشوف المورد أو زر الاستلام. الكارت يعرض نفس المعلومات مرتبة
+   وبأزرار كبيرة تنضغط بالإصبع.
+========================= */
+function renderMobilePurchases(list) {
+  window.visiblePurchases = list || [];   // القائمة المعروضة حالياً (تحترم الفلترة)
+  const box = document.getElementById("mobilePurchases");
+  if (!box) return;
+  if (!list || !list.length) {
+    box.innerHTML = `<div class="empty-state">📭 لا توجد فواتير</div>`;
+    return;
+  }
+
+  box.innerHTML = list.map(p => {
+    const id = p.id;
+    const dateStr = new Date(p.date).toLocaleDateString("en-GB");
+    const total = (p.finalTotalAmount ?? p.totalAmount ?? 0).toLocaleString("en-US");
+    const cls = p.status === "received" ? "received" : p.status === "rejected" ? "rejected" : "";
+
+    const status = p.status === "received"
+      ? `<div class="p-card-status" style="color:var(--success)">✅ مستلم: ${p.receivedBy || ""}</div>`
+      : p.status === "rejected"
+      ? `<div class="p-card-status" style="color:var(--danger)">❌ مرفوض: ${p.rejectedBy || ""}</div>`
+      : "";
+
+    const actions = (p.status === "received" || p.status === "rejected")
+      ? ""
+      : `<button style="background:var(--success)" onclick="receivePurchase('${id}')">✅ استلام</button>
+         <button style="background:#e67e22" onclick="rejectPurchase('${id}')">❌ رفض</button>`;
+
+    return `
+      <div class="p-card ${cls}">
+        <div class="p-card-top">
+          <span class="p-card-sup">${p.supplierName || "-"}</span>
+          <span class="p-card-date">${dateStr}</span>
+        </div>
+        <div class="p-card-rows">
+          <div>المشتري: <b>${p.buyer || "-"}</b></div>
+          <div>المنتجات: <b>${p.items?.length || 0}</b></div>
+          <div>الكمية: <b>${p.totalQty ?? 0}</b></div>
+          <div>الإجمالي: <b class="p-card-total">${total}</b></div>
+        </div>
+        ${status}
+        <div class="p-card-acts">
+          ${canShare()
+            ? `<button style="background:var(--blue)" onclick="shareInvoice('${id}')">📤 مشاركة</button>`
+            : `<button style="background:var(--blue)" onclick="printInvoice('${id}')">🖨️ طباعة</button>`}
+          ${actions}
+          <button class="del" onclick="deletePurchase('${id}')">🗑</button>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 /* =========================
@@ -2139,6 +2671,72 @@ window.shareInvoice = async function (id) {
   await printInvoice(id);
 };
 
+
+/* =========================
+   📄 تقرير PDF شامل
+   ────────────────────────
+   🐞 هذا الزر كان موجود بالصفحة من زمان بس الدالة مو مكتوبة أصلاً —
+   أي ضغطة عليه ما تسوي شي وتطلع خطأ بالكونسول بصمت. هسه ينزّل تقرير
+   بكل الفواتير المعروضة حالياً (يحترم الفلترة) بنفس خط وشعار الفواتير.
+========================= */
+window.downloadFullPDF = async function () {
+  const list = (window.visiblePurchases && window.visiblePurchases.length)
+    ? window.visiblePurchases
+    : (window.purchases || []);
+  if (!list.length) return alert("⚠️ ماكو فواتير لتصديرها");
+
+  try {
+    const res = await fetch("Tajawal-Regular.ttf");
+    const buffer = await res.arrayBuffer();
+    const base64 = btoa(Array.from(new Uint8Array(buffer)).map(b => String.fromCharCode(b)).join(""));
+    pdfMake.vfs = { "Tajawal-Regular.ttf": base64 };
+    pdfMake.fonts = {
+      Tajawal: { normal: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf",
+                 italics: "Tajawal-Regular.ttf", bolditalics: "Tajawal-Regular.ttf" }
+    };
+
+    const totalAmount = list.reduce((a, b) => a + (b.finalTotalAmount ?? b.totalAmount ?? 0), 0);
+    const totalQty = list.reduce((a, b) => a + (b.totalQty || 0), 0);
+
+    const head = ["الحالة", "المشتري", "المورد", "الإجمالي", "الكمية", "التاريخ", "#"]
+      .map(t => ({ text: fixArabicText(t), bold: true, color: "#fff", fontSize: 10, alignment: "center" }));
+
+    const rows = list.map((p, i) => ([
+      fixArabicText(p.status === "received" ? "مستلم" : p.status === "rejected" ? "مرفوض" : "قيد الانتظار"),
+      fixArabicText(p.buyer || "-"),
+      fixArabicText(p.supplierName || "-"),
+      (p.finalTotalAmount ?? p.totalAmount ?? 0).toLocaleString("en-US"),
+      String(p.totalQty ?? 0),
+      new Date(p.date).toLocaleDateString("en-GB"),
+      String(i + 1)
+    ].map(t => ({ text: t, fontSize: 9, alignment: "center" }))));
+
+    pdfMake.createPdf({
+      pageSize: "A4",
+      pageMargins: [24, 28, 24, 28],
+      defaultStyle: { font: "Tajawal", alignment: "right" },
+      content: [
+        { text: fixArabicText("تقرير المشتريات — شركة المراد"),
+          fontSize: 17, bold: true, color: "#043B64", alignment: "center", margin: [0, 0, 0, 4] },
+        { text: new Date().toLocaleString("en-GB"),
+          fontSize: 9, color: "#718096", alignment: "center", margin: [0, 0, 0, 12] },
+        { columns: [
+            { text: fixArabicText(`المجموع: ${totalAmount.toLocaleString("en-US")}`), fontSize: 11, bold: true, alignment: "center" },
+            { text: fixArabicText(`القطع: ${totalQty.toLocaleString("en-US")}`), fontSize: 11, bold: true, alignment: "center" },
+            { text: fixArabicText(`الفواتير: ${list.length}`), fontSize: 11, bold: true, alignment: "center" }
+          ], margin: [0, 0, 0, 12] },
+        { table: { headerRows: 1, widths: ["*", "*", "*", "auto", "auto", "auto", "auto"], body: [head, ...rows] },
+          layout: {
+            fillColor: (r) => r === 0 ? "#043B64" : (r % 2 === 0 ? "#f7fafc" : null),
+            hLineColor: () => "#e2e8f0", vLineColor: () => "#e2e8f0"
+          } }
+      ]
+    }).download(`تقرير-المشتريات-${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}.pdf`);
+  } catch (e) {
+    console.error("downloadFullPDF:", e);
+    alert("⚠️ تعذر إنشاء التقرير: " + e.message);
+  }
+};
 
 window.downloadFullExcel = async () => {
   const XLSX = await import("https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs");
