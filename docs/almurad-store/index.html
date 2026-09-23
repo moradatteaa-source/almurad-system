@@ -1106,6 +1106,19 @@ window.closeCatPage=()=>{
 };
 
 /* ── LOAD PRODUCTS ── */
+// ⚠️ إصلاح (2026-09-23): كنا نجيب فرع warehouse كامل لكل زبون — ١٨٨٠
+// منتج و٥١٦ كيلوبايت — حتى نعرض ١٧١ منتج ظاهر. وكان سعر الشراء
+// (buyPrice) ينوصل للمتصفح وياها. هسه نقرا storeCatalog: نسخة خفيفة
+// يبنيها السيرفر تلقائياً فيها الظاهر بس وبالحقول اللي يحتاجها المتجر
+// (~١٠٠ كيلوبايت). إذا ما كان جاهز بعد، نرجع للمخزن متل قبل بالضبط.
+async function getCatalog(){
+  try{
+    const c=await get(ref(db,'storeCatalog'));
+    if(c.exists()&&c.size!==0) return c;
+  }catch(e){ console.warn('storeCatalog:',e.message); }
+  try{ return await get(ref(db,'warehouse')); }catch(e){ return null; }
+}
+
 async function loadProds(){
   // كاش بالـ sessionStorage لتسريع الفتح
   const cached=sessionStorage.getItem('_prods_cache');
@@ -1115,7 +1128,8 @@ async function loadProds(){
       all.sort((a,b)=>new Date(b.lastUpdate||0)-new Date(a.lastUpdate||0));
       applyF();
       // حدّث في الخلفية
-      get(ref(db,'warehouse')).then(snap=>{
+      getCatalog().then(snap=>{
+        if(!snap) return;
         if(!snap.exists()) return;
         const fresh=[];
         snap.forEach(c=>{
@@ -1129,8 +1143,8 @@ async function loadProds(){
       return;
     }catch(e){}
   }
-  const snap=await get(ref(db,'warehouse'));
-  if(!snap.exists()){
+  const snap=await getCatalog();
+  if(!snap||!snap.exists()){
     document.getElementById('pg').innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--mu);font-size:15px;">لا توجد منتجات حالياً</div>`;
     return;
   }

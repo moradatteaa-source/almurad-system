@@ -484,7 +484,9 @@ async function recordBatchPrint(logId, log, btnEl) {
   const summarySlot = document.getElementById("summaryPrintedSlot");
   if (summarySlot) summarySlot.innerHTML = printedBadgeHTML(by, at);
   try {
+    // نكتب بالمكانين: الأصل (shippingLogs) والملخّص اللي تقراه القائمة
     await update(ref(db, `shippingLogs/${logId}`), { printedBy: by, printedAt: at });
+    await update(ref(db, `shippingLogSummaries/${logId}`), { printedBy: by, printedAt: at });
   } catch (err) {
     console.warn("⚠️ تعذر حفظ سجل طباعة الدفعة:", err.message);
   }
@@ -532,8 +534,30 @@ function prewarmBatchPdf(logId) {
 }
 
 // تحميل السجلات
+// ⚠️ إصلاح تكلفة (2026-09-23): هذي الدالة كانت تجيب shippingLogs كامل —
+// ٣.٥ ميكابايت بكل فتحة للصفحة، ٩٥٪ منها تفاصيل طلبات كل دفعة (orders)
+// وهي ما تنعرض بالكارت إطلاقاً، وتنجاب مرة ثانية بـopenDetails لما
+// الموظف يفتح الدفعة فعلاً. هسه نقرا فرع الملخّصات الخفيف
+// (shippingLogSummaries ≈ ١٧٠ كيلوبايت) اللي ينكتب وقت رفع الدفعة.
+// إذا الفرع فاضي (قبل الترحيل) نرجع للطريقة القديمة تلقائياً حتى
+// ما تتعطل الصفحة أبداً.
+async function fetchLogSummaries() {
+  try {
+    const sum = await get(ref(db, "shippingLogSummaries"));
+    if (sum.exists()) {
+      const v = sum.val();
+      if (v && Object.keys(v).length) return v;
+    }
+  } catch (err) {
+    console.warn("تعذر قراءة ملخّصات السجلات:", err.message);
+  }
+  const full = await get(ref(db, "shippingLogs"));
+  return full.exists() ? full.val() : null;
+}
+
 async function loadLogs() {
-  const snapshot = await get(ref(db, "shippingLogs"));
+  const logsVal = await fetchLogSummaries();
+  const snapshot = { exists: () => !!logsVal, val: () => logsVal };
   if (!snapshot.exists()) {
     logsList.innerHTML = `<div class="state-box"><span class="state-icon">📭</span>لا توجد سجلات شحن بعد</div>`;
     return;

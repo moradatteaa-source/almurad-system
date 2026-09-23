@@ -80,6 +80,25 @@
       if (safeSnap.exists()) return { key: safe, snap: safeSnap };
     }
 
+    // ⚠️ إصلاح تكلفة (2026-09-23): هنا كنا ننزّل فرع warehouse كامل
+    // (٥١٦ كيلوبايت) بس حتى نلقي مفتاح منتج واحد — وهذا يصير بكل
+    // خصم وإرجاع، يعني آلاف المرات بالشهر. هسه نقرا سطر واحد من
+    // فهرس الأسماء اللي يبنيه السيرفر تلقائياً (warehouseIndex).
+    // مفتاح الفهرس = الاسم المنظّف بعد استبدال الرموز الممنوعة بفايربيس
+    // بس (بدون لمس الفراغات) — نفس التحويل المستخدم بالسيرفر تماماً
+    const idxKey = original.replace(/[.#$\[\]\/]/g, "_");
+    try {
+      const idxSnap = await get(ref(db, `warehouseIndex/${idxKey}`));
+      if (idxSnap.exists()) {
+        const key = idxSnap.val();
+        const matchSnap = await get(ref(db, `warehouse/${key}`));
+        if (matchSnap.exists()) return { key, snap: matchSnap };
+      }
+    } catch (e) {
+      console.warn("warehouseIndex:", e.message);
+    }
+
+    // احتياط أخير: الطريقة القديمة (تشتغل بس إذا الفهرس مو جاهز بعد)
     const allSnap = await get(ref(db, "warehouse"));
     if (allSnap.exists()) {
       const all = allSnap.val();

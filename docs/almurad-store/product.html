@@ -428,7 +428,14 @@ async function loadProduct(){
   }
   
   if(!allProds.length){
-    const snap = await get(ref(db,'warehouse'));
+    // نفس سبب index.html: نقرا النسخة الخفيفة (storeCatalog) بدل المخزن
+    // كامل، ونرجع للمخزن احتياطاً بس إذا النسخة ما كانت جاهزة
+    let snap = null;
+    try {
+      const c = await get(ref(db,'storeCatalog'));
+      if (c.exists() && c.size !== 0) snap = c;
+    } catch(e){ console.warn('storeCatalog:', e.message); }
+    if (!snap) snap = await get(ref(db,'warehouse'));
     if(!snap.exists()){
       document.getElementById('mainContent').innerHTML=`<div class="loading"><p>❌ المنتج غير موجود</p></div>`;
       return;

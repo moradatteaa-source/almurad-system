@@ -557,6 +557,22 @@ if (selectedCompany === "waseet") {
         uploadedBy: "admin",
         orders: ordersObj
       });
+
+      // 💰 ملخّص خفيف للسجل — صفحة سجلات الشحن تعرض كروت فيها هذي
+      // الحقول بس، وكانت تنزّل شجرة shippingLogs كاملة (٣.٥ ميكابايت،
+      // أغلبها تفاصيل طلبات ما تنعرض بالكارت أصلاً) بكل فتحة. هسه
+      // تقرا هذا الفرع الخفيف، والتفاصيل تنجاب عند فتح الدفعة بس.
+      try {
+        await set(ref(db, `shippingLogSummaries/${logId}`), {
+          provider: companyLabel,
+          createdAt: Date.now(),
+          total: successCount + failCount,
+          successCount,
+          failCount,
+          uploadedBy: "admin"
+        });
+      } catch (e) { console.warn("تعذر حفظ ملخّص السجل:", e.message); }
+
       addLog("📝 تم حفظ السجل بنجاح", "ok");
 
       // 🔥 تجهيز مسبق لملف الطباعة: نطلب من السيرفر يبني ملف وصولات

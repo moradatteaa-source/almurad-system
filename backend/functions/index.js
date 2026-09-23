@@ -262,7 +262,47 @@ exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async
       if (a) await bump(`stats/deliveredBy/${key(a)}`, 1);
     }
   }
+
+  // ── فهرس البحث (orderIndex) ──
+  // صفحة الطلبات كانت تنزّل كل فروع ordersTest (٥ ميكابايت) بكل عملية
+  // بحث، حتى تدوّر على رقم طلب أو تلفون أو رقم وصل. هسه تنزّل هذا
+  // الفهرس الخفيف (~٢٦٠ كيلوبايت) وتطابق محلياً، وبعدها تجيب الطلبات
+  // المطابقة بس بمسارها المباشر. نفس النتيجة بالضبط ونفس شكل البحث.
+  const idxRef = admin.database().ref(`orderIndex/${orderId}`);
+  if (!existsAfter) {
+    // الطلب انشال من هذا الفرع — ما نمسح الفهرس إلا إذا كان يشير لهنا،
+    // لأن الشيل غالباً جزء من نقل لفرع ثاني (والفرع الجديد يكتب قبل/بعد)
+    const cur = await idxRef.get();
+    if (cur.exists() && cur.val() && cur.val().s === status) await idxRef.remove();
+  } else {
+    await idxRef.set(orderIndexEntry(afterVal, status));
+  }
 });
+
+// سطر الفهرس: الحالة + التلفونات مطبّعة + رقم الوصل + ترتيب الدخول
+// ⚠️ التطبيع لازم يطابق normalizeNum بـorders-cards.html حرف بحرف،
+// حتى تطلع نتائج البحث نفسها تماماً (أرقام عربية → لاتينية، وحذف
+// الفراغات والشرطات والشُرَط السفلية بس — أي شي ثاني يبقى مثل ما هو)
+const normalizeNum = v => {
+  if (v == null || v === "") return "";
+  const ar = "٠١٢٣٤٥٦٧٨٩", en = "0123456789";
+  return String(v)
+    .split("").map(c => { const i = ar.indexOf(c); return i >= 0 ? en[i] : c; }).join("")
+    .replace(/[\s\-_]/g, "");
+};
+
+function orderIndexEntry(o, status) {
+  const e = { s: status };
+  const p1 = normalizeNum(o && o.phone1);
+  const p2 = normalizeNum(o && o.phone2);
+  const p = [p1, p2].filter(Boolean).join("§");
+  if (p) e.p = p;
+  const r = normalizeNum(o && o.receiptNum);
+  if (r) e.r = r;
+  const en = Number(o && o.enterIndex);
+  if (en) e.e = en;
+  return e;
+}
 
 // ── إعادة بناء العدّادات من الصفر ──
 // تنادى مرة وحدة بعد النشر (وأي وقت تشك بالأرقام). تمشي على الفروع
@@ -298,9 +338,175 @@ exports.rebuildOrderCounts = onRequest({ timeoutSeconds: 540, memory: "512MiB" }
     await db.ref("stats/deliveredBy").set(deliveredBy);
     await db.ref("stats/countsRebuiltAt").set(Date.now());
 
-    res.json({ ok: true, counts, employees: Object.keys(deliveredBy).length });
+    // فهرس البحث كامل بنفس المرور
+    const index = {};
+    for (const status of STATUSES) {
+      const snap = await db.ref(`ordersTest/${status}`).get();
+      const val = snap.exists() ? snap.val() : {};
+      for (const [id, o] of Object.entries(val)) {
+        if (id === "_meta" || !o || typeof o !== "object") continue;
+        index[id] = orderIndexEntry(o, status);
+      }
+    }
+    await db.ref("orderIndex").set(index);
+
+    res.json({
+      ok: true,
+      counts,
+      employees: Object.keys(deliveredBy).length,
+      indexed: Object.keys(index).length,
+      indexKB: Math.round(JSON.stringify(index).length / 1024)
+    });
   } catch (err) {
     console.error("❌ rebuildOrderCounts:", err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+// ════════════════════════════════════════════════════════
+// 📦 ملخّصات دفعات الشحن (shippingLogSummaries)
+// ────────────────────────────────────────────────────────
+// ليش: صفحة سجلات الشحن تعرض كارت لكل دفعة فيه المزوّد والتاريخ ومن
+// رفعها وعدد الناجح/الفاشل بس — لكنها كانت تنزّل shippingLogs كامل
+// (٣.٥ ميكابايت) لأن كل دفعة تحمل معها تفاصيل كل طلباتها. التفاصيل
+// أصلاً تنجاب مرة ثانية لما الموظف يفتح الدفعة، فكانت تنزّل مرتين.
+// هسه القائمة تقرا هذا الفرع الخفيف (~١٧٠ كيلوبايت).
+//
+// الكتابة الجارية تصير من الواجهة وقت رفع الدفعة (send-shipping.html)
+// ووقت تسجيل الطباعة (shipping-logs.html). هذي الدالة للترحيل مرة
+// وحدة للدفعات القديمة — تنطلب بالمتصفح وتخلص.
+// ════════════════════════════════════════════════════════
+exports.rebuildLogSummaries = onRequest({ timeoutSeconds: 540, memory: "512MiB" }, async (req, res) => {
+  try {
+    const db = admin.database();
+    const snap = await db.ref("shippingLogs").get();
+    if (!snap.exists()) return res.json({ ok: true, logs: 0, note: "ماكو سجلات" });
+
+    const logs = snap.val();
+    const out = {};
+    for (const [logId, log] of Object.entries(logs)) {
+      if (!log || typeof log !== "object") continue;
+      const sum = {
+        provider: log.provider || "",
+        createdAt: log.createdAt || Number(logId) || 0,
+        total: Number(log.total || 0),
+        successCount: Number(log.successCount || 0),
+        failCount: Number(log.failCount || 0),
+        uploadedBy: log.uploadedBy || ""
+      };
+      if (log.printedBy) sum.printedBy = log.printedBy;
+      if (log.printedAt) sum.printedAt = log.printedAt;
+      out[logId] = sum;
+    }
+
+    await db.ref("shippingLogSummaries").set(out);
+    const bytes = JSON.stringify(out).length;
+    res.json({ ok: true, logs: Object.keys(out).length, summaryKB: Math.round(bytes / 1024) });
+  } catch (err) {
+    console.error("❌ rebuildLogSummaries:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// 🏬 نسخة المتجر الخفيفة (storeCatalog) + فهرس أسماء المخزن (warehouseIndex)
+// ────────────────────────────────────────────────────────
+// المشكلة: كل زبون يفتح المتجر كان ينزّل فرع warehouse كامل — ١٨٨٠
+// منتج و٥١٦ كيلوبايت — مع إن المتجر يعرض ١٧١ منتج ظاهر بس، ويحتاج
+// منهن الاسم والسعر والصور والكمية لا غير. يعني ٨٠٪ من التنزيل ضايع،
+// وفوقها سعر الشراء (buyPrice) كان ينوصل للزبون بالمتصفح.
+//
+// وبنفس الوقت: دفتر المخزن وصفحة إضافة الطلب كانوا ينزّلون warehouse
+// كامل بس حتى يلقون "وين المنتج الفلاني" لما الاسم ما يطابق المفتاح —
+// وهذا يصير بكل تثبيت طلب. الفهرس يخلّي هذي العملية قراءة سطر واحد.
+//
+// الفرعين ينبنون تلقائياً من هنا بكل تعديل يصير على أي منتج، فما يحتاج
+// أي صفحة تتذكر تحدّثهن، وما يصير اختلاف بينهن وبين المخزن أبداً.
+// ════════════════════════════════════════════════════════
+const cleanProductName = n => String(n || "").trim().replace(/\s+/g, " ");
+const safeKey = k => String(k || "").replace(/[.#$\[\]\/]/g, "_");
+
+// الحقول اللي يحتاجها المتجر بس — أي شي غيرها (سعر الشراء، الباركودات،
+// تواريخ الإنشاء، علامات الطلبات) ما ينوصل للزبون إطلاقاً
+function toCatalogEntry(p) {
+  if (!p || p.visible !== true) return null;
+  const e = {
+    name: p.name || "",
+    visible: true,
+    totalQty: p.stock
+      ? Object.values(p.stock).reduce((a, b) => a + (Number(b) || 0), 0)
+      : Number(p.totalQty || 0)
+  };
+  if (p.prices)     e.prices     = p.prices;
+  if (p.price != null) e.price   = p.price;
+  if (p.images)     e.images     = p.images;
+  if (p.thumbs)     e.thumbs     = p.thumbs;
+  if (p.category)   e.category   = p.category;
+  if (p.desc)       e.desc       = p.desc;
+  if (p.stock)      e.stock      = p.stock;
+  if (p.lastUpdate) e.lastUpdate = p.lastUpdate;
+  return e;
+}
+
+exports.syncStoreCatalog = onValueWritten("/warehouse/{pkey}", async (event) => {
+  const pkey = event.params.pkey;
+  const db = admin.database();
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  // 1) نسخة المتجر
+  const entry = toCatalogEntry(after);
+  await db.ref(`storeCatalog/${safeKey(pkey)}`).set(entry); // null = ينشال
+
+  // 2) فهرس الأسماء (الاسم المنظّف → مفتاح المنتج بالمخزن)
+  const oldName = cleanProductName(before && before.name);
+  const newName = cleanProductName(after && after.name);
+  if (oldName && oldName !== newName) {
+    await db.ref(`warehouseIndex/${safeKey(oldName)}`).remove();
+  }
+  if (newName) {
+    await db.ref(`warehouseIndex/${safeKey(newName)}`).set(pkey);
+  }
+  // اسم المفتاح نفسه بعد ينفع للبحث (المخزن تاريخياً يخزّن بصيغ مختلفة)
+  const fromKey = cleanProductName(String(pkey).replace(/_/g, " "));
+  if (after && fromKey && fromKey !== newName) {
+    await db.ref(`warehouseIndex/${safeKey(fromKey)}`).set(pkey);
+  }
+});
+
+// ── بناء الفرعين من الصفر (تنطلب مرة وحدة بعد النشر) ──
+exports.rebuildStoreCatalog = onRequest({ timeoutSeconds: 540, memory: "512MiB" }, async (req, res) => {
+  try {
+    const db = admin.database();
+    const snap = await db.ref("warehouse").get();
+    if (!snap.exists()) return res.json({ ok: true, products: 0 });
+
+    const wh = snap.val();
+    const catalog = {};
+    const index = {};
+    for (const [pkey, p] of Object.entries(wh)) {
+      const entry = toCatalogEntry(p);
+      if (entry) catalog[safeKey(pkey)] = entry;
+
+      const name = cleanProductName(p && p.name);
+      if (name) index[safeKey(name)] = pkey;
+      const fromKey = cleanProductName(String(pkey).replace(/_/g, " "));
+      if (fromKey && fromKey !== name) index[safeKey(fromKey)] = pkey;
+    }
+
+    await db.ref("storeCatalog").set(catalog);
+    await db.ref("warehouseIndex").set(index);
+
+    res.json({
+      ok: true,
+      products: Object.keys(wh).length,
+      visible: Object.keys(catalog).length,
+      catalogKB: Math.round(JSON.stringify(catalog).length / 1024),
+      indexKB: Math.round(JSON.stringify(index).length / 1024)
+    });
+  } catch (err) {
+    console.error("❌ rebuildStoreCatalog:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+

@@ -1147,6 +1147,92 @@ const applyAndRender = applyFiltersAndRender;
 // ════════════════════════════════════════════════════════
 // 🌐 Global Search — ✅ إصلاح كامل للـ iOS والفراغات
 // ════════════════════════════════════════════════════════
+// ⚠️ إصلاح تكلفة (2026-09-23): البحث كان ينزّل كل فروع ordersTest
+// كاملة — ٥ ميكابايت — بكل ضغطة بحث، وبعدين يفلتر بالمتصفح. وهذا أكثر
+// شي يتكرر بيوم الموظف، فصار أكبر مصدر للاستهلاك. هسه نقرا فهرس خفيف
+// (orderIndex ≈ ٢٦٠ كيلوبايت) فيه الحالة والتلفونات ورقم الوصل بس،
+// نطابق بيه محلياً بنفس الطريقة بالضبط، وبعدها نجيب الطلبات المطابقة
+// لوحدها بمسارها المباشر. النتيجة نفسها والشكل نفسه للموظف.
+let _orderIdx = null, _orderIdxTs = 0;
+const ORDER_IDX_TTL = 10 * 60 * 1000;
+const SEARCH_DIRECT_LIMIT = 150; // فوقها نرجع للطريقة القديمة (بحث واسع نادر)
+
+async function getOrderIndex() {
+  if (_orderIdx && Date.now() - _orderIdxTs < ORDER_IDX_TTL) return _orderIdx;
+  try {
+    const snap = await get(ref(db, "orderIndex"));
+    if (!snap.exists()) return null;
+    const v = snap.val();
+    if (!v || !Object.keys(v).length) return null;
+    _orderIdx = v; _orderIdxTs = Date.now();
+    return v;
+  } catch (e) {
+    console.warn("orderIndex:", e.message);
+    return null;
+  }
+}
+
+// عرض نتائج البحث — مشتركة بين الطريق السريع (الفهرس) والقديم
+function finishSearch(results, queryText) {
+  results.sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
+  S.visibleOrders = results;
+  updateStats(results.length, false);
+
+  const container = document.getElementById("ordersList");
+  container.innerHTML = "";
+
+  if (results.length === 0) {
+    document.getElementById("emptyState").style.display = "block";
+  } else {
+    const frag = document.createDocumentFragment();
+    results.forEach(order => {
+      frag.appendChild(buildCard(order));
+      const d = document.createElement("div"); d.className = "divider";
+      frag.appendChild(d);
+    });
+    container.appendChild(frag);
+    showEndMessage();
+  }
+
+  localStorage.setItem("activeSearch", JSON.stringify({ type: S.searchType, query: queryText }));
+  showToast(`🔍 ${results.length} نتيجة`, results.length > 0 ? "success" : "warning");
+}
+
+// يرجّع مصفوفة الطلبات المطابقة، أو null إذا ما ينفع نستخدم الفهرس
+async function searchViaIndex(normalizedQ) {
+  const idx = await getOrderIndex();
+  if (!idx) return null;
+
+  const hits = [];
+  for (const id in idx) {
+    const e = idx[id];
+    if (!e) continue;
+    let match = false;
+    switch (S.searchType) {
+      case "orderId":    match = normalizeNum(String(id)).includes(normalizedQ); break;
+      case "phone":      match = String(e.p || "").includes(normalizedQ); break;
+      case "receiptNum": match = String(e.r || "").includes(normalizedQ); break;
+    }
+    if (match) hits.push([id, e]);
+  }
+  if (hits.length > SEARCH_DIRECT_LIMIT) return null; // بحث واسع — الطريقة القديمة أرخص
+
+  hits.sort((a, b) => (b[1].e || 0) - (a[1].e || 0));
+
+  const out = [];
+  for (let i = 0; i < hits.length; i += 10) {
+    const chunk = hits.slice(i, i + 10);
+    const got = await Promise.all(chunk.map(async ([id, e]) => {
+      try {
+        const snap = await get(ref(db, `ordersTest/${e.s}/${id}`));
+        return snap.exists() ? { id, ...snap.val() } : null;
+      } catch (err) { return null; }
+    }));
+    got.forEach(o => { if (o && !o.isDeleted) out.push(o); });
+  }
+  return out;
+}
+
 async function globalSearch(queryText) {
   // ✅ تطبيع نص البحث: حذف فراغات زائدة وتطبيع الأرقام
   const rawQ        = String(queryText || "").trim();
@@ -1163,6 +1249,14 @@ async function globalSearch(queryText) {
   let results = [];
 
   try {
+    // الطريق السريع: الفهرس. إذا ما اشتغل لأي سبب، نكمل بالطريقة القديمة
+    const viaIndex = await searchViaIndex(normalizedQ);
+    if (viaIndex) {
+      results = viaIndex;
+      finishSearch(results, queryText);
+      return;
+    }
+
     // ✅ إصلاح iOS: تسلسلي بدل Promise.all لتجنب خنق الشبكة
     const allOrders = [];
     for (const status of ALL_STATUSES) {
@@ -1217,28 +1311,7 @@ async function globalSearch(queryText) {
       if (match) results.push(order);
     });
 
-    results.sort((a, b) => (b.enterIndex || 0) - (a.enterIndex || 0));
-    S.visibleOrders = results;
-    updateStats(results.length, false);
-
-    const container = document.getElementById("ordersList");
-    container.innerHTML = "";
-
-    if (results.length === 0) {
-      document.getElementById("emptyState").style.display = "block";
-    } else {
-      const frag = document.createDocumentFragment();
-      results.forEach(order => {
-        frag.appendChild(buildCard(order));
-        const d = document.createElement("div"); d.className = "divider";
-        frag.appendChild(d);
-      });
-      container.appendChild(frag);
-      showEndMessage();
-    }
-
-    localStorage.setItem("activeSearch", JSON.stringify({ type: S.searchType, query: queryText }));
-    showToast(`🔍 ${results.length} نتيجة`, results.length > 0 ? "success" : "warning");
+    finishSearch(results, queryText);
 
   } catch (err) {
     console.error("globalSearch:", err);

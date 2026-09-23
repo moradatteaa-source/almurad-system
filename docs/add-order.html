@@ -1357,25 +1357,46 @@ if (status === "رفض") {
         // وهكذا...
 const ordersPath = `ordersTest/${status}`;
 if (status === "مثبت") {
-          const warehouseSnap = await get(ref(db, 'warehouse'));
-          if (warehouseSnap.exists()) {
-            const wh = warehouseSnap.val();
-            const nToK = new Map();
-            for (const [k, v] of Object.entries(wh)) {
-              const n = (v.name || '').trim().replace(/\s+/g, ' ');
-              if (n) nToK.set(n, k);
+          // ⚠️ إصلاح تكلفة (2026-09-23): هنا كان ينزّل فرع warehouse
+          // كامل (١٨٨٠ منتج، ٥١٦ كيلوبايت) بكل طلب مثبت — بس حتى يتأكد
+          // من كمية منتج أو اثنين. هسه نسأل عن منتجات الطلب بس عبر فهرس
+          // الأسماء اللي يبنيه السيرفر (warehouseIndex)، فالقراءة تصير
+          // كم كيلوبايت. إذا الفهرس مو جاهز، نرجع للطريقة القديمة مرة
+          // وحدة بس — نفس النتيجة بالضبط، ونفس الرسائل للموظف.
+          let _whAll = null;
+          const resolveProduct = async (name) => {
+            const idxKey = name.replace(/[.#$\[\]\/]/g, '_');
+            try {
+              const direct = await get(ref(db, `warehouse/${idxKey}`));
+              if (direct.exists()) return { key: idxKey, data: direct.val() };
+              const idx = await get(ref(db, `warehouseIndex/${idxKey}`));
+              if (idx.exists()) {
+                const k = idx.val();
+                const snap = await get(ref(db, `warehouse/${k}`));
+                if (snap.exists()) return { key: k, data: snap.val() };
+              }
+            } catch (e) { console.warn('warehouseIndex:', e.message); }
+            if (!_whAll) {
+              const all = await get(ref(db, 'warehouse'));
+              _whAll = all.exists() ? all.val() : {};
             }
+            const k = Object.keys(_whAll).find(x =>
+              ((_whAll[x] && _whAll[x].name) || '').trim().replace(/\s+/g, ' ') === name);
+            return k ? { key: k, data: _whAll[k] } : null;
+          };
+
+          {
             const norm = t => t.split('|').map(s => s.trim()).filter(Boolean).sort().join('|');
             let ok = true;
             for (const item of productsDetailed) {
               if (!item.name) continue;
               const name = item.name.trim().replace(/\s+/g, ' ');
-              const pKey = nToK.get(name);
-              if (!pKey) {
+              const found = await resolveProduct(name);
+              if (!found) {
                 alert(`⚠️ المنتج غير موجود بالمخزن: ${name}`);
                 ok = false; break;
               }
-              const stock = wh[pKey]?.stock || {};
+              const stock = (found.data && found.data.stock) || {};
               const hasV = Object.keys(stock).some(k => k.includes('|'));
               if (!hasV) {
                 const cur = Number(stock.default || 0);
