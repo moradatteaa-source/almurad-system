@@ -913,7 +913,24 @@ function isCacheFresh() {
 // ============================================================
 // 🔢 حساب عدد الطلبات في مسار واحد
 // ============================================================
+// ⚠️ إصلاح تكلفة جوهري (2026-09-23): هذي الدالة كانت تجيب الفرع كامل
+// وتعد مفاتيحه — يعني تنزّل كل طلبات الحالة (آلاف الطلبات) حتى تطلّع رقم
+// واحد. ومع المراقب الحي بالأسفل، أي تغيير حالة عند أي موظف كان يعيد
+// تنزيل الفرع كامل بكل لوحة مفتوحة. هذا كان أكبر مصدر استهلاك بالنظام.
+//
+// هسه السيرفر يمسك العدّاد (دالة syncOrderCounts ببـ backend/functions)
+// ونقرا الرقم مباشرة. نفس القيمة بالضبط، بس بايتات بدل ميكابايتات.
+// إذا العدّاد لسه ما انبنى (قبل تشغيل rebuildOrderCounts أول مرة)، نرجع
+// للطريقة القديمة حتى ما تطلع أصفار بالشاشة.
 async function fetchCount(path) {
+  const status = String(path).replace(/^ordersTest\//, "");
+  try {
+    const snap = await get(ref(db, `stats/ordersCounts/${status}`));
+    if (snap.exists()) return Number(snap.val()) || 0;
+  } catch (err) {
+    console.warn("fetchCount (counter):", status, err.message);
+  }
+  // احتياط: الطريقة القديمة
   try {
     const snap = await get(ref(db, path));
     if (!snap.exists()) return 0;
@@ -978,22 +995,26 @@ function setupLightWatchers() {
   Object.values(listeners).forEach(unsub => { try { unsub(); } catch {} });
   listeners = {};
 
-  STATUS_CONFIG.forEach(s => {
-    const metaPath = `${s.path}/_meta/lastModified`;
-    const unsubscribe = onValue(ref(db, metaPath), (snap) => {
-      if (!snap.exists()) return;
-      const serverTime = snap.val();
-      const cacheKey   = `watcher_ts_${s.key}`;
-      const lastSeen   = parseInt(localStorage.getItem(cacheKey) || "0");
-
-      if (serverTime > lastSeen) {
-        localStorage.setItem(cacheKey, String(serverTime));
-        refreshSingleCount(s);
+  // ✅ نراقب العدّاد نفسه (رقم واحد) بدل ما نراقب وقت آخر تعديل ثم نعيد
+  // تنزيل الفرع كامل. التحديث يوصل فوراً وبحجم بايتات.
+  const unsubscribe = onValue(ref(db, "stats/ordersCounts"), (snap) => {
+    if (!snap.exists()) return;
+    const live = snap.val() || {};
+    let changed = false;
+    STATUS_CONFIG.forEach(s => {
+      const status = String(s.path).replace(/^ordersTest\//, "");
+      if (!(status in live)) return;
+      const n = Number(live[status]) || 0;
+      if (counts[s.key] !== n) {
+        counts[s.key] = n;
+        updateSingleCard(s.key, n);
+        changed = true;
       }
-    }, { onlyOnce: false });
+    });
+    if (changed) { saveCache(counts); updateCacheBadge("live"); }
+  }, { onlyOnce: false });
 
-    listeners[s.key] = unsubscribe;
-  });
+  listeners.counters = unsubscribe;
 }
 
 async function refreshSingleCount(statusConf) {

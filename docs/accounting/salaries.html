@@ -750,19 +750,25 @@ function updateSelects() {
 // We use get() once + then onValue only for updates — avoids heavy download
 function listenDelivered() {
   // Read only the "تم التسليم" sub-path — much lighter than reading all orders
-onValue(ref(db, 'ordersTest/تم التسليم'), snap => {
+// ⚠️ إصلاح تكلفة (2026-09-23): كان اشتراك حي على فرع "تم التسليم"
+  // كامل — ينزّل كل طلب تسلّم بتاريخ الشركة، بس حتى يعد طلبات كل موظف.
+  // هسه السيرفر يمسك العدّادات (stats/deliveredBy) ونقراهن مباشرة:
+  // نفس الأرقام ونفس التحديث الحي، بحجم بايتات بدل ميكابايتات.
+  // أسماء الموظفين تنخزن بمفاتيح منظّفة، فنرجّعها لأسمائها عند القراءة.
+  onValue(ref(db, 'stats/deliveredBy'), snap => {
     deliveredOrders = {};
     let total = 0;
 
     if (snap.exists()) {
-      const data = snap.val();
-      for (const orderId in data) {
-        const order = data[orderId];
-        const emp = order.fixedBy || order.assignedTo || 'غير محدد';
-        if (!deliveredOrders[emp]) deliveredOrders[emp] = 0;
-        deliveredOrders[emp]++;
-        total++;
-      }
+      const raw = snap.val() || {};
+      const keyOf = n => String(n).replace(/[.#$\[\]\/]/g, '_');
+      // نطابق كل موظف معروف مع مفتاحه
+      employees.forEach(emp => {
+        const n = Number(raw[keyOf(emp)]) || 0;
+        if (n) deliveredOrders[emp] = n;
+      });
+      // المجموع من كل المفاتيح (حتى موظفين مو بالقائمة)
+      total = Object.values(raw).reduce((a, b) => a + (Number(b) || 0), 0);
     }
 
     // Update commissions

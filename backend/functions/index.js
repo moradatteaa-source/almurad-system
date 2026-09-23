@@ -212,3 +212,95 @@ exports.landing = onRequest({ region: "us-central1", cors: false }, async (req, 
     return res.redirect(302, `/landing.html?id=${encodeURIComponent(slug)}`);
   }
 });
+
+// ════════════════════════════════════════════════════════
+// 🔢 عدّادات الطلبات — الإصلاح الأكبر لتكلفة قاعدة البيانات
+// ────────────────────────────────────────────────────────
+// ⚠️ المشكلة (2026-09-23): لوحة التحكم كانت تحسب عدد الطلبات بكل حالة
+// هيچي: تجيب الفرع كامل ثم تعد مفاتيحه —
+//     get(ref(db,"ordersTest/تم التسليم")) → Object.keys(...).length
+// يعني كل فتحة للوحة تنزّل *كل طلبات الشركة* حتى تعرض عشر أرقام. وفوقها
+// مراقب حي على كل حالة: أي طلب يتغير عند أي موظف، كل لوحة مفتوحة تعيد
+// تنزيل ذاك الفرع كامل. مع 10 موظفين و~250 تغيير حالة باليوم، هذا وحده
+// كان يطلّع عشرات الغيغات بالشهر — والتكلفة تكبر كل ما زادت الطلبات.
+//
+// الحل: نخلي السيرفر يمسك العدّاد. كل ما ينضاف أو ينحذف طلب من فرع
+// حالة، نعدّل رقم بـstats/ordersCounts. اللوحة تقرا الأرقام مباشرة —
+// نفس القيم بالضبط، بس بايتات بدل ميكابايتات، وتحديث أسرع.
+//
+// نمسك هم عدّاد الطلبات المسلّمة لكل موظف (stats/deliveredBy) — صفحة
+// "مهامي" كانت تنزّل كل الطلبات المسلّمة حتى تعد طلبات موظف واحد.
+// ════════════════════════════════════════════════════════
+function bump(path, delta) {
+  return admin.database().ref(path).transaction(v => Math.max(0, (Number(v) || 0) + delta));
+}
+
+exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async (event) => {
+  const { status, orderId } = event.params;
+  if (orderId === "_meta") return;
+
+  const beforeVal = event.data.before.val();
+  const afterVal  = event.data.after.val();
+  const existedBefore = !!beforeVal;
+  const existsAfter   = !!afterVal;
+
+  // عدّاد الحالة: يتغير بس إذا الطلب انضاف للفرع أو انشال منه.
+  // تعديل بيانات طلب موجود ما يأثر على العدد.
+  if (existedBefore !== existsAfter) {
+    await bump(`stats/ordersCounts/${status}`, existsAfter ? 1 : -1);
+  }
+
+  // عدّاد المسلّم لكل موظف — يهم فرع "تم التسليم" بس
+  if (status === "تم التسليم") {
+    const empOf = o => (o && (o.fixedBy || o.assignedTo || o.employee)) || "";
+    const b = existedBefore ? empOf(beforeVal) : "";
+    const a = existsAfter   ? empOf(afterVal)  : "";
+    if (b !== a) {
+      // اسم الموظف ممكن يجي بمحارف ما تنفع كمفتاح بفايربيس
+      const key = n => String(n).replace(/[.#$\[\]\/]/g, "_");
+      if (b) await bump(`stats/deliveredBy/${key(b)}`, -1);
+      if (a) await bump(`stats/deliveredBy/${key(a)}`, 1);
+    }
+  }
+});
+
+// ── إعادة بناء العدّادات من الصفر ──
+// تنادى مرة وحدة بعد النشر (وأي وقت تشك بالأرقام). تمشي على الفروع
+// حالة حالة بدل ما تجيب الشجرة كاملة بالذاكرة.
+exports.rebuildOrderCounts = onRequest({ timeoutSeconds: 540, memory: "512MiB" }, async (req, res) => {
+  const STATUSES = [
+    "جديد", "مثبت", "قيد المعالجة", "قيد التجهيز", "بانتظار البضاعة",
+    "قيد التوصيل", "تم التسليم", "راجع", "تم استلام الراجع", "رفض"
+  ];
+  try {
+    const db = admin.database();
+    const counts = {};
+    const deliveredBy = {};
+
+    for (const status of STATUSES) {
+      const snap = await db.ref(`ordersTest/${status}`).get();
+      const val = snap.exists() ? snap.val() : {};
+      const ids = Object.keys(val).filter(k => k !== "_meta");
+      counts[status] = ids.length;
+
+      if (status === "تم التسليم") {
+        for (const id of ids) {
+          const o = val[id] || {};
+          const emp = o.fixedBy || o.assignedTo || o.employee || "";
+          if (!emp) continue;
+          const key = String(emp).replace(/[.#$\[\]\/]/g, "_");
+          deliveredBy[key] = (deliveredBy[key] || 0) + 1;
+        }
+      }
+    }
+
+    await db.ref("stats/ordersCounts").set(counts);
+    await db.ref("stats/deliveredBy").set(deliveredBy);
+    await db.ref("stats/countsRebuiltAt").set(Date.now());
+
+    res.json({ ok: true, counts, employees: Object.keys(deliveredBy).length });
+  } catch (err) {
+    console.error("❌ rebuildOrderCounts:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});

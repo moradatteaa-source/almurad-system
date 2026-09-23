@@ -200,8 +200,58 @@ function fitLabelPagesToBox(pages) {
   });
 }
 
-// 🔎 بحث عن طلب داخل شجرة ordersTest الكاملة (دالة نقية بدون فايربيس —
-// الشجرة نفسها تُسحب مرة وحدة بالصفحة المستدعية عبر fetchAllOrdersTree)
+// ════════════════════════════════════════════════════════
+// 🔎 إيجاد طلب برقمه — بقراءة مسار الطلب مباشرة
+// ────────────────────────────────────────────────────────
+// ⚠️ إصلاح تكلفة (2026-09-23): قبل، كل طباعة وصل كانت تسحب فرع
+// "ordersTest" كامل — يعني كل طلبات الشركة بكل الحالات من أول يوم —
+// حتى تلقي طلب واحد برقمه. مع آلاف الطلبات بالشهر صار هذا أكبر مصدر
+// استهلاك بقاعدة البيانات، والتكلفة تكبر كل ما زادت الطلبات.
+//
+// الطلب مخزّن بمسار معروف: ordersTest/<الحالة>/<رقم الطلب>. الحالات
+// عددها محدود (10)، فنقرا المسار مباشرة لكل حالة لين نلقاه. عشر قراءات
+// صغيرة جداً (أغلبها فاضية) بدل تحميل الشجرة كاملة.
+// ════════════════════════════════════════════════════════
+const ORDER_STATUSES = [
+  'مثبت', 'قيد التجهيز', 'قيد التوصيل', 'تم التسليم', 'راجع',
+  'تم استلام الراجع', 'بانتظار البضاعة', 'قيد المعالجة', 'جديد', 'رفض'
+];
+
+// تحتاج { db, ref, get } من فايربيس — كل صفحة تمررهن لأن هذا ملف سكربت
+// عادي مو module.
+async function fetchOrderById(fb, orderId) {
+  if (!orderId) return null;
+  const { db, ref, get } = fb;
+  // نفحص الحالات بالتوازي — أسرع من وحدة وحدة والحمل نفسه
+  const results = await Promise.all(
+    ORDER_STATUSES.map(async status => {
+      try {
+        const snap = await get(ref(db, `ordersTest/${status}/${orderId}`));
+        return snap.exists() ? { ...snap.val(), id: orderId, status } : null;
+      } catch (e) { return null; }
+    })
+  );
+  const found = results.find(Boolean);
+  if (found) return found;
+  // احتياط: الفرع القديم قبل ordersTest
+  try {
+    const legacy = await get(ref(db, `orders/${orderId}`));
+    if (legacy.exists()) return { ...legacy.val(), id: orderId };
+  } catch (e) {}
+  return null;
+}
+
+// نجيب عدة طلبات سوا، بدفعات حتى ما نفتح مئات الاتصالات مرة وحدة
+async function fetchOrdersByIds(fb, ids, batch = 8) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += batch) {
+    const chunk = await Promise.all(ids.slice(i, i + batch).map(id => fetchOrderById(fb, id)));
+    for (const o of chunk) if (o) out.push(o);
+  }
+  return out;
+}
+
+// 🔎 النسخة القديمة — تبقى للتوافق مع أي كود لسه يمرر الشجرة
 function findOrderInTree(tree, orderId) {
   for (const status of Object.keys(tree)) {
     if (status === "_meta") continue;
