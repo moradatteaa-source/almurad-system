@@ -348,7 +348,7 @@ main { padding: 20px; max-width: 900px; margin: 0 auto; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -525,11 +525,11 @@ async function init() {
   });
 
   // ── Listen: points ──
-onValue(ref(db, 'pointsHistory'), snap => {
+// نطلب نقاط هذا الموظف بس بدل كل سجل النقاط (يحتاج .indexOn employee)
+onValue(query(ref(db, 'pointsHistory'), orderByChild('employee'), equalTo(user)), snap => {
   bonusPoints = 0; penaltyPoints = 0;
   if (snap.exists()) {
     Object.values(snap.val()).forEach(p => {
-      if (p.employee !== user) return;
       if (p.type === 'bonus') bonusPoints += (p.points || 0);
       else penaltyPoints += (p.points || 0);
     });
@@ -538,7 +538,8 @@ onValue(ref(db, 'pointsHistory'), snap => {
 });
 
   // ── Listen: tasks ──
-  onValue(ref(db, 'tasks'), snap => {
+  // مهام هذا الموظف بس بدل مهام كل الموظفين (يحتاج .indexOn employee)
+  onValue(query(ref(db, 'tasks'), orderByChild('employee'), equalTo(user)), snap => {
     const today = [];
     const week = [];
     const month = [];

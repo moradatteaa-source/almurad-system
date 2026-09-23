@@ -837,7 +837,7 @@
 
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, onValue, set, update }
+import { getDatabase, ref, get, onValue, set, update, query, orderByChild, equalTo }
   from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 // ============================================================
@@ -1212,9 +1212,14 @@ onValue(ref(db, `notifications/${username}`), snap => {
 
 let taskFirstLoad = true;
 let prevTaskCount = 0;
-onValue(ref(db, "tasks"), snap => {
-  if (!snap.exists()) return;
-  const myTasks = Object.values(snap.val()).filter(t => t.employee === displayName);
+// ⚠️ إصلاح تكلفة (2026-09-23): كان يجيب فرع "tasks" كامل (مهام كل
+// الموظفين) ويفلتر بالمتصفح — وهذي الصفحة مفتوحة عند كل موظف طول
+// اليوم، وأي تعديل بأي مهمة يعيد تنزيل الفرع كامل عند الجميع.
+// هسه نطلب مهام هذا الموظف بس. يحتاج ".indexOn": "employee" على
+// فرع tasks بقواعد قاعدة البيانات (بدونه يشتغل صح بس بدون توفير).
+onValue(query(ref(db, "tasks"), orderByChild("employee"), equalTo(displayName)), snap => {
+  if (!snap.exists()) { document.getElementById("taskBadge").style.display = "none"; taskFirstLoad = false; prevTaskCount = 0; return; }
+  const myTasks = Object.values(snap.val());
   const badge   = document.getElementById("taskBadge");
   if (myTasks.length > 0) { badge.style.display = "flex"; } else { badge.style.display = "none"; }
   if (!taskFirstLoad && myTasks.length > prevTaskCount) {
