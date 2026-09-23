@@ -723,10 +723,10 @@ document.getElementById("mainBackArrow").onclick = () => {
 // "ordersTest" كاملة من فايربيس من جديد لكل طلب منفرد بالدفعة (لو الدفعة
 // فيها 28 طلب، يصير 28 عملية تحميل كاملة للشجرة الواحدة تلو الأخرى!).
 // هسه نسحب الشجرة مرة وحدة بس بغض النظر عن عدد الطلبات، ونبحث بالذاكرة.
-async function fetchAllOrdersTree() {
-  const fullSnap = await get(ref(db, "ordersTest"));
-  return fullSnap.exists() ? fullSnap.val() : {};
-}
+// ملاحظة (2026-09-23): انحذفت fetchAllOrdersTree — كانت تسحب فرع
+// ordersTest كامل (كل طلبات الشركة بكل الحالات) لكل عملية طباعة.
+// صارت القراءة بمسار كل طلب مباشرة عبر fetchOrderById/fetchOrdersByIds
+// بملف labelTemplate.js المشترك.
 
 // ملاحظة: findOrderInTree/buildLabelHTML/attachLogoFallback أصبحت بملف
 // labelTemplate.js المشترك (محمّل بالأعلى) — نفس التصميم بالضبط يُستخدم
@@ -734,8 +734,8 @@ async function fetchAllOrdersTree() {
 
 // لبحث عن طلب منفرد وحيد (مو دفعة) — يسحب الشجرة مرة وحدة وينتهي
 async function findOrder(orderId) {
-  const tree = await fetchAllOrdersTree();
-  return findOrderInTree(tree, orderId);
+  // قراءة مسار الطلب مباشرة — بدل سحب الشجرة كاملة لطلب واحد
+  return fetchOrderById({ db, ref, get }, orderId);
 }
 
 // 📱 بالموبايل: نشارك الوصل مباشرة (واتساب/تلي/الخ) عبر مشاركة النظام.
@@ -822,13 +822,14 @@ async function handlePrintInvoice(logId, btnEl, log) {
     // ✅ سحب شجرة الطلبات مرة وحدة بس لكل الدفعة (بدل ما نسحبها من جديد
     // لكل طلب) — هذا وحده يختصر وقت التحضير من ثواني/دقائق لأجزاء الثانية
     // مهما كان عدد الطلبات بالدفعة
-    const tree = await fetchAllOrdersTree();
-    const orders = [];
-    for (const stub of stubs) {
-      if (!stub?.orderId) continue;
-      const full = findOrderInTree(tree, stub.orderId);
-      if (full) orders.push({ ...full, receiptNum: stub.receiptNum || full.receiptNum });
-    }
+    // ✅ نقرا مسار كل طلب مباشرة بدل سحب شجرة الطلبات كاملة
+    // (شوف التعليق فوق fetchOrderById بملف labelTemplate.js)
+    const byId = new Map(stubs.filter(x => x && x.orderId).map(x => [String(x.orderId), x]));
+    const found = await fetchOrdersByIds({ db, ref, get }, [...byId.keys()]);
+    const orders = found.map(full => {
+      const stub = byId.get(String(full.id));
+      return { ...full, receiptNum: (stub && stub.receiptNum) || full.receiptNum };
+    });
 
     if (!orders.length) {
       toast("تعذر إيجاد أي طلب من هذا السجل بقاعدة البيانات الحالية (ربما انحذفت الطلبات لاحقاً)", "error");

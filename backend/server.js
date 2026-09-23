@@ -106,6 +106,36 @@ function findOrderInTreeServer(tree, orderId) {
 // بصفحة الطباعة قبل ما تفتح — فما تحتاج الصفحة تتصل بأي شي بالإنترنت
 // إطلاقاً غير تحميل الخط والصور المحلية.
 // ============================================================
+// ⚠️ إصلاح تكلفة (2026-09-23): كانت هذي تجيب فرع "ordersTest" كامل —
+// يعني كل طلبات الشركة بكل الحالات — لكل عملية طباعة، حتى تلقي طلب
+// واحد أو دفعة برقم. مع آلاف الطلبات صار هذا من أكبر مصادر استهلاك
+// قاعدة البيانات. الطلب مخزّن بمسار معروف (ordersTest/<الحالة>/<الرقم>)
+// والحالات عددها محدود، فنقرا المسار مباشرة: عشر قراءات صغيرة بدل
+// تحميل الشجرة كاملة.
+const ORDER_STATUSES = [
+  "مثبت", "قيد التجهيز", "قيد التوصيل", "تم التسليم", "راجع",
+  "تم استلام الراجع", "بانتظار البضاعة", "قيد المعالجة", "جديد", "رفض"
+];
+
+async function fetchOrderByIdServer(orderId) {
+  if (!orderId) return null;
+  const results = await Promise.all(
+    ORDER_STATUSES.map(async status => {
+      try {
+        const snap = await get(ref(db, `ordersTest/${status}/${orderId}`));
+        return snap.exists() ? { ...snap.val(), id: orderId, status } : null;
+      } catch { return null; }
+    })
+  );
+  const found = results.find(Boolean);
+  if (found) return found;
+  try {
+    const legacy = await get(ref(db, `orders/${orderId}`));
+    if (legacy.exists()) return { ...legacy.val(), id: orderId };
+  } catch {}
+  return null;
+}
+
 async function fetchOrdersForPrint({ logId, orderId, receiptNum }) {
   if (logId) {
     const logSnap = await get(ref(db, `shippingLogs/${logId}/orders`));
@@ -114,23 +144,24 @@ async function fetchOrdersForPrint({ logId, orderId, receiptNum }) {
     const stubs = Object.values(logSnap.val()).filter(s => s?.status === "success");
     if (!stubs.length) return { error: "لا توجد طلبات ناجحة بهذا السجل لطباعتها" };
 
-    const treeSnap = await get(ref(db, "ordersTest"));
-    const tree = treeSnap.exists() ? treeSnap.val() : {};
-
+    // بدفعات صغيرة حتى ما نفتح مئات الاتصالات مرة وحدة
     const orders = [];
-    for (const stub of stubs) {
-      if (!stub?.orderId) continue;
-      const full = findOrderInTreeServer(tree, stub.orderId);
-      if (full) orders.push({ ...full, receiptNum: stub.receiptNum || full.receiptNum });
+    const list = stubs.filter(s => s?.orderId);
+    for (let i = 0; i < list.length; i += 8) {
+      const chunk = await Promise.all(
+        list.slice(i, i + 8).map(async stub => {
+          const full = await fetchOrderByIdServer(stub.orderId);
+          return full ? { ...full, receiptNum: stub.receiptNum || full.receiptNum } : null;
+        })
+      );
+      for (const o of chunk) if (o) orders.push(o);
     }
     if (!orders.length) return { error: "تعذر إيجاد أي طلب من هذا السجل بقاعدة البيانات الحالية" };
     return { orders };
   }
 
   if (orderId) {
-    const treeSnap = await get(ref(db, "ordersTest"));
-    const tree = treeSnap.exists() ? treeSnap.val() : {};
-    const full = findOrderInTreeServer(tree, orderId);
+    const full = await fetchOrderByIdServer(orderId);
     if (!full) return { error: "الطلب غير موجود في قاعدة البيانات" };
     if (receiptNum) full.receiptNum = receiptNum;
     return { orders: [full] };
