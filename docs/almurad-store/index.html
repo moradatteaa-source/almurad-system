@@ -1157,6 +1157,9 @@ snap.forEach(c=>{
   });
   // sort by newest
   all.sort((a,b)=>new Date(b.lastUpdate||0)-new Date(a.lastUpdate||0));
+  // 🐞 إصلاح: الكاش كان ينكتب بس بمسار التحديث بالخلفية، يعني أول فتحة
+  // ما تحفظ شي — فصفحة المنتج تنزّل الكتلوك من جديد بكل ضغطة على منتج.
+  try{ sessionStorage.setItem('_prods_cache',JSON.stringify(all)); }catch(e){}
   applyF();
 }
 
