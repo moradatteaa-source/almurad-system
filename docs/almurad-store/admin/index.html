@@ -1025,6 +1025,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <!-- TOAST -->
 <div class="tw" id="tw"></div>
 
+<!-- 🖼️ ضغط الصور قبل الرفع — مشترك مع صفحة الصور بالجملة -->
+<script src="imageTools.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set, update, remove, push } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -1549,6 +1552,10 @@ window.saveProduct = async () => {
   const newImgs = prodImages.filter(i=>i.isNew);
   const oldImgs = prodImages.filter(i=>!i.isNew).map(i=>i.url);
   let uploadedUrls = [...oldImgs];
+  // المصغّرات مصفوفة موازية — نحافظ على القديمة اللي إلها صور باقية
+  const keptThumbs = (allProds[editProdKey]?.thumbs||[]).filter((t,idx)=>
+    oldImgs.includes((allProds[editProdKey]?.images||[])[idx]));
+  let uploadedThumbs = [...keptThumbs];
 
 if(newImgs.length) {
     progressBar.style.display='block';
@@ -1556,15 +1563,23 @@ if(newImgs.length) {
     const safeName = name.replace(/[^\w\s]/gi,'_');
     
     // رفع كل الصور بالتوازي
-    const uploads = newImgs.map((img,i) => {
-      const uniqueName = `${Date.now()}_${i}_${img.file.name}`;
-      const storageRef = sRef(storage,`warehouse_images/${safeName}/${uniqueName}`);
-      return uploadBytes(storageRef, img.file).then(()=>getDownloadURL(storageRef));
+    // 🖼️ نضغط كل صورة بالمتصفح قبل الرفع وننتج نسختين: كاملة لصفحة
+    // المنتج ومصغّرة لكروت القائمة. بدون هذا، صورة الكامرة الوحدة
+    // (2-4 ميكابايت) تخلي المتجر بطيء جداً على الموبايل.
+    const uploads = newImgs.map(async (img,i) => {
+      const c = await compressProductImage(img.file);
+      const base = `${Date.now()}_${i}_${String(img.file.name).replace(/[^\w.\-]/g,'_').replace(/\.[^.]+$/,'')}`;
+      const fRef = sRef(storage,`warehouse_images/${safeName}/${base}.${c.ext}`);
+      await uploadBytes(fRef, c.full);
+      const tRef = sRef(storage,`warehouse_images/${safeName}/thumb_${base}.${c.thumbExt||c.ext}`);
+      await uploadBytes(tRef, c.thumb);
+      return { full: await getDownloadURL(fRef), thumb: await getDownloadURL(tRef) };
     });
-    
+
     progressFill.style.width='60%';
-    const newUrls = await Promise.all(uploads);
-    uploadedUrls.push(...newUrls);
+    const pairs = await Promise.all(uploads);
+    uploadedUrls.push(...pairs.map(x=>x.full));
+    uploadedThumbs.push(...pairs.map(x=>x.thumb));
     progressFill.style.width='100%';
     progressBar.style.display='none';
   }
@@ -1588,6 +1603,7 @@ const data = {
     visible: document.getElementById('pVisible').checked,
     stock,
     images:uploadedUrls,
+    thumbs:uploadedThumbs,
     totalQty:Object.values(stock).reduce((a,b)=>a+Number(b||0),0),
     lastUpdate:new Date().toISOString(),
     createdAt:allProds[key]?.createdAt||new Date().toISOString()

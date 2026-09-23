@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>رفع صور المنتجات بالجملة — لوحة المراد</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!-- 🖼️ ضغط الصور قبل الرفع — مشترك مع لوحة التحكم -->
+<script src="imageTools.js"></script>
 <!--
   ════════════════════════════════════════════════════════
   📷 رفع صور المنتجات بالجملة ومطابقتها بالأسماء تلقائياً
@@ -126,6 +128,22 @@ select.w{width:215px} select.c{width:140px}
       <button class="btn btn-gh btn-sm" id="pickFiles">🖼 اختيار صور مفردة بدل مجلد</button>
       <span id="pickInfo" class="hint"></span>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>🗜️ ضغط الصور المرفوعة سابقاً</h2>
+    <p class="hint">
+      إذا رفعت صور قبل ما نضيف الضغط، هي محفوظة بحجمها الأصلي (2-3 ميكابايت
+      للصورة) وتخلي المتجر بطيء. هذا الزر يجيب صور المنتجات الحالية،
+      يضغطها بنفس الطريقة، ويستبدلها — <b>بدون ما تعيد رفع أي شي من جهازك</b>.
+      يشتغل مرة وحدة بس؛ الصور المضغوطة أصلاً يتجاوزها.
+    </p>
+    <div class="row">
+      <button class="btn btn-pr" id="recompressBtn">🗜️ اضغط صور كل المنتجات</button>
+      <span id="recompInfo" class="hint"></span>
+    </div>
+    <div class="bar" id="recompBar" style="display:none"><i id="recompFill"></i></div>
+    <div id="recompDone"></div>
   </div>
 
   <div class="card" id="reviewCard" style="display:none">
@@ -302,7 +320,8 @@ async function loadData(){
     const [w,c]=await Promise.all([get(ref(db,'warehouse')),get(ref(db,'storeCategories'))]);
     PRODUCTS = w.exists()? Object.entries(w.val()).map(([key,v])=>({
       key, name:String(v.name||key).trim(),
-      category:v.category||'', images:Array.isArray(v.images)?v.images:[]
+      category:v.category||'', images:Array.isArray(v.images)?v.images:[],
+      thumbs:Array.isArray(v.thumbs)?v.thumbs:[]
     })).filter(p=>p.name) : [];
     const cv = c.exists()? c.val() : {};
     CATS = Object.values(cv).map(x=> typeof x==='string'? x : String((x&&x.name)||'')).filter(Boolean);
@@ -470,7 +489,7 @@ $('publishBtn').onclick=async()=>{
     byProd.get(r.prodKey).push(r);
   }
 
-  let done=0, okCount=0, failCount=0; const fails=[];
+  let done=0, okCount=0, failCount=0, savedBytes=0; const fails=[];
   const total=rows.length;
 
   for(const [key,list] of byProd){
@@ -479,10 +498,21 @@ $('publishBtn').onclick=async()=>{
     const urls=[];
     for(const r of list){
       try{
-        const unique=`${Date.now()}_${Math.random().toString(36).slice(2,7)}_${r.fileName.replace(/[^\w.\-]/g,'_')}`;
-        const st=sRef(storage,`warehouse_images/${safe}/${unique}`);
-        await uploadBytes(st,r.file);
-        urls.push(await getDownloadURL(st));
+        // 🖼️ نضغط بالمتصفح قبل الرفع: نسخة كاملة لصفحة المنتج ومصغّرة
+        // للكروت. صور تيليكرام تجي 2-3 ميكابايت، وبدون ضغط أول فتحة
+        // للمتجر تنزّل عشرات الميكات.
+        const c = await compressProductImage(r.file);
+        savedBytes += Math.max(0, c.before - c.after);
+        const base=`${Date.now()}_${Math.random().toString(36).slice(2,7)}_${r.fileName.replace(/[^\w.\-]/g,'_').replace(/\.[^.]+$/,'')}`;
+
+        const stFull=sRef(storage,`warehouse_images/${safe}/${base}.${c.ext}`);
+        await uploadBytes(stFull,c.full);
+        urls.push(await getDownloadURL(stFull));
+
+        const stThumb=sRef(storage,`warehouse_images/${safe}/thumb_${base}.${c.thumbExt||c.ext}`);
+        await uploadBytes(stThumb,c.thumb);
+        thumbs.push(await getDownloadURL(stThumb));
+
         okCount++;
       }catch(e){ failCount++; fails.push(`${r.srcName}: ${e.message}`); }
       done++;
@@ -490,13 +520,15 @@ $('publishBtn').onclick=async()=>{
       info.textContent=`${done} / ${total}`;
     }
     if(urls.length){
-      const finalImgs = replace ? urls : [...(p.images||[]), ...urls];
-      const patch={ images:finalImgs, lastUpdate:new Date().toISOString() };
+      const finalImgs   = replace ? urls   : [...(p.images||[]), ...urls];
+      const finalThumbs = replace ? thumbs : [...(p.thumbs||[]), ...thumbs];
+      // thumbs مصفوفة موازية لـimages — كروت المتجر تستخدمها بدل الكاملة
+      const patch={ images:finalImgs, thumbs:finalThumbs, lastUpdate:new Date().toISOString() };
       const catRow=list.find(r=>r.cat);
       if(catRow) patch.category=catRow.cat;
       try{
         await update(ref(db,'warehouse/'+key),patch);
-        p.images=finalImgs; if(catRow) p.category=catRow.cat;
+        p.images=finalImgs; p.thumbs=finalThumbs; if(catRow) p.category=catRow.cat;
       }catch(e){ fails.push(`حفظ ${p.name}: ${e.message}`); }
     }
   }
@@ -506,6 +538,7 @@ $('publishBtn').onclick=async()=>{
   $('doneBody').innerHTML=`
     <div class="stats">
       <span class="stat s-ok">✅ ${okCount} صورة انرفعت</span>
+      <span class="stat s-nv">🗜️ وفّرنا ${imageToolsFmtSize(savedBytes)}</span>
       <span class="stat s-nv">📦 ${byProd.size} منتج انحدث</span>
       ${failCount?`<span class="stat s-er">❌ ${failCount} فشلت</span>`:''}
     </div>
@@ -514,6 +547,91 @@ $('publishBtn').onclick=async()=>{
     عدّلها من لوحة التحكم عادي.</p>`;
   $('doneCard').scrollIntoView({behavior:'smooth'});
   toast(`✅ خلصنا: ${okCount} صورة على ${byProd.size} منتج`,'s');
+};
+
+// ══════════════ ضغط الصور المرفوعة سابقاً ══════════════
+// نجيب كل صورة من رابطها بالتخزين، نضغطها بنفس أداة الضغط، ونرفع
+// النسختين (كاملة + مصغّرة) ونستبدل روابط المنتج. الصور القديمة تبقى
+// بالتخزين (ما نحذفها حتى ما نخاطر) — بس ما عاد أحد يستعملها.
+$('recompressBtn').onclick = async () => {
+  if(!PRODUCTS.length) return toast('لسه ما انحملت المنتجات','w');
+  const targets = PRODUCTS.filter(p => (p.images||[]).length);
+  if(!targets.length) return toast('ماكو منتجات عندها صور','w');
+  if(!confirm(`ضغط صور ${targets.length} منتج؟ ممكن ياخذ عدة دقائق — خلّي الصفحة مفتوحة.`)) return;
+
+  const btn=$('recompressBtn'); btn.disabled=true;
+  $('recompBar').style.display='block';
+  const fill=$('recompFill'), info=$('recompInfo');
+
+  const totalImgs = targets.reduce((n,p)=>n+p.images.length,0);
+  let done=0, okN=0, skipN=0, failN=0, before=0, after=0; const errs=[];
+
+  for(const p of targets){
+    const safe=String(p.name||p.key).replace(/[^\w\s\u0621-\u064A]/g,'_').replace(/\s+/g,'_');
+    const newImgs=[], newThumbs=[];
+    let changed=false;
+
+    for(let i=0;i<p.images.length;i++){
+      const url=p.images[i];
+      try{
+        const resp=await fetch(url);
+        if(!resp.ok) throw new Error('HTTP '+resp.status);
+        const blob=await resp.blob();
+
+        // مضغوطة أصلاً (webp أو أقل من 300 ك.ب) وعندها مصغّرة — نتجاوزها
+        const hasThumb = !!(p.thumbs||[])[i];
+        if(hasThumb && (blob.type==='image/webp' || blob.size < 300*1024)){
+          newImgs.push(url); newThumbs.push(p.thumbs[i]); skipN++; done++;
+          fill.style.width=Math.round(done/totalImgs*100)+'%';
+          info.textContent=`${done} / ${totalImgs}`;
+          continue;
+        }
+
+        const file=new File([blob],`img_${i}.png`,{type:blob.type||'image/png'});
+        const c=await compressProductImage(file);
+        before+=c.before; after+=c.after;
+
+        const base=`${Date.now()}_${Math.random().toString(36).slice(2,7)}_${i}`;
+        const fRef=sRef(storage,`warehouse_images/${safe}/${base}.${c.ext}`);
+        await uploadBytes(fRef,c.full);
+        newImgs.push(await getDownloadURL(fRef));
+
+        const tRef=sRef(storage,`warehouse_images/${safe}/thumb_${base}.${c.thumbExt||c.ext}`);
+        await uploadBytes(tRef,c.thumb);
+        newThumbs.push(await getDownloadURL(tRef));
+
+        changed=true; okN++;
+      }catch(e){
+        // نخلي الرابط القديم متل ما هو بدل ما نضيّع صورة
+        newImgs.push(url); newThumbs.push((p.thumbs||[])[i]||'');
+        failN++; errs.push(`${p.name}: ${e.message}`);
+      }
+      done++;
+      fill.style.width=Math.round(done/totalImgs*100)+'%';
+      info.textContent=`${done} / ${totalImgs}`;
+    }
+
+    if(changed){
+      try{
+        await update(ref(db,'warehouse/'+p.key),
+          { images:newImgs, thumbs:newThumbs, lastUpdate:new Date().toISOString() });
+        p.images=newImgs; p.thumbs=newThumbs;
+      }catch(e){ errs.push(`حفظ ${p.name}: ${e.message}`); }
+    }
+  }
+
+  btn.disabled=false;
+  const saved=Math.max(0,before-after);
+  $('recompDone').innerHTML=`
+    <div class="stats" style="margin-top:12px">
+      <span class="stat s-ok">✅ ${okN} صورة انضغطت</span>
+      ${skipN?`<span class="stat s-nv">⏭ ${skipN} مضغوطة أصلاً</span>`:''}
+      ${failN?`<span class="stat s-er">❌ ${failN} فشلت</span>`:''}
+      <span class="stat s-nv">🗜️ ${imageToolsFmtSize(before)} → ${imageToolsFmtSize(after)}</span>
+    </div>
+    ${errs.length?`<div class="notebox nb-er"><b>تفاصيل:</b><br>${errs.slice(0,25).join('<br>')}</div>`:''}
+    <p class="hint">الصور القديمة باقية بالتخزين بس ما عاد أحد يستعملها.</p>`;
+  toast(`✅ خلصنا — وفّرنا ${imageToolsFmtSize(saved)}`,'s');
 };
 
 // ══════════════ ربط مدخلات الملفات ══════════════

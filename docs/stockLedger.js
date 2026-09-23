@@ -123,6 +123,35 @@
   // للطلبات القديمة اللي انثبتت قبل هذا النظام وماكو عندها علامة خصم
   const STOCK_OUT_STATUSES = ["مثبت", "قيد التجهيز", "قيد التوصيل", "تم التسليم", "راجع"];
 
+  // ⚠️ العلامات انتقلت خارج warehouse (2026-09-23): كانت تنخزن تحت
+  // warehouse/<المنتج>/processedOrders، وهذا يعني إن كل زبون يفتح المتجر
+  // ينزّل كل علامات كل الطلبات اللي مرّت على كل منتج — وهي تكبر للأبد مع
+  // كل طلب. صفحة المتجر تجيب warehouse كامل، فالفتحة الأولى كانت تثقل
+  // شهر بعد شهر بلا أي سبب ظاهر. هسه بفرع مستقل ما يقراه المتجر إطلاقاً.
+  // نقرا الفرع القديم هم، حتى الطلبات المسجلة قبل هذا التعديل تبقى صحيحة.
+  const markPath  = (pkey, mark) => `stockMarkers/${pkey}/${mark}`;
+  const markRoot  = pkey => `stockMarkers/${pkey}`;
+  const oldPath   = (pkey, mark) => `warehouse/${pkey}/processedOrders/${mark}`;
+
+  // يقرا العلامة من الفرع الجديد، وإذا ماكو يشوف القديم
+  async function readMark(pkey, mark) {
+    const { db, ref, get } = FB;
+    const cur = await get(ref(db, markPath(pkey, mark)));
+    if (cur.exists()) return { exists: true, val: cur.val(), legacy: false };
+    const old = await get(ref(db, oldPath(pkey, mark)));
+    if (old.exists()) return { exists: true, val: old.val(), legacy: true };
+    return { exists: false, val: null, legacy: false };
+  }
+
+  // يكتب/يحذف بالفرعين حتى ما تبقى علامة يتيمة بالقديم
+  async function writeMarks(pkey, patch) {
+    const { db, ref, update } = FB;
+    await update(ref(db, markRoot(pkey)), patch);
+    const clearOld = {};
+    for (const k of Object.keys(patch)) clearOld[k] = null;
+    await update(ref(db, `warehouse/${pkey}/processedOrders`), clearOld).catch(() => {});
+  }
+
   const sanitize = s => String(s).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
   const deductMarker = (orderId, name, vkey) => `deduct_${sanitize(orderId)}_${sanitize(name)}_${sanitize(vkey)}`;
   // علامة قديمة من النظام السابق — نقراها بس حتى ما نرجّع بضاعة رجعت أصلاً
@@ -180,8 +209,8 @@
       const pkey = found.key;
 
       const mark = deductMarker(orderId, name, vkey);
-      const already = await get(ref(db, `warehouse/${pkey}/processedOrders/${mark}`));
-      if (already.exists()) continue; // مخصوم أصلاً
+      const already = await readMark(pkey, mark);
+      if (already.exists) continue; // مخصوم أصلاً
 
       const stock = (found.snap.val() || {}).stock || {};
       const stockKey = matchStockKey(stock, vkey);
@@ -192,10 +221,7 @@
 
       // ✅ نخزن الكمية المخصومة داخل العلامة نفسها، حتى لو انعدّلت بنود
       // الطلب بعدين يرجع بالضبط اللي انخصم، مو اللي بالطلب هسه
-      await update(ref(db, `warehouse/${pkey}/processedOrders`), {
-        [mark]: qty,
-        [legacyReturnMarker(orderId, name, vkey)]: null
-      });
+      await writeMarks(pkey, { [mark]: qty, [legacyReturnMarker(orderId, name, vkey)]: null });
       await refreshTotal(pkey);
     }
   }
@@ -216,9 +242,9 @@
       const pkey = found.key;
 
       const mark = deductMarker(orderId, name, vkey);
-      const markSnap = await get(ref(db, `warehouse/${pkey}/processedOrders/${mark}`));
+      const markSnap = await readMark(pkey, mark);
 
-      if (!markSnap.exists()) {
+      if (!markSnap.exists) {
         // ⚠️ طلب قديم: انثبت قبل ما يصير عدنا دفتر مخزن، فبضاعته انخصمت
         // بدون ما تنسجل أي علامة (صفحة تفاصيل الطلب وصفحة الإضافة ما كانوا
         // يسجلون). ما نقدر نتجاهله وإلا البضاعة ما ترجع أبداً. نعتمد على
@@ -227,15 +253,15 @@
         if (!prevStatus || !STOCK_OUT_STATUSES.includes(prevStatus)) continue;
 
         const legacyMark = legacyRestoredMarker(orderId, name, vkey);
-        const legacyDone = await get(ref(db, `warehouse/${pkey}/processedOrders/${legacyMark}`));
-        if (legacyDone.exists()) continue;
+        const legacyDone = await readMark(pkey, legacyMark);
+        if (legacyDone.exists) continue;
 
         const stockNow = (found.snap.val() || {}).stock || {};
         const key = matchStockKey(stockNow, vkey);
         if (!key) continue;
 
         await runTransaction(ref(db, `warehouse/${pkey}/stock/${key}`), cur => (Number(cur) || 0) + qty);
-        await update(ref(db, `warehouse/${pkey}/processedOrders`), { [legacyMark]: qty });
+        await writeMarks(pkey, { [legacyMark]: qty });
         await refreshTotal(pkey);
         console.log(`↩️ stockLedger: رجّعنا ${qty} من "${name}" لطلب قديم #${orderId} (كان بحالة ${prevStatus})`);
         continue;
@@ -245,19 +271,19 @@
       // الخصم بس بدون ما نضيف كمية (البضاعة رجعت فعلاً قبل)، حتى الطلب
       // يقدر ينخصم من جديد إذا انثبت مرة ثانية.
       const legacy = legacyReturnMarker(orderId, name, vkey);
-      const legacySnap = await get(ref(db, `warehouse/${pkey}/processedOrders/${legacy}`));
-      if (legacySnap.exists()) {
-        await update(ref(db, `warehouse/${pkey}/processedOrders`), { [mark]: null, [legacy]: null });
+      const legacySnap = await readMark(pkey, legacy);
+      if (legacySnap.exists) {
+        await writeMarks(pkey, { [mark]: null, [legacy]: null });
         continue;
       }
 
-      const stored = Number(markSnap.val());
+      const stored = Number(markSnap.val);
       const back = (!isNaN(stored) && stored > 0) ? stored : qty;
 
       await runTransaction(ref(db, `warehouse/${pkey}/stock/${matchStockKey((found.snap.val() || {}).stock || {}, vkey) || vkey}`),
         cur => (Number(cur) || 0) + back);
 
-      await update(ref(db, `warehouse/${pkey}/processedOrders`), { [mark]: null });
+      await writeMarks(pkey, { [mark]: null });
       await refreshTotal(pkey);
     }
   }

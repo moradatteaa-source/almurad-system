@@ -1174,7 +1174,12 @@ function renderMore(){
 }
 window.renderMore=renderMore;
 
+// كارت القائمة يستخدم الصورة المصغّرة (~25 ك.ب) بدل الكاملة (~200 ك.ب).
+// صفحة المنتج هي اللي تعرض الكاملة. المنتجات القديمة اللي ما عندها
+// مصغّرة ترجع للكاملة تلقائياً، فما ينكسر شي.
 function getImg(p){
+  const t = Array.isArray(p.thumbs)?p.thumbs[0]:Object.values(p.thumbs||{})[0];
+  if(t) return t;
   return Array.isArray(p.images)?p.images[0]:Object.values(p.images||{})[0]||'';
 }
 

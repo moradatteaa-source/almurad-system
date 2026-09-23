@@ -393,6 +393,9 @@ function toast(msg, type='s'){
 }
 
 function getImg(p){
+  // المصغّرة أول (لكروت المنتجات المشابهة)، والكاملة احتياط للمنتجات القديمة
+  const t = Array.isArray(p.thumbs)?p.thumbs[0]:Object.values(p.thumbs||{})[0];
+  if(t) return t;
   return Array.isArray(p.images)?p.images[0]:Object.values(p.images||{})[0]||'';
 }
 
