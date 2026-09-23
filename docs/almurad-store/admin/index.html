@@ -522,7 +522,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
     <div class="page" id="page-products">
       <div class="sec-head">
         <div class="sec-title">المنتجات</div>
-        <button class="btn btn-orange" onclick="openAddProd()">➕ إضافة منتج</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <!-- 📷 أداة ربط الصور بالمنتجات دفعة وحدة (bulk-images.html) -->
+          <a class="btn btn-navy" href="bulk-images.html" style="text-decoration:none">📷 صور بالجملة</a>
+          <button class="btn btn-orange" onclick="openAddProd()">➕ إضافة منتج</button>
+        </div>
       </div>
       <div class="toolbar">
         <div class="search-box"><span class="si">🔍</span><input type="text" id="prodSearch" placeholder="بحث عن منتج..." oninput="filterProds()"></div>

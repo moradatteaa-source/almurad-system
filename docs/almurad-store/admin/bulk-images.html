@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رفع صور المنتجات بالجملة — لوحة المراد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!--
+  ════════════════════════════════════════════════════════
+  📷 رفع صور المنتجات بالجملة ومطابقتها بالأسماء تلقائياً
+  ────────────────────────────────────────────────────────
+  الغرض: بعد ما انمسحت صور المتجر، نرجّعها دفعة وحدة بدل صورة صورة.
+  تختار مجلد الصور كله (أو تصدير قناة تيليكرام مباشرة)، والصفحة:
+    1) تقرا اسم كل صورة — من اسم الملف، أو من تعليق الرسالة إذا كان
+       المجلد تصدير تيليكرام (فيه result.json)، لأن تيليكرام يسمي
+       الملفات photo_12@... وما ينفع للمطابقة.
+    2) تطابقه مع أسماء المنتجات بالمخزن بمقارنة تتحمل اختلاف الهمزات
+       والتاء المربوطة والأرقام العربية والكلمات الزايدة.
+    3) تقترح فئة لكل منتج من كلمات اسمه.
+    4) تعرض كل شي بجدول مراجعة تقدر تعدّله قبل الحفظ، وتبيّن اللي ما
+       انطابق باسمه حتى تربطه يدوي أو تتركه.
+    5) ترفع الصور لنفس مسار التخزين المستخدم بلوحة التحكم
+       (warehouse_images/<اسم المنتج>/) وتحدّث المنتج.
+
+  ⚠️ الصفحة ما تنشئ منتجات جديدة إطلاقاً — تربط الصور بالمنتجات
+  الموجودة بس، حتى ما تتلخبط بيانات المخزن.
+  ════════════════════════════════════════════════════════
+-->
+<style>
+:root{
+  --pr:#FF6B2D; --pr2:#e55a1e; --nv:#043B64; --nv2:#032d4e;
+  --ok:#0f9d58; --okbg:#e3f9ec; --wr:#b8860b; --wrbg:#fff6e0;
+  --er:#d93025; --erbg:#fde9e8; --bg:#f2f4f7; --br:#e2e8f0; --mu:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:#1a202c}
+header{background:linear-gradient(135deg,var(--nv),var(--nv2));color:#fff;padding:16px 20px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+  box-shadow:0 2px 12px rgba(0,0,0,.18)}
+header h1{font-size:19px;font-weight:800;flex:1}
+.wrap{max-width:1250px;margin:0 auto;padding:20px 16px 60px}
+.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(4,59,100,.07)}
+.card h2{font-size:16px;font-weight:800;color:var(--nv);margin-bottom:10px}
+.hint{font-size:13px;color:var(--mu);line-height:1.9}
+.btn{border:0;border-radius:10px;padding:10px 18px;font-family:inherit;font-size:14.5px;
+  font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px;
+  text-decoration:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-pr{background:var(--pr);color:#fff} .btn-pr:hover:not(:disabled){background:var(--pr2)}
+.btn-gh{background:#eef2f6;color:var(--nv)}
+.btn-sm{padding:6px 12px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.drop{border:2.5px dashed #cbd5e1;border-radius:14px;padding:28px 18px;text-align:center;
+  background:#fafbfc;transition:.15s;cursor:pointer}
+.drop.over{border-color:var(--pr);background:#fff5ef}
+.drop b{display:block;font-size:16px;color:var(--nv);margin-bottom:4px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.stat{border-radius:10px;padding:9px 14px;font-size:14px;font-weight:700}
+.s-ok{background:var(--okbg);color:var(--ok)} .s-wr{background:var(--wrbg);color:var(--wr)}
+.s-er{background:var(--erbg);color:var(--er)} .s-nv{background:#eef2f6;color:var(--nv)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:#f8fafc;padding:9px 8px;text-align:right;font-weight:800;color:var(--nv);
+  border-bottom:2px solid var(--br);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+tr.sel{background:#fff8f2}
+.thumb{width:46px;height:46px;border-radius:8px;object-fit:cover;background:#eef2f6;display:block}
+.src{font-weight:700;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fname{font-size:11px;color:var(--mu);font-weight:400;direction:ltr;text-align:right}
+select{font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--br);
+  border-radius:8px;background:#fff;max-width:100%}
+select.w{width:215px} select.c{width:140px}
+.badge{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.b-ok{background:var(--okbg);color:var(--ok)} .b-wr{background:var(--wrbg);color:var(--wr)}
+.b-er{background:var(--erbg);color:var(--er)}
+.bar{height:9px;background:#eef2f6;border-radius:20px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pr),#ffa06b);width:0;transition:.25s}
+.tablewrap{overflow-x:auto;margin-top:10px;max-height:62vh;overflow-y:auto}
+.notebox{border-radius:10px;padding:12px;margin-top:10px;font-size:13.5px;line-height:2}
+.nb-er{background:var(--erbg)} .nb-nv{background:#eef2f6}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.tst{background:#1c2b36;color:#fff;font-size:14px;font-weight:600;padding:11px 18px;border-radius:11px;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transform:translateY(10px);transition:.2s}
+.tst.show{opacity:1;transform:translateY(0)}
+.tst.s{background:#14663f} .tst.e{background:#7a1f1a} .tst.w{background:#7a4a00}
+#login{position:fixed;inset:0;background:linear-gradient(135deg,var(--nv),var(--nv2));
+  display:flex;align-items:center;justify-content:center;z-index:300}
+#login .box{background:#fff;padding:30px;border-radius:16px;width:320px;text-align:center}
+#login input{width:100%;padding:11px;border:1px solid var(--br);border-radius:10px;margin:14px 0;
+  font-family:inherit;font-size:15px;text-align:center}
+@media(max-width:700px){ .src{max-width:130px} select.w{width:150px} }
+</style>
+</head>
+<body>
+
+<div id="login"><div class="box">
+  <div style="font-size:40px">🔐</div>
+  <h2 style="color:var(--nv);margin-top:8px">رفع الصور بالجملة</h2>
+  <input type="password" id="pw" placeholder="كلمة مرور اللوحة">
+  <button class="btn btn-pr" style="width:100%;justify-content:center" id="loginBtn">دخول</button>
+  <div id="pwErr" style="color:var(--er);font-size:13px;margin-top:8px;display:none">كلمة المرور غير صحيحة</div>
+</div></div>
+
+<header>
+  <h1>📷 رفع صور المنتجات بالجملة</h1>
+  <a href="index.html" class="btn btn-gh btn-sm">← رجوع للوحة</a>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>١ · اختر الصور</h2>
+    <p class="hint">
+      اختر <b>مجلد الصور كله</b> مرة وحدة. إذا الصور من قناة تيليكرام، اختر
+      <b>مجلد التصدير كامل</b> (اللي بداخله <code>result.json</code> ومجلد <code>photos</code>) —
+      الصفحة تقرا اسم كل منتج من تعليق الرسالة، لأن تيليكرام يسمي الملفات
+      بأرقام ما تنفع للمطابقة. غير هيچي، اسم الملف نفسه هو اسم المنتج.
+    </p>
+    <div class="drop" id="drop">
+      <b>📁 اضغط هنا لاختيار المجلد</b>
+      <span class="hint">أو اسحب الملفات وأفلتها هنا</span>
+    </div>
+    <input type="file" id="fDir" webkitdirectory directory multiple hidden>
+    <input type="file" id="fFiles" multiple accept="image/*" hidden>
+    <div class="row" style="margin-top:10px">
+      <button class="btn btn-gh btn-sm" id="pickFiles">🖼 اختيار صور مفردة بدل مجلد</button>
+      <span id="pickInfo" class="hint"></span>
+    </div>
+  </div>
+
+  <div class="card" id="reviewCard" style="display:none">
+    <h2>٢ · راجع المطابقة</h2>
+    <div class="stats" id="stats"></div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn btn-gh btn-sm" id="selAllBtn">✅ تحديد كل المطابق</button>
+      <button class="btn btn-gh btn-sm" id="selNoneBtn">☐ إلغاء التحديد</button>
+      <span style="width:1px;height:22px;background:var(--br)"></span>
+      <select id="bulkCat" class="c"></select>
+      <button class="btn btn-gh btn-sm" id="applyCatBtn">📂 طبّق الفئة على المحدد</button>
+      <span style="width:1px;height:22px;background:var(--br)"></span>
+      <label class="hint"><input type="checkbox" id="replaceImgs"> استبدل صور المنتج بدل الإضافة إليها</label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>☑</th><th>الصورة</th><th>الاسم المقروء</th>
+          <th>المنتج بالمخزن</th><th>التطابق</th><th>الفئة</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="unmatchedBox"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-pr" id="publishBtn">🚀 انشر الصور المحددة</button>
+      <span id="pubInfo" class="hint"></span>
+    </div>
+    <div class="bar" id="bar" style="display:none"><i id="barFill"></i></div>
+  </div>
+
+  <div class="card" id="doneCard" style="display:none">
+    <h2>٣ · النتيجة</h2>
+    <div id="doneBody"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+const app = initializeApp({
+  apiKey:"AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain:"almurad-system.firebaseapp.com",
+  databaseURL:"https://almurad-system-default-rtdb.firebaseio.com/",
+  projectId:"almurad-system",
+  storageBucket:"almurad-system.firebasestorage.app",
+  messagingSenderId:"911755824405",
+  appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
+});
+const db = getDatabase(app);
+const storage = getStorage(app);
+const $ = id => document.getElementById(id);
+
+function toast(msg, t=''){
+  const b=$('toast'), e=document.createElement('div');
+  e.className='tst '+t; e.textContent=msg; b.appendChild(e);
+  requestAnimationFrame(()=>e.classList.add('show'));
+  setTimeout(()=>{e.classList.remove('show');setTimeout(()=>e.remove(),250)},3400);
+}
+
+// ══════════════ دخول (نفس كلمة مرور اللوحة) ══════════════
+const DEFAULT_PW='murad2024';
+function doLogin(){
+  const pw=$('pw').value;
+  if(pw===(localStorage.getItem('admin_pw')||DEFAULT_PW)){
+    localStorage.setItem('admin_logged','1');
+    $('login').style.display='none';
+    loadData();
+  } else {
+    $('pwErr').style.display='block'; $('pw').value='';
+    setTimeout(()=>$('pwErr').style.display='none',3000);
+  }
+}
+$('loginBtn').onclick=doLogin;
+$('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// ══════════════ تطبيع عربي للمقارنة ══════════════
+// نفس الاسم ينكتب بصيغ كثيرة: "مِطَرة"/"مطاره"/"مطارة"، أرقام عربية أو
+// إنجليزية، شرطات وفراغات زايدة. نوحّد كل هذا قبل أي مقارنة.
+const AR_DIGITS={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9',
+                 '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+const STOP=new Set(['من','في','علي','مع','او','و','ال','الي','عدد','قطعه','قطع','حجم','نوع','لون',
+                    'موديل','جديد','الاصلي','اصلي','ماركه','سعر','دع','متوفر','الان','عرض']);
+function norm(s){
+  let t=String(s==null?'':s);
+  t=t.replace(/[٠-٩۰-۹]/g,d=>AR_DIGITS[d]||d);
+  t=t.replace(/[ً-ْـ]/g,'');
+  t=t.replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و')
+     .replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/گ/g,'ك').replace(/پ/g,'ب');
+  t=t.toLowerCase();
+  t=t.replace(/[^ء-يa-z0-9]+/g,' ');
+  return t.replace(/\s+/g,' ').trim();
+}
+function tokens(s){ return norm(s).split(' ').filter(w=>w && w.length>1 && !STOP.has(w)); }
+
+function diceTokens(a,b){
+  const A=new Set(tokens(a)), B=new Set(tokens(b));
+  if(!A.size||!B.size) return 0;
+  let inter=0; for(const x of A) if(B.has(x)) inter++;
+  return (2*inter)/(A.size+B.size);
+}
+function trigrams(s){
+  const t=' '+norm(s)+' '; const g=new Set();
+  for(let i=0;i<t.length-2;i++) g.add(t.slice(i,i+3));
+  return g;
+}
+function diceTri(a,b){
+  const A=trigrams(a),B=trigrams(b);
+  if(!A.size||!B.size) return 0;
+  let inter=0; for(const x of A) if(B.has(x)) inter++;
+  return (2*inter)/(A.size+B.size);
+}
+function score(src, prodName){
+  const a=norm(src), b=norm(prodName);
+  if(!a||!b) return 0;
+  if(a===b) return 100;
+  let s=(diceTokens(a,b)*0.65 + diceTri(a,b)*0.35)*100;
+  if(a.includes(b)||b.includes(a)){
+    const r=Math.min(a.length,b.length)/Math.max(a.length,b.length);
+    s=Math.max(s, 80+r*18);
+  }
+  return Math.round(Math.min(100,s));
+}
+
+// ══════════════ اقتراح الفئة من اسم المنتج ══════════════
+const CAT_HINTS={
+  'خشبيات':['خشب','خشبي','خشبيه','بامبو','خيزران'],
+  'العاب':['لعبه','العاب','لعب','دميه','بازل','مكعبات','اطفال','طفل','بالون','تركيب','ريموت'],
+  'ادوات المطبخ':['قدر','قدور','مقلاه','طنجره','سكين','سكاكين','ملعقه','ملاعق','شوكه','صحن','صحون',
+    'طبق','اطباق','كوب','اكواب','قدح','مصفاه','مبشره','عجانه','تقطيع','فتاحه','قمع','مطبخ','برطمان',
+    'قلايه','صينيه','ميزان مطبخ','علبه حفظ','لوح تقطيع'],
+  'اجهزة منزلية':['خلاط','عصاره','مكواه','مروحه','غلايه','محضره','مكنسه','شوايه','محمصه','كهربائي',
+    'كهربائيه','سخان','مجفف','ماكنه','جهاز','شاحن','سماعه','مبرده'],
+  'ادوات منزلية':['منظم','رف','علاقه','سله','ممسحه','حبل','مشجب','صندوق','تخزين','ستاره','سجاده',
+    'فرشه','منشفه','مرايه','ساعه حائط','شماعه','دلو','منزلي','منزليه','حمام','تنظيف'],
+  'ورد':['ورد','ورده','زهور','زهره','نبات','نباتات','باقه'],
+  'مطارات':['مطاره','مطارات','مطره','ترمس','قنينه','فلاسك','زجاجه ماء','شرب','رياضيه'],
+  'زجاجيات':['زجاج','زجاجي','زجاجيه','كاس','كاسات','كووس','مزهريه','كريستال'],
+};
+function suggestCat(name, cats){
+  const t=norm(name);
+  let best='', bestLen=0;
+  for(const cat of cats){
+    const cn=norm(cat);
+    if(cn.length>2 && t.includes(cn)) return cat;
+    for(const h of (CAT_HINTS[cat]||[])){
+      const hn=norm(h);
+      if(hn && t.includes(hn) && hn.length>bestLen){ bestLen=hn.length; best=cat; }
+    }
+  }
+  return best;
+}
+
+// ══════════════ تحميل المنتجات والفئات ══════════════
+let PRODUCTS=[], CATS=[];
+async function loadData(){
+  try{
+    const [w,c]=await Promise.all([get(ref(db,'warehouse')),get(ref(db,'storeCategories'))]);
+    PRODUCTS = w.exists()? Object.entries(w.val()).map(([key,v])=>({
+      key, name:String(v.name||key).trim(),
+      category:v.category||'', images:Array.isArray(v.images)?v.images:[]
+    })).filter(p=>p.name) : [];
+    const cv = c.exists()? c.val() : {};
+    CATS = Object.values(cv).map(x=> typeof x==='string'? x : String((x&&x.name)||'')).filter(Boolean);
+    if(!CATS.length) CATS = Object.keys(cv);
+    $('bulkCat').innerHTML='<option value="">— اختر فئة —</option>'+
+      CATS.map(c=>`<option>${c}</option>`).join('');
+    toast(`جاهز: ${PRODUCTS.length} منتج و${CATS.length} فئة`,'s');
+  }catch(e){ toast('تعذر تحميل البيانات: '+e.message,'e'); }
+}
+if(localStorage.getItem('admin_logged')==='1'){ $('login').style.display='none'; loadData(); }
+
+// ══════════════ قراءة الملفات ══════════════
+let ROWS=[];
+
+// تصدير تيليكرام: أسماء الملفات أرقام، والاسم الحقيقي بتعليق الرسالة.
+// الرسائل بدون تعليق ضمن نفس المجموعة ناخذ لها آخر تعليق قبلها، لأن
+// تيليكرام يحط التعليق على صورة وحدة بس لما تنرسل مجموعة صور سوا.
+function captionsFromTelegram(json){
+  const map=new Map();
+  const flat = t => Array.isArray(t)
+    ? t.map(x=> typeof x==='string'? x : String((x&&x.text)||'')).join('')
+    : String(t||'');
+  let last='';
+  for(const m of (json.messages||[])){
+    let path = m.photo || null;
+    if(!path && m.file && /^image\//.test(String(m.mime_type||''))) path=m.file;
+    const txt = flat(m.text).trim();
+    if(txt) last = txt;
+    if(path){
+      const base = String(path).split('/').pop();
+      map.set(base, (txt||last).split('\n')[0].trim());
+    }
+  }
+  return map;
+}
+
+function cleanFileName(n){
+  return String(n)
+    .replace(/\.[a-z0-9]+$/i,'')
+    .replace(/@\d{2}-\d{2}-\d{4}.*$/,'')
+    .replace(/^photo[_-]?\d+/i,'')
+    .replace(/^\d+[\s._-]+/,'')
+    .replace(/[_-]+/g,' ')
+    .trim();
+}
+
+async function handleFiles(fileList){
+  if(!PRODUCTS.length){ toast('لسه ما انحملت المنتجات — انتظر ثانية وجرّب','w'); return; }
+  const files=[...fileList];
+  const imgs=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif)$/i.test(f.name));
+  const jsonF=files.find(f=>/result\.json$/i.test(f.name));
+
+  let capMap=null;
+  if(jsonF){
+    try{
+      capMap=captionsFromTelegram(JSON.parse(await jsonF.text()));
+      toast(`تصدير تيليكرام: قرينا ${capMap.size} تعليق`,'s');
+    }catch(e){ toast('ما قدرنا نقرا result.json — رح نعتمد أسماء الملفات','w'); }
+  }
+  if(!imgs.length){ toast('ماكو صور بالمجلد المختار','w'); return; }
+
+  ROWS = imgs.map(f=>{
+    const cap = capMap && capMap.get(f.name);
+    const srcName = (cap && cap.length>1) ? cap : cleanFileName(f.name);
+    let best=null, bestS=0;
+    for(const p of PRODUCTS){ const s=score(srcName,p.name); if(s>bestS){bestS=s;best=p;} }
+    const matched = bestS>=45 && best;
+    return {
+      file:f, fileName:f.name, srcName,
+      prodKey: matched? best.key : '',
+      score: bestS,
+      cat: matched ? (best.category || suggestCat(best.name,CATS)) : suggestCat(srcName,CATS),
+      checked: bestS>=70,
+      url: URL.createObjectURL(f)
+    };
+  });
+  render();
+}
+
+function render(){
+  const tb=$('tbody');
+  const opts='<option value="">— بدون —</option>'+
+    PRODUCTS.map(p=>`<option value="${p.key}">${p.name}</option>`).join('');
+  const copts='<option value="">— بدون —</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
+  tb.innerHTML = ROWS.map((r,i)=>{
+    const b = r.score>=70?'b-ok': r.score>=45?'b-wr':'b-er';
+    const lbl = r.score>=70?'مطابق': r.score>=45?'راجعه':'ما انطابق';
+    return `<tr class="${r.checked?'sel':''}">
+      <td><input type="checkbox" data-tog="${i}" ${r.checked?'checked':''}></td>
+      <td><img class="thumb" src="${r.url}" loading="lazy" alt=""></td>
+      <td><div class="src" title="${r.srcName}">${r.srcName}</div><div class="fname">${r.fileName}</div></td>
+      <td><select class="w" data-prod="${i}">${opts}</select></td>
+      <td><span class="badge ${b}">${lbl} ${r.score}%</span></td>
+      <td><select class="c" data-cat="${i}">${copts}</select></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('[data-prod]').forEach(el=>{ el.value = ROWS[+el.dataset.prod].prodKey; });
+  tb.querySelectorAll('[data-cat]').forEach(el=>{ el.value = ROWS[+el.dataset.cat].cat; });
+
+  const ok=ROWS.filter(r=>r.score>=70).length,
+        wr=ROWS.filter(r=>r.score>=45&&r.score<70).length,
+        er=ROWS.filter(r=>r.score<45).length,
+        ch=ROWS.filter(r=>r.checked&&r.prodKey).length;
+  $('stats').innerHTML=
+    `<span class="stat s-nv">📷 ${ROWS.length} صورة</span>
+     <span class="stat s-ok">✅ ${ok} مطابق</span>
+     <span class="stat s-wr">⚠️ ${wr} يحتاج مراجعة</span>
+     <span class="stat s-er">❌ ${er} ما انطابق</span>
+     <span class="stat s-nv">🚀 ${ch} محدد للنشر</span>`;
+
+  const un=ROWS.filter(r=>!r.prodKey);
+  $('unmatchedBox').innerHTML = un.length
+    ? `<div class="notebox nb-er"><b>❌ ما لكَينا منتج مطابق لهذي (${un.length}):</b><br>
+       ${un.map(r=>r.srcName).join(' • ')}
+       <br><button class="btn btn-gh btn-sm" id="copyUnBtn" style="margin-top:8px">📋 نسخ القائمة</button></div>`
+    : '';
+  const cu=$('copyUnBtn');
+  if(cu) cu.onclick=()=>{
+    navigator.clipboard.writeText(ROWS.filter(r=>!r.prodKey).map(r=>r.srcName).join('\n'))
+      .then(()=>toast('📋 انتنسخت','s'));
+  };
+  $('reviewCard').style.display='block';
+}
+
+// أحداث الجدول (تفويض — الجدول ينبني من جديد كل مرة)
+$('tbody').addEventListener('change', e=>{
+  const t=e.target;
+  if(t.dataset.tog!==undefined){ ROWS[+t.dataset.tog].checked=t.checked; render(); }
+  else if(t.dataset.prod!==undefined){
+    const i=+t.dataset.prod, v=t.value;
+    ROWS[i].prodKey=v;
+    if(v){
+      const p=PRODUCTS.find(x=>x.key===v);
+      ROWS[i].score=100; ROWS[i].checked=true;
+      if(!ROWS[i].cat) ROWS[i].cat=p.category||suggestCat(p.name,CATS);
+    } else { ROWS[i].checked=false; }
+    render();
+  }
+  else if(t.dataset.cat!==undefined){ ROWS[+t.dataset.cat].cat=t.value; }
+});
+
+$('selAllBtn').onclick=()=>{ ROWS.forEach(r=>{ r.checked=!!r.prodKey; }); render(); };
+$('selNoneBtn').onclick=()=>{ ROWS.forEach(r=>{ r.checked=false; }); render(); };
+$('applyCatBtn').onclick=()=>{
+  const c=$('bulkCat').value;
+  if(!c) return toast('اختر فئة أول','w');
+  let n=0; ROWS.forEach(r=>{ if(r.checked){ r.cat=c; n++; } });
+  render(); toast(`📂 انطبقت الفئة على ${n} صورة`,'s');
+};
+
+// ══════════════ النشر ══════════════
+$('publishBtn').onclick=async()=>{
+  const rows=ROWS.filter(r=>r.checked&&r.prodKey);
+  if(!rows.length) return toast('ماكو صور محددة','w');
+  const replace=$('replaceImgs').checked;
+
+  const btn=$('publishBtn'); btn.disabled=true;
+  $('bar').style.display='block';
+  const fill=$('barFill'), info=$('pubInfo');
+
+  // نجمع صور كل منتج سوا حتى نكتب بقاعدة البيانات مرة وحدة لكل منتج
+  const byProd=new Map();
+  for(const r of rows){
+    if(!byProd.has(r.prodKey)) byProd.set(r.prodKey,[]);
+    byProd.get(r.prodKey).push(r);
+  }
+
+  let done=0, okCount=0, failCount=0; const fails=[];
+  const total=rows.length;
+
+  for(const [key,list] of byProd){
+    const p=PRODUCTS.find(x=>x.key===key);
+    const safe=String(p.name||key).replace(/[^\w\sء-ي]/g,'_').replace(/\s+/g,'_');
+    const urls=[];
+    for(const r of list){
+      try{
+        const unique=`${Date.now()}_${Math.random().toString(36).slice(2,7)}_${r.fileName.replace(/[^\w.\-]/g,'_')}`;
+        const st=sRef(storage,`warehouse_images/${safe}/${unique}`);
+        await uploadBytes(st,r.file);
+        urls.push(await getDownloadURL(st));
+        okCount++;
+      }catch(e){ failCount++; fails.push(`${r.srcName}: ${e.message}`); }
+      done++;
+      fill.style.width=Math.round(done/total*100)+'%';
+      info.textContent=`${done} / ${total}`;
+    }
+    if(urls.length){
+      const finalImgs = replace ? urls : [...(p.images||[]), ...urls];
+      const patch={ images:finalImgs, lastUpdate:new Date().toISOString() };
+      const catRow=list.find(r=>r.cat);
+      if(catRow) patch.category=catRow.cat;
+      try{
+        await update(ref(db,'warehouse/'+key),patch);
+        p.images=finalImgs; if(catRow) p.category=catRow.cat;
+      }catch(e){ fails.push(`حفظ ${p.name}: ${e.message}`); }
+    }
+  }
+
+  btn.disabled=false;
+  $('doneCard').style.display='block';
+  $('doneBody').innerHTML=`
+    <div class="stats">
+      <span class="stat s-ok">✅ ${okCount} صورة انرفعت</span>
+      <span class="stat s-nv">📦 ${byProd.size} منتج انحدث</span>
+      ${failCount?`<span class="stat s-er">❌ ${failCount} فشلت</span>`:''}
+    </div>
+    ${fails.length?`<div class="notebox nb-er"><b>تفاصيل الفشل:</b><br>${fails.join('<br>')}</div>`:''}
+    <p class="hint" style="margin-top:8px">افتح المتجر وتأكد من الصور. إذا صورة طلعت بمنتج غلط،
+    عدّلها من لوحة التحكم عادي.</p>`;
+  $('doneCard').scrollIntoView({behavior:'smooth'});
+  toast(`✅ خلصنا: ${okCount} صورة على ${byProd.size} منتج`,'s');
+};
+
+// ══════════════ ربط مدخلات الملفات ══════════════
+$('drop').onclick=()=>$('fDir').click();
+$('pickFiles').onclick=()=>$('fFiles').click();
+for(const id of ['fDir','fFiles']){
+  $(id).addEventListener('change',e=>{
+    $('pickInfo').textContent=`${e.target.files.length} ملف مختار`;
+    handleFiles(e.target.files);
+  });
+}
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+</script>
+</body>
+</html>
