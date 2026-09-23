@@ -235,8 +235,35 @@ function bump(path, delta) {
   return admin.database().ref(path).transaction(v => Math.max(0, (Number(v) || 0) + delta));
 }
 
+// ⚠️ إصلاح حرج (2026-09-23): أسماء الفروع عربية، وفايربيس أحياناً
+// يوصّل اسم الفرع بـevent.params مشوّه (UTF-8 مقروء كـlatin-1)، مثلاً
+// "راجع" توصل "Ø±Ø§Ø¬Ø¹". النتيجة: عدّاد بمفتاح خربان، وسطر بفهرس
+// البحث يشير لفرع ما موجود — فالطلب يختفي من نتائج البحث. نصلّح
+// الاسم قبل أي استخدام، وما نلمسه إلا إذا فعلاً كان مشوّه ورجع عربي
+// سليم بعد التصحيح.
+function fixArabicKey(v) {
+  const str = String(v == null ? "" : v);
+  if (/[\u0600-\u06FF]/.test(str)) return str;          // عربي سليم — ما نلمسه
+  // مُرمّز بـ%D8%B1...
+  if (/%[0-9A-Fa-f]{2}/.test(str)) {
+    try {
+      const d = decodeURIComponent(str);
+      if (/[\u0600-\u06FF]/.test(d)) return d;
+    } catch (e) { /* نتجاهل */ }
+  }
+  // UTF-8 مقروء كـlatin-1 ("Ø±Ø§Ø¬Ø¹")
+  if (/[\u0080-\u00FF]/.test(str)) {
+    try {
+      const d = Buffer.from(str, "latin1").toString("utf8");
+      if (/[\u0600-\u06FF]/.test(d) && !d.includes("\uFFFD")) return d;
+    } catch (e) { /* نتجاهل */ }
+  }
+  return str;                                           // مو عربي أصلاً
+}
+
 exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async (event) => {
-  const { status, orderId } = event.params;
+  const status = fixArabicKey(event.params.status);
+  const { orderId } = event.params;
   if (orderId === "_meta") return;
 
   const beforeVal = event.data.before.val();
@@ -317,15 +344,21 @@ exports.rebuildOrderCounts = onRequest({ timeoutSeconds: 540, memory: "512MiB" }
     const counts = {};
     const deliveredBy = {};
 
+    // مرور واحد: العدّادات والفهرس من نفس القراءة، حتى ما يختلفون إذا
+    // تحرك طلب أثناء إعادة البناء
+    const index = {};
     for (const status of STATUSES) {
       const snap = await db.ref(`ordersTest/${status}`).get();
       const val = snap.exists() ? snap.val() : {};
       const ids = Object.keys(val).filter(k => k !== "_meta");
       counts[status] = ids.length;
 
-      if (status === "تم التسليم") {
-        for (const id of ids) {
-          const o = val[id] || {};
+      for (const id of ids) {
+        const o = val[id];
+        if (!o || typeof o !== "object") continue;
+        index[id] = orderIndexEntry(o, status);
+
+        if (status === "تم التسليم") {
           const emp = o.fixedBy || o.assignedTo || o.employee || "";
           if (!emp) continue;
           const key = String(emp).replace(/[.#$\[\]\/]/g, "_");
@@ -334,20 +367,11 @@ exports.rebuildOrderCounts = onRequest({ timeoutSeconds: 540, memory: "512MiB" }
       }
     }
 
+    // set() يستبدل الفرع كامل، فأي مفتاح مشوّه قديم ينمسح لحاله
     await db.ref("stats/ordersCounts").set(counts);
     await db.ref("stats/deliveredBy").set(deliveredBy);
     await db.ref("stats/countsRebuiltAt").set(Date.now());
 
-    // فهرس البحث كامل بنفس المرور
-    const index = {};
-    for (const status of STATUSES) {
-      const snap = await db.ref(`ordersTest/${status}`).get();
-      const val = snap.exists() ? snap.val() : {};
-      for (const [id, o] of Object.entries(val)) {
-        if (id === "_meta" || !o || typeof o !== "object") continue;
-        index[id] = orderIndexEntry(o, status);
-      }
-    }
     await db.ref("orderIndex").set(index);
 
     res.json({
@@ -449,7 +473,7 @@ function toCatalogEntry(p) {
 }
 
 exports.syncStoreCatalog = onValueWritten("/warehouse/{pkey}", async (event) => {
-  const pkey = event.params.pkey;
+  const pkey = fixArabicKey(event.params.pkey); // نفس مشكلة ترميز المفاتيح العربية
   const db = admin.database();
   const before = event.data.before.val();
   const after = event.data.after.val();
