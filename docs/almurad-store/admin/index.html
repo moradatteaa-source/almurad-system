@@ -543,6 +543,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   <button id="tabAll" class="btn btn-orange" onclick="setVisTab('all',this)">📦 الكل</button>
   <button id="tabVisible" class="btn btn-ghost" onclick="setVisTab('visible',this)">🌐 نشط في المتجر</button>
   <button id="tabHidden" class="btn btn-ghost" onclick="setVisTab('hidden',this)">🔒 غير نشط</button>
+  <span style="flex:1"></span>
+  <!-- ✅ إظهار كل منتج عنده صورة دفعة وحدة — بدل ما ينفتح كل منتج على حدة -->
+  <button class="btn btn-navy" onclick="showAllWithImages()">🌐 أظهر كل منتج عنده صورة</button>
 </div>
       <div class="prod-admin-grid" id="prodsGrid"></div>
     </div>
@@ -1398,6 +1401,29 @@ window.setVisTab = (tab, el) => {
   el.className = 'btn btn-orange';
   filterProds();
 };
+// ✅ إظهار جماعي: أي منتج عنده صورة وحدة على الأقل ومخفي حالياً، نخليه
+// ظاهر بالمتجر. مفيدة بعد رفع الصور بالجملة — بدل ما تفتح 170 منتج وحدة
+// وحدة. ما تلمس المنتجات اللي بلا صور (تبقى مخفية، وهذا المطلوب لأن
+// منتج بلا صورة يطلع شكله فاضي بالمتجر).
+window.showAllWithImages = async () => {
+  const hasImg = p => {
+    const i = p.images;
+    return Array.isArray(i) ? i.length > 0 : Object.keys(i || {}).length > 0;
+  };
+  const targets = Object.entries(allProds).filter(([k,p]) => hasImg(p) && p.visible !== true);
+  if (!targets.length) return toast('كل المنتجات اللي عندها صور ظاهرة أصلاً','i');
+  if (!confirm(`إظهار ${targets.length} منتج عنده صورة بالمتجر؟`)) return;
+
+  const updates = {};
+  for (const [k] of targets) updates[`warehouse/${k}/visible`] = true;
+  try {
+    await update(ref(db), updates);
+    for (const [k,p] of targets) p.visible = true;
+    renderProds(); loadDash();
+    toast(`✅ صار ${targets.length} منتج ظاهر بالمتجر`,'s');
+  } catch(e) { toast('تعذر الحفظ: '+e.message,'e'); }
+};
+
 function renderProds() {
   filterProds();
 }
