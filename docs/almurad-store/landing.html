@@ -4,7 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex">
-<title>جاري التحميل...</title>
+<!-- ⚠️ هذا العنوان الثابت هو اللي يقراه زاحف فيسبوك/واتساب لما ينفتح
+     الرابط القديم (landing.html?id=...) — لأن الزاحف ما يشغّل جافاسكربت.
+     رابط المشاركة الصحيح هو /l/<اسم-الصفحة>: هناك دالة السيرفر (landing
+     بملف backend/functions/index.js) تستبدل هذا السطر بعنوان المنتج وصورته
+     وسعره قبل ما يوصل الزاحف. فلا تخلي هنا نص متل "جاري التحميل" أبداً. -->
+<title>متجر المراد</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="متجر المراد">
+<meta property="og:title" content="متجر المراد">
+<meta property="og:description" content="توصيل لجميع المحافظات • الدفع عند الاستلام">
+<meta property="og:image" content="https://almurad.store/almurad-logo.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="almushtari-logo.png">
 
 <link rel="preconnect" href="https://firebasedatabase.googleapis.com" crossorigin>
@@ -213,7 +224,7 @@ input,select,button{font-size:16px!important;}
             <div class="err-msg" id="errCity">أدخل المحافظة</div>
           </div>
           <div class="fg">
-            <input class="fi" id="fAddr" placeholder="🏠 العنوان التفصيلي (أقرب نقطة دالة)">
+            <input class="fi" id="fAddr" placeholder="🏠 المنطقة والعنوان (أقرب نقطة دالة)">
             <div class="err-msg" id="errAddr">أدخل عنوانك</div>
           </div>
 
@@ -299,7 +310,9 @@ function ttTrack(event, params){
 }
 
 const params = new URLSearchParams(location.search);
-const pageId = params.get('id');
+// المعرّف يجي محقون من دالة السيرفر لما ينفتح الرابط /l/<اسم-الصفحة>،
+// وإلا من ?id= بالرابط القديم — الاثنين يشتغلون
+const pageId = window.__LANDING_ID || params.get('id');
 const CACHE_KEY = pageId ? `_lp_cache_${pageId}` : null;
 
 window._landingData = null;
@@ -477,7 +490,12 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
       landingPageId: pageId,
       address: addr,
       city: city,
-      area: city,
+      // ✅ المنطقة تبقى فارغة عمداً — الزبون يكتب عنوانه يدوي بالمتجر،
+      // بينما نظام الطلبات يعتمد منسدلة مناطق مرتبطة بالمحافظة. لو حطينا
+      // نص الزبون هنا يطلع دائماً غلط (كان ينحط اسم المحافظة بداله!).
+      // الموظف يختار المنطقة الصحيحة، وعنوان الزبون كامل محفوظ بالعنوان
+      // التفصيلي تحت.
+      area: '',
       productName: l.productName || l.title || '',
       price: total,
       totalPrice: total,

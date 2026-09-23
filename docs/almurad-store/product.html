@@ -272,7 +272,7 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
         <option>السليمانية</option><option>الناصرية - ذي قار</option><option>الكوت - واسط</option>
       </datalist>
     </div>
-    <div class="fg"><label class="fl">العنوان التفصيلي *</label><input class="fi" id="ca" placeholder="الشارع، قريب من..."></div>
+    <div class="fg"><label class="fl">المنطقة والعنوان التفصيلي *</label><input class="fi" id="ca" placeholder="المنطقة، الشارع، أقرب نقطة دالة"></div>
     <div class="fg" id="varsSelectWrap" style="display:none;">
       <label class="fl">المتغير *</label>
       <select class="fi" id="orderVar"></select>
@@ -731,7 +731,12 @@ const extraProducts = extraItems.map(c => ({
     source:           'الموقع الإلكتروني',
     address:          addr,
     city:             city,
-    area:             city,
+    // ✅ المنطقة تبقى فارغة عمداً — الزبون يكتب عنوانه يدوي بالمتجر،
+    // بينما نظام الطلبات يعتمد منسدلة مناطق مرتبطة بالمحافظة. لو حطينا
+    // نص الزبون هنا يطلع دائماً غلط (كان ينحط اسم المحافظة بداله!).
+    // الموظف يختار المنطقة الصحيحة، وعنوان الزبون كامل محفوظ بالعنوان
+    // التفصيلي تحت.
+    area: '',
     productName:      mainItem.name || '',
 price:      (mainPrice * mainQty) + delivery - discountAmt,
 totalPrice: subtotalBeforeDiscount - discountAmt + delivery,

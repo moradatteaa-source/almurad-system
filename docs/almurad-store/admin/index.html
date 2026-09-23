@@ -930,6 +930,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <div class="fg"><label class="fl">وسم (اختياري)</label><input class="fi" id="lBadge" placeholder="جديد"></div>
     </div>
     <div class="fg"><label class="fl">الوصف التحفيزي تحت اسم المنتج</label><input class="fi" id="lTagline" placeholder="خلاط عصير محمول — طازج. صحي. معك في كل مكان"></div>
+    <div class="fg" style="background:#fff8f2;border:1px solid #ffd9c2;border-radius:10px;padding:10px">
+      <label class="fl">📣 عنوان المشاركة بالفيس (اختياري)</label>
+      <input class="fi" id="lShareTitle" placeholder="اتركه فارغ ليستخدم اسم المنتج تلقائياً">
+      <label class="fl" style="margin-top:8px">وصف المشاركة (اختياري)</label>
+      <input class="fi" id="lShareDesc" placeholder="اتركه فارغ ليستخدم الوصف التحفيزي والسعر">
+      <div style="font-size:12px;color:#8a6d5a;margin-top:6px">
+        هذا اللي يطلع بمنشور فيسبوك/واتساب. شارك الرابط اللي يبدي بـ <b>/l/</b> حتى يظهر صح.
+      </div>
+    </div>
     <div class="fr2">
       <div class="fg"><label class="fl">السعر (د.ع) *</label><input class="fi" type="number" id="lPrice" placeholder="35000"></div>
       <div class="fg"><label class="fl">السعر قبل الخصم (اختياري، يظهر مشطوب)</label><input class="fi" type="number" id="lOldPrice" placeholder="45000"></div>
@@ -1136,24 +1145,28 @@ function renderLandingPages() {
       </div>
       <div class="slide-info">
         <div class="slide-title-text">${l.title||slug} ${l.active===false?'• ⛔ معطّلة':''}</div>
-        <div class="slide-sub-text">IQD ${Number(l.price||0).toLocaleString()} • /landing.html?id=${slug}</div>
+        <div class="slide-sub-text">IQD ${Number(l.price||0).toLocaleString()} • /l/${slug}</div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="copyLandingLink('${slug}')">🔗 نسخ</button>
-      <button class="btn btn-navy btn-sm" onclick="window.open('https://almurad.store/landing.html?id=${slug}','_blank')">👁️</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyLandingLink('${slug}')" title="رابط المشاركة — يظهر اسم المنتج وصورته بالفيس">🔗 نسخ</button>
+      <button class="btn btn-navy btn-sm" onclick="window.open('https://almurad.store/l/${slug}','_blank')">👁️</button>
       <button class="btn btn-navy btn-sm" onclick="openEditLanding('${slug}')">✏️</button>
       <button class="btn btn-danger btn-sm" onclick="deleteLanding('${slug}')">🗑</button>
     </div>`).join('');
 }
 
 window.copyLandingLink = (slug) => {
-  const url = `https://almurad.store/landing.html?id=${slug}`;
-  navigator.clipboard.writeText(url).then(()=>toast('✅ تم نسخ الرابط','s'));
+  // ✅ رابط /l/ هو اللي يطلع بيه اسم المنتج وصورته عند المشاركة بفيسبوك
+  // وواتساب — لأن السيرفر يركّب وسوم المشاركة قبل ما يوصل الزاحف.
+  // رابط landing.html?id= القديم يضل شغال للزبون، بس بالمشاركة يطلع
+  // باسم المتجر العام بدل اسم المنتج.
+  const url = `https://almurad.store/l/${slug}`;
+  navigator.clipboard.writeText(url).then(()=>toast('✅ تم نسخ رابط المشاركة','s'));
 };
 
 window.openAddLanding = () => {
   editLandingKey = null; landingFeatures = [];
   document.getElementById('landingModalTitle').textContent = '➕ صفحة هبوط جديدة';
-  ['lTitle','lSlug','lBadge','lProductName','lTagline','lPrice','lOldPrice','lMainImage',
+  ['lTitle','lSlug','lBadge','lProductName','lTagline','lShareTitle','lShareDesc','lPrice','lOldPrice','lMainImage',
    'lG1t','lG2t','lG3t','lWhatsapp','lFbPixel','lTtPixel'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
@@ -1174,6 +1187,8 @@ window.openEditLanding = (slug) => {
   document.getElementById('lBadge').value = l.badge||'';
   document.getElementById('lProductName').value = l.productName||'';
   document.getElementById('lTagline').value = l.tagline||'';
+  document.getElementById('lShareTitle').value = l.shareTitle||'';
+  document.getElementById('lShareDesc').value  = l.shareDesc||'';
   document.getElementById('lPrice').value = l.price||'';
   document.getElementById('lOldPrice').value = l.oldPrice||'';
   document.getElementById('lMainImage').value = l.mainImage||'';
@@ -1240,6 +1255,9 @@ window.saveLanding = async () => {
     badge: document.getElementById('lBadge').value.trim(),
     productName: document.getElementById('lProductName').value.trim(),
     tagline: document.getElementById('lTagline').value.trim(),
+    // 📣 يستخدمهن السيرفر بوسوم المشاركة — فاضيين يعني ياخذ اسم المنتج والوصف تلقائياً
+    shareTitle: document.getElementById('lShareTitle').value.trim(),
+    shareDesc: document.getElementById('lShareDesc').value.trim(),
     price,
     oldPrice: parseFloat(document.getElementById('lOldPrice').value)||0,
     mainImage: document.getElementById('lMainImage').value.trim(),

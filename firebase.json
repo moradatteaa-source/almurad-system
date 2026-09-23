@@ -20,6 +20,13 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/l/**",
+          "function": "landing",
+          "region": "us-central1"
+        }
       ]
     }
   ]
