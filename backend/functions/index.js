@@ -534,3 +534,141 @@ exports.rebuildStoreCatalog = onRequest({ timeoutSeconds: 540, memory: "512MiB" 
   }
 });
 
+
+// ════════════════════════════════════════════════════════
+// 🗜️ ضغط صور المنتجات بالسيرفر
+// ────────────────────────────────────────────────────────
+// المشكلة المقاسة (2026-09-24): كل صور المتجر انرفعت بحجمها الأصلي
+// متل ما جت من التلفون/تيليكرام — PNG بمتوسط ٢.٤ ميكابايت للصورة
+// الوحدة، و١٧١ صورة يعني ٤٠٠ ميكابايت. المتجر يعرض ٨ منتجات بأول
+// شاشة، فالزبون ينزّل ١٨.٧ ميكابايت قبل ما يشوف أي شي. على بيانات
+// الموبايل هذا بطء قاتل — وهذا سبب "الصور تتأخر يلا تطلع".
+//
+// أداة الضغط بالمتصفح (imageTools.js) موجودة للرفع الجديد، بس الصور
+// القديمة انرفعت قبلها. هذي الدالة تضغطهن كلهن بالسيرفر — أسرع بكثير
+// وما تحتاج المتصفح يضل مفتوح.
+//
+// تنتج نسختين WebP لكل صورة:
+//   thumb — ٥٠٠ بكسل، لكروت القائمة  (~٢٥ كيلوبايت)
+//   full  — ١٤٠٠ بكسل، لصفحة المنتج  (~١٢٠ كيلوبايت)
+// الأصل يضل بمكانه بالتخزين (ما ننحذف شي) — بس ما نعود نشير له.
+//
+// الاستخدام: تنفتح بالمتصفح وتشتغل على دفعة، وترجّع كم باقي. تنعاد
+// لحد ما يصير remaining = 0. تتخطى أي منتج مضغوط من قبل، فإعادة
+// تشغيلها آمنة تماماً.
+// ════════════════════════════════════════════════════════
+const sharp = require("sharp");
+const crypto = require("crypto");
+
+const THUMB_SIDE = 500, FULL_SIDE = 1400;
+const THUMB_Q = 75, FULL_Q = 82;
+
+// نفكّك رابط فايربيس ستوريج لاسم الباكت ومسار الملف
+function parseStorageUrl(url) {
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("firebasestorage.googleapis.com")) return null;
+    const m = u.pathname.match(/\/v0\/b\/([^/]+)\/o\/(.+)$/);
+    if (!m) return null;
+    return { bucket: m[1], path: decodeURIComponent(m[2]) };
+  } catch (e) { return null; }
+}
+
+async function uploadWebp(bucketName, objPath, buffer) {
+  const bucket = admin.storage().bucket(bucketName);
+  const file = bucket.file(objPath);
+  const token = crypto.randomUUID();
+  await file.save(buffer, {
+    resumable: false,
+    metadata: {
+      contentType: "image/webp",
+      cacheControl: "public, max-age=31536000, immutable",
+      metadata: { firebaseStorageDownloadTokens: token }
+    }
+  });
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(objPath)}?alt=media&token=${token}`;
+}
+
+exports.compressProductImages = onRequest(
+  { timeoutSeconds: 540, memory: "2GiB" },
+  async (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 25, 60);
+    const force = req.query.force === "1";
+    const db = admin.database();
+
+    try {
+      const snap = await db.ref("warehouse").get();
+      if (!snap.exists()) return res.json({ ok: true, note: "المخزن فاضي" });
+      const wh = snap.val();
+
+      // المنتجات الظاهرة بالمتجر اللي عندها صور وما عندها مصغّرة بعد
+      const pending = Object.keys(wh).filter(k => {
+        const p = wh[k];
+        if (!p || p.visible !== true) return false;
+        if (!Array.isArray(p.images) || !p.images.length) return false;
+        if (!force && Array.isArray(p.thumbs) && p.thumbs.length) return false;
+        return true;
+      });
+
+      const batch = pending.slice(0, limit);
+      const done = [];
+      const failed = [];
+      let bytesBefore = 0, bytesAfter = 0;
+
+      for (const key of batch) {
+        const p = wh[key];
+        const newImages = [], newThumbs = [];
+        try {
+          for (const url of p.images) {
+            const info = parseStorageUrl(url);
+            if (!info) { newImages.push(url); continue; }  // رابط خارجي — نتركه
+
+            const bucket = admin.storage().bucket(info.bucket);
+            const [buf] = await bucket.file(info.path).download();
+            bytesBefore += buf.length;
+
+            const base = info.path.replace(/\.[^./]+$/, "");
+            const [thumbBuf, fullBuf] = await Promise.all([
+              sharp(buf).rotate().resize({ width: THUMB_SIDE, height: THUMB_SIDE,
+                fit: "inside", withoutEnlargement: true })
+                .flatten({ background: "#ffffff" }).webp({ quality: THUMB_Q }).toBuffer(),
+              sharp(buf).rotate().resize({ width: FULL_SIDE, height: FULL_SIDE,
+                fit: "inside", withoutEnlargement: true })
+                .flatten({ background: "#ffffff" }).webp({ quality: FULL_Q }).toBuffer()
+            ]);
+            bytesAfter += thumbBuf.length + fullBuf.length;
+
+            const [thumbUrl, fullUrl] = await Promise.all([
+              uploadWebp(info.bucket, `${base}_thumb.webp`, thumbBuf),
+              uploadWebp(info.bucket, `${base}_full.webp`, fullBuf)
+            ]);
+            newThumbs.push(thumbUrl);
+            newImages.push(fullUrl);
+          }
+
+          if (newImages.length) {
+            await db.ref(`warehouse/${key}`).update({ images: newImages, thumbs: newThumbs });
+            done.push(key);
+          }
+        } catch (e) {
+          console.error("ضغط فشل:", key, e.message);
+          failed.push({ key, error: e.message });
+        }
+      }
+
+      res.json({
+        ok: true,
+        عولجت: done.length,
+        فشلت: failed.length,
+        باقي: Math.max(0, pending.length - batch.length),
+        الحجم_قبل_ميكا: +(bytesBefore / 1048576).toFixed(1),
+        الحجم_بعد_ميكا: +(bytesAfter / 1048576).toFixed(2),
+        التوفير: bytesBefore ? Math.round((1 - bytesAfter / bytesBefore) * 100) + "%" : "-",
+        أخطاء: failed.slice(0, 5)
+      });
+    } catch (err) {
+      console.error("❌ compressProductImages:", err);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);

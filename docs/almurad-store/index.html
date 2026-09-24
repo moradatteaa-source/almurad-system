@@ -1183,7 +1183,10 @@ function renderMore(){
     document.getElementById('lmw').style.display='none';
     return;
   }
-  chunk.forEach(p=>grid.insertAdjacentHTML('beforeend',buildCard(p)));
+  // أول كم كارت بأول شاشة نحمّلهن فوراً وبأولوية عالية بدل lazy —
+  // lazy تخلّي المتصفح ينتظر تخطيط الصفحة قبل ما يبدي التحميل، وهذا
+  // يضيف تأخير محسوس على أهم صور: اللي الزبون يشوفهن أول لحظة
+  chunk.forEach((p,i)=>grid.insertAdjacentHTML('beforeend',buildCard(p, disp+i < 4)));
   disp+=chunk.length;
   const more=disp<filt.length;
   document.getElementById('lmw').style.display=more?'block':'none';
@@ -1200,14 +1203,17 @@ function getImg(p){
   return Array.isArray(p.images)?p.images[0]:Object.values(p.images||{})[0]||'';
 }
 
-function buildCard(p){
+function buildCard(p, eager){
   const name=p.name||p.key;
   const price=p.prices?.online||p.prices?.pos||0;
   const img=getImg(p);
   const inWish=wishlist.includes(p.key);
+  const loadAttrs = eager
+    ? 'loading="eager" fetchpriority="high" decoding="async"'
+    : 'loading="lazy" decoding="async"';
   return`<div class="pc" onclick="openProdPage('${p.key}')">
     <div class="pc-img">
-      ${img?`<img src="${img}" alt="${name}" loading="lazy" decoding="async" width="400" height="500">`:`<div class="pc-no-img">📦</div>`}
+      ${img?`<img src="${img}" alt="${name}" ${loadAttrs} width="400" height="500">`:`<div class="pc-no-img">📦</div>`}
       <button class="pc-wish${inWish?' on':''}" onclick="event.stopPropagation();toggleWish('${p.key}',this)" title="المفضلة">${inWish?'❤️':'🤍'}</button>
     </div>
     <div class="pc-body">
