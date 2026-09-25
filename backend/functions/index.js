@@ -831,3 +831,96 @@ exports.recoverOrderCredit = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, 
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+// ════════════════════════════════════════════════════════
+// 📡 تصحيح مصدر الطلبات (صفحة الهبوط / الموقع الإلكتروني)
+// ────────────────────────────────────────────────────────
+// الفحص على البيانات الحية: ٢٨٥ طلب انكتبوا من صفحة الهبوط فعلاً
+// (سجل الحالة "جديد" مكتوب باسم landing-page)، بس ٤٧ منهن بس
+// مصدرهن مكتوب "صفحة هبوط". الباقي (٢٣٨) مكتوب عليهن اتصال أو
+// واتساب أو فيسبوك — غالباً لأن الموظف فتح الطلب وضغط زر مصدر
+// (وما كان أكو زر يمثّل صفحة الهبوط أصلاً، فما كان يشوف أي زر
+// محدّد). النتيجة: ما تكدر تعرف شنو تجيب صفحات الهبوط فعلاً.
+//
+// منو ننشئ الطلب هو المصدر الموثوق — مكتوب وقت الإنشاء وما يتغير:
+//   landing-page          → صفحة هبوط
+//   website / store       → الموقع الإلكتروني
+//
+// ⚠️ معاينة فقط افتراضياً. التنفيذ يحتاج ?apply=1
+// القيمة القديمة تنحفظ بـsourcePrev، فما ينضيع شي ونقدر نتراجع.
+// ════════════════════════════════════════════════════════
+const CREATOR_SOURCE = {
+  "landing-page": "صفحة هبوط",
+  "website": "الموقع الإلكتروني",
+  "store": "الموقع الإلكتروني",
+  "admin-store": "الموقع الإلكتروني"
+};
+
+exports.fixOrderSources = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, async (req, res) => {
+  const apply = req.query.apply === "1";
+  const STATUSES = [
+    "جديد", "مثبت", "قيد المعالجة", "قيد التجهيز", "بانتظار البضاعة",
+    "قيد التوصيل", "تم التسليم", "راجع", "تم استلام الراجع", "رفض"
+  ];
+
+  try {
+    const db = admin.database();
+    const updates = {};
+    const changes = {};     // "من → إلى": عدد
+    let checked = 0, alreadyOk = 0, fixed = 0;
+    const samples = [];
+
+    for (const status of STATUSES) {
+      const snap = await db.ref(`ordersTest/${status}`).get();
+      const val = snap.exists() ? snap.val() : {};
+      for (const [id, o] of Object.entries(val)) {
+        if (id === "_meta" || !o || typeof o !== "object") continue;
+
+        const creator = historyBy(o, "جديد") || o.createdBy || "";
+        const trueSource = CREATOR_SOURCE[String(creator).trim()];
+        if (!trueSource) continue;          // مو من الموقع ولا الهبوط
+
+        checked++;
+        const current = String(o.source || "").trim();
+        if (current === trueSource) { alreadyOk++; continue; }
+
+        fixed++;
+        const key = `${current || "(فاضي)"} → ${trueSource}`;
+        changes[key] = (changes[key] || 0) + 1;
+        if (samples.length < 8) samples.push({ id, status, من: current || "(فاضي)", إلى: trueSource });
+
+        if (apply) {
+          updates[`ordersTest/${status}/${id}/source`] = trueSource;
+          if (current) updates[`ordersTest/${status}/${id}/sourcePrev`] = current;
+          updates[`ordersTest/${status}/${id}/sourceFixedAt`] = Date.now();
+        }
+      }
+    }
+
+    if (apply && Object.keys(updates).length) {
+      const keys = Object.keys(updates);
+      for (let i = 0; i < keys.length; i += 600) {
+        const chunk = {};
+        for (const k of keys.slice(i, i + 600)) chunk[k] = updates[k];
+        await db.ref().update(chunk);
+      }
+      await db.ref("stats/sourcesFixedAt").set(Date.now());
+    }
+
+    res.json({
+      ok: true,
+      الوضع: apply ? "تم التنفيذ ✅" : "معاينة فقط — ضيف ?apply=1 للتنفيذ",
+      طلبات_من_الموقع_والهبوط: checked,
+      مصدرها_صحيح_أصلاً: alreadyOk,
+      انتصلّحت: fixed,
+      التفاصيل: changes,
+      عينة: samples,
+      ملاحظة: apply
+        ? "القيمة القديمة محفوظة بـsourcePrev لكل طلب انتصلّح"
+        : "ماكو أي تعديل انكتب"
+    });
+  } catch (err) {
+    console.error("❌ fixOrderSources:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});

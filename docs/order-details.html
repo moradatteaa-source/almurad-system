@@ -606,7 +606,12 @@ import { getWarehouseCached } from "./sharedCache.js";
         { name: 'فيسبوك', icon: 'ri-facebook-circle-fill' },
         { name: 'تيك توك', icon: 'ri-tiktok-fill' },
         { name: 'واتساب', icon: 'ri-whatsapp-line' },
-        { name: 'اتصال', icon: 'ri-phone-fill' }
+        { name: 'اتصال', icon: 'ri-phone-fill' },
+        // الطلبات الجاية من المتجر وصفحات الهبوط تكتب مصدرها بنفسها —
+        // بس ما كان أكو زر يمثّلهن، فالموظف يفتح الطلب ما يشوف أي زر
+        // محدّد وممكن يضغط واحد ثاني بالغلط فيضيع المصدر الحقيقي
+        { name: 'صفحة هبوط', icon: 'ri-focus-3-line' },
+        { name: 'الموقع الإلكتروني', icon: 'ri-global-line' }
       ];
       container.innerHTML = sources.map(s =>
         `<div class="source-btn ${selected === s.name ? 'active' : ''}" data-value="${s.name}" title="${s.name}"><i class="${s.icon}"></i></div>`
