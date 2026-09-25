@@ -118,14 +118,31 @@
       lastStatusAt: now
     };
 
-    // fixedBy: أول من يوصل الطلب لحالة "مثبت" أو "بانتظار البضاعة"،
-    // ويبقى للأبد. الشرط !o.fixedBy هو اللي يمنع أي نقل لاحق (حتى من
-    // الأدمن) من سرقة النسبة.
-    if (!o.fixedBy && ["مثبت", "بانتظار البضاعة"].includes(newStatus)) {
-      fields.fixedBy = userName;
+    // fixedBy: أول *موظف* يوصل الطلب لحالة "مثبت" أو "بانتظار البضاعة"،
+    // ويبقى للأبد.
+    //
+    // الثبات بوجه الموظفين بس: إذا الحقل فاضي، أو فيه حساب آلي/أدمن
+    // (مو موظف حقيقي)، الموظف الجاي ياخذه. هذا يغطّي حالتين واقعيتين:
+    //
+    //   • الموظفة حاولت تثبّت وماكو كمية، فصار "بانتظار البضاعة" —
+    //     تاخذ النسبة هي، ولمّا توصل البضاعة والأدمن ينقله للمثبت
+    //     ما ينسرق منها شي (لأن fixedBy صار موظفة حقيقية).
+    //   • الأدمن أو النظام أول من لمس الطلب، وبعدين موظفة اشتغلت عليه
+    //     فعلاً — تاخذه هي، وما يضل مكتوب "ثبت بواسطة: admin" وهي
+    //     اللي سوّته.
+    const CREDIT_STATUSES = ["مثبت", "بانتظار البضاعة"];
+    if (CREDIT_STATUSES.includes(newStatus)) {
+      const current = String(o.fixedBy || "").trim();
+      const claimerIsReal = !isAutomated(userName);
+      if (!current || (isAutomated(current) && claimerIsReal)) {
+        fields.fixedBy = userName;
+      }
     }
-    if (!o.rejectedBy && newStatus === "رفض") {
-      fields.rejectedBy = userName;
+    if (newStatus === "رفض") {
+      const cur = String(o.rejectedBy || "").trim();
+      if (!cur || (isAutomated(cur) && !isAutomated(userName))) {
+        fields.rejectedBy = userName;
+      }
     }
     return fields;
   }
