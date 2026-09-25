@@ -9,6 +9,7 @@
   <script src="https://npmcdn.com/flatpickr/dist/l10n/ar.js"></script>
   <!-- 📦 دفتر المخزن المشترك — نفس منطق الخصم/الإرجاع بكل الصفحات -->
   <script src="stockLedger.js"></script>
+  <script src="orderCredit.js"></script>
   <style>
     :root {
       --navy: #043B64;
@@ -1796,28 +1797,21 @@ for (const id of S.selectedOrders) {
       }
       if (!order) continue;
 
-      const updatedHistory = {
-        ...(order.statusHistory || {}),
-        [encodeURIComponent(newStatus)]: { time: now, by: userName }
-      };
+  // ⚠️ إصلاح (2026-09-25): هنا كانت تنسرق نسبة الموظف. السطر القديم
+  // كان يكتب فوق سجل الحالة:
+  //     statusHistory[الحالة] = { by: اللي ضاغط الزر }
+  // فطلب ثبّته موظف ← راح "بانتظار البضاعة" ← الأدمن ينقله جماعياً
+  // للمثبت = اسم الموظف الأصلي ينمسح للأبد. هسه القاعدة كلها بمكان
+  // واحد (orderCredit.js): أول من يدخل الحالة يبقى صاحبها، وfixedBy
+  // ما يتغير أبداً بعد أول تثبيت، ومين نقله آخر مرة محفوظ
+  // بـlastStatusBy.
+  const creditFields = OrderCredit.buildStatusChangeFields(order, newStatus, userName, now);
 
   const updatedOrder = {
   ...order,
   id,
-  status: newStatus,
-  updatedAt: now,
-  updatedBy: userName,
+  ...creditFields,
   enterIndex: newPath !== dataPath ? Date.now() : (order.enterIndex || Date.now()),
-  statusHistory: updatedHistory,
-  // ✅ إصلاح جوهري (2026-09-16): "ثبت بواسطة" يُحسب فقط لأول موظف يحوّل الطلب
-  // إلى "مثبت" أو "بانتظار البضاعة"، ويبقى ثابتاً للأبد بعدها مهما تحول الطلب
-  // من حالة لأخرى ومهما كان من ينقله (حتى لو أدمن). قبل هذا التعديل كان أي
-  // نقل جماعي (Bulk) لأي طلب إلى إحدى هذه الحالات يعيد كتابة fixedBy باسم
-  // من ضغط الزر، حتى لو كان الطلب مثبتاً مسبقاً من موظف آخر — وهذا يسبب
-  // ضياع نسبة/عمولة الموظف الحقيقي. نفس القاعدة المستخدمة أصلاً بصفحة
-  // order-details.html، لضمان التطابق بين الصفحتين.
-  ...(order.fixedBy ? {} : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {})),
-  ...(order.rejectedBy ? {} : (newStatus === 'رفض' ? { rejectedBy: userName } : {}))
 };
 
 atomicUpdate[`${newPath}/${id}`] = updatedOrder;

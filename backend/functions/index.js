@@ -231,6 +231,45 @@ exports.landing = onRequest({ region: "us-central1", cors: false }, async (req, 
 // نمسك هم عدّاد الطلبات المسلّمة لكل موظف (stats/deliveredBy) — صفحة
 // "مهامي" كانت تنزّل كل الطلبات المسلّمة حتى تعد طلبات موظف واحد.
 // ════════════════════════════════════════════════════════
+
+// ── مين يستحق الطلب ──
+// ⚠️ لازم تطابق docs/orderCredit.js حرف بحرف بالترتيب، وإلا أرقام
+// الرواتب (stats/deliveredBy) تختلف عن أرقام صفحات الإحصائيات لنفس
+// الطلب. fixedBy أولاً: أول من ثبّت الطلب وما يتغير بعدين.
+const AUTOMATED_ACTORS = [
+  "google-sheets", "system", "waseet-api", "Prime",
+  "system-prime", "system-waseet", "fix-script",
+  "admin", "admin-store", "landing-page", "website", "store"
+];
+
+function historyBy(order, status) {
+  const h = (order && order.statusHistory) || {};
+  let e;
+  try { e = h[encodeURIComponent(status)]; } catch (x) { e = undefined; }
+  if (!e) e = h[status];
+  return (e && e.by) || "";
+}
+
+function orderConfirmer(o) {
+  const order = o || {};
+  const candidates = [
+    order.fixedBy,
+    historyBy(order, "مثبت"),
+    historyBy(order, "بانتظار البضاعة"),
+    order.rejectedBy,
+    historyBy(order, order.status),
+    order.employeeName,
+    order.assignedTo,
+    order.employee,
+    order.updatedBy
+  ];
+  for (const c of candidates) {
+    const n = String(c || "").trim();
+    if (n && !AUTOMATED_ACTORS.includes(n)) return n;
+  }
+  return "";
+}
+
 function bump(path, delta) {
   return admin.database().ref(path).transaction(v => Math.max(0, (Number(v) || 0) + delta));
 }
@@ -279,7 +318,7 @@ exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async
 
   // عدّاد المسلّم لكل موظف — يهم فرع "تم التسليم" بس
   if (status === "تم التسليم") {
-    const empOf = o => (o && (o.fixedBy || o.assignedTo || o.employee)) || "";
+    const empOf = orderConfirmer;
     const b = existedBefore ? empOf(beforeVal) : "";
     const a = existsAfter   ? empOf(afterVal)  : "";
     if (b !== a) {
@@ -359,7 +398,7 @@ exports.rebuildOrderCounts = onRequest({ timeoutSeconds: 540, memory: "512MiB" }
         index[id] = orderIndexEntry(o, status);
 
         if (status === "تم التسليم") {
-          const emp = o.fixedBy || o.assignedTo || o.employee || "";
+          const emp = orderConfirmer(o);
           if (!emp) continue;
           const key = String(emp).replace(/[.#$\[\]\/]/g, "_");
           deliveredBy[key] = (deliveredBy[key] || 0) + 1;

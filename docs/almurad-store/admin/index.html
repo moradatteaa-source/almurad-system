@@ -1028,6 +1028,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <!-- 🖼️ ضغط الصور قبل الرفع — مشترك مع صفحة الصور بالجملة -->
 <script src="imageTools.js"></script>
 
+<script src="../orderCredit.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set, update, remove, push } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -2159,14 +2160,17 @@ window.changeWoStatus = async (orderId, oldStatus, newStatus) => {
     const orderSnap = await get(ref(db, `ordersTest/${oldStatus}/${orderId}`));
     if(!orderSnap.exists()) return toast('❌ الطلب غير موجود','e');
     
+    // ⚠️ إصلاح (2026-09-25): هنا كان يكتب فوق سجل الحالة باسم
+    // 'admin-store'، فأي طلب يرجع لحالة سبق ودخلها موظف = اسم الموظف
+    // ينمسح. وكمان كان يكتب المفتاح خام بينما باقي النظام يكتبه
+    // مُرمّز، فتصير حالة وحدة بمفتاحين. هسه نفس قاعدة باقي النظام:
+    // أول من يدخل الحالة يبقى صاحبها، وfixedBy ما يتغير.
     const orderData = orderSnap.val();
-    orderData.status = newStatus;
-    orderData.updatedAt = new Date().toISOString();
-    
+    const now = new Date().toISOString();
+    const credit = OrderCredit.buildStatusChangeFields(orderData, newStatus, 'admin-store', now);
+    Object.assign(orderData, credit);
+
     await set(ref(db, `ordersTest/${newStatus}/${orderId}`), orderData);
-    await set(ref(db, `ordersTest/${newStatus}/${orderId}/statusHistory/${newStatus}`), {
-      time: Date.now(), by: 'admin-store'
-    });
     await remove(ref(db, `ordersTest/${oldStatus}/${orderId}`));
     
     toast(`✅ تم تغيير الحالة إلى "${newStatus}"`, 's');

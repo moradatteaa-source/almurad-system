@@ -386,6 +386,7 @@
 
   <!-- 📦 دفتر المخزن المشترك — نفس منطق الخصم/الإرجاع بكل الصفحات -->
   <script src="stockLedger.js"></script>
+  <script src="orderCredit.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -1138,11 +1139,14 @@ const selectedArea = document.querySelector('#area input')?.value.trim() || stat
           if (!avail.ok) { showToast(avail.msg, 'error', 5000); showLoader(false); return; }
         }
 
-        // --- بناء كائن التاريخ المحدث ---
-        const existingHistory = state.orderData?.statusHistory || {};
-        const updatedHistory = statusChanged
-          ? { ...existingHistory, [encodeURIComponent(newStatus)]: { time: timeNow, by: userName } }
-          : existingHistory;
+        // --- نسب الطلب وسجل الحالات ---
+        // ⚠️ إصلاح (2026-09-25): كان يكتب فوق سجل الحالة، فرجعة الطلب
+        // لنفس الحالة تمسح اسم أول من دخّله فيها. القاعدة كلها صارت
+        // بملف واحد مشترك (orderCredit.js) حتى النقل الفردي والجماعي
+        // يتصرفون نفس التصرف بالضبط.
+        const creditFields = statusChanged
+          ? OrderCredit.buildStatusChangeFields(state.orderData, newStatus, userName, timeNow)
+          : null;
 
         // --- البيانات الكاملة للطلب ---
         const fullOrderData = {
@@ -1166,13 +1170,11 @@ area: selectedArea,
           selectedVariants: mainVariants,
           productsDetailed: cleanedDetails,
           status: newStatus || oldStatus,
-          statusHistory: updatedHistory,
           updatedBy: userName,
           updatedAt: timeNow,
    enterIndex: Date.now(),
         source: document.querySelector('#sourceButtons .source-btn.active')?.dataset?.value || state.orderData?.source || '',
-...(state.orderData?.fixedBy ? { fixedBy: state.orderData.fixedBy } : (['مثبت', 'بانتظار البضاعة'].includes(newStatus) ? { fixedBy: userName } : {})),
-...(state.orderData?.rejectedBy ? { rejectedBy: state.orderData.rejectedBy } : (newStatus === 'رفض' ? { rejectedBy: userName } : {}))
+          ...(creditFields || {})
         };
 
         const oldPath = state.currentPath;

@@ -464,6 +464,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <!-- ══════════════════════════════════════════
      SCRIPT
 ══════════════════════════════════════════ -->
+<script src="orderCredit.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -502,16 +503,13 @@ const AUTOMATED_NAMES = ["google-sheets", "system", "waseet-api", "Prime", "syst
 
 // ✏️ ضيف هنا أي اسم موظف قديم أو حساب وهمي تريد إخفاءه من كل التقارير
 const EXCLUDED_EMPLOYEES = ["اسم الموظف الأول", "اسم الموظف الثاني"];
+// ⚠️ نفس إصلاح statistics.html — القاعدة صارت بملف مشترك
+// (orderCredit.js) حتى الصفحتين ما يعطن أرقام مختلفة لنفس الطلب.
+// fixedBy أولاً: أول من ثبّت الطلب، وما يتغير مهما انتقل بعدين.
 function getResponsibleEmployee(o) {
-  const h = o.statusHistory || {};
-  const st = (o.status || "").trim();
-  const byStatus = h[encodeURIComponent(st)]?.by || h[st]?.by;
-  const candidates = [byStatus, o.rejectedBy, o.fixedBy, o.employeeName, o.updatedBy];
-  for (const c of candidates) {
-    const n = String(c || "").trim();
-if (n && !AUTOMATED_NAMES.includes(n) && !EXCLUDED_EMPLOYEES.includes(n)) return n;
-  }
-  return "غير محدد";
+  const n = OrderCredit.getOrderConfirmer(o, { fallback: "" });
+  if (!n || EXCLUDED_EMPLOYEES.includes(n)) return "غير محدد";
+  return n;
 }
 
 /* ── SCORE FORMULA ── */

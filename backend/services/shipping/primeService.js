@@ -1,6 +1,7 @@
 import { ref, get, update, set, remove } from "firebase/database";
 import { db } from "../../firebase.js";
 import fetch from "node-fetch";
+import { addHistory } from "./statusHistory.js";
 
 const PRIME_BASE_URL        = "https://www.prime-iq.com";
 const PRIME_LOGIN           = "al_murad";
@@ -182,10 +183,7 @@ export async function createPrimeOrderFromFirebase(orderId) {
     shippingCompany: "prime",
     lastUpdateBy:  "system-prime",
     lastStatusAt:  now,
-    statusHistory: {
-      ...(order.statusHistory || {}),
-      [encodeURIComponent("قيد التجهيز")]: { time: now, by: "Prime" }
-    }
+    statusHistory: addHistory(order.statusHistory, "قيد التجهيز", "Prime", now)
   };
 
   const atomicUpdate = {
@@ -308,10 +306,7 @@ if (["DLEIVERD","PART_SUCC","SUCC_CHANGEPRICE","FORCE_DLV","SUCCARCHV"].includes
       primeStepCode:  step,
       lastUpdateBy:   "system-prime",
       lastStatusAt:   now,
-      statusHistory:  {
-        ...(order.orderData.statusHistory || {}),
-        [encodeURIComponent(newStatus)]: { time: now, by: "Prime" }
-      }
+      statusHistory:  addHistory(order.orderData.statusHistory, newStatus, "Prime", now)
     };
 
     // معالجة تغيير السعر

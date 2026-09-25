@@ -15,6 +15,7 @@
 import { ref, get, update } from "firebase/database";
 import { db } from "../../firebase.js";
 import fetch from "node-fetch";
+import { addHistory } from "./statusHistory.js";
 
 // ============================================================
 // ثوابت
@@ -214,10 +215,7 @@ export async function createJenniOrderFromFirebase(orderId) {
     shippingCompany: "jenni",
     lastUpdateBy:    "system-jenni",
     lastStatusAt:    now,
-    statusHistory: {
-      ...(order.statusHistory || {}),
-      [encodeURIComponent("قيد التجهيز")]: { time: now, by: "Jenni" }
-    }
+    statusHistory: addHistory(order.statusHistory, "قيد التجهيز", "Jenni", now)
   };
 
   // نقل ذري: كتابة بالمسار الجديد + حذف من القديم
@@ -302,10 +300,7 @@ export async function updateJenniStatusesFromFirebase(preloadedBranches = null) 
       jenniStep:     shipment.current_step,
       lastStatusAt:  now,
       lastUpdateBy:  "system-jenni",
-      statusHistory: {
-        ...(order.statusHistory || {}),
-        [encodeURIComponent(mapped)]: { time: now, by: "Jenni" }
-      }
+      statusHistory: addHistory(order.statusHistory, mapped, "Jenni", now)
     };
     delete updatedOrder._path;
 

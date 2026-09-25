@@ -10,6 +10,7 @@ import { db } from "../../firebase.js";
 import { ref, get, update } from "firebase/database";
 import fetch from "node-fetch";
 import FormData from "form-data";
+import { addHistory } from "./statusHistory.js";
 
 // ============================================================
 // ثوابت
@@ -75,12 +76,8 @@ function normalizePhone(phone) {
 export function getCityId(name, cities)   { return cities.find(c => c.city_name   === name)?.id || ""; }
 export function getRegionId(name, regions, cityId) { return regions.find(r => r.region_name === name && r.city_id === String(cityId))?.id || ""; }
 
-function addHistory(existing = {}, status, by) {
-  const clean = {};
-  Object.entries(existing).forEach(([k, v]) => { if (isNaN(Number(k))) clean[k] = v; });
-  clean[encodeURIComponent(status)] = { time: new Date().toISOString(), by };
-  return clean;
-}
+// انتقلت لملف مشترك (statusHistory.js) — أول من يدخل الحالة يبقى
+// صاحبها، ما ننكتب فوقه. راجع الملف للتفاصيل.
 
 async function updateMeta(...paths) {
   const t = Date.now();

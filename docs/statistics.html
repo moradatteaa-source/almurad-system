@@ -267,6 +267,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   <button class="share-copy" id="shareCopy">📋</button>
 </div>
 
+<script src="orderCredit.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -404,17 +405,16 @@ function formatArabicDate(d) {
   return d.toLocaleDateString("ar-EG", {weekday:"long", year:"numeric", month:"long", day:"numeric"});
 }
 
+// ⚠️ إصلاح (2026-09-25): هذي الدالة كانت تقرا سجل الحالات *قبل*
+// fixedBy، وسجل الحالات كان ينكتب فوقه بكل نقل. النتيجة المقاسة على
+// بياناتك: ١٬٠٢٦ طلب (٢٣٪) كانت محسوبة لحساب "admin" بهذي الصفحة —
+// ثالث أكبر "موظف" بالتقرير كان الأدمن. وكمان قائمة الحسابات الآلية
+// هنا ما كانت تشمل "admin" أصلاً، بعكس صفحة أداء الموظفين، فالصفحتين
+// كانن تعطن أرقام مختلفة لنفس الطلب.
+// هسه القاعدة وحدة بملف مشترك: fixedBy أولاً — وهو الحقل الوحيد
+// المقصود إنه ما يتغير بعد أول تثبيت.
 function getResponsibleEmployee(o) {
-  const automatedNames = ["google-sheets", "system", "waseet-api", "Prime", "system-prime", "system-waseet", "fix-script"];
-  const h = o.statusHistory || {};
-  const byStatus = h[encodeURIComponent(o.status)]?.by || h[o.status]?.by;
-
-  const candidates = [byStatus, o.fixedBy, o.rejectedBy, o.employeeName, o.updatedBy];
-  for (const c of candidates) {
-    const n = String(c || "").trim();
-    if (n && !automatedNames.includes(n)) return n;
-  }
-  return "";
+  return OrderCredit.getOrderConfirmer(o, { fallback: "" });
 }
 
 function applyFilters() {
