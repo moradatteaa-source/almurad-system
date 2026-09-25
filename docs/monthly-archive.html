@@ -490,6 +490,23 @@ main { padding: 24px; max-width: 1200px; margin: 0 auto; }
   .stats-bar { grid-template-columns: 1fr 1fr; gap: 10px; }
   .detail-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* زر النسخ الاحتياطي */
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn-backup {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(255,255,255,.14);
+  color: #fff; border: 1.5px solid rgba(255,255,255,.35);
+  border-radius: 10px; padding: 10px 16px;
+  font-family: inherit; font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: .2s; white-space: nowrap;
+}
+.btn-backup:hover { background: rgba(255,255,255,.26); }
+.btn-backup:disabled { opacity: .6; cursor: default; }
+@media (max-width: 640px) {
+  .header-actions { width: 100%; }
+  .header-actions button { flex: 1; justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -499,10 +516,16 @@ main { padding: 24px; max-width: 1200px; margin: 0 auto; }
     <span>🗂️</span>
     الأرشيف الشهري — المراد
   </div>
-<button class="btn-archive" id="btnArchive">
-  <span>📦</span>
-  أرشفة الشهر المنتهي
-</button>
+<div class="header-actions">
+  <button class="btn-backup" id="btnBackup" onclick="backupWarehouseNow()">
+    <span>💾</span>
+    نسخة احتياطية للمخزن
+  </button>
+  <button class="btn-archive" id="btnArchive">
+    <span>📦</span>
+    أرشفة الشهر المنتهي
+  </button>
+</div>
 </header>
 
 <main>
@@ -582,7 +605,7 @@ main { padding: 24px; max-width: 1200px; margin: 0 auto; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, set, update, child } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set, update, remove, child } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -629,19 +652,134 @@ function setProgress(pct, title, sub) {
   if (sub) document.getElementById('progressSub').textContent = sub;
 }
 
+
+/* ════════════════════════════════════════════════════════
+   💾 النسخ الاحتياطي للمخزن
+   ────────────────────────────────────────────────────────
+   ⚠️ الأرشفة الشهرية كانت تحفظ *أرقام* المخزن بس (عدد المنتجات،
+   الكمية، رأس المال) — مو محتوى المخزن نفسه. يعني لو انمسح المخزن
+   أو تخربطت الكميات، ماكو من وين نرجّعهن.
+
+   هسه ننسخ المخزن كامل (المنتجات، الكميات، الأسعار، الباركودات،
+   الصور) بلا ما نلمسه ولا نصفّره — نسخة للقراءة بس.
+
+   ⚠️ مهم: النسخة اللي تنخزن بقاعدة البيانات ما تحميك إذا القاعدة
+   كلها راحت. لذلك كل نسخة تتنزّل ملف JSON على جهازك بنفس اللحظة —
+   هذي هي النسخة الحقيقية اللي تحميك. خلّيها بمكان آمن.
+   ════════════════════════════════════════════════════════ */
+const MAX_BACKUPS = 12;   // نحتفظ بآخر ١٢ نسخة بالقاعدة، والأقدم تنشال
+
+async function snapshotWarehouse(label) {
+  const snap = await get(ref(db, 'warehouse'));
+  if (!snap.exists()) throw new Error('المخزن فاضي — ماكو شي ننسخه');
+  const data = snap.val();
+
+  const products = Object.keys(data).length;
+  const totalQty = Object.values(data).reduce((a, p) => {
+    if (!p) return a;
+    if (p.stock) return a + Object.values(p.stock).reduce((x, y) => x + (Number(y) || 0), 0);
+    return a + (Number(p.totalQty) || 0);
+  }, 0);
+
+  const key = label || new Date().toISOString().replace(/[:.]/g, '-');
+  const meta = {
+    createdAt: new Date().toISOString(),
+    products,
+    totalQty,
+    bytes: JSON.stringify(data).length,
+    by: (localStorage.getItem('loggedInUser') || localStorage.getItem('username') || 'غير معروف')
+  };
+
+  await set(ref(db, `backups/warehouse/${key}`), { meta, data });
+
+  // ننظّف النسخ القديمة حتى ما تتراكم بلا نهاية
+  try {
+    const idx = await get(ref(db, 'backups/warehouse'));
+    if (idx.exists()) {
+      const keys = Object.keys(idx.val()).sort();
+      const extra = keys.slice(0, Math.max(0, keys.length - MAX_BACKUPS));
+      for (const k of extra) await remove(ref(db, `backups/warehouse/${k}`));
+    }
+  } catch (e) { console.warn('تنظيف النسخ القديمة:', e.message); }
+
+  return { key, meta, data };
+}
+
+function downloadJson(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+
+window.backupWarehouseNow = async function () {
+  const btn = document.getElementById('btnBackup');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> جاري النسخ...';
+  try {
+    const { key, meta, data } = await snapshotWarehouse();
+    downloadJson({ meta, warehouse: data }, `نسخة-المخزن-${key}.json`);
+    alert(`✅ تمت النسخة الاحتياطية\n\n` +
+          `المنتجات: ${meta.products}\n` +
+          `مجموع الكميات: ${meta.totalQty}\n` +
+          `الحجم: ${Math.round(meta.bytes / 1024)} ك.ب\n\n` +
+          `📥 نزّلنالك ملف JSON على جهازك — خلّيه بمكان آمن، هو النسخة\n` +
+          `اللي تحميك لو راحت قاعدة البيانات كلها.`);
+  } catch (e) {
+    alert('⚠️ فشلت النسخة الاحتياطية: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+};
+
 // ===== تحميل الأرشيف =====
 async function loadArchive() {
   const container = document.getElementById('monthsContainer');
   container.innerHTML = `<div class="loading"><div class="spinner"></div><span>جاري التحميل...</span></div>`;
 
-  const snap = await get(ref(db, 'archive'));
-  if (!snap.exists()) {
+  // ⚠️ إصلاح تكلفة: هنا كان يجيب فرع archive كامل — كل الطلبات
+  // والمشتريات المؤرشفة لكل الأشهر — مع إنه ما يستخدم غير `report`
+  // مال كل شهر (كم سطر). هسه نقرا فهرس الأشهر الخفيف وبعدين تقرير
+  // كل شهر لحاله. أول فتحة تبني الفهرس من الطريقة القديمة وتحفظه.
+  const data = {};
+  let keys = [];
+
+  let idxSnap = null;
+  try { idxSnap = await get(ref(db, 'archiveMonths')); } catch (e) {}
+
+  if (idxSnap && idxSnap.exists()) {
+    keys = Object.keys(idxSnap.val()).filter(k => k.match(/^\d{4}-\d{2}$/)).sort((a,b) => b.localeCompare(a));
+    for (const k of keys) {
+      try {
+        const r = await get(ref(db, `archive/${k}/report`));
+        data[k] = { report: r.exists() ? r.val() : {} };
+      } catch (e) { data[k] = { report: {} }; }
+    }
+  } else {
+    // احتياط + بناء الفهرس مرة وحدة
+    const snap = await get(ref(db, 'archive'));
+    if (!snap.exists()) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>لا توجد بيانات مؤرشفة بعد</p></div>`;
+      return;
+    }
+    const full = snap.val();
+    keys = Object.keys(full).filter(k => k.match(/^\d{4}-\d{2}$/)).sort((a,b) => b.localeCompare(a));
+    keys.forEach(k => { data[k] = { report: full[k].report || {} }; });
+    try {
+      const idx = {};
+      keys.forEach(k => { idx[k] = true; });
+      if (keys.length) await set(ref(db, 'archiveMonths'), idx);
+    } catch (e) { console.warn('بناء فهرس الأشهر:', e.message); }
+  }
+
+  if (!keys.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>لا توجد بيانات مؤرشفة بعد</p></div>`;
     return;
   }
-
-  const data = snap.val();
-  const keys = Object.keys(data).filter(k => k.match(/^\d{4}-\d{2}$/)).sort((a,b) => b.localeCompare(a));
 
   if (!keys.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>لا توجد بيانات مؤرشفة بعد</p></div>`;
@@ -987,6 +1125,7 @@ window.executeArchive = async function() {
     const totalPurchaseQty = Object.values(monthPurchases).reduce((a, p) => a + (+p.totalQty || +p.quantity || 0), 0);
 
     // 4. حفظ الأرشيف
+    await set(ref(db, `archiveMonths/${targetKey}`), true);   // فهرس خفيف لقائمة الأشهر
     await set(ref(db, `archive/${targetKey}/orders`), finalOrders);
     await set(ref(db, `archive/${targetKey}/purchases`), monthPurchases);
     await set(ref(db, `archive/${targetKey}/stats`), {
@@ -996,6 +1135,28 @@ window.executeArchive = async function() {
       totalSell: warehouseStats.totalSell || 0,
       lastUpdate: warehouseStats.lastUpdate || new Date().toISOString()
     });
+
+    // 4-ب. نسخة كاملة من المخزن — بلا ما نلمسه ولا نصفّره
+    // (الأرشفة تشيل الطلبات والمشتريات من مكانهن، أما المخزن فينضل
+    //  متل ما هو بالضبط — هذي نسخة للقراءة بس، احتياط لو انمسح شي)
+    // تنخزن بفرع backups مستقل، مو تحت archive، لأن صفحة الأرشيف
+    // تقرا فرع archive كامل — فلو حطيناها هنا صارت كل فتحة تنزّل
+    // كل النسخ.
+    let backupNote = '';
+    try {
+      const bk = await snapshotWarehouse(targetKey);
+      backupNote = `${bk.meta.products} منتج`;
+      await set(ref(db, `archive/${targetKey}/warehouseBackup`), {
+        path: `backups/warehouse/${targetKey}`,
+        products: bk.meta.products,
+        totalQty: bk.meta.totalQty,
+        createdAt: bk.meta.createdAt
+      });
+      // ننزّلها ملف بعد — النسخة اللي بالقاعدة ما تحمي لو راحت القاعدة
+      downloadJson({ meta: bk.meta, warehouse: bk.data }, `نسخة-المخزن-${targetKey}.json`);
+    } catch (e) {
+      console.warn('نسخة المخزن:', e.message);
+    }
 
     setProgress(65, 'جاري حفظ التقرير...', '');
 
