@@ -711,3 +711,123 @@ exports.compressProductImages = onRequest(
     }
   }
 );
+
+// ════════════════════════════════════════════════════════
+// 🔁 استرداد نسبة الطلبات اللي ضاع صاحبها
+// ────────────────────────────────────────────────────────
+// خلفية: قبل إصلاح 2026-09-25، سجل الحالات كان ينكتب فوقه بكل نقل،
+// فالطلب اللي يرجع لحالة سبق ومرّ بيها يضيع اسم الموظف الأصلي. النتيجة
+// ٨٢٢ طلب ما بقى بيها أي اسم موظف — تطلع "غير محدد" بالتقارير.
+//
+// بس الطلب يحمل حقل `code` (رمز إدخال الطلب)، والفحص على البيانات
+// الحية بيّن إنه يطابق الموظف بنسبة ٩٨-١٠٠٪:
+//     Nag→نجوى · Fa→Fatma · no→Noor · na→naba · ah→Aya · Fl→Flow · Ze→Zina
+//
+// فنقدر نسترد منهن ٢٢٦ طلب — منها ١٥٥ من أصل ١٥٦ "تم التسليم".
+//
+// الخريطة تنبني من بياناتك نفسها كل مرة (مو مكتوبة بالكود)، بشرطين:
+//   • الرمز مستعمل ٥ مرات على الأقل بطلبات نعرف صاحبها
+//   • ٩٥٪ منهن على الأقل لنفس الموظف
+// فأي رمز ملخبط أو مشترك بين موظفين ما ينعتمد.
+//
+// ⚠️ الوضع الافتراضي معاينة فقط. للتنفيذ الفعلي لازم ?apply=1
+// كل طلب يتصلّح ينتّاشر عليه fixedBySource:"code" حتى يبقى واضح إنه
+// مسترد مو أصلي، وينقدر يتراجع عنه.
+// ════════════════════════════════════════════════════════
+exports.recoverOrderCredit = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, async (req, res) => {
+  const apply = req.query.apply === "1";
+  const MIN_SAMPLES = 5;
+  const MIN_CONFIDENCE = 0.95;
+  const STATUSES = [
+    "جديد", "مثبت", "قيد المعالجة", "قيد التجهيز", "بانتظار البضاعة",
+    "قيد التوصيل", "تم التسليم", "راجع", "تم استلام الراجع", "رفض"
+  ];
+  // نشيل علامات الاتجاه المخفية والفراغات — نفس الرمز ينكتب بصيغ مختلفة
+  const normCode = c => String(c == null ? "" : c).replace(/[‎‏\s]/g, "").toLowerCase();
+
+  try {
+    const db = admin.database();
+    const all = [];
+    for (const status of STATUSES) {
+      const snap = await db.ref(`ordersTest/${status}`).get();
+      const val = snap.exists() ? snap.val() : {};
+      for (const [id, o] of Object.entries(val)) {
+        if (id === "_meta" || !o || typeof o !== "object") continue;
+        all.push({ id, status, order: o });
+      }
+    }
+
+    // ١) نبني الخريطة من الطلبات اللي نعرف صاحبها
+    const tally = {};
+    for (const { order } of all) {
+      const emp = orderConfirmer(order);
+      if (!emp) continue;
+      const c = normCode(order.code);
+      if (!c) continue;
+      tally[c] = tally[c] || {};
+      tally[c][emp] = (tally[c][emp] || 0) + 1;
+    }
+    const codeMap = {};
+    const rejectedCodes = [];
+    for (const [c, counts] of Object.entries(tally)) {
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      const [top, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (total >= MIN_SAMPLES && n / total >= MIN_CONFIDENCE) {
+        codeMap[c] = { employee: top, confidence: +(n / total).toFixed(3), samples: total };
+      } else {
+        rejectedCodes.push({ code: c, samples: total, reason: total < MIN_SAMPLES ? "عينة قليلة" : "مشترك بين موظفين" });
+      }
+    }
+
+    // ٢) نصلّح الطلبات المجهولة
+    const updates = {};
+    const perEmployee = {};
+    const perStatus = {};
+    let recovered = 0, stillUnknown = 0;
+
+    for (const { id, status, order } of all) {
+      if (orderConfirmer(order)) continue;          // معروف صاحبها — ما نلمسها
+      const hit = codeMap[normCode(order.code)];
+      if (!hit) { stillUnknown++; continue; }
+
+      recovered++;
+      perEmployee[hit.employee] = (perEmployee[hit.employee] || 0) + 1;
+      perStatus[status] = (perStatus[status] || 0) + 1;
+
+      if (apply) {
+        updates[`ordersTest/${status}/${id}/fixedBy`] = hit.employee;
+        updates[`ordersTest/${status}/${id}/fixedBySource`] = "code";
+        updates[`ordersTest/${status}/${id}/fixedByRecoveredAt`] = Date.now();
+      }
+    }
+
+    if (apply && Object.keys(updates).length) {
+      // على دفعات حتى ما تنفجر عملية وحدة كبيرة
+      const keys = Object.keys(updates);
+      for (let i = 0; i < keys.length; i += 600) {
+        const chunk = {};
+        for (const k of keys.slice(i, i + 600)) chunk[k] = updates[k];
+        await db.ref().update(chunk);
+      }
+      await db.ref("stats/creditRecoveredAt").set(Date.now());
+    }
+
+    res.json({
+      ok: true,
+      الوضع: apply ? "تم التنفيذ ✅" : "معاينة فقط — ضيف ?apply=1 للتنفيذ",
+      مجموع_الطلبات: all.length,
+      مستردة: recovered,
+      تبقى_مجهولة: stillUnknown,
+      حسب_الموظف: perEmployee,
+      حسب_الحالة: perStatus,
+      الرموز_المعتمدة: codeMap,
+      رموز_مرفوضة: rejectedCodes.slice(0, 10),
+      ملاحظة: apply
+        ? "شغّل rebuildOrderCounts بعدها حتى تتحدث عدّادات الرواتب"
+        : "ماكو أي تعديل انكتب"
+    });
+  } catch (err) {
+    console.error("❌ recoverOrderCredit:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
