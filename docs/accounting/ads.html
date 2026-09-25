@@ -90,6 +90,41 @@ color:var(--orange);
 text-align:center;
 }
 
+
+/* شريط فلترة الإعلانات */
+.ads-filters{
+  display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;
+  background:#f7fafc; border:1px solid #e2e8f0; border-radius:12px;
+  padding:12px; margin-bottom:12px;
+}
+.af-group{display:flex; flex-direction:column; gap:4px; min-width:130px; flex:1;}
+.af-group label{font-size:12px; font-weight:700; color:#64748b;}
+.af-group select, .af-group input{
+  padding:8px 10px; border:1.5px solid #e2e8f0; border-radius:8px;
+  font-family:inherit; font-size:13px; background:#fff; width:100%;
+}
+.af-clear{
+  background:#fff; border:1.5px solid #e2e8f0; border-radius:8px;
+  padding:9px 14px; font-family:inherit; font-weight:700; font-size:13px;
+  cursor:pointer; color:#475569;
+}
+.af-clear:hover{border-color:#e53e3e; color:#e53e3e;}
+
+/* مجاميع حسب المنصة والمعلن */
+.ads-summary{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+.as-card{
+  background:#043B64; color:#fff; border-radius:10px;
+  padding:10px 14px; min-width:120px;
+}
+.as-card .lbl{font-size:11px; opacity:.75; font-weight:600;}
+.as-card .val{font-size:17px; font-weight:800; direction:ltr; margin-top:3px;}
+.as-card.alt{background:#FF6B2D;}
+@media(max-width:640px){
+  .af-group{min-width:calc(50% - 6px);}
+  .ads-filters{gap:8px; padding:10px;}
+  .af-clear{width:100%;}
+  .as-card{flex:1; min-width:calc(50% - 5px);}
+}
 </style>
 
 </head>
@@ -107,6 +142,8 @@ style="width:120px">
 <option value="تيك توك">تيك توك</option>
 <option value="فيسبوك">فيسبوك</option>
 <option value="انستغرام">انستغرام</option>
+<option value="صفحة هبوط">صفحة هبوط</option>
+<option value="الموقع الإلكتروني">الموقع الإلكتروني</option>
 </select>
 
 <input type="text" id="employee" placeholder="اسم المعلن">
@@ -123,6 +160,30 @@ style="width:120px">
 اعلان مرايا" style="width:100%;height:100px;margin-top:10px"></textarea>
 <button onclick="parseWhatsapp()">تحليل الرسالة</button>
 </div>
+<!-- 🔎 فلترة: الصفحة كانت جدول مسطّح بلا أي فلترة، فما تكدر تعرف
+     شكد صرفت على منصة معيّنة ولا على معلن معيّن بفترة معيّنة -->
+<div class="ads-filters">
+  <div class="af-group">
+    <label>المعلن</label>
+    <select id="fEmployee"><option value="">الكل</option></select>
+  </div>
+  <div class="af-group">
+    <label>المنصة</label>
+    <select id="fPlatform"><option value="">الكل</option></select>
+  </div>
+  <div class="af-group">
+    <label>من</label>
+    <input type="date" id="fFrom">
+  </div>
+  <div class="af-group">
+    <label>إلى</label>
+    <input type="date" id="fTo">
+  </div>
+  <button class="af-clear" onclick="clearAdsFilters()">🗑️ مسح</button>
+</div>
+
+<div id="adsSummary" class="ads-summary"></div>
+
 <button onclick="deleteSelectedAds()" 
 style="margin-bottom:10px;background:red;color:white;padding:8px 12px;border:none;border-radius:6px;">
 🗑 حذف المحدد
@@ -254,42 +315,109 @@ loadAds();
 alert("تم إضافة الإعلانات بنجاح");
 
 }
+// كل الإعلانات بالذاكرة — الفلترة تصير محلياً بدون أي قراءة جديدة
+let ALL_ADS = [];
+
 function loadAds(){
-
-onValue(ref(db,"ads"), (snap)=>{
-
-if(!snap.exists()){
-document.getElementById("tableBody").innerHTML="";
-document.getElementById("total").textContent="0";
-return;
+  onValue(ref(db,"ads"), (snap)=>{
+    ALL_ADS = snap.exists()
+      ? Object.entries(snap.val()).map(([id,a]) => ({ id, ...a })).reverse()
+      : [];
+    buildAdsFilterOptions();
+    renderAds();
+  });
 }
-exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
-let rows="";
-let total = 0;
 
-Object.entries(snap.val()).reverse().forEach(([id,a])=>{
+// نعبّي قوائم المعلنين والمنصات من البيانات نفسها، ونحافظ على
+// اختيار المستخدم إذا كان لسه موجود
+function buildAdsFilterOptions(){
+  const fill = (id, values) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const keep = el.value;
+    el.innerHTML = '<option value="">الكل</option>' +
+      values.map(v => `<option value="${v}">${v}</option>`).join("");
+    if (values.includes(keep)) el.value = keep;
+  };
+  fill("fEmployee", [...new Set(ALL_ADS.map(a => (a.employee||"").trim()).filter(Boolean))].sort());
+  fill("fPlatform", [...new Set(ALL_ADS.map(a => (a.platform||"").trim()).filter(Boolean))].sort());
+}
 
-    total+=a.amountIQD || (a.amount * exchangeRate);
+function filteredAds(){
+  const emp  = (document.getElementById("fEmployee")?.value || "").trim();
+  const plat = (document.getElementById("fPlatform")?.value || "").trim();
+  const from = document.getElementById("fFrom")?.value || "";
+  const to   = document.getElementById("fTo")?.value   || "";
 
-rows+=`
+  return ALL_ADS.filter(a => {
+    if (emp  && (a.employee||"").trim() !== emp)  return false;
+    if (plat && (a.platform||"").trim() !== plat) return false;
+    if (from || to) {
+      const d = (a.date || "").slice(0,10);
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+    }
+    return true;
+  });
+}
+
+function renderAds(){
+  exchangeRate = Number(document.getElementById("rateInput").value) || 1400;
+  const list = filteredAds();
+
+  let rows = "", total = 0, totalUsd = 0;
+  const byPlatform = {}, byEmployee = {};
+
+  list.forEach(a => {
+    const iqd = a.amountIQD || (a.amount * exchangeRate);
+    total += iqd;
+    totalUsd += Number(a.amount) || 0;
+    const p = (a.platform||"غير محدد").trim();
+    const e = (a.employee||"غير محدد").trim();
+    byPlatform[p] = (byPlatform[p]||0) + iqd;
+    byEmployee[e] = (byEmployee[e]||0) + iqd;
+
+    rows += `
 <tr>
-<td><input type="checkbox" class="rowCheck" value="${id}" data-amount="${a.amount}"></td>
+<td><input type="checkbox" class="rowCheck" value="${a.id}" data-amount="${a.amount}"></td>
 <td>${a.employee || ""}</td>
-<td>${a.platform}</td>
+<td>${a.platform || ""}</td>
 <td>${format(a.amount)} $</td>
 <td>${a.note||""}</td>
 <td>${new Date(a.date).toLocaleDateString("en-GB")}</td>
-<td><button onclick="deleteAd('${id}', ${a.amount})">🗑 حذف</button></td>
-</tr>
-`;
+<td><button onclick="deleteAd('${a.id}', ${a.amount})">🗑 حذف</button></td>
+</tr>`;
+  });
 
-});
+  document.getElementById("tableBody").innerHTML =
+    rows || `<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b">ماكو إعلانات بهذي الفلترة</td></tr>`;
+  document.getElementById("total").textContent = format(total);
 
-document.getElementById("tableBody").innerHTML=rows;
-document.getElementById("total").textContent=format(total);
-
-});
+  // مجاميع سريعة: كم إعلان، وشكد على كل منصة
+  const box = document.getElementById("adsSummary");
+  if (box) {
+    const top = Object.entries(byPlatform).sort((a,b)=>b[1]-a[1]);
+    box.innerHTML =
+      `<div class="as-card"><div class="lbl">عدد الإعلانات</div><div class="val">${list.length}</div></div>` +
+      `<div class="as-card alt"><div class="lbl">المجموع (دينار)</div><div class="val">${format(total)}</div></div>` +
+      `<div class="as-card"><div class="lbl">المجموع (دولار)</div><div class="val">${format(totalUsd)} $</div></div>` +
+      top.map(([p,v]) => `<div class="as-card"><div class="lbl">${p}</div><div class="val">${format(v)}</div></div>`).join("");
+  }
 }
+
+window.clearAdsFilters = function(){
+  ["fEmployee","fPlatform","fFrom","fTo"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
+  renderAds();
+};
+
+// أي تغيير بالفلترة أو سعر الصرف يعيد العرض فوراً
+["fEmployee","fPlatform","fFrom","fTo","rateInput"].forEach(id => {
+  document.addEventListener("change", e => {
+    if (e.target && e.target.id === id) renderAds();
+  });
+});
 
 loadAds();
 window.deleteAd = async function(id, amount){

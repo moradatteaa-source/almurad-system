@@ -217,6 +217,21 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   .stats-grid{grid-template-columns:repeat(5,1fr)}
   .emp-body{grid-template-columns:repeat(5,1fr)}
 }
+
+.src-row{flex-wrap:wrap;align-items:center}
+.src-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.src-chip{
+  background:#fff;border:1.5px solid #e2e8f0;border-radius:999px;
+  padding:6px 14px;font-family:inherit;font-size:12.5px;font-weight:700;
+  color:#475569;cursor:pointer;transition:.18s;white-space:nowrap;
+}
+.src-chip:hover{border-color:var(--orange);color:var(--orange)}
+.src-chip.active{background:var(--orange);border-color:var(--orange);color:#fff}
+@media(max-width:640px){
+  .src-row{flex-direction:column;align-items:stretch;gap:8px}
+  .src-chips{justify-content:flex-start}
+  .src-chip{font-size:11.5px;padding:5px 11px}
+}
 </style>
 </head>
 <body>
@@ -249,6 +264,13 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   <label>إلى</label>
   <input type="date" id="toDate"/>
   <button class="apply-btn" id="applyBtn">تطبيق</button>
+</div>
+
+<!-- 📡 فلترة حسب المنصة — الصفحة كانت تفلتر بالتاريخ بس، فما تكدر
+     تعرف شنو تجيبلك صفحات الهبوط أو الموقع لوحدهن -->
+<div class="date-row src-row">
+  <label>المنصة</label>
+  <div id="srcChips" class="src-chips"></div>
 </div>
 
 <!-- CONTENT -->
@@ -334,6 +356,7 @@ if (isStabilizer) {
     });
   }
 
+  buildSourceChips();
   applyFilters();
 }
 function getStatusTime(o) {
@@ -417,6 +440,34 @@ function getResponsibleEmployee(o) {
   return OrderCredit.getOrderConfirmer(o, { fallback: "" });
 }
 
+// المنصات المختارة — فاضية يعني الكل
+let selectedSources = new Set();
+
+function buildSourceChips() {
+  const box = document.getElementById("srcChips");
+  if (!box) return;
+  const list = [...new Set(allOrders.map(o => (o.source || "").trim()).filter(Boolean))].sort();
+  box.innerHTML =
+    `<button class="src-chip ${selectedSources.size ? "" : "active"}" data-src="">الكل</button>` +
+    list.map(sname =>
+      `<button class="src-chip ${selectedSources.has(sname) ? "active" : ""}" data-src="${sname}">${sname}</button>`
+    ).join("");
+
+  if (!box.dataset.bound) {
+    box.addEventListener("click", e => {
+      const b = e.target.closest(".src-chip");
+      if (!b) return;
+      const v = b.dataset.src;
+      if (!v) selectedSources.clear();                       // "الكل"
+      else if (selectedSources.has(v)) selectedSources.delete(v);
+      else selectedSources.add(v);
+      buildSourceChips();
+      applyFilters();
+    });
+    box.dataset.bound = "1";
+  }
+}
+
 function applyFilters() {
   const from = document.getElementById("fromDate").value;
   const to   = document.getElementById("toDate").value;
@@ -428,6 +479,7 @@ filteredOrders = allOrders.filter(o => {
     const dt = toDate(getStatusTime(o));
     if (fDate && dt && dt < fDate) return false;
     if (tDate && dt && dt > tDate) return false;
+    if (selectedSources.size && !selectedSources.has((o.source || "").trim())) return false;
     return true;
   });
   render();

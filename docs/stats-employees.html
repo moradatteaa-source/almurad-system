@@ -447,6 +447,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
       <input type="date" class="filter-input" id="fromDate"/>
       <span class="filter-label">إلى:</span>
       <input type="date" class="filter-input" id="toDate"/>
+      <span class="filter-label">المنصة:</span>
+      <select class="filter-input" id="srcFilter" onchange="applyFilters()">
+        <option value="">الكل</option>
+      </select>
       <button class="apply-btn" onclick="applyFilters()">تطبيق</button>
     </div>
   </div>
@@ -619,6 +623,7 @@ async function loadOrders() {
 
   if(allOrders.length === 0){ renderEmpty(); return; }
   buildSidebar();
+  buildSourceFilter();
   render();
 }
 
@@ -672,13 +677,27 @@ window.selectUser = function(name) {
 /* ── FILTERS ── */
 window.applyFilters = function() { render(); };
 
+// 📡 نعبّي قائمة المنصات من الطلبات نفسها — حتى تظهر "صفحة هبوط"
+// و"الموقع الإلكتروني" لحالهن أول ما تنصلّح بيانات المصدر
+function buildSourceFilter() {
+  const el = document.getElementById("srcFilter");
+  if (!el) return;
+  const keep = el.value;
+  const list = [...new Set(allOrders.map(o => (o.source || "").trim()).filter(Boolean))].sort();
+  el.innerHTML = '<option value="">الكل</option>' +
+    list.map(v => `<option value="${v}">${v}</option>`).join("");
+  if (list.includes(keep)) el.value = keep;
+}
+
 function getFiltered() {
   const from = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value + "T00:00:00") : null;
   const to   = document.getElementById("toDate").value   ? new Date(document.getElementById("toDate").value   + "T23:59:59") : null;
+  const src  = (document.getElementById("srcFilter")?.value || "").trim();
   return allOrders.filter(o => {
     const dt = new Date(o.updatedAt || o.orderDate || Date.now());
     if(from && dt < from) return false;
     if(to   && dt > to)   return false;
+    if(src && (o.source || "").trim() !== src) return false;
 if(selectedUser && getResponsibleEmployee(o) !== selectedUser) return false;
     return true;
   });
