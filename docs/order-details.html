@@ -363,6 +363,10 @@
         <input id="orderDate" readonly>
       </div>
       <div class="field single" style="margin-top: 12px;">
+        <label>👤 اسم الزبون</label>
+        <input id="customerName" type="text" placeholder="اسم الزبون">
+      </div>
+      <div class="field single" style="margin-top: 12px;">
         <label>📢 المعلن</label>
         <input id="advertiser" type="text" placeholder="اسم المعلن">
       </div>
@@ -557,7 +561,7 @@ import { getWarehouseCached } from "./sharedCache.js";
         receiptCard.style.display = 'none';
       }
 
-      ['code', 'phone1', 'phone2', 'address', 'notes', 'advertiser', 'price', 'quantity'].forEach(id => {
+      ['code', 'phone1', 'phone2', 'address', 'notes', 'advertiser', 'customerName', 'price', 'quantity'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.value = data[id] || ''; el.dataset.oldValue = el.value; }
       });
@@ -1169,6 +1173,7 @@ area: selectedArea,
           totalQty,
           notes: finalNotes,
           advertiser: document.getElementById('advertiser').value.trim(),
+          customerName: document.getElementById('customerName')?.value.trim() || '',
           price: mainPrice,
           quantity: mainQty,
           extraProducts: state.extraProducts,
@@ -1352,7 +1357,7 @@ getWarehouseCached(db).then((data) => {
       document.getElementById('undoBtn')?.addEventListener('click', undoChange);
       document.getElementById('redoBtn')?.addEventListener('click', redoChange);
 
-      ['code', 'phone1', 'phone2', 'address', 'price', 'quantity', 'notes', 'advertiser'].forEach(id => {
+      ['code', 'phone1', 'phone2', 'address', 'price', 'quantity', 'notes', 'advertiser', 'customerName'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.dataset.oldValue = el.value;

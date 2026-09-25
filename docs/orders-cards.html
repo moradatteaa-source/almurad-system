@@ -848,6 +848,7 @@ ${order.status === "رفض"
     <div class="card-left">
       <span class="card-qty">📦 ${order.totalQty || order.quantity || 1}</span>
       <span class="card-price">💰 ${Number(order.totalPrice || order.price || 0).toLocaleString("en-US")} د.ع</span>
+      ${order.customerName ? `<div class="card-adv">👤 ${order.customerName}</div>` : ""}
       <div class="card-adv">🏢 ${order.advertiser || "غير محدد"}</div>
       ${getTimerText(order)}
       <span class="badge ${badgeClass}">${order.status || "جديد"}</span>

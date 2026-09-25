@@ -877,8 +877,14 @@ exports.fixOrderSources = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, asy
         if (id === "_meta" || !o || typeof o !== "object") continue;
 
         const creator = historyBy(o, "جديد") || o.createdBy || "";
-        const trueSource = CREATOR_SOURCE[String(creator).trim()];
+        let trueSource = CREATOR_SOURCE[String(creator).trim()];
         if (!trueSource) continue;          // مو من الموقع ولا الهبوط
+
+        // 🛡️ تحصين: "صفحة هبوط" ما تنكتب إلا إذا الطلب فعلاً عنده
+        // معرّف صفحة هبوط. اسم المنشئ لوحده ما يكفي — لو يوم صار
+        // استيراد من كوكل شيت أو أي مصدر ثاني يكتب نفس الاسم، ما
+        // نريده ينحسب صفحة هبوط بالغلط.
+        if (trueSource === "صفحة هبوط" && !o.landingPageId) continue;
 
         checked++;
         const current = String(o.source || "").trim();
@@ -924,3 +930,77 @@ exports.fixOrderSources = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, asy
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+// ════════════════════════════════════════════════════════
+// 👤 نقل اسم الزبون من خانة "المعلن" لخانته الصحيحة
+// ────────────────────────────────────────────────────────
+// صفحة الهبوط والمتجر كانوا يحطون اسم الزبون بحقل advertiser لأنه
+// ما كان أكو حقل لاسم الزبون أصلاً. النتيجة: تقارير المعلنين تطلع
+// فيها أسماء زبائن، والليبل يطبع رمز الإدخال مكان اسم الزبون.
+//
+// هسه صار أكو حقل customerName. هذي الدالة تنقل الأسماء القديمة
+// للطلبات اللي جت من الموقع أو صفحة الهبوط بس (اللي نتأكد إن
+// الاسم فيها هو اسم زبون مو معلن).
+//
+// ⚠️ معاينة فقط افتراضياً — التنفيذ يحتاج ?apply=1
+// ════════════════════════════════════════════════════════
+exports.moveCustomerNames = onRequest({ timeoutSeconds: 540, memory: "1GiB" }, async (req, res) => {
+  const apply = req.query.apply === "1";
+  const STATUSES = [
+    "جديد", "مثبت", "قيد المعالجة", "قيد التجهيز", "بانتظار البضاعة",
+    "قيد التوصيل", "تم التسليم", "راجع", "تم استلام الراجع", "رفض"
+  ];
+  const WEB_CREATORS = ["landing-page", "website", "store", "admin-store"];
+
+  try {
+    const db = admin.database();
+    const updates = {};
+    let moved = 0, already = 0, skipped = 0;
+    const samples = [];
+
+    for (const status of STATUSES) {
+      const snap = await db.ref(`ordersTest/${status}`).get();
+      const val = snap.exists() ? snap.val() : {};
+      for (const [id, o] of Object.entries(val)) {
+        if (id === "_meta" || !o || typeof o !== "object") continue;
+
+        const creator = String(historyBy(o, "جديد") || o.createdBy || "").trim();
+        const isWeb = WEB_CREATORS.includes(creator) || !!o.landingPageId;
+        if (!isWeb) { skipped++; continue; }
+
+        if (o.customerName) { already++; continue; }
+        const name = String(o.advertiser || "").trim();
+        if (!name) { skipped++; continue; }
+
+        moved++;
+        if (samples.length < 8) samples.push({ id, status, الاسم: name });
+        if (apply) {
+          updates[`ordersTest/${status}/${id}/customerName`] = name;
+          updates[`ordersTest/${status}/${id}/advertiser`] = "";
+        }
+      }
+    }
+
+    if (apply && Object.keys(updates).length) {
+      const keys = Object.keys(updates);
+      for (let i = 0; i < keys.length; i += 600) {
+        const chunk = {};
+        for (const k of keys.slice(i, i + 600)) chunk[k] = updates[k];
+        await db.ref().update(chunk);
+      }
+    }
+
+    res.json({
+      ok: true,
+      الوضع: apply ? "تم التنفيذ ✅" : "معاينة فقط — ضيف ?apply=1 للتنفيذ",
+      انتقلت: moved,
+      عندها_اسم_زبون_أصلاً: already,
+      مو_من_الموقع_أو_الهبوط: skipped,
+      عينة: samples
+    });
+  } catch (err) {
+    console.error("❌ moveCustomerNames:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+

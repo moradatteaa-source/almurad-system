@@ -675,6 +675,10 @@
           <label>اسم المعلن</label>
           <input id="advertiser" type="text" placeholder="اختياري">
         </div>
+        <div class="form-field">
+          <label>اسم الزبون</label>
+          <input id="customerName" type="text" placeholder="اختياري">
+        </div>
       </div>
       
       <div class="form-field" style="margin-top: 14px;">
@@ -1333,6 +1337,7 @@ if (!normalizedPhone1) errors.push("❌ رقم الهاتف غير صحيح (ي�
           notes: finalNotes,
           status: status, // ✅ الحالة الفعلية للطلب
           advertiser: document.getElementById("advertiser").value.trim(),
+          customerName: document.getElementById("customerName")?.value.trim() || "",
           orderDate: new Date().toISOString(),
           enterIndex: Date.now(),
           extraProducts: extraProducts,

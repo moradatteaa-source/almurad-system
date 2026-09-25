@@ -889,6 +889,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--cr);color:var(--tx);overf
 <!-- TOAST -->
 <div class="toast-wrap" id="tw"></div>
 
+<script src="iraqiPhone.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -1710,7 +1711,8 @@ notes:            orderData.map(c=>`${c.name} ×${c.qty}`).join(' | ') + (note ?
     statusHistory: {},
     receiptNum:    '',
     notes:       note || '',
-    advertiser:  name,
+    customerName:  name,
+    advertiser:  '',   // اسم الزبون مكانه customerName مو خانة المعلن
     code:        'WEB',
     orderNumber: orderNum,
     orderDate:   now.toISOString(),

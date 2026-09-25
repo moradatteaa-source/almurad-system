@@ -261,6 +261,7 @@ input,select,button{font-size:16px!important;}
 
 <div class="tw" id="tw"></div>
 
+<script src="iraqiPhone.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -451,7 +452,14 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
 
   let ok = true;
   if(!name){ showErr('fName','errName'); ok=false; }
-  if(!phone || phone.length<10){ showErr('fPhone','errPhone'); ok=false; }
+  // ⚠️ قبل: أي شي طوله ١٠ خانات ينقبل — فتوصل أرقام ناقصة أو زايدة
+  // أو مفاتيح مو عراقية، والموظف يتصل ما يرد. هسه لازم رقم عراقي
+  // صحيح بالضبط، والرسالة تكَله شنو الغلط.
+  if(!IraqiPhone.isValidIraqiPhone(phone)){
+    const el = document.getElementById('errPhone');
+    if(el) el.textContent = IraqiPhone.iraqiPhoneError(phone);
+    showErr('fPhone','errPhone'); ok=false;
+  }
   if(!city){ showErr('fCity','errCity'); ok=false; }
   if(!addr){ showErr('fAddr','errAddr'); ok=false; }
   if(!ok) return;
@@ -480,10 +488,16 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     }
 
     const now = new Date();
-    const total = Number(l.price||0) + delivery;
+    // ⚠️ إصلاح (2026-09-25): كان يضيف كلفة التوصيل على سعر صفحة
+    // الهبوط. بس سعر صفحة الهبوط شامل التوصيل أصلاً — صاحب الصفحة
+    // يحطه كذلك عمداً. فالإضافة كانت تخلّي الزبون يشوف سعر بالإعلان
+    // ويوصله النظام بسعر أعلى ٥ آلاف. هسه السعر المعروض هو النهائي.
+    const total = Number(l.price||0);
 
     const order = {
-      phone1: phone,
+      // ⚠️ الهاتف ينخزن بصيغة موحّدة (+9647XXXXXXXXX) حتى ما يتكرر
+      // نفس الزبون بقاعدة البيانات بصيغ مختلفة
+      phone1: IraqiPhone.normalizeIraqiPhone(phone) || phone,
       phone2: '',
       source: 'صفحة هبوط',
       code: 'WEB',
@@ -499,7 +513,8 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
       productName: l.productName || l.title || '',
       price: total,
       totalPrice: total,
-      deliveryPrice: delivery,
+      deliveryPrice: 0,          // السعر شامل التوصيل أصلاً
+      deliveryIncluded: true,
       quantity: 1,
       productsDetailed: [{
         name: l.productName || l.title || '',
@@ -513,7 +528,11 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
       statusHistory: {},
       receiptNum: '',
       notes: `طلب من صفحة هبوط: ${l.title||pageId}`,
-      advertiser: name,
+      // ⚠️ إصلاح (2026-09-25): اسم الزبون كان ينحط بخانة "المعلن"،
+      // فالنظام يعرض اسم الزبون مكان اسم المعلن بكل مكان — وتقارير
+      // المعلنين تطلع غلط. هسه بخانته الصحيحة، والمعلن يبقى للمعلن.
+      customerName: name,
+      advertiser: l.advertiser || '',
       orderNumber: orderNum,
       orderDate: now.toISOString(),
       updatedAt: now.toISOString(),

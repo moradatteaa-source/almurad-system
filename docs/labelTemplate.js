@@ -113,7 +113,7 @@ function buildLabelHTML(order, pageNum) {
         المحافظة: ${escHtml(order.city)}<br>
         المنطقة: ${escHtml(order.area)}<br>
         أقرب نقطة: ${escHtml(order.address)}<br>
-        اسم الزبون: ${escHtml(order.code) || "غير معروف"}
+        اسم الزبون: ${escHtml(order.customerName || order.advertiser || order.code) || "غير معروف"}
       </div>
       <div class="label-box">
         <b>تفاصيل الطلب</b>

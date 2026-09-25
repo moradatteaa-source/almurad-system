@@ -364,7 +364,10 @@ if(o.productsDetailed) {
   const pd = Array.isArray(o.productsDetailed) ? o.productsDetailed : Object.values(o.productsDetailed);
   pd.forEach(p => { if(p?.name) tempMap[key].products[p.name] = (tempMap[key].products[p.name]||0)+(p.qty||1); });
 }
-if(o.advertiser && o.advertiser.length > 1) tempMap[key].name = o.advertiser;
+// اسم الزبون صار بخانته الصحيحة (customerName). advertiser يبقى
+// احتياط للطلبات القديمة اللي انحط فيها اسم الزبون بخانة المعلن.
+const cname = o.customerName || o.advertiser;
+if(cname && cname.length > 1) tempMap[key].name = cname;
 tempMap[key].city = o.city || o.area || '-';
 tempMap[key].address = o.address || '-';
 if(o.phone2) tempMap[key].phone2 = o.phone2;
@@ -449,7 +452,7 @@ window.importArchive = async () => {
             tempMap[key] = {
               phone: o.phone1,
               phone2: o.phone2 || '',
-              name: o.advertiser || o.customerName || '-',
+              name: o.customerName || o.advertiser || '-',
               city: o.city || o.area || '-',
               address: o.address || '-',
               deliveryCount: 0,
