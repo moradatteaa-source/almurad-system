@@ -626,10 +626,17 @@ const FINAL_STATUSES = ["تم التسليم", "تم استلام الراجع",
 
 // ===== أدوات مساعدة =====
 function fmt(n) { return Number(n || 0).toLocaleString('en-US'); }
+// ⚠️ الشهر ينحسب بتوقيت بغداد (UTC+3) مو UTC. قبل، أي طلب ينكتب
+// بين ١٢ و٣ بالليل بتوقيت بغداد كان يقع بالشهر السابق حسب UTC —
+// فينأرشف بالشهر الغلط.
+const IRAQ_OFFSET_MS = 3 * 60 * 60 * 1000;
 function getMonthKey(dateStr) {
   if (!dateStr) return null;
-  try { return new Date(dateStr).toISOString().slice(0, 7); }
-  catch { return null; }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getTime() + IRAQ_OFFSET_MS).toISOString().slice(0, 7);
+  } catch { return null; }
 }
 function monthLabel(key) {
   if (!key) return "غير محدد";
@@ -1087,7 +1094,12 @@ window.executeArchive = async function() {
           Object.entries(orders).forEach(([id, o]) => {
             if (id === '_meta' || !o || typeof o !== 'object') return;
             const monthKey = getMonthKey(o.orderDate || o.createdAt);
-        if (true) {
+        // 🚨 إصلاح حرج (2026-09-26): هنا كان مكتوب `if (true)` بدل
+        // الشرط الحقيقي. يعني الزر كان يؤرشف **ويحذف** كل الطلبات
+        // النهائية من كل الأشهر دفعة وحدة — بينما نافذة التأكيد
+        // تعرض عدد طلبات الشهر المستهدف بس (مثلاً "٥ طلبات مؤهلة").
+        // ضغطة وحدة كانت تمسح كل تاريخ الطلبات من ordersTest.
+        if (monthKey === targetKey) {
               finalOrders[id] = { ...o, _archivedFrom: `ordersTest/${statusPath}` };
               if (statusPath === 'تم التسليم') delivered++;
               else if (statusPath === 'تم استلام الراجع') returned++;
