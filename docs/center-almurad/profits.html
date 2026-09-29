@@ -2,383 +2,549 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>الأرباح</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💰 أرباح سنتر المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+
+<!-- 🔒 قفل الصفحة — لازم يبقى أول شي قبل أي محتوى -->
+<script src="center-auth.js" data-page="profits"></script>
 
 <style>
+/* ════════════════════════════════════════════════════════
+   💰 أرباح سنتر المراد
+   ────────────────────────────────────────────────────────
+   التصميم القديم كان: جدول واحد يرمي كل بند بكل فاتورة
+   (١٢ ألف سطر) وصافي الربح بآخر الصفحة — لازم تنزل للآخر
+   حتى تعرف ربحت لو خسرت.
+
+   هسه: ربح اليوم وأمس والشهر بأول الصفحة قبل أي شي، بعدين
+   التفاصيل لمن تحتاجها.
+   ════════════════════════════════════════════════════════ */
 :root{
-  --blue:#043B64;
-  --orange:#FF6B2D;
-  --bg:#f4f6fa;
+  --navy:#0d1b2e; --navy2:#162032; --blue:#1a3a5c;
+  --accent:#f97316; --accent2:#fb923c;
+  --green:#059669; --red:#dc2626; --yellow:#b45309;
+  --bg:#f0f4f8; --card:#fff; --border:#e2e8f0;
+  --text:#1e293b; --text2:#64748b; --text3:#94a3b8;
+  --shadow:0 4px 24px rgba(0,0,0,.07);
+  --r:14px; --r2:10px;
 }
-body{
-  margin:0;
-  font-family:Tahoma;
-  background:var(--bg);
-}
-header{
-  background:var(--blue);
-  color:white;
-  padding:12px;
-  text-align:center;
-  font-size:18px;
-}
-.container{padding:10px;}
-.box{
-  background:white;
-  padding:10px;
-  margin-bottom:10px;
-  border-radius:6px;
-}
-label{font-size:13px}
-input,button{
-  padding:6px;
-  margin:4px 0;
-}
-button{
-  background:var(--orange);
-  color:white;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-  margin-top:10px;
-}
-th,td{
-  border:1px solid #ddd;
-  padding:6px;
-  text-align:center;
-}
-th{background:#eaf0f6;}
-.total{
-  font-size:16px;
-  font-weight:bold;
-  color:var(--orange);
-  text-align:center;
-  margin-top:10px;
-}
-/* منع التقريب التلقائي عند الضغط على الحقول */
-input,
-select,
-textarea,
-button {
-  font-size: 16px !important;
-  -webkit-text-size-adjust: 100%;
-}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
 
-/* منع zoom غير مقصود باللمس */
-html, body {
-  touch-action: manipulation;
+/* ── الرأس ── */
+#header{
+  background:linear-gradient(135deg,var(--navy),var(--blue));
+  color:#fff;padding:0 22px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  position:sticky;top:0;z-index:60;box-shadow:0 3px 18px rgba(0,0,0,.25);flex-wrap:wrap
 }
+.hd-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+.hd-brand .dot{width:38px;height:38px;border-radius:11px;background:var(--accent);
+  display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.hd-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hd-pill{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.hd-btn{background:var(--accent);border:none;border-radius:9px;color:#fff;padding:8px 14px;
+  font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.hd-btn:hover{background:var(--accent2)}
 
+.wrap{max-width:1360px;margin:18px auto;padding:0 16px 70px}
+
+/* ══ البطاقات الكبيرة فوق ══ الجواب قبل أي سؤال ══ */
+.hero{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.hcard{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 17px;box-shadow:var(--shadow);position:relative;overflow:hidden
+}
+.hcard::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.hcard.big::before{width:5px}
+.hcard.big{grid-column:span 2;background:linear-gradient(135deg,#fff,#fffaf5)}
+.h-lbl{font-size:12.5px;color:var(--text2);font-weight:700;margin-bottom:7px;
+  display:flex;align-items:center;gap:6px}
+.h-val{font-size:27px;font-weight:900;line-height:1.15;letter-spacing:-.5px}
+.hcard.big .h-val{font-size:34px}
+.h-val.pos{color:var(--green)} .h-val.neg{color:var(--red)}
+.h-sub{font-size:12px;color:var(--text2);margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
+.h-sub b{color:var(--text);font-weight:800}
+.delta{font-size:12px;font-weight:800;border-radius:999px;padding:2px 9px;display:inline-block;margin-top:7px}
+.delta.up{background:#ecfdf5;color:var(--green)}
+.delta.down{background:#fef2f2;color:var(--red)}
+.delta.flat{background:#f1f5f9;color:var(--text2)}
+
+/* ══ شريط الفلترة ══ */
+.bar{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:16px;box-shadow:var(--shadow);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap
+}
+.chip{background:#fff;border:1.5px solid var(--border);border-radius:999px;padding:7px 15px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.bar .sep{width:1px;height:26px;background:var(--border);margin:0 3px}
+.bar input[type=date],.bar select{
+  border:1.5px solid var(--border);border-radius:9px;padding:7px 10px;
+  font-family:inherit;font-size:13px;background:#fff;color:var(--text)}
+.bar label{font-size:12.5px;color:var(--text2);font-weight:700}
+.bar .grow{margin-inline-start:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ghost{background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:7px 13px;
+  font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text2);cursor:pointer}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ══ مؤشرات الفترة ══ */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:13px 14px;box-shadow:var(--shadow)}
+.kpi-lbl{font-size:11.5px;color:var(--text2);font-weight:700;margin-bottom:5px}
+.kpi-val{font-size:20px;font-weight:900;letter-spacing:-.3px}
+.kpi-val.pos{color:var(--green)} .kpi-val.neg{color:var(--red)}
+
+/* ══ البطاقات ══ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 17px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{font-size:15.5px;font-weight:800;margin-bottom:3px;display:flex;align-items:center;gap:7px}
+.card .hint{font-size:12px;color:var(--text2);margin-bottom:13px}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.tab{background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;
+  font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text2);cursor:pointer}
+.tab:hover{border-color:var(--accent);color:var(--accent)}
+.tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* ══ الجداول ══ الأرقام تحت رأسها بالضبط ══ */
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:620px}
+thead th{
+  position:sticky;top:0;z-index:2;background:#f1f5f9;color:var(--text2);
+  font-size:11.5px;font-weight:800;text-align:center;padding:10px 8px;
+  border-bottom:2px solid var(--border);white-space:nowrap
+}
+thead th.t-name{text-align:right}
+tbody td{padding:9px 8px;border-bottom:1px solid #f1f5f9;text-align:center;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody td.t-name{text-align:right;font-weight:700;white-space:normal;
+  max-width:260px;word-break:break-word}
+tbody tr:hover{background:#fafcfe}
+tbody td.pos{color:var(--green);font-weight:800}
+tbody td.neg{color:var(--red);font-weight:800}
+.rank{width:34px;color:var(--text3);font-weight:800;font-size:12px}
+.empty{text-align:center;color:var(--text2);padding:34px 10px;font-size:13.5px}
+.more{display:block;width:100%;margin-top:11px;background:#f8fafc;border:1.5px dashed var(--border);
+  border-radius:9px;padding:9px;font-family:inherit;font-size:12.5px;font-weight:700;
+  color:var(--text2);cursor:pointer}
+.more:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ══ التحميل ══ */
+#loading{position:fixed;inset:0;background:rgba(240,244,248,.96);z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px}
+.spin{width:46px;height:46px;border:4px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+@media(max-width:1080px){
+  .hero{grid-template-columns:1fr 1fr}
+  .hcard.big{grid-column:span 2}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:820px){
+  #header{height:auto;padding:9px 12px;gap:8px}
+  .hd-brand{font-size:14.5px}
+  .hd-brand .dot{width:32px;height:32px;font-size:16px;border-radius:9px}
+  .wrap{margin:12px auto;padding:0 10px 60px}
+  .hero{grid-template-columns:1fr 1fr;gap:9px}
+  .hcard{padding:13px 13px}
+  .hcard.big{grid-column:span 2}
+  .h-val{font-size:22px} .hcard.big .h-val{font-size:27px}
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .kpi-val{font-size:17px}
+  .card{padding:14px 13px}
+  .chip{font-size:12px;padding:6px 12px}
+  table{font-size:12px}
+  tbody td.t-name{max-width:140px}
+}
 </style>
 </head>
-
 <body>
 
-<script>
-  const enteredCode = prompt("🔒 أدخل رمز الدخول للأرباح:");
-  if (enteredCode !== "0099") {
-    document.write(`
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Tahoma;background:#f4f6fa;color:#e74c3c;text-align:center;padding:20px;">
-        <div style="font-size:50px;margin-bottom:12px;">🚫</div>
-        <div style="font-size:18px;font-weight:bold;">الرمز غير صحيح</div>
-        <div style="font-size:14px;color:#888;margin-top:8px;">لا تملك صلاحية الدخول لهذه الصفحة</div>
-        <button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;background:#043B64;color:white;border:none;border-radius:6px;cursor:pointer;font-family:Tahoma;font-size:14px;">🔄 إعادة المحاولة</button>
-      </div>
-    `);
-    throw new Error("Access denied - wrong code");
-  }
-</script>
+<div id="loading"><div class="spin"></div><div>جاري حساب الأرباح...</div></div>
 
-<header>💰 الأرباح</header>
-
-<div class="container">
-
-<div class="box">
-  <label>👤 الكاشير:</label>
-<select id="cashierFilter">
-  <option value="all">كل الكاشيرات</option>
-</select>
-<br>
-
-  <label>من تاريخ:</label>
-  <input type="date" id="from">
-  <label>إلى تاريخ:</label>
-  <input type="date" id="to">
-  <br>
-  <button onclick="calcProfit()">📊 عرض الأرباح</button>
-  <hr>
-
-<button onclick="quickFilter('today')">اليوم</button>
-<button onclick="quickFilter('yesterday')">أمس</button>
-<button onclick="quickFilter('week')">هذا الأسبوع</button>
-<button onclick="quickFilter('month')">هذا الشهر</button>
-<button onclick="quickFilter('year')">هذه السنة</button>
-<button onclick="quickFilter('all')" style="background:#ccc;color:#333">الكل</button>
-
+<div id="header">
+  <div class="hd-brand"><div class="dot">💰</div><span>الأرباح</span></div>
+  <div class="hd-right">
+    <div class="hd-pill" id="whoPill">👤 —</div>
+    <button class="hd-btn" id="reloadBtn">🔄 تحديث</button>
+  </div>
 </div>
 
-<div class="box">
-<table id="table">
-  <tr>
-    <th>التاريخ</th>
-    <th>المنتج</th>
-    <th>الكمية</th>
-    <th>إجمالي البيع</th>
-    <th>إجمالي الشراء</th>
-    <th>الربح</th>
-  </tr>
-</table>
+<div class="wrap">
 
-<div id="netProfit" class="total">صافي الربح: 0 د.ع</div>
+  <!-- ══ الجواب فوق: ربح اليوم وأمس والشهر ══ -->
+  <div class="hero" id="hero"></div>
+
+  <!-- ══ الفلترة ══ -->
+  <div class="bar">
+    <button class="chip" data-p="today">اليوم</button>
+    <button class="chip" data-p="yday">أمس</button>
+    <button class="chip" data-p="7">٧ أيام</button>
+    <button class="chip" data-p="30">٣٠ يوم</button>
+    <button class="chip on" data-p="month">هذا الشهر</button>
+    <button class="chip" data-p="all">الكل</button>
+    <span class="sep"></span>
+    <label>من</label><input type="date" id="fromDate">
+    <label>إلى</label><input type="date" id="toDate">
+    <button class="chip" data-p="custom">تطبيق</button>
+    <div class="grow">
+      <label>الكاشير</label>
+      <select id="cashierSel"><option value="all">الكل</option></select>
+      <button class="ghost" id="csvBtn">⬇ تصدير CSV</button>
+    </div>
+  </div>
+
+  <!-- ══ مؤشرات الفترة المختارة ══ -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ══ التفاصيل ══ -->
+  <div class="card">
+    <h3>📋 تفاصيل الأرباح</h3>
+    <div class="hint" id="detailHint">—</div>
+    <div class="tabs">
+      <button class="tab on" data-t="product">حسب المنتج</button>
+      <button class="tab" data-t="day">حسب اليوم</button>
+      <button class="tab" data-t="cashier">حسب الكاشير</button>
+      <button class="tab" data-t="invoice">حسب الفاتورة</button>
+    </div>
+    <div class="tbl-scroll"><table id="detailTbl"></table></div>
+    <button class="more" id="moreBtn" style="display:none">عرض المزيد</button>
+  </div>
+
 </div>
-
-</div>
-
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import {
+  loadCenterData, computeProfit, itemsOf, IRAQ_MS, bDate, dayKey, clean, fmt
+} from "./center-data.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
-  authDomain: "almurad-system.firebaseapp.com",
-  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
-  projectId: "almurad-system",
+/* ════════ الحالة ════════ */
+let DATA = null;            // { invoices, warehouse, resolve, costOf }
+let period = "month";
+let cashier = "all";
+let tab = "product";
+let limit = 30;
+
+const $ = id => document.getElementById(id);
+const money = n => fmt(n) + " د.ع";
+const sign = n => (n > 0 ? "pos" : n < 0 ? "neg" : "");
+
+/* ════════ الفترات ════════ */
+const DAY = 86400000;
+function todayStart() {
+  const d = bDate(Date.now()); d.setUTCHours(0, 0, 0, 0);
+  return d.getTime() - IRAQ_MS;
+}
+function monthStart(back = 0) {
+  const d = bDate(Date.now());
+  d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0);
+  d.setUTCMonth(d.getUTCMonth() - back);
+  return d.getTime() - IRAQ_MS;
+}
+function periodRange(p) {
+  const now = Date.now(), t0 = todayStart();
+  switch (p) {
+    case "today": return [t0, now];
+    case "yday":  return [t0 - DAY, t0 - 1];
+    case "7":     return [t0 - 6 * DAY, now];
+    case "30":    return [t0 - 29 * DAY, now];
+    case "month": return [monthStart(0), now];
+    case "custom": {
+      const f = $("fromDate").value, t = $("toDate").value;
+      return [
+        f ? new Date(f + "T00:00:00Z").getTime() - IRAQ_MS : 0,
+        t ? new Date(t + "T23:59:59Z").getTime() - IRAQ_MS : now
+      ];
+    }
+    default: return [0, now];
+  }
+}
+const PERIOD_LABEL = {
+  today: "اليوم", yday: "أمس", "7": "آخر ٧ أيام", "30": "آخر ٣٠ يوم",
+  month: "هذا الشهر", all: "كل الفترة", custom: "الفترة المختارة"
 };
 
-
-
-
-const app = initializeApp(firebaseConfig);
-const rtdb = getDatabase(app);
-
-
-
-// ================= 💰 حساب الأرباح =================
-
-const table = document.getElementById("table");
-const netProfitEl = document.getElementById("netProfit");
-let invoices = [];
-let warehouse = {};
-let warehouseByName = {};
-const cashierFilter = document.getElementById("cashierFilter");
-loadData().then(() => calcProfit());
-
-async function loadData(){
-
-  // ✅ تحميل فواتير الكاشير من Realtime DB
-  const snap = await get(ref(rtdb, "posInvoices"));
-  invoices = [];
-
-  if (snap.exists()) {
-    Object.values(snap.val()).forEach(inv => {
-      invoices.push(inv);
-    });
-  }
-// تعبئة قائمة الكاشير
-cashierFilter.innerHTML = `<option value="all">كل الكاشيرات</option>`;
-
-[...new Set(invoices.map(i => i.cashierId || "غير معروف"))]
-.forEach(id=>{
-  cashierFilter.innerHTML += `<option value="${id}">${id}</option>`;
-});
-
-// ✅ تحميل المخزن (سعر الشراء) من Realtime DB
-const whSnap = await get(ref(rtdb, "warehouse"));
-warehouse = whSnap.exists() ? whSnap.val() : {};
-// ⚠️ إصلاح (2026-09-29): الفهرس كان بالاسم الخام بس. لكن المخزن يخزّن
-// بمفتاح منظّف (الفراغات صارت _)، فأي منتج اسمه فيه فراغ — وهذا أغلب
-// المنتجات العربية — ما يتطابق، فكلفته ترجع صفر والربح يطلع كامل
-// السعر. الفحص على البيانات الحية: بثلاث طرق مطابقة نغطّي ٩٩٪ من
-// البنود و٩٨٪ من الإيراد بدل جزء صغير.
-const _clean = x => String(x || "").trim().replace(/\s+/g, " ");
-const _norm  = x => _clean(x).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
-warehouseByName = {};
-let warehouseByKey = {}, warehouseByNorm = {};
-Object.entries(warehouse).forEach(([k, p]) => {
-  if (!p || typeof p !== "object") return;
-  warehouseByKey[k] = p;
-  if (p.name) warehouseByName[_clean(p.name)] = p;
-  warehouseByNorm[_norm(k)] = p;
-  if (p.name) warehouseByNorm[_norm(p.name)] = p;
-});
-window._whLookup = n => warehouseByKey[n] || warehouseByName[_clean(n)] || warehouseByNorm[_norm(n)] || null;
-}
-
-// الكلفة المثبّتة بالبند وقت البيع تفوز دائماً على الحالية —
-// الفواتير الجديدة تحفظها، والقديمة ترجع للمخزن
-function getBuyPrice(productName, item){
-  if (item && Number(item.buyPrice) > 0) return Number(item.buyPrice);
-  const p = window._whLookup ? window._whLookup(productName) : null;
-  return p && p.buyPrice ? Number(p.buyPrice) : 0;
-}
-
-
-
-async function calcProfit(){
-  
-
-
-  const from = document.getElementById("from").value;
-  const to   = document.getElementById("to").value;
-
-  table.innerHTML = `
-    <tr>
-      <th>التاريخ</th>
-      <th>المنتج</th>
-      <th>الكمية</th>
-      <th>إجمالي البيع</th>
-      <th>إجمالي الشراء</th>
-      <th>الربح</th>
-    </tr>
-  `;
-
-  let netProfit = 0;
-  let found = false;
-
-  invoices.forEach(inv=>{
-    // فلترة حسب الكاشير
-if(cashierFilter.value !== "all"){
-  if(inv.cashierId !== cashierFilter.value) return;
-}
-
-if (!inv.createdAt) return;
-
-let invDate;
-
-// 🟢 إذا createdAt رقم
-if (typeof inv.createdAt === "number") {
-  invDate = new Date(inv.createdAt).toLocaleDateString("en-CA");
-}
-
-// 🟢 إذا createdAt جاي من serverTimestamp
-else if (inv.createdAt.seconds) {
-  invDate = new Date(inv.createdAt.seconds * 1000)
-    .toLocaleDateString("en-CA");
-}
-
-// 🛑 إذا نوع غير معروف
-else {
-  return;
-}
-
-if (from && invDate < from) return;
-if (to && invDate > to) return;
-
-    if(!inv.items) return;
-
-    inv.items.forEach(it=>{
- const buyPrice = getBuyPrice(it.product, it);
-
-const sellTotal = Number(it.total) || 0;
-const qty = Number(it.qty) || 0;
-
-const absQty = Math.abs(qty);
-
-let profit;
-let buyTotal;
-
-if (qty > 0) {
-  buyTotal = buyPrice * absQty;
-  profit = sellTotal - buyTotal;
-} else {
-  buyTotal = buyPrice * absQty;
-  profit = -(sellTotal - buyTotal);
-}
-
-
-      netProfit += profit;
-      found = true;
-const r = table.insertRow();
-
-// 🔴 إذا الربح سالب خلي الصف أحمر
-if (profit < 0) {
-  r.style.color = "red";
-}
-
-r.innerHTML = `
-  <td>${invDate}</td>
-  <td>${it.product}</td>
-  <td>${it.qty}</td>
-  <td>${sellTotal.toLocaleString("en-US")} د.ع</td>
-  <td>${buyTotal.toLocaleString("en-US")} د.ع</td>
-  <td>${profit.toLocaleString("en-US")} د.ع</td>
-`;
-    });
+/* الفواتير ضمن مدى، مع فلتر الكاشير */
+function rowsIn(a, b) {
+  return DATA.invoices.filter(v => {
+    const t = Number(v.createdAt);
+    if (!(t >= a && t <= b)) return false;
+    if (cashier !== "all" && (clean(v.cashierId) || "غير معروف") !== cashier) return false;
+    return true;
   });
+}
+const profitOf = rows => computeProfit(rows, DATA.costOf);
 
-  if(!found){
-    const r = table.insertRow();
-    r.innerHTML = `<td colspan="6">لا توجد بيانات ضمن هذه الفترة</td>`;
-    netProfitEl.textContent = "صافي الربح: 0 د.ع";
+/* ════════ البطاقات الكبيرة ════════ */
+function renderHero() {
+  const now = Date.now(), t0 = todayStart();
+  const today = profitOf(rowsIn(t0, now));
+  const yday  = profitOf(rowsIn(t0 - DAY, t0 - 1));
+  const thisM = profitOf(rowsIn(monthStart(0), now));
+
+  /* الشهر الماضي لنفس عدد الأيام المنقضية — مقارنة عادلة */
+  const dayOfMonth = bDate(now).getUTCDate();
+  const lastMStart = monthStart(1);
+  const lastMSame = lastMStart + dayOfMonth * DAY - 1;
+  const lastM = profitOf(rowsIn(lastMStart, Math.min(lastMSame, monthStart(0) - 1)));
+
+  const deltaTag = (cur, prev, word) => {
+    if (!prev) return cur ? `<span class="delta up">جديد</span>` : "";
+    const pct = ((cur - prev) / Math.abs(prev)) * 100;
+    if (!isFinite(pct)) return "";
+    const cls = pct > 1 ? "up" : pct < -1 ? "down" : "flat";
+    const ar = pct > 1 ? "▲" : pct < -1 ? "▼" : "▬";
+    return `<span class="delta ${cls}">${ar} ${Math.abs(pct).toFixed(0)}٪ ${word}</span>`;
+  };
+
+  $("hero").innerHTML = `
+    <div class="hcard big">
+      <div class="h-lbl">💵 ربح اليوم</div>
+      <div class="h-val ${sign(today.profit)}">${money(today.profit)}</div>
+      <div class="h-sub">
+        <span>مبيعات <b>${money(today.netRevenue)}</b></span>
+        <span>فواتير <b>${fmt(today.sales)}</b></span>
+        <span>هامش <b>${today.margin.toFixed(1)}٪</b></span>
+      </div>
+      ${deltaTag(today.profit, yday.profit, "عن أمس")}
+    </div>
+
+    <div class="hcard">
+      <div class="h-lbl">🌙 ربح أمس</div>
+      <div class="h-val ${sign(yday.profit)}">${money(yday.profit)}</div>
+      <div class="h-sub"><span>مبيعات <b>${money(yday.netRevenue)}</b></span>
+        <span>فواتير <b>${fmt(yday.sales)}</b></span></div>
+    </div>
+
+    <div class="hcard">
+      <div class="h-lbl">📅 ربح هذا الشهر</div>
+      <div class="h-val ${sign(thisM.profit)}">${money(thisM.profit)}</div>
+      <div class="h-sub"><span>مبيعات <b>${money(thisM.netRevenue)}</b></span>
+        <span>فواتير <b>${fmt(thisM.sales)}</b></span></div>
+      ${deltaTag(thisM.profit, lastM.profit, "عن نفس أيام الشهر الماضي")}
+    </div>
+  `;
+}
+
+/* ════════ مؤشرات الفترة ════════ */
+function renderKpis(a) {
+  $("kpis").innerHTML = [
+    ["صافي الربح", money(a.profit), sign(a.profit)],
+    ["المبيعات (بعد الإرجاع)", money(a.netRevenue), ""],
+    ["كلفة البضاعة", money(a.netCost), ""],
+    ["هامش الربح", a.margin.toFixed(1) + "٪", sign(a.margin)],
+    ["عدد الفواتير", fmt(a.sales), ""],
+    ["الإرجاعات", fmt(a.returns) + " — " + money(a.retValue), a.returns ? "neg" : ""]
+  ].map(([l, v, c]) => `
+    <div class="kpi"><div class="kpi-lbl">${l}</div>
+    <div class="kpi-val ${c}">${v}</div></div>`).join("");
+}
+
+/* ════════ الجداول ════════ */
+function aggProducts(rows) {
+  const m = {};
+  for (const inv of rows) {
+    const isRet = inv.type === "return";
+    for (const it of itemsOf(inv)) {
+      const name = clean(it.product); if (!name) continue;
+      const q = Number(it.qty) || 0, aq = Math.abs(q);
+      const line = Math.abs(Number(it.total) || 0);
+      const bp = DATA.costOf(it);
+      m[name] = m[name] || { name, qty: 0, revenue: 0, cost: 0, returned: 0, unit: 0 };
+      if (isRet || q < 0) { m[name].returned += aq; m[name].revenue -= line; m[name].cost -= bp * aq; }
+      else { m[name].qty += q; m[name].revenue += line; m[name].cost += bp * q;
+             m[name].unit = q > 0 ? Math.round(line / q) : m[name].unit; }
+    }
+  }
+  return Object.values(m).map(p => ({
+    ...p, profit: p.revenue - p.cost,
+    margin: p.revenue > 0 ? ((p.revenue - p.cost) / p.revenue) * 100 : 0
+  })).sort((x, y) => y.profit - x.profit);
+}
+
+function aggDays(rows) {
+  const m = {};
+  for (const inv of rows) (m[dayKey(inv.createdAt)] ||= []).push(inv);
+  return Object.entries(m).map(([d, r]) => ({ day: d, ...profitOf(r) }))
+    .sort((x, y) => y.day.localeCompare(x.day));
+}
+
+function aggCashiers(rows) {
+  const m = {};
+  for (const inv of rows) (m[clean(inv.cashierId) || "غير معروف"] ||= []).push(inv);
+  return Object.entries(m).map(([c, r]) => ({ who: c, ...profitOf(r) }))
+    .sort((x, y) => y.profit - x.profit);
+}
+
+function aggInvoices(rows) {
+  return rows.map(inv => {
+    const a = profitOf([inv]);
+    const d = bDate(inv.createdAt);
+    return {
+      no: inv.invoiceNo || "—",
+      day: dayKey(inv.createdAt),
+      time: String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0"),
+      who: clean(inv.cashierId) || "غير معروف",
+      isRet: inv.type === "return",
+      items: itemsOf(inv).length,
+      revenue: a.netRevenue, cost: a.netCost, profit: a.profit
+    };
+  }).sort((x, y) => (y.day + y.time).localeCompare(x.day + x.time));
+}
+
+/* رؤوس الأعمدة — كل عمود له رأس واضح والأرقام تنزل تحته بالضبط */
+const VIEWS = {
+  product: {
+    hint: "كل منتج: كم انباع، بكم، كلفته، وشكد ربّح — مرتّب من الأكثر ربحاً",
+    head: ["#", "المنتج", "الكمية", "سعر البيع", "الإيراد", "التكلفة", "الربح", "الهامش", "مرتجع"],
+    align: ["rank", "t-name", "", "", "", "", "", "", ""],
+    rows: a => aggProducts(a).map((p, i) => [
+      i + 1, p.name, fmt(p.qty), money(p.unit), money(p.revenue),
+      money(p.cost), { v: money(p.profit), c: sign(p.profit) },
+      p.margin.toFixed(1) + "٪", p.returned ? fmt(p.returned) : "—"
+    ])
+  },
+  day: {
+    hint: "ربح كل يوم — الأحدث أولاً",
+    head: ["اليوم", "فواتير", "المبيعات", "التكلفة", "الربح", "الهامش", "إرجاعات"],
+    align: ["t-name", "", "", "", "", "", ""],
+    rows: a => aggDays(a).map(d => [
+      d.day, fmt(d.sales), money(d.netRevenue), money(d.netCost),
+      { v: money(d.profit), c: sign(d.profit) }, d.margin.toFixed(1) + "٪",
+      d.returns ? fmt(d.returns) : "—"
+    ])
+  },
+  cashier: {
+    hint: "أداء كل كاشير بالفترة المختارة",
+    head: ["الكاشير", "فواتير", "المبيعات", "التكلفة", "الربح", "الهامش", "معدل الفاتورة", "إرجاعات"],
+    align: ["t-name", "", "", "", "", "", "", ""],
+    rows: a => aggCashiers(a).map(c => [
+      c.who, fmt(c.sales), money(c.netRevenue), money(c.netCost),
+      { v: money(c.profit), c: sign(c.profit) }, c.margin.toFixed(1) + "٪",
+      money(c.avgTicket), c.returns ? fmt(c.returns) : "—"
+    ])
+  },
+  invoice: {
+    hint: "كل فاتورة على حدة — الأحدث أولاً",
+    head: ["الفاتورة", "التاريخ", "الوقت", "الكاشير", "بنود", "المبيعات", "التكلفة", "الربح"],
+    align: ["", "", "", "t-name", "", "", "", ""],
+    rows: a => aggInvoices(a).map(v => [
+      (v.isRet ? "↩ " : "") + v.no, v.day, v.time, v.who, fmt(v.items),
+      money(v.revenue), money(v.cost), { v: money(v.profit), c: sign(v.profit) }
+    ])
+  }
+};
+
+let lastRows = [];
+function renderTable(rows) {
+  const view = VIEWS[tab];
+  $("detailHint").textContent = view.hint;
+  const data = view.rows(rows);
+  lastRows = { head: view.head, data };
+
+  if (!data.length) {
+    $("detailTbl").innerHTML = `<tbody><tr><td class="empty">ماكو بيانات بهذه الفترة</td></tr></tbody>`;
+    $("moreBtn").style.display = "none";
     return;
   }
 
-  netProfitEl.textContent =
-    "صافي الربح: " + netProfit.toLocaleString("en-US") + " د.ع";
+  const head = "<thead><tr>" + view.head.map((h, i) =>
+    `<th class="${view.align[i] === "t-name" ? "t-name" : ""}">${h}</th>`).join("") + "</tr></thead>";
+
+  const body = "<tbody>" + data.slice(0, limit).map(r =>
+    "<tr>" + r.map((cell, i) => {
+      const cls = [view.align[i] === "t-name" ? "t-name" : view.align[i] || ""];
+      let val = cell;
+      if (cell && typeof cell === "object") { val = cell.v; cls.push(cell.c); }
+      return `<td class="${cls.filter(Boolean).join(" ")}">${val}</td>`;
+    }).join("") + "</tr>").join("") + "</tbody>";
+
+  $("detailTbl").innerHTML = head + body;
+
+  if (data.length > limit) {
+    $("moreBtn").style.display = "block";
+    $("moreBtn").textContent = `عرض المزيد (${fmt(data.length - limit)} باقي)`;
+  } else {
+    $("moreBtn").style.display = "none";
+  }
 }
-function quickFilter(type){
 
-  const fromInput = document.getElementById("from");
-  const toInput   = document.getElementById("to");
-fromInput.addEventListener("change", calcProfit);
-toInput.addEventListener("change", calcProfit);
+/* ════════ التشغيل ════════ */
+function refresh() {
+  const [a, b] = periodRange(period);
+  const rows = rowsIn(a, b);
+  renderHero();
+  renderKpis(profitOf(rows));
+  renderTable(rows);
+}
 
-  const todayDate = new Date();
-  let start, end;
+function fillCashiers() {
+  const set = [...new Set(DATA.invoices.map(i => clean(i.cashierId) || "غير معروف"))].sort();
+  $("cashierSel").innerHTML = `<option value="all">الكل</option>` +
+    set.map(c => `<option value="${c}">${c}</option>`).join("");
+}
 
-  if(type === "today"){
-    start = end = todayDate;
-  }
+/* ════════ CSV ════════ */
+function exportCsv() {
+  if (!lastRows.data || !lastRows.data.length) return;
+  const strip = v => String(v && typeof v === "object" ? v.v : v)
+    .replace(/ /g, " ").replace(/"/g, '""');
+  const lines = [lastRows.head, ...lastRows.data]
+    .map(r => r.map(c => `"${strip(c)}"`).join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + lines], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `أرباح-${tab}-${PERIOD_LABEL[period]}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 
-  if(type === "yesterday"){
-    const y = new Date();
-    y.setDate(y.getDate() - 1);
-    start = end = y;
-  }
+/* ════════ الأحداث ════════ */
+document.querySelectorAll(".chip[data-p]").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip[data-p]").forEach(x => x.classList.remove("on"));
+  c.classList.add("on");
+  period = c.dataset.p; limit = 30; refresh();
+}));
+document.querySelectorAll(".tab[data-t]").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab[data-t]").forEach(x => x.classList.remove("on"));
+  t.classList.add("on");
+  tab = t.dataset.t; limit = 30; refresh();
+}));
+$("cashierSel").addEventListener("change", e => { cashier = e.target.value; limit = 30; refresh(); });
+$("moreBtn").addEventListener("click", () => { limit += 50; refresh(); });
+$("csvBtn").addEventListener("click", exportCsv);
+$("reloadBtn").addEventListener("click", async () => {
+  $("loading").style.display = "flex";
+  DATA = await loadCenterData(true);
+  refresh();
+  $("loading").style.display = "none";
+});
 
-  if(type === "week"){
-    const d = new Date();
-    d.setDate(d.getDate() - d.getDay());
-    start = d;
-    end   = todayDate;
-  }
-
-  if(type === "month"){
-    start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-    end   = todayDate;
-  }
-
-  if(type === "year"){
-    start = new Date(todayDate.getFullYear(), 0, 1);
-    end   = todayDate;
-  }
-
-  if(type === "all"){
-    fromInput.value = "";
-    toInput.value   = "";
-    calcProfit();
+/* ════════ البداية ════════ بعد ما يفتح القفل ════════ */
+async function start() {
+  const who = window.__centerAuth?.user;
+  if (who) $("whoPill").textContent = "👤 " + who.name;
+  try {
+    DATA = await loadCenterData();
+    fillCashiers();
+    refresh();
+  } catch (e) {
+    $("loading").innerHTML =
+      `<div style="font-size:40px">⚠️</div><div>ما وصلنا للبيانات — تأكد من الإنترنت</div>`;
     return;
   }
-
-  const fmt = d => d.toLocaleDateString("en-CA");
-
-  fromInput.value = fmt(start);
-  toInput.value   = fmt(end);
-
-  calcProfit();
+  $("loading").style.display = "none";
 }
 
-window.quickFilter = quickFilter;
-
-window.calcProfit = calcProfit;
-
+if (window.__centerAuth?.user) start();
+else document.addEventListener("center-auth-ready", start, { once: true });
 </script>
 
 <!-- 🧭 شريط تنقّل السنتر المشترك -->

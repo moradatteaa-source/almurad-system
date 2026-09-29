@@ -6,6 +6,9 @@
 <title>📊 تحليلات سنتر المراد</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+
+<!-- 🔒 قفل الصفحة — تعرض أرباح وتكاليف، فلازم رمز -->
+<script src="center-auth.js" data-page="analytics"></script>
 <style>
 /* ════════════════════════════════════════════════════════
    📊 تحليلات سنتر المراد
@@ -110,14 +113,21 @@ body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text
 /* ── الجداول ── */
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
-th{
-  background:#f8fafc;color:var(--text2);font-size:12px;font-weight:800;
+thead th{
+  position:sticky;top:0;z-index:2;
+  background:#f1f5f9;color:var(--text2);font-size:12px;font-weight:800;
   padding:9px 10px;text-align:start;border-bottom:2px solid var(--border);white-space:nowrap
 }
 td{padding:9px 10px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:#fafbfc}
-.num{direction:ltr;text-align:start;font-weight:700;font-variant-numeric:tabular-nums}
+/* ⚠️ إصلاح المحاذاة: الرأس كان يمين والرقم يسار بنفس العمود.
+   السبب أن .num فيها direction:ltr فصار معنى start = يسار، بينما
+   رأس العمود بقى rtl يعني start = يمين. هسه الاثنين يمين فيزيائي
+   فالرقم ينزل تحت رأسه بالضبط. */
+.num,thead th.num{direction:ltr;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+thead th.num{font-weight:800}
+thead th.mid,td.mid{text-align:center}
 .rank{width:26px;height:26px;border-radius:7px;background:#f1f5f9;color:var(--text2);
   display:grid;place-items:center;font-size:12px;font-weight:800;direction:ltr}
 .rank.r1{background:var(--c1);color:#fff} .rank.r2{background:var(--c2);color:#fff}
@@ -288,6 +298,44 @@ svg{display:block;width:100%;height:auto;overflow:visible}
     </div>
   </div>
 
+  <!-- ══ الأهداف ══ -->
+  <div class="card" id="goalCard">
+    <div class="card-head">
+      <div class="card-title">🎯 هدف الشهر</div>
+      <div class="card-note" id="goalNote"></div>
+    </div>
+    <div id="goalBody"></div>
+  </div>
+
+  <!-- ══ مقارنة الأشهر ══ -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">📆 مقارنة الأشهر — النمو</div>
+      <div class="card-note">كل شهر مقارنة بالشهر اللي قبله</div>
+    </div>
+    <div class="chart-box" id="monthChart"></div>
+    <div class="tbl-wrap"><table id="monthTable"></table></div>
+  </div>
+
+  <div class="grid2">
+    <!-- ══ تنباع ونفدت ══ -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🔥 تنباع بس نفدت من المخزن</div>
+        <div class="card-note">بضاعة مطلوبة وما موجودة — بيع ضايع</div>
+      </div>
+      <div class="tbl-wrap"><table id="outStockTable"></table></div>
+    </div>
+    <!-- ══ توقفت عن البيع ══ -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">💤 كانت تنباع وتوقفت</div>
+        <div class="card-note">موجودة بالمخزن وماكو عليها حركة من فترة</div>
+      </div>
+      <div class="tbl-wrap"><table id="stalledTable"></table></div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-head">
       <div class="card-title">🧊 بضاعة راكدة — فلوس واقفة بالمخزن</div>
@@ -316,7 +364,7 @@ svg{display:block;width:100%;height:auto;overflow:visible}
 <div id="tip"></div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -341,6 +389,24 @@ const toKey = s => clean(s).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
 // تاريخ بغداد من طابع زمني
 const bDate = ts => new Date(Number(ts) + IRAQ_MS);
 const dayKey = ts => bDate(ts).toISOString().slice(0, 10);
+
+/* بنود الفاتورة — فايربيس أحياناً يرجّع المصفوفة على شكل كائن،
+   والاعتماد على Array.isArray لحاله يخلّينا نتجاهل الفاتورة بصمت */
+function itemsOfInv(inv) {
+  const it = inv && inv.items;
+  if (Array.isArray(it)) return it.filter(Boolean);
+  if (it && typeof it === "object") return Object.values(it).filter(Boolean);
+  return [];
+}
+
+/* قراءة وحفظ هدف الشهر */
+async function getTarget() {
+  const snap = await get(ref(rtdb, "centerTargets"));
+  return snap.exists() ? snap.val() : {};
+}
+async function setTarget(key, value) {
+  await set(ref(rtdb, "centerTargets/" + key), Number(value) || 0);
+}
 
 /* ════════ حالة ════════ */
 let ALL = [];          // كل الفواتير
@@ -445,7 +511,7 @@ function analyse(rows) {
     const isRet = inv.type === "return";
     const t = Number(inv.createdAt);
     const d = dayKey(t), bd = bDate(t);
-    const items = Array.isArray(inv.items) ? inv.items : [];
+    const items = itemsOfInv(inv);
 
     if (!isRet) {
       const tot = Number(inv.total) || 0;
@@ -672,17 +738,20 @@ function renderProducts(a) {
   const max = Math.max(...list.map(p => Math.abs(p[maxOf])), 1);
 
   el.innerHTML = `<thead><tr>
-      <th>#</th><th>المنتج</th><th>الكمية</th><th>الإيراد</th>
-      <th>الكلفة</th><th>الربح</th><th>الهامش</th><th style="width:110px"></th>
+      <th class="mid">#</th><th>المنتج</th><th class="num">الكمية</th>
+      <th class="num">سعر البيع</th><th class="num">الإيراد</th>
+      <th class="num">التكلفة</th><th class="num">الربح</th>
+      <th class="mid">الهامش</th><th style="width:110px"></th>
     </tr></thead><tbody>` +
     list.map((p, i) => `<tr>
-      <td><div class="rank ${i < 3 ? "r" + (i + 1) : ""}">${i + 1}</div></td>
+      <td class="mid"><div class="rank ${i < 3 ? "r" + (i + 1) : ""}">${i + 1}</div></td>
       <td class="pname" title="${esc(p.name)}">${esc(p.name)}</td>
       <td class="num">${fmt(p.qty)}</td>
+      <td class="num" style="color:var(--text2)">${p.unit ? fmt(p.unit) : "—"}</td>
       <td class="num">${fmt(p.revenue)}</td>
       <td class="num" style="color:var(--text2)">${p.bp ? fmt(p.cost) : "—"}</td>
       <td class="num" style="color:${p.profit < 0 ? "var(--red)" : "var(--c3)"}">${p.bp ? fmt(p.profit) : "—"}</td>
-      <td><span class="tag ${!p.bp ? "mute" : p.margin < 0 ? "bad" : p.margin < 10 ? "warn" : "good"}">${p.bp ? p.margin.toFixed(0) + "%" : "؟"}</span></td>
+      <td class="mid"><span class="tag ${!p.bp ? "mute" : p.margin < 0 ? "bad" : p.margin < 10 ? "warn" : "good"}">${p.bp ? p.margin.toFixed(0) + "%" : "؟"}</span></td>
       <td class="bar-cell"><div class="mini-bar" style="width:${Math.max(3, Math.abs(p[maxOf]) / max * 100)}%;background:${p.profit < 0 && prodTab === "profit" ? "var(--red)" : "var(--c1)"}"></div></td>
     </tr>`).join("") + "</tbody>";
 }
@@ -691,7 +760,7 @@ function renderLoss(a) {
   const el = document.getElementById("lossTable");
   const list = a.products.filter(p => p.bp > 0 && p.profit < 0).sort((x, y) => x.profit - y.profit).slice(0, 12);
   if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو ولا منتج ينباع بخسارة</td></tr></tbody>'; return; }
-  el.innerHTML = `<thead><tr><th>المنتج</th><th>سعر البيع</th><th>الشراء</th><th>الخسارة</th></tr></thead><tbody>` +
+  el.innerHTML = `<thead><tr><th>المنتج</th><th class="num">سعر البيع</th><th class="num">سعر الشراء</th><th class="num">الخسارة للقطعة</th></tr></thead><tbody>` +
     list.map(p => `<tr>
       <td class="pname" title="${esc(p.name)}">${esc(p.name)}</td>
       <td class="num">${fmt(p.unit)}</td>
@@ -705,7 +774,7 @@ function renderReturns(a) {
   const list = Object.entries(a.retProd).sort((x, y) => y[1] - x[1]).slice(0, 12);
   if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو إرجاعات بهذي الفترة</td></tr></tbody>'; return; }
   const max = Math.max(...list.map(l => l[1]), 1);
-  el.innerHTML = `<thead><tr><th>المنتج</th><th>القطع المرجّعة</th><th style="width:90px"></th></tr></thead><tbody>` +
+  el.innerHTML = `<thead><tr><th>المنتج</th><th class="num">القطع المرجّعة</th><th style="width:90px"></th></tr></thead><tbody>` +
     list.map(([n, q]) => `<tr>
       <td class="pname" title="${esc(n)}">${esc(n)}</td>
       <td class="num">${fmt(q)}</td>
@@ -729,7 +798,7 @@ function renderDead(a) {
   const total = rows.reduce((s, r) => s + r.value, 0);
   const top = rows.slice(0, 15);
   if (!top.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ كل منتجات المخزن تحركت بهذي الفترة</td></tr></tbody>'; return; }
-  el.innerHTML = `<thead><tr><th>المنتج</th><th>الكمية بالمخزن</th><th>سعر الشراء</th><th>الفلوس الواقفة</th></tr></thead><tbody>` +
+  el.innerHTML = `<thead><tr><th>المنتج</th><th class="num">الكمية بالمخزن</th><th class="num">سعر الشراء</th><th class="num">الفلوس الواقفة</th></tr></thead><tbody>` +
     top.map(r => `<tr>
       <td class="pname" title="${esc(r.name)}">${esc(r.name)}</td>
       <td class="num">${fmt(r.qty)}</td>
@@ -746,7 +815,7 @@ function renderCashiers(a) {
     .filter(c => c.invoices > 0 || c.returns > 0)
     .sort((x, y) => y.revenue - x.revenue);
   if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">ماكو بيانات</td></tr></tbody>'; return; }
-  el.innerHTML = `<thead><tr><th>الكاشير</th><th>الفواتير</th><th>المبيعات</th><th>متوسط الفاتورة</th><th>الربح</th><th>إرجاعات</th></tr></thead><tbody>` +
+  el.innerHTML = `<thead><tr><th>الكاشير</th><th class="num">الفواتير</th><th class="num">المبيعات</th><th class="num">متوسط الفاتورة</th><th class="num">الربح</th><th class="num">إرجاعات</th></tr></thead><tbody>` +
     list.map(c => `<tr>
       <td style="font-weight:700">${esc(c.name)}</td>
       <td class="num">${fmt(c.invoices)}</td>
@@ -761,7 +830,7 @@ function renderPairs(a) {
   const el = document.getElementById("pairTable");
   const list = Object.entries(a.pairs).filter(p => p[1] >= 3).sort((x, y) => y[1] - x[1]).slice(0, 12);
   if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">ماكو تكرار كافي بهذي الفترة</td></tr></tbody>'; return; }
-  el.innerHTML = `<thead><tr><th>المنتجان</th><th>انباعوا سوية</th></tr></thead><tbody>` +
+  el.innerHTML = `<thead><tr><th>المنتجان</th><th class="num">انباعوا سوية</th></tr></thead><tbody>` +
     list.map(([k, c]) => {
       const [x, y] = k.split(" ⟷ ");
       return `<tr><td><span style="font-weight:700">${esc(x)}</span>
@@ -805,6 +874,266 @@ function renderCharts(a) {
     { color: "var(--c4)", tipLabel: d => `${d.l}\n${fmt(d.v)} د.ع` });
 }
 
+/* ════════════════════════════════════════════════════════════
+   الأقسام الجديدة
+   ════════════════════════════════════════════════════════════ */
+
+const monthKey = ts => bDate(ts).toISOString().slice(0, 7);
+const MONTH_AR = ["كانون٢","شباط","آذار","نيسان","أيار","حزيران",
+                  "تموز","آب","أيلول","تشرين١","تشرين٢","كانون١"];
+const monthLabel = k => {
+  const [y, m] = k.split("-");
+  return MONTH_AR[Number(m) - 1] + " " + y.slice(2);
+};
+
+/* ── 📆 مقارنة الأشهر ومعدل النمو ──
+   تنحسب على كل الفواتير مو على الفترة المختارة — المقارنة
+   الشهرية ما لها معنى إذا تتقيّد بفلتر ٧ أيام. */
+function monthlySeries() {
+  const m = {};
+  for (const inv of ALL) (m[monthKey(inv.createdAt)] ||= []).push(inv);
+  return Object.keys(m).sort().map(k => {
+    const A = analyse(m[k]);
+    return {
+      key: k, label: monthLabel(k),
+      revenue: A.revenue, profit: A.profit, margin: A.margin,
+      invoices: A.invoiceCount, avg: A.avgInvoice, ret: A.retValue
+    };
+  });
+}
+
+function renderMonths() {
+  const series = monthlySeries();
+  const el = document.getElementById("monthTable");
+  const chart = document.getElementById("monthChart");
+
+  if (series.length < 2) {
+    chart.innerHTML = '<div class="empty">نحتاج شهرين على الأقل للمقارنة</div>';
+    el.innerHTML = "";
+    return;
+  }
+
+  /* الشهر الحالي ناقص — نأشّره حتى ما ينقرأ كأنه هبوط */
+  const curKey = monthKey(Date.now());
+
+  barChart(chart, series.map(x => ({
+    l: x.label, v: x.profit,
+    color: x.key === curKey ? "var(--c2)" : "var(--c1)"
+  })), { tipLabel: d => `${d.l}\n${fmt(d.v)} د.ع` });
+
+  const rows = series.slice().reverse().map((x, i, arr) => {
+    const prev = arr[i + 1];
+    const g = prev && prev.profit !== 0
+      ? ((x.profit - prev.profit) / Math.abs(prev.profit)) * 100 : null;
+    const gr = prev && prev.revenue > 0
+      ? ((x.revenue - prev.revenue) / prev.revenue) * 100 : null;
+    const tag = v => v === null ? '<span class="tag mute">—</span>'
+      : `<span class="tag ${v > 1 ? "good" : v < -1 ? "bad" : "mute"}">${v > 1 ? "▲" : v < -1 ? "▼" : "▬"} ${Math.abs(v).toFixed(0)}%</span>`;
+    return `<tr>
+      <td style="font-weight:800">${esc(x.label)}${x.key === curKey ? ' <span class="tag mute">لسه ماخلص</span>' : ""}</td>
+      <td class="num">${fmt(x.invoices)}</td>
+      <td class="num">${fmt(x.revenue)}</td>
+      <td class="num" style="color:var(--c3)">${fmt(x.profit)}</td>
+      <td class="mid"><span class="tag ${x.margin < 10 ? "warn" : "good"}">${x.margin.toFixed(0)}%</span></td>
+      <td class="num">${fmt(x.avg)}</td>
+      <td class="mid">${tag(gr)}</td>
+      <td class="mid">${tag(g)}</td>
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `<thead><tr>
+      <th>الشهر</th><th class="num">الفواتير</th><th class="num">المبيعات</th>
+      <th class="num">الربح</th><th class="mid">الهامش</th><th class="num">متوسط الفاتورة</th>
+      <th class="mid">نمو المبيعات</th><th class="mid">نمو الربح</th>
+    </tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ── 🎯 هدف الشهر ──
+   الهدف محفوظ بقاعدة البيانات تحت centerTargets/<YYYY-MM>
+   حتى يظهر نفسه على كل الأجهزة. */
+let TARGETS = {};
+
+async function loadTargets() {
+  try {
+    const snap = await getTarget();
+    TARGETS = snap || {};
+  } catch (e) { TARGETS = {}; }
+}
+
+function renderGoal() {
+  const k = monthKey(Date.now());
+  const now = Date.now();
+  const d = bDate(now);
+  const daysIn = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  const dayNow = d.getUTCDate();
+
+  const mStart = (() => { const x = bDate(now); x.setUTCDate(1); x.setUTCHours(0,0,0,0);
+                          return x.getTime() - IRAQ_MS; })();
+  const A = analyse(inRange(ALL, mStart, now));
+
+  const target = Number(TARGETS[k]) || 0;
+  const note = document.getElementById("goalNote");
+  const body = document.getElementById("goalBody");
+
+  /* اقتراح هدف = ربح الشهر الماضي + ١٠٪ */
+  const series = monthlySeries();
+  const lastFull = series.filter(x => x.key !== k).slice(-1)[0];
+  const suggest = lastFull ? Math.round(lastFull.profit * 1.1 / 1000) * 1000 : 0;
+
+  note.textContent = `يوم ${dayNow} من ${daysIn}`;
+
+  if (!target) {
+    body.innerHTML = `
+      <div class="empty" style="padding:16px 8px">
+        ما محدّد هدف لهذا الشهر.
+        ${suggest > 0 ? `<br>اقتراح حسب الشهر الماضي +١٠٪: <b>${fmt(suggest)} د.ع</b>` : ""}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+        <input id="goalInput" type="number" inputmode="numeric" placeholder="هدف الربح بالدينار"
+          value="${suggest || ""}"
+          style="padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;
+                 font-family:inherit;font-size:14px;width:190px;text-align:center">
+        <button class="refresh-btn" id="goalSave">💾 حفظ الهدف</button>
+      </div>`;
+  } else {
+    const pct = (A.profit / target) * 100;
+    const pace = dayNow > 0 ? (A.profit / dayNow) * daysIn : 0;
+    const need = Math.max(0, target - A.profit);
+    const perDay = dayNow < daysIn ? need / (daysIn - dayNow) : 0;
+    const onTrack = pace >= target;
+
+    body.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;
+                  flex-wrap:wrap;gap:8px;margin-bottom:9px">
+        <div style="font-size:26px;font-weight:900;color:${onTrack ? "var(--c3)" : "var(--yellow)"}">
+          ${fmt(A.profit)} <span style="font-size:14px;color:var(--text2);font-weight:700">
+          من ${fmt(target)} د.ع</span></div>
+        <div style="font-size:20px;font-weight:900;color:var(--text2)">${pct.toFixed(0)}%</div>
+      </div>
+      <div style="height:13px;background:#f1f5f9;border-radius:999px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100, Math.max(0, pct))}%;border-radius:999px;
+             background:${onTrack ? "var(--c3)" : "var(--c1)"}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:14px">
+        <div><div class="kpi-label">متوقع نهاية الشهر</div>
+          <div style="font-size:17px;font-weight:900;color:${onTrack ? "var(--c3)" : "var(--yellow)"}">
+            ${fmt(pace)} د.ع</div></div>
+        <div><div class="kpi-label">باقي للهدف</div>
+          <div style="font-size:17px;font-weight:900">${fmt(need)} د.ع</div></div>
+        <div><div class="kpi-label">لازم باليوم</div>
+          <div style="font-size:17px;font-weight:900">${fmt(perDay)} د.ع</div></div>
+      </div>
+      <div style="margin-top:13px;font-size:12.5px;color:var(--text2)">
+        ${onTrack ? "✅ ماشي على الهدف بهذا المعدل" : "⚠️ بهذا المعدل راح تقصّر عن الهدف"}
+        &nbsp;·&nbsp;
+        <a href="#" id="goalEdit" style="color:var(--accent);font-weight:700">تغيير الهدف</a>
+      </div>`;
+  }
+
+  const saveBtn = document.getElementById("goalSave");
+  if (saveBtn) saveBtn.addEventListener("click", async () => {
+    const v = Number(document.getElementById("goalInput").value) || 0;
+    if (v <= 0) return;
+    saveBtn.disabled = true;
+    try { await setTarget(k, v); TARGETS[k] = v; renderGoal(); }
+    catch (e) { saveBtn.textContent = "❌ ما انحفظ"; saveBtn.disabled = false; }
+  });
+  const editLink = document.getElementById("goalEdit");
+  if (editLink) editLink.addEventListener("click", e => {
+    e.preventDefault(); delete TARGETS[k]; renderGoal();
+  });
+}
+
+/* ── 🔥 تنباع بس نفدت من المخزن ──
+   بضاعة عليها طلب فعلي والرف فاضي = بيع ضايع كل يوم. */
+function renderOutStock(a) {
+  const el = document.getElementById("outStockTable");
+  const days = Math.max(1, Object.keys(a.byDay).length);
+
+  const rows = a.products
+    .filter(p => p.qty > 0)
+    .map(p => {
+      const w = RESOLVE(p.name);
+      if (!w) return null;
+      const stock = Number(w.totalQty) || 0;
+      if (stock > 0) return null;
+      const perDay = p.qty / days;
+      return { name: p.name, qty: p.qty, perDay,
+               lostPerWeek: perDay * 7 * (p.qty > 0 ? (p.profit / p.qty) : 0) };
+    })
+    .filter(Boolean)
+    .sort((x, y) => y.qty - x.qty)
+    .slice(0, 12);
+
+  if (!rows.length) {
+    el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو منتج مطلوب ونافد من المخزن</td></tr></tbody>';
+    return;
+  }
+  el.innerHTML = `<thead><tr>
+      <th>المنتج</th><th class="num">انباع بالفترة</th>
+      <th class="num">باليوم</th><th class="num">ربح ضايع/أسبوع</th>
+    </tr></thead><tbody>` +
+    rows.map(r => `<tr>
+      <td class="pname" title="${esc(r.name)}">${esc(r.name)}</td>
+      <td class="num">${fmt(r.qty)}</td>
+      <td class="num">${r.perDay.toFixed(1)}</td>
+      <td class="num" style="color:var(--red)">${r.lostPerWeek > 0 ? fmt(r.lostPerWeek) : "—"}</td>
+    </tr>`).join("") + "</tbody>";
+}
+
+/* ── 💤 كانت تنباع وتوقفت ──
+   تنحسب على كل التاريخ مو على الفترة المختارة: منتج انباع
+   بالماضي، وما انباع ولا قطعة من ٣٠ يوم، ولساته بالمخزن. */
+function renderStalled() {
+  const el = document.getElementById("stalledTable");
+  const now = Date.now();
+  const CUT = now - 30 * 86400000;
+
+  const last = {}, sold = {};
+  for (const inv of ALL) {
+    const t = Number(inv.createdAt);
+    for (const it of itemsOfInv(inv)) {
+      const n = clean(it.product); if (!n) continue;
+      const q = Number(it.qty) || 0;
+      if (q <= 0 || inv.type === "return") continue;
+      sold[n] = (sold[n] || 0) + q;
+      if (!last[n] || t > last[n]) last[n] = t;
+    }
+  }
+
+  const rows = Object.keys(sold)
+    .filter(n => last[n] < CUT && sold[n] >= 3)
+    .map(n => {
+      const w = RESOLVE(n);
+      const stock = w ? Number(w.totalQty) || 0 : 0;
+      if (stock <= 0) return null;               // خلصت — مو راكدة
+      const bp = w ? Number(w.buyPrice) || 0 : 0;
+      return { name: n, stock, bp, value: stock * bp,
+               days: Math.floor((now - last[n]) / 86400000),
+               lastDay: dayKey(last[n]), sold: sold[n] };
+    })
+    .filter(Boolean)
+    .sort((x, y) => y.value - x.value)
+    .slice(0, 12);
+
+  if (!rows.length) {
+    el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو منتج توقف عن البيع</td></tr></tbody>';
+    return;
+  }
+  el.innerHTML = `<thead><tr>
+      <th>المنتج</th><th class="num">آخر بيعة</th>
+      <th class="num">بالمخزن</th><th class="num">فلوس واقفة</th>
+    </tr></thead><tbody>` +
+    rows.map(r => `<tr>
+      <td class="pname" title="${esc(r.name)}">${esc(r.name)}<br>
+        <span style="font-size:11px;color:var(--text3);font-weight:500">انباع منه ${fmt(r.sold)} قطعة قبل</span></td>
+      <td class="num" style="color:var(--red)">${fmt(r.days)} يوم<br>
+        <span style="font-size:11px;color:var(--text3);font-weight:500">${r.lastDay}</span></td>
+      <td class="num">${fmt(r.stock)}</td>
+      <td class="num" style="color:var(--yellow)">${r.bp ? fmt(r.value) : "—"}</td>
+    </tr>`).join("") + "</tbody>";
+}
+
 /* ════════ التشغيل ════════ */
 function render() {
   const [a, b] = periodRange(period);
@@ -825,6 +1154,10 @@ function render() {
   renderDead(A);
   renderCashiers(A);
   renderPairs(A);
+  renderOutStock(A);
+  renderStalled();
+  renderMonths();
+  renderGoal();
 }
 
 document.querySelectorAll(".pchip").forEach(c => c.addEventListener("click", () => {
@@ -852,10 +1185,11 @@ setInterval(() => {
     new Date().toLocaleTimeString("ar-IQ", { hour: "2-digit", minute: "2-digit" });
 }, 1000);
 
-(async () => {
+async function boot() {
   try {
     await loadData();
     RESOLVE = buildResolver(WH);
+    await loadTargets();
     render();
   } catch (e) {
     console.error(e);
@@ -864,7 +1198,12 @@ setInterval(() => {
   } finally {
     document.getElementById("loadingOverlay").style.display = "none";
   }
-})();
+}
+
+/* ما نبدأ التحميل قبل ما ينفتح القفل — حتى ما ننزّل بيانات
+   الأرباح لواحد ما عنده صلاحية */
+if (window.__centerAuth && window.__centerAuth.user) boot();
+else document.addEventListener("center-auth-ready", boot, { once: true });
 </script>
 <!-- 🧭 شريط تنقّل السنتر المشترك -->
 <script src="center-nav.js"></script>

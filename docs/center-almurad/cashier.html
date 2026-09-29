@@ -880,19 +880,7 @@ body {
 /* ══════════════════════════════
    PRINT AREA
 ══════════════════════════════ */
-#printArea { display: none; }
-@media print {
-  body * { visibility: hidden; }
-  #printArea, #printArea * { visibility: visible; }
-  #printArea {
-    display: block !important;
-    position: fixed;
-    top: 0; right: 0;
-    width: 72mm;
-    font-family: Tajawal, Tahoma, sans-serif;
-  }
-}
-@page { size: 72mm auto; margin: 0; }
+/* الطباعة صارت بملف center-receipt.js — مشتركة مع صفحة الحسابات */
 
 /* ══════════════════════════════
    RETURN MODE
@@ -1111,26 +1099,7 @@ html, body { touch-action: manipulation; }
   </div>
 </div>
 <!-- PRINT AREA -->
-<div id="printArea">
-  <div style="padding:6px 10px; direction:rtl; font-family:Tajawal,Tahoma,sans-serif;">
-    <div style="text-align:center;font-size:16px;font-weight:bold;margin-bottom:4px">سنتر المراد</div>
-    <div style="text-align:center;font-size:12px;color:#555;margin-bottom:6px">📞 07865393559</div>
-    <hr style="border-color:#ddd;margin:6px 0">
-    <div style="font-size:11px; line-height:1.7">
-      <div>👤 الكاشير: <span id="pCashier"></span></div>
-      <div>📅 التاريخ: <span id="pDate"></span></div>
-      <div>🧾 رقم الفاتورة: <span id="pInvoice"></span></div>
-    </div>
-    <hr style="border-color:#ddd;margin:6px 0">
-    <div id="pItems"></div>
-    <hr style="border-color:#ddd;margin:6px 0">
-    <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px">
-      <span>المجموع</span>
-      <span id="pTotal"></span>
-    </div>
-    <div style="text-align:center;margin-top:10px;font-size:12px;color:#777">شكراً لتسوقكم 🌸</div>
-  </div>
-</div>
+<!-- قالب الفاتورة انتقل لـ center-receipt.js -->
 
 <!-- ZXing -->
 <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
@@ -2224,8 +2193,13 @@ localTime: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-
     items: rowsData.map(item => ({
       name: item.row.querySelector(".row-name-input").value,
       qty: item.qty,
-      total: item.rowTotal
+      price: Number(item.row.dataset.unitPrice || 0),
+      total: Number(item.row.cells[4].textContent.replace(/[^\d\-]/g, "")) || item.rowTotal
     })),
+    paid: Number(document.getElementById("paid").value || 0),
+    rest: isCredit ? (grandVal - Number(document.getElementById("paid").value || 0)) : 0,
+    isReturn: isReturnMode,
+    debtorName: isCredit ? document.getElementById("debtorName").value : "",
     total: grandVal,
     discount: Number(document.getElementById("discount").value || 0)
   };
@@ -2366,31 +2340,24 @@ window.closeParkedModal = function() {
 // PRINT
 // ═══════════════════════════════
 function buildAndPrint() {
-  if (!window._printData?.items?.length) return;
+  const d = window._printData;
+  if (!d?.items?.length) return;
+  if (!window.CenterReceipt) { showToast("تعذّر تحميل قالب الفاتورة", "error"); return; }
 
-  const itemsBox = document.getElementById("pItems");
-  itemsBox.innerHTML = "";
-
-  window._printData.items.forEach(item => {
-    const d = document.createElement("div");
-    d.style.cssText = "display:flex;justify-content:space-between;font-size:12px;margin:3px 0;";
-    d.innerHTML = `<span>${item.name}</span><span>×${item.qty}</span><span>${f(item.total)}</span>`;
-    itemsBox.appendChild(d);
+  const now = new Date();
+  window.CenterReceipt.print({
+    invoiceNo: document.getElementById("invoiceNo").textContent,
+    cashier:   localStorage.getItem("cashierUsername") || "—",
+    date:      now.toLocaleDateString("en-CA"),
+    time:      now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
+    items:     d.items.map(it => ({ name: it.name, qty: it.qty, price: it.price, total: it.total })),
+    discount:  d.discount,
+    total:     d.total,
+    paid:      d.paid,
+    rest:      d.rest,
+    isReturn:  !!d.isReturn,
+    debtorName: d.debtorName || ""
   });
-
-  if (window._printData.discount > 0) {
-    const d = document.createElement("div");
-    d.style.cssText = "display:flex;justify-content:space-between;font-size:12px;margin:3px 0;color:#888;";
-    d.innerHTML = `<span>الخصم</span><span>- ${f(window._printData.discount)}</span>`;
-    itemsBox.appendChild(d);
-  }
-
-  document.getElementById("pTotal").textContent = f(window._printData.total);
-  document.getElementById("pCashier").textContent = localStorage.getItem("cashierUsername") || "—";
-  document.getElementById("pDate").textContent = new Date().toLocaleDateString("ar-EG");
-  document.getElementById("pInvoice").textContent = document.getElementById("invoiceNo").textContent;
-
-  window.print();
 }
 
 window.saveAndPrint = async function() {
@@ -2443,6 +2410,7 @@ window.handleBarcode = handleBarcode;
 
 </script>
 <!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-receipt.js"></script>
 <script src="center-nav.js"></script>
 </body>
 </html>

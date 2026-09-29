@@ -369,23 +369,7 @@ tr.totals-row td.t-val { color: var(--accent2); }
 }
 .empty-icon { font-size: 40px; margin-bottom: 8px; }
 
-/* PRINT STYLES for single invoice */
-/* ضع هذا بدله */
-#printArea { display: none; }
-@media print {
-  body * { visibility: hidden; }
-  #printArea, #printArea * { visibility: visible; }
-  #printArea {
-    display: block !important;
-    position: fixed;
-    top: 0; right: 0;
-    width: 72mm;
-    padding: 6px;
-    font-family: 'Cairo', Tahoma, sans-serif;
-    direction: rtl;
-  }
-}
-@page { size: 72mm auto; margin: 0; }
+/* الطباعة صارت بملف center-receipt.js — نفس فاتورة الكاشير بالضبط */
 
 /* LOADING */
 .loading-overlay {
@@ -531,46 +515,7 @@ html, body { touch-action: manipulation; }
 </div>
 
 <!-- PRINT AREA FOR SINGLE INVOICE -->
-<div id="printArea">
-  <div style="padding:6px 10px; direction:rtl; font-family:'Cairo',Tahoma,sans-serif;">
-    <div style="text-align:center; font-size:17px; font-weight:900; margin-bottom:3px;">سنتر المراد</div>
-    <div style="text-align:center; font-size:11px; color:#666; margin-bottom:8px;">📞 07865393559</div>
-    <hr style="border-color:#ddd; margin:6px 0;">
-    <div style="font-size:11px; line-height:1.9;">
-      <div>👤 الكاشير: <strong id="pCashier"></strong></div>
-      <div>📅 التاريخ: <strong id="pDate"></strong></div>
-      <div>🕐 الوقت: <strong id="pTime"></strong></div>
-      <div>🧾 رقم الفاتورة: <strong id="pInvoice"></strong></div>
-    </div>
-    <hr style="border-color:#ddd; margin:6px 0;">
-    <table style="width:100%; font-size:11px; border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:1px solid #ddd;">
-          <th style="text-align:right; padding:3px 0;">المنتج</th>
-          <th style="text-align:center;">الكمية</th>
-          <th style="text-align:center;">السعر</th>
-          <th style="text-align:center;">المجموع</th>
-        </tr>
-      </thead>
-      <tbody id="pItems"></tbody>
-    </table>
-    <hr style="border-color:#ddd; margin:6px 0;">
-    <div style="display:flex; justify-content:space-between; font-weight:900; font-size:14px;">
-      <span>المجموع الإجمالي</span>
-      <span id="pTotal"></span>
-    </div>
-    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
-      <span>المدفوع</span>
-      <span id="pPaid"></span>
-    </div>
-    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:2px; color:#ef4444;" id="pDebtRow">
-      <span>الدين</span>
-      <span id="pDebt"></span>
-    </div>
-    <div style="text-align:center; margin-top:14px; font-size:11px; color:#888;">شكراً لتسوقكم 🌸</div>
-    <div style="text-align:center; font-size:10px; color:#aaa; margin-top:4px;">نظام المراد</div>
-  </div>
-</div>
+<!-- قالب الفاتورة انتقل لـ center-receipt.js -->
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -905,40 +850,28 @@ function toggleDetail(row, inv, tbody) {
   row.after(detRow);
 }
 
-// ── Print Single Invoice ──
+// ── طباعة فاتورة واحدة ──
+// تستدعي نفس محرّك فاتورة الكاشير، فالمطبوع متطابق بالضبط
 window.printInvoice = function(key) {
   const inv = allInvoices.find(i => i._key === key);
   if (!inv) return;
+  if (!window.CenterReceipt) { alert("تعذّر تحميل قالب الفاتورة — حدّث الصفحة"); return; }
 
-  const tbody = document.getElementById("pItems");
-  tbody.innerHTML = "";
-  (inv.items || []).forEach(it => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td style="text-align:right; padding:3px 0; border-bottom:1px solid #f0f0f0;">${it.product}</td>
-      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">×${Math.abs(it.qty)}</td>
-      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">${fmt(it.price)}</td>
-      <td style="text-align:center; border-bottom:1px solid #f0f0f0;">${fmt(Math.abs(it.total))}</td>
-    `;
-    tbody.appendChild(tr);
+  const items = Array.isArray(inv.items) ? inv.items
+              : (inv.items && typeof inv.items === "object" ? Object.values(inv.items) : []);
+
+  window.CenterReceipt.print({
+    invoiceNo: inv.invoiceNo,
+    cashier:   inv.cashierId,
+    date:      inv.date,
+    time:      inv.time,
+    items:     items.map(it => ({ name: it.product, qty: it.qty, price: it.price, total: it.total })),
+    total:     inv.grand,
+    paid:      inv.paid,
+    rest:      inv.rest,
+    isReturn:  inv.type === "return",
+    debtorName: inv.debtor && inv.debtor.name ? inv.debtor.name : ""
   });
-
-  document.getElementById("pCashier").textContent = inv.cashierId;
-  document.getElementById("pDate").textContent    = inv.date;
-  document.getElementById("pTime").textContent    = inv.time;
-  document.getElementById("pInvoice").textContent = inv.invoiceNo;
-  document.getElementById("pTotal").textContent   = fmt(inv.grand) + " د.ع";
-  document.getElementById("pPaid").textContent    = fmt(inv.paid)  + " د.ع";
-
-  const debtRow = document.getElementById("pDebtRow");
-  if (inv.rest > 0) {
-    debtRow.style.display = "flex";
-    document.getElementById("pDebt").textContent = fmt(inv.rest) + " د.ع";
-  } else {
-    debtRow.style.display = "none";
-  }
-
-  window.print();
 };
 
 // ── PDF Export ──
@@ -1083,6 +1016,7 @@ loadInvoices();
 setInterval(loadInvoices, 120000); // تحديث كل دقيقتين بدل الاستماع اللحظي لكل عملية بيع/إرجاع
 </script>
 <!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-receipt.js"></script>
 <script src="center-nav.js"></script>
 </body>
 </html>
