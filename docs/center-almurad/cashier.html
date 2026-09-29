@@ -2344,19 +2344,13 @@ function buildAndPrint() {
   if (!d?.items?.length) return;
   if (!window.CenterReceipt) { showToast("تعذّر تحميل قالب الفاتورة", "error"); return; }
 
-  const now = new Date();
   window.CenterReceipt.print({
     invoiceNo: document.getElementById("invoiceNo").textContent,
     cashier:   localStorage.getItem("cashierUsername") || "—",
-    date:      now.toLocaleDateString("en-CA"),
-    time:      now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
-    items:     d.items.map(it => ({ name: it.name, qty: it.qty, price: it.price, total: it.total })),
+    date:      new Date().toLocaleDateString("ar-EG"),
+    items:     d.items.map(it => ({ name: it.name, qty: it.qty, total: it.total })),
     discount:  d.discount,
-    total:     d.total,
-    paid:      d.paid,
-    rest:      d.rest,
-    isReturn:  !!d.isReturn,
-    debtorName: d.debtorName || ""
+    total:     d.total
   });
 }
 

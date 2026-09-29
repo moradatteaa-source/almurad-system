@@ -851,7 +851,8 @@ function toggleDetail(row, inv, tbody) {
 }
 
 // ── طباعة فاتورة واحدة ──
-// تستدعي نفس محرّك فاتورة الكاشير، فالمطبوع متطابق بالضبط
+// نستدعي نفس محرّك فاتورة الكاشير بنفس الحقول بالضبط،
+// فالمطبوع من هنا ما ينفرق ولا شعرة عن المطبوع من الكاشير.
 window.printInvoice = function(key) {
   const inv = allInvoices.find(i => i._key === key);
   if (!inv) return;
@@ -864,13 +865,8 @@ window.printInvoice = function(key) {
     invoiceNo: inv.invoiceNo,
     cashier:   inv.cashierId,
     date:      inv.date,
-    time:      inv.time,
-    items:     items.map(it => ({ name: it.product, qty: it.qty, price: it.price, total: it.total })),
-    total:     inv.grand,
-    paid:      inv.paid,
-    rest:      inv.rest,
-    isReturn:  inv.type === "return",
-    debtorName: inv.debtor && inv.debtor.name ? inv.debtor.name : ""
+    items:     items.map(it => ({ name: it.product, qty: it.qty, total: it.total })),
+    total:     inv.grand
   });
 };
 

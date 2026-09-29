@@ -1,23 +1,21 @@
 /* ════════════════════════════════════════════════════════════
    🧾 طباعة الفاتورة — center-receipt.js
    ────────────────────────────────────────────────────────────
-   ليش انبنى: الكاشير وصفحة الحسابات كل واحد عنده كود طباعة
-   لحاله، فالفاتورة تطلع مختلفة بين الاثنين. والأسوأ: صفحة
-   الحسابات كانت تطبع الصفحة كلها بورق زائد وقياس غلط.
+   هذا نسخة طبق الأصل من فاتورة الكاشير — نفس الترتيب ونفس
+   القياسات ونفس الخط. الهدف أن الفاتورة المطبوعة من صفحة
+   الحسابات ما تنفرق ولا شعرة عن المطبوعة من الكاشير.
 
-   سبب الخلل بالحسابات: كود الطباعة القديم كان يخفي الصفحة بـ
-   visibility:hidden — وهذا يخفي الشكل بس يبقي المساحة محجوزة،
-   يعني جدول فيه ٥٠٠ فاتورة يظل ياخذ طوله كامل بالطباعة فتطلع
-   صفحات فاضية، والإيصال بـ position:fixed يطبع بأول صفحة بس.
-   هنا نستعمل display:none — المساحة تنطوي كلها وما يبقى غير
-   الإيصال بعرض ٧٢ ملم.
+   ⛔ ما ينضاف ولا ينشال أي حقل هنا. إذا تغيّر شي بفاتورة
+   الكاشير لازم يتغيّر هنا بنفس الوقت.
 
-   الاستخدام:
-     <script src="center-receipt.js"></script>
-     CenterReceipt.print({ invoiceNo, cashier, date, time,
-       items:[{name,qty,price,total}], discount, total, paid, rest, isReturn })
-
-   أي صفحة تستدعيها تطلع نفس الفاتورة بالضبط.
+   الشي الوحيد الي انتغيّر عن الكود القديم هو طريقة إخفاء بقية
+   الصفحة وقت الطباعة:
+     • كان: visibility:hidden — يخفي الشكل بس يبقي المساحة
+       محجوزة، فصفحة الحسابات (جدول ٥٠٠ فاتورة) كانت تطبع
+       صفحات فاضية والإيصال بأول وحدة بس
+     • صار: display:none — المساحة تنطوي كلها
+   وكذلك box-sizing حتى يطلع العرض ٧٢ ملم بالضبط (كان يطلع
+   ٧٦٫٢ لأن الحشوة تنضاف فوق العرض).
    ════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -26,15 +24,25 @@
   var SHOP = { name: "سنتر المراد", phone: "07865393559" };
   var WIDTH = "72mm";
 
-  var fmt = function (n) {
-    return Number(n || 0).toLocaleString("en-US");
+  var f = function (n) {
+    return Number(n || 0).toLocaleString("en-US") + " د.ع";
   };
   var esc = function (s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   };
 
-  /* ── ستايل الطباعة ── يُحقن مرة وحدة ── */
+  /* خط الكاشير — نحمّله بأنفسنا حتى الفاتورة تطلع بنفس الخط
+     من أي صفحة، حتى لو الصفحة نفسها تستعمل خط ثاني */
+  function ensureFont() {
+    if (document.getElementById("crcpt-font")) return;
+    var l = document.createElement("link");
+    l.id = "crcpt-font";
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap";
+    (document.head || document.documentElement).appendChild(l);
+  }
+
   function ensureStyle() {
     if (document.getElementById("crcpt-style")) return;
     var st = document.createElement("style");
@@ -45,20 +53,16 @@
       "@media print{",
       "  html,body{",
       "    width:" + WIDTH + " !important;margin:0 !important;padding:0 !important;",
-      "    background:#fff !important;overflow:visible !important;height:auto !important;",
+      "    background:#fff !important;height:auto !important;",
       "  }",
-      /* الفرق الجوهري: display:none مو visibility — تنطوي المساحة كلها */
       "  body > *:not(#crcpt){display:none !important}",
+      "  #crcpt,#crcpt *{box-sizing:border-box !important;visibility:visible !important}",
       "  #crcpt{",
       "    display:block !important;position:static !important;",
-      "    width:" + WIDTH + ";max-width:" + WIDTH + ";margin:0;padding:6px 8px;",
-      "    direction:rtl;color:#000;background:#fff;",
-      "    font-family:'Cairo','Tajawal',Tahoma,sans-serif;",
+      "    width:" + WIDTH + ";max-width:" + WIDTH + ";margin:0;",
+      "    font-family:Tajawal,Tahoma,sans-serif;",
       "    -webkit-print-color-adjust:exact;print-color-adjust:exact;",
       "  }",
-      "  #crcpt *{visibility:visible !important}",
-      "  #crcpt table{width:100%;border-collapse:collapse;font-size:11px}",
-      "  #crcpt tr{page-break-inside:avoid}",
       "}"
     ].join("\n");
     (document.head || document.documentElement).appendChild(st);
@@ -74,86 +78,54 @@
     return el;
   }
 
+  /* ــــ القالب ــــ حرفياً مثل فاتورة الكاشير ــــ */
   function build(d) {
     d = d || {};
     var items = Array.isArray(d.items) ? d.items : [];
-    var isRet = !!d.isReturn;
-    var line = '<hr style="border:none;border-top:1px dashed #999;margin:6px 0">';
 
     var rows = items.map(function (it) {
-      var qty = Math.abs(Number(it.qty) || 0);
-      var tot = Math.abs(Number(it.total) || 0);
-      var unit = Number(it.price) > 0 ? Number(it.price) : (qty > 0 ? Math.round(tot / qty) : 0);
-      return (
-        '<tr>' +
-        '<td style="text-align:right;padding:3px 0;border-bottom:1px solid #eee;' +
-        'word-break:break-word">' + esc(it.name || it.product) + "</td>" +
-        '<td style="text-align:center;border-bottom:1px solid #eee;white-space:nowrap">×' + qty + "</td>" +
-        '<td style="text-align:center;border-bottom:1px solid #eee;white-space:nowrap">' + fmt(unit) + "</td>" +
-        '<td style="text-align:left;border-bottom:1px solid #eee;white-space:nowrap">' + fmt(tot) + "</td>" +
-        "</tr>"
-      );
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;margin:3px 0;">' +
+        "<span>" + esc(it.name != null ? it.name : it.product) + "</span>" +
+        "<span>×" + Math.abs(Number(it.qty) || 0) + "</span>" +
+        "<span>" + f(Math.abs(Number(it.total) || 0)) + "</span>" +
+        "</div>";
     }).join("");
 
-    var money = function (label, val, style) {
-      return '<div style="display:flex;justify-content:space-between;font-size:12px;' +
-        'margin-top:3px;' + (style || "") + '"><span>' + label + "</span><span>" +
-        fmt(val) + " د.ع</span></div>";
-    };
-
-    var extra = "";
-    if (Number(d.discount) > 0) extra += money("الخصم", d.discount, "color:#555");
-    if (d.paid != null && Number(d.paid) !== Number(d.total)) extra += money("المدفوع", d.paid);
-    if (Number(d.rest) > 0) extra += money("الباقي (دين)", d.rest, "color:#b91c1c;font-weight:800");
-    if (d.debtorName) {
-      extra += '<div style="font-size:11px;margin-top:5px">👤 الزبون: <strong>' +
-        esc(d.debtorName) + "</strong></div>";
+    if (Number(d.discount) > 0) {
+      rows += '<div style="display:flex;justify-content:space-between;font-size:12px;margin:3px 0;color:#888;">' +
+        "<span>الخصم</span><span>- " + f(d.discount) + "</span></div>";
     }
 
-    return (
-      '<div style="text-align:center;font-size:17px;font-weight:900;margin-bottom:2px">' +
+    return '<div style="padding:6px 10px; direction:rtl; font-family:Tajawal,Tahoma,sans-serif;">' +
+      '<div style="text-align:center;font-size:16px;font-weight:bold;margin-bottom:4px">' +
         esc(SHOP.name) + "</div>" +
-      '<div style="text-align:center;font-size:11px;color:#444;margin-bottom:6px">📞 ' +
+      '<div style="text-align:center;font-size:12px;color:#555;margin-bottom:6px">📞 ' +
         esc(SHOP.phone) + "</div>" +
-      (isRet
-        ? '<div style="text-align:center;border:1.5px solid #000;border-radius:5px;' +
-          'padding:3px;font-size:12px;font-weight:900;margin-bottom:6px">↩ فاتورة استرجاع</div>'
-        : "") +
-      line +
-      '<div style="font-size:11px;line-height:1.85">' +
-        "<div>👤 الكاشير: <strong>" + esc(d.cashier || "—") + "</strong></div>" +
-        "<div>📅 التاريخ: <strong>" + esc(d.date || "—") + "</strong></div>" +
-        (d.time ? "<div>🕐 الوقت: <strong>" + esc(d.time) + "</strong></div>" : "") +
-        "<div>🧾 رقم الفاتورة: <strong>" + esc(d.invoiceNo || "—") + "</strong></div>" +
+      '<hr style="border-color:#ddd;margin:6px 0">' +
+      '<div style="font-size:11px; line-height:1.7">' +
+        "<div>👤 الكاشير: <span>" + esc(d.cashier) + "</span></div>" +
+        "<div>📅 التاريخ: <span>" + esc(d.date) + "</span></div>" +
+        "<div>🧾 رقم الفاتورة: <span>" + esc(d.invoiceNo) + "</span></div>" +
       "</div>" +
-      line +
-      "<table><thead><tr style='border-bottom:1.5px solid #000'>" +
-        "<th style='text-align:right;padding:3px 0'>المنتج</th>" +
-        "<th style='text-align:center'>الكمية</th>" +
-        "<th style='text-align:center'>السعر</th>" +
-        "<th style='text-align:left'>المجموع</th>" +
-      "</tr></thead><tbody>" + rows + "</tbody></table>" +
-      line +
-      '<div style="display:flex;justify-content:space-between;font-weight:900;font-size:14px">' +
-        "<span>المجموع الإجمالي</span><span>" + fmt(d.total) + " د.ع</span></div>" +
-      extra +
-      '<div style="text-align:center;margin-top:12px;font-size:11px;color:#555">شكراً لتسوقكم 🌸</div>' +
-      '<div style="text-align:center;font-size:10px;color:#888;margin-top:3px">نظام المراد</div>'
-    );
+      '<hr style="border-color:#ddd;margin:6px 0">' +
+      "<div>" + rows + "</div>" +
+      '<hr style="border-color:#ddd;margin:6px 0">' +
+      '<div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px">' +
+        "<span>المجموع</span><span>" + f(d.total) + "</span></div>" +
+      '<div style="text-align:center;margin-top:10px;font-size:12px;color:#777">شكراً لتسوقكم 🌸</div>' +
+      "</div>";
   }
 
-  var CenterReceipt = {
+  window.CenterReceipt = {
     /* يرجّع HTML الفاتورة بدون طباعة — للمعاينة أو الاختبار */
     html: function (d) { return build(d); },
 
     print: function (d) {
+      ensureFont();
       ensureStyle();
-      var el = box();
-      el.innerHTML = build(d);
+      box().innerHTML = build(d);
       /* نترك المتصفح يرسم قبل ما ينفتح صندوق الطباعة */
       setTimeout(function () { window.print(); }, 60);
     }
   };
-
-  window.CenterReceipt = CenterReceipt;
 })();
