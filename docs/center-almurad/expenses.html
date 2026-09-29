@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💼 المصاريف والرواتب — سنتر المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+
+<!-- 🔒 قفل الصفحة — تعرض الربح الصافي -->
+<script src="center-auth.js" data-page="expenses"></script>
+
+<style>
+/* ════════════════════════════════════════════════════════
+   💼 المصاريف والرواتب — الربح الصافي الحقيقي
+   ────────────────────────────────────────────────────────
+   ليش انبنت: صفحة الأرباح تحسب ربح البضاعة بس (البيع ناقص
+   سعر الشراء). بس هذا مو الربح الحقيقي — ماكو بيه إيجار ولا
+   كهرباء ولا رواتب. السنتر ممكن يبيّن رابح بالبضاعة وهو
+   خاسر بالحقيقة.
+
+   هنا نسجّل كل الي يطلع من الصندوق، فيطلع الرقم الحقيقي:
+   مبيعات − كلفة بضاعة − رواتب − مصاريف = الصافي.
+   ════════════════════════════════════════════════════════ */
+:root{
+  --navy:#0d1b2e; --blue:#1a3a5c;
+  --accent:#f97316; --accent2:#fb923c;
+  --green:#059669; --red:#dc2626; --yellow:#b45309; --purple:#7c3aed;
+  --bg:#f0f4f8; --card:#fff; --border:#e2e8f0;
+  --text:#1e293b; --text2:#64748b; --text3:#94a3b8;
+  --shadow:0 4px 24px rgba(0,0,0,.07);
+  --r:14px; --r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+#header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:0 22px;
+  height:64px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  position:sticky;top:0;z-index:60;box-shadow:0 3px 18px rgba(0,0,0,.25);flex-wrap:wrap}
+.hd-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+.hd-brand .dot{width:38px;height:38px;border-radius:11px;background:var(--accent);
+  display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.hd-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hd-btn{background:var(--accent);border:none;border-radius:9px;color:#fff;padding:8px 14px;
+  font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.hd-btn:hover{background:var(--accent2)}
+.hd-btn:disabled{background:#64748b;cursor:default}
+.hd-sel{border:none;border-radius:9px;padding:8px 12px;font-family:inherit;
+  font-size:13px;font-weight:700;background:rgba(255,255,255,.15);color:#fff}
+.hd-sel option{color:#1e293b}
+
+.wrap{max-width:1240px;margin:18px auto;padding:0 16px 80px}
+
+/* ══ شلال الربح ══ من المبيعات لحد الصافي ══ */
+.flow{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.flow h3{font-size:15.5px;font-weight:800;margin-bottom:3px}
+.flow .sub{font-size:12.5px;color:var(--text2);margin-bottom:16px}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 0;border-bottom:1px dashed var(--border)}
+.frow:last-child{border-bottom:none}
+.frow .lbl{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700}
+.frow .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  font-size:15px;flex-shrink:0;background:#f1f5f9}
+.frow .amt{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.frow .note{font-size:11.5px;color:var(--text3);font-weight:500;display:block;margin-top:2px}
+.frow.minus .amt{color:var(--red)}
+.frow.plus .amt{color:var(--text)}
+.frow.total{border-top:2.5px solid var(--navy);border-bottom:none;margin-top:6px;padding-top:15px}
+.frow.total .lbl{font-size:16px;font-weight:900}
+.frow.total .amt{font-size:27px}
+.frow.total .amt.good{color:var(--green)} .frow.total .amt.bad{color:var(--red)}
+.bars{display:flex;height:9px;border-radius:999px;overflow:hidden;margin-top:15px;background:#f1f5f9}
+.bars i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11.5px;color:var(--text2)}
+.legend b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-inline-end:5px}
+
+/* ══ بطاقات ══ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 17px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{font-size:15.5px;font-weight:800;display:flex;align-items:center;gap:7px}
+.card .hint{font-size:12px;color:var(--text2);margin:3px 0 13px}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ══ نموذج ══ */
+.form{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.6fr auto;gap:9px;
+  align-items:end;margin-bottom:14px}
+.fld label{display:block;font-size:11.5px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.fld input,.fld select{width:100%;border:1.5px solid var(--border);border-radius:9px;
+  padding:9px 11px;font-family:inherit;font-size:14px;background:#fff;color:var(--text)}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--accent)}
+.fld input.err{border-color:var(--red);background:#fef2f2}
+.btn{background:var(--accent);border:none;border-radius:9px;color:#fff;padding:10px 17px;
+  font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--accent2)}
+.btn:disabled{background:#cbd5e1;cursor:default}
+.btn.ghost{background:#fff;border:1.5px solid var(--border);color:var(--text2)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn.sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.btn.danger{background:#fef2f2;color:var(--red);border:1.5px solid #fecaca}
+.btn.danger:hover{background:#fee2e2}
+
+/* ══ جداول ══ */
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+thead th{background:#f1f5f9;color:var(--text2);font-size:11.5px;font-weight:800;
+  padding:10px 8px;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center}
+thead th.t-name{text-align:right}
+thead th.num{text-align:right;direction:ltr}
+tbody td{padding:9px 8px;border-bottom:1px solid #f1f5f9;text-align:center;
+  font-variant-numeric:tabular-nums}
+tbody td.t-name{text-align:right;font-weight:700}
+tbody td.num{text-align:right;direction:ltr;font-weight:700}
+tbody tr:hover{background:#fafcfe}
+tfoot td{padding:11px 8px;font-weight:900;background:#fffbeb;border-top:2px solid var(--border)}
+tfoot td.num{text-align:right;direction:ltr}
+.empty{text-align:center;color:var(--text2);padding:30px 10px;font-size:13.5px}
+.pill{border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:800;
+  display:inline-block;white-space:nowrap}
+.pill.paid{background:#d1fae5;color:#065f46}
+.pill.due{background:#fef3c7;color:#92400e}
+.pill.off{background:#f1f5f9;color:#475569}
+
+/* ══ تصنيفات ══ */
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.cat{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;
+  padding:8px 13px;font-size:12.5px;font-weight:700}
+.cat span{color:var(--text2);font-weight:600;margin-inline-start:6px}
+
+#toast{position:fixed;bottom:22px;inset-inline-end:22px;z-index:900;background:var(--navy);
+  color:#fff;padding:12px 20px;border-radius:11px;font-weight:700;font-size:13.5px;
+  opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none}
+#toast.on{opacity:1;transform:translateY(0)}
+#toast.bad{background:var(--red)}
+#toast.good{background:var(--green)}
+
+#loading{position:fixed;inset:0;background:rgba(240,244,248,.96);z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px}
+.spin{width:46px;height:46px;border:4px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){
+  .grid2{grid-template-columns:1fr}
+  .form{grid-template-columns:1fr 1fr;gap:8px}
+  .form .fld:nth-child(4){grid-column:1/-1}
+  .form .btn{grid-column:1/-1;width:100%}
+}
+@media(max-width:820px){
+  #header{height:auto;padding:9px 12px}
+  .hd-brand{font-size:14.5px}
+  .hd-brand .dot{width:32px;height:32px;font-size:16px}
+  .wrap{margin:12px auto;padding:0 10px 70px}
+  .flow{padding:14px 14px}
+  .frow .amt{font-size:15px}
+  .frow.total .amt{font-size:22px}
+  .card{padding:14px 13px}
+  table{font-size:12px;min-width:460px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><div>جاري تحميل حسابات السنتر...</div></div>
+
+<div id="header">
+  <div class="hd-brand"><div class="dot">💼</div><span>المصاريف والرواتب</span></div>
+  <div class="hd-right">
+    <select class="hd-sel" id="monthSel"></select>
+    <button class="hd-btn" id="exportBtn">📥 تقرير الشهر</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ══ الرقم الحقيقي ══ -->
+  <div class="flow">
+    <h3>📊 صافي الربح الحقيقي</h3>
+    <div class="sub" id="flowSub">—</div>
+    <div id="flowBody"></div>
+  </div>
+
+  <div class="grid2">
+    <!-- ══ المصاريف ══ -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h3>🧾 المصاريف</h3>
+          <div class="hint">كل الي يطلع من الصندوق غير الرواتب</div>
+        </div>
+        <div style="font-size:19px;font-weight:900;color:var(--red)" id="expTotal">0 د.ع</div>
+      </div>
+
+      <div class="form">
+        <div class="fld"><label>البند</label>
+          <select id="expCat"></select></div>
+        <div class="fld"><label>المبلغ</label>
+          <input id="expAmt" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="fld"><label>التاريخ</label>
+          <input id="expDate" type="date"></div>
+        <div class="fld"><label>ملاحظة (اختياري)</label>
+          <input id="expNote" placeholder="مثلاً: فاتورة كهرباء أيلول"></div>
+        <button class="btn" id="expAdd">➕ إضافة</button>
+      </div>
+
+      <div class="cats" id="catSummary"></div>
+      <div class="tbl-scroll"><table id="expTable"></table></div>
+    </div>
+
+    <!-- ══ الرواتب ══ -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h3>👥 الرواتب</h3>
+          <div class="hint">الراتب ينحدد مرة، وكل شهر تأشّر المدفوع</div>
+        </div>
+        <div style="font-size:19px;font-weight:900;color:var(--red)" id="salTotal">0 د.ع</div>
+      </div>
+
+      <div class="form" style="grid-template-columns:1.5fr 1fr 1fr auto">
+        <div class="fld"><label>اسم الموظف</label>
+          <input id="stName" placeholder="الاسم"></div>
+        <div class="fld"><label>الراتب الشهري</label>
+          <input id="stSalary" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="fld"><label>يشتغل من شهر</label>
+          <input id="stFrom" type="month"></div>
+        <button class="btn" id="stAdd">➕ إضافة</button>
+      </div>
+
+      <div class="tbl-scroll"><table id="salTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ══ مقارنة الأشهر ══ -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h3>📆 الصافي الحقيقي شهر بشهر</h3>
+        <div class="hint">بعد خصم الرواتب والمصاريف — مو ربح البضاعة لحاله</div>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table id="monthsTable"></table></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, push, set, remove, update }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { loadCenterData, computeProfit, IRAQ_MS, bDate, clean, fmt } from "./center-data.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.firebasestorage.app",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:c5520c00c11e336148ad1c"
+};
+/* نعيد استعمال التطبيق المشغّل — القفل يشغّله قبلنا */
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const rtdb = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+const money = n => fmt(n) + " د.ع";
+const esc = s => String(s ?? "").replace(/[&<>"]/g,
+  c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+const CATEGORIES = [
+  "إيجار", "كهرباء ومولدة", "ماء", "إنترنت", "نقل وتوصيل",
+  "صيانة وتصليح", "أكياس ومستلزمات", "تنظيف", "ضرائب ورسوم",
+  "دعاية وإعلان", "ضيافة", "سحب شخصي", "أخرى"
+];
+
+/* ════════ الحالة ════════ */
+let DATA = null;          // فواتير + مخزن
+let EXPENSES = {};        // centerExpenses
+let STAFF = {};           // centerStaff
+let PAYMENTS = {};        // centerSalaries/<شهر>/<موظف>
+let month = "";           // YYYY-MM المختار
+
+const monthKeyOf = ts => bDate(ts).toISOString().slice(0, 7);
+const MONTH_AR = ["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران",
+                  "تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
+const monthLabel = k => { const [y, m] = k.split("-"); return MONTH_AR[+m - 1] + " " + y; };
+
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "on " + (kind || "");
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ""; }, 2600);
+}
+
+/* ════════ قراءة وكتابة ════════ */
+async function loadLedger() {
+  const [e, s, p] = await Promise.all([
+    get(ref(rtdb, "centerExpenses")),
+    get(ref(rtdb, "centerStaff")),
+    get(ref(rtdb, "centerSalaries"))
+  ]);
+  EXPENSES = e.exists() ? e.val() : {};
+  STAFF = s.exists() ? s.val() : {};
+  PAYMENTS = p.exists() ? p.val() : {};
+}
+
+/* ════════ حسابات الشهر ════════ */
+function monthRange(k) {
+  const [y, m] = k.split("-").map(Number);
+  const from = Date.UTC(y, m - 1, 1, 0, 0, 0) - IRAQ_MS;
+  const to = Date.UTC(y, m, 1, 0, 0, 0) - IRAQ_MS - 1;
+  return [from, to];
+}
+
+function expensesOf(k) {
+  return Object.entries(EXPENSES)
+    .map(([id, v]) => ({ id, ...v }))
+    .filter(v => String(v.date || "").slice(0, 7) === k)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+/* الرواتب المستحقة هذا الشهر = كل موظف فعّال، والمدفوع من سجل الشهر.
+   نحسب الصافي على المستحق مو على المدفوع — الراتب المتأخر يبقى
+   مصروف على الشهر الي اشتغل بيه، مو على الشهر الي انصرف بيه. */
+function salariesOf(k) {
+  const paid = PAYMENTS[k] || {};
+  return Object.entries(STAFF)
+    .map(([id, v]) => {
+      /* الموظف ينحسب على الشهر بس إذا كان يشتغل بيه فعلاً.
+         بدون هذا، إضافة موظف اليوم تخصم راتبه من أرباح كل
+         الأشهر الماضية وتخرّب التاريخ. */
+      const from = v.from || (v.createdAt ? monthKeyOf(v.createdAt) : "0000-00");
+      const to = v.to || null;                 // آخر شهر اشتغل بيه
+      const worked = k >= from && (!to || k <= to);
+      return {
+        id, name: v.name || "—",
+        salary: Number(v.salary) || 0,
+        active: v.active !== false,
+        from, to, worked,
+        paid: paid[id] ? Number(paid[id].amount) || 0 : 0,
+        isPaid: !!paid[id]
+      };
+    })
+    .sort((a, b) => (b.worked - a.worked) || (b.salary - a.salary));
+}
+
+function monthTotals(k) {
+  const [from, to] = monthRange(k);
+  const rows = DATA.invoices.filter(v => {
+    const t = Number(v.createdAt); return t >= from && t <= to;
+  });
+  const sales = computeProfit(rows, DATA.costOf);
+  const exp = expensesOf(k).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const sal = salariesOf(k).filter(s => s.worked).reduce((s, e) => s + e.salary, 0);
+  return {
+    ...sales, expenses: exp, salaries: sal,
+    net: sales.profit - exp - sal,
+    invoiceRows: rows
+  };
+}
+
+/* ════════ العرض ════════ */
+function renderFlow() {
+  const t = monthTotals(month);
+  $("flowSub").textContent = monthLabel(month) +
+    ` · ${fmt(t.sales)} فاتورة` + (t.returns ? ` · ${fmt(t.returns)} إرجاع` : "");
+
+  const row = (ic, bg, label, note, amt, cls) => `
+    <div class="frow ${cls || ""}">
+      <div class="lbl"><div class="ic" style="background:${bg}">${ic}</div>
+        <div>${label}${note ? `<span class="note">${note}</span>` : ""}</div></div>
+      <div class="amt ${cls === "total" ? (amt >= 0 ? "good" : "bad") : ""}">${money(amt)}</div>
+    </div>`;
+
+  const grossNote = t.margin ? `هامش البضاعة ${t.margin.toFixed(1)}٪` : "";
+
+  $("flowBody").innerHTML =
+    row("💵", "#e0f2fe", "المبيعات", t.retValue ? `بعد خصم إرجاعات ${money(t.retValue)}` : "", t.netRevenue, "plus") +
+    row("📦", "#fef3c7", "− كلفة البضاعة", "", -t.netCost, "minus") +
+    row("📈", "#ecfdf5", "= الربح من البضاعة", grossNote, t.profit, "plus") +
+    row("👥", "#ede9fe", "− الرواتب", "", -t.salaries, "minus") +
+    row("🧾", "#fee2e2", "− المصاريف", "", -t.expenses, "minus") +
+    row(t.net >= 0 ? "✅" : "⚠️", t.net >= 0 ? "#d1fae5" : "#fee2e2",
+        "صافي الربح الحقيقي",
+        t.netRevenue > 0 ? `${((t.net / t.netRevenue) * 100).toFixed(1)}٪ من المبيعات` : "",
+        t.net, "total");
+
+  /* شريط: وين تروح كل دينار مبيعات */
+  const base = t.netRevenue || 1;
+  const seg = (v, c) => `<i style="width:${Math.max(0, (v / base) * 100)}%;background:${c}"></i>`;
+  $("flowBody").insertAdjacentHTML("beforeend",
+    `<div class="bars">
+       ${seg(t.netCost, "#b45309")}${seg(t.salaries, "#7c3aed")}
+       ${seg(t.expenses, "#dc2626")}${seg(Math.max(0, t.net), "#059669")}
+     </div>
+     <div class="legend">
+       <span><b style="background:#b45309"></b>كلفة البضاعة</span>
+       <span><b style="background:#7c3aed"></b>رواتب</span>
+       <span><b style="background:#dc2626"></b>مصاريف</span>
+       <span><b style="background:#059669"></b>صافي ربح</span>
+     </div>`);
+}
+
+function renderExpenses() {
+  const list = expensesOf(month);
+  const total = list.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  $("expTotal").textContent = money(total);
+
+  /* ملخص حسب البند */
+  const byCat = {};
+  for (const e of list) byCat[e.category || "أخرى"] = (byCat[e.category || "أخرى"] || 0) + (Number(e.amount) || 0);
+  $("catSummary").innerHTML = Object.entries(byCat)
+    .sort((a, b) => b[1] - a[1])
+    .map(([c, v]) => `<div class="cat">${esc(c)}<span>${money(v)}</span></div>`).join("");
+
+  if (!list.length) {
+    $("expTable").innerHTML = `<tbody><tr><td class="empty">ماكو مصاريف مسجّلة بهذا الشهر</td></tr></tbody>`;
+    return;
+  }
+  $("expTable").innerHTML = `<thead><tr>
+      <th>التاريخ</th><th class="t-name">البند</th><th class="t-name">ملاحظة</th>
+      <th class="num">المبلغ</th><th></th></tr></thead><tbody>` +
+    list.map(e => `<tr>
+      <td>${esc(e.date)}</td>
+      <td class="t-name">${esc(e.category || "أخرى")}</td>
+      <td class="t-name" style="font-weight:500;color:var(--text2)">${esc(e.note || "—")}</td>
+      <td class="num" style="color:var(--red)">${money(e.amount)}</td>
+      <td><button class="btn sm danger" data-del="${esc(e.id)}">حذف</button></td>
+    </tr>`).join("") +
+    `</tbody><tfoot><tr><td colspan="3">المجموع</td>
+      <td class="num" style="color:var(--red)">${money(total)}</td><td></td></tr></tfoot>`;
+
+  $("expTable").querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => delExpense(b.dataset.del)));
+}
+
+function renderSalaries() {
+  const list = salariesOf(month);
+  const due = list.filter(s => s.worked).reduce((s, e) => s + e.salary, 0);
+  $("salTotal").textContent = money(due);
+
+  if (!list.length) {
+    $("salTable").innerHTML = `<tbody><tr><td class="empty">ماكو موظفين مسجّلين — ضيفهم فوق</td></tr></tbody>`;
+    return;
+  }
+  const paidSum = list.reduce((s, e) => s + e.paid, 0);
+  $("salTable").innerHTML = `<thead><tr>
+      <th class="t-name">الموظف</th><th class="num">الراتب</th>
+      <th>حالة الشهر</th><th></th></tr></thead><tbody>` +
+    list.map(s => `<tr${s.worked ? "" : ' style="opacity:.5"'}>
+      <td class="t-name">${esc(s.name)}
+        ${s.active ? "" : '<span class="pill off">موقوف</span>'}
+        <span style="display:block;font-size:11px;color:var(--text3);font-weight:500">
+          من ${esc(s.from)}${s.to ? ` إلى ${esc(s.to)}` : ""}</span></td>
+      <td class="num">${money(s.salary)}</td>
+      <td>${!s.worked ? '<span class="pill off">مو بهذا الشهر</span>'
+                      : s.isPaid ? '<span class="pill paid">✓ مدفوع</span>'
+                      : '<span class="pill due">مستحق</span>'}</td>
+      <td style="white-space:nowrap">
+        ${s.worked ? `<button class="btn sm ${s.isPaid ? "ghost" : ""}" data-pay="${esc(s.id)}"
+            data-amt="${s.salary}">${s.isPaid ? "تراجع" : "أشّر مدفوع"}</button>` : ""}
+        <button class="btn sm ghost" data-edit="${esc(s.id)}">✏️</button>
+        <button class="btn sm ghost" data-toggle="${esc(s.id)}"
+          data-active="${s.active ? 1 : 0}">${s.active ? "إيقاف" : "تفعيل"}</button>
+        <button class="btn sm danger" data-delst="${esc(s.id)}">حذف</button>
+      </td>
+    </tr>`).join("") +
+    `</tbody><tfoot><tr><td>المستحق هذا الشهر</td>
+      <td class="num" style="color:var(--red)">${money(due)}</td>
+      <td colspan="2" style="font-weight:700;color:var(--text2);font-size:12.5px">
+        مدفوع منه ${money(paidSum)}</td></tr></tfoot>`;
+
+  const T = $("salTable");
+  T.querySelectorAll("[data-pay]").forEach(b =>
+    b.addEventListener("click", () => togglePaid(b.dataset.pay, Number(b.dataset.amt))));
+  T.querySelectorAll("[data-edit]").forEach(b =>
+    b.addEventListener("click", () => editStaff(b.dataset.edit)));
+  T.querySelectorAll("[data-toggle]").forEach(b =>
+    b.addEventListener("click", () => toggleActive(b.dataset.toggle, b.dataset.active === "1")));
+  T.querySelectorAll("[data-delst]").forEach(b =>
+    b.addEventListener("click", () => delStaff(b.dataset.delst)));
+}
+
+function renderMonths() {
+  const keys = allMonths();
+  if (!keys.length) { $("monthsTable").innerHTML = ""; return; }
+  const rows = keys.slice().reverse().map(k => {
+    const t = monthTotals(k);
+    return `<tr${k === month ? ' style="background:#fff7ed"' : ""}>
+      <td class="t-name">${monthLabel(k)}</td>
+      <td class="num">${money(t.netRevenue)}</td>
+      <td class="num" style="color:var(--text2)">${money(t.netCost)}</td>
+      <td class="num" style="color:var(--green)">${money(t.profit)}</td>
+      <td class="num" style="color:var(--purple)">${money(t.salaries)}</td>
+      <td class="num" style="color:var(--red)">${money(t.expenses)}</td>
+      <td class="num" style="font-weight:900;color:${t.net >= 0 ? "var(--green)" : "var(--red)"}">
+        ${money(t.net)}</td>
+    </tr>`;
+  }).join("");
+  $("monthsTable").innerHTML = `<thead><tr>
+      <th class="t-name">الشهر</th><th class="num">المبيعات</th><th class="num">كلفة البضاعة</th>
+      <th class="num">ربح البضاعة</th><th class="num">الرواتب</th><th class="num">المصاريف</th>
+      <th class="num">الصافي الحقيقي</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function allMonths() {
+  const s = new Set(DATA.invoices.map(v => monthKeyOf(v.createdAt)));
+  Object.values(EXPENSES).forEach(e => { if (e && e.date) s.add(String(e.date).slice(0, 7)); });
+  s.add(monthKeyOf(Date.now()));
+  return [...s].filter(Boolean).sort();
+}
+
+function renderAll() {
+  renderFlow(); renderExpenses(); renderSalaries(); renderMonths();
+}
+
+/* ════════ العمليات ════════ */
+async function addExpense() {
+  const cat = $("expCat").value;
+  const amt = Number($("expAmt").value) || 0;
+  const date = $("expDate").value;
+  const note = $("expNote").value.trim();
+
+  $("expAmt").classList.toggle("err", amt <= 0);
+  $("expDate").classList.toggle("err", !date);
+  if (amt <= 0) return toast("اكتب مبلغ أكبر من صفر", "bad");
+  if (!date) return toast("اختر التاريخ", "bad");
+
+  const btn = $("expAdd"); btn.disabled = true;
+  try {
+    const r = push(ref(rtdb, "centerExpenses"));
+    const rec = { amount: amt, category: cat, date, note,
+                  createdAt: Date.now(),
+                  by: (window.__centerAuth?.user?.name) || "—" };
+    await set(r, rec);
+    EXPENSES[r.key] = rec;
+    $("expAmt").value = ""; $("expNote").value = "";
+    /* لو المصروف بشهر ثاني ننقل العرض له حتى يشوفه */
+    const mk = date.slice(0, 7);
+    if (mk !== month) { month = mk; syncMonthSel(); }
+    renderAll();
+    toast("انحفظ المصروف ✓", "good");
+  } catch (e) {
+    toast("ما انحفظ — تأكد من الإنترنت", "bad");
+  } finally { btn.disabled = false; }
+}
+
+async function delExpense(id) {
+  const e = EXPENSES[id];
+  if (!e) return;
+  if (!confirm(`حذف مصروف ${fmt(e.amount)} د.ع (${e.category})؟`)) return;
+  try {
+    await remove(ref(rtdb, "centerExpenses/" + id));
+    delete EXPENSES[id];
+    renderAll();
+    toast("انحذف", "good");
+  } catch (err) { toast("ما انحذف", "bad"); }
+}
+
+async function addStaff() {
+  const name = $("stName").value.trim();
+  const salary = Number($("stSalary").value) || 0;
+  $("stName").classList.toggle("err", !name);
+  $("stSalary").classList.toggle("err", salary <= 0);
+  if (!name) return toast("اكتب اسم الموظف", "bad");
+  if (salary <= 0) return toast("اكتب الراتب", "bad");
+
+  const btn = $("stAdd"); btn.disabled = true;
+  try {
+    const r = push(ref(rtdb, "centerStaff"));
+    const from = $("stFrom").value || monthKeyOf(Date.now());
+    const rec = { name, salary, active: true, from, createdAt: Date.now() };
+    await set(r, rec);
+    STAFF[r.key] = rec;
+    $("stName").value = ""; $("stSalary").value = "";
+    renderAll();
+    toast("انضاف الموظف ✓", "good");
+  } catch (e) { toast("ما انحفظ", "bad"); }
+  finally { btn.disabled = false; }
+}
+
+async function togglePaid(id, amount) {
+  const paid = PAYMENTS[month] || {};
+  try {
+    if (paid[id]) {
+      await remove(ref(rtdb, `centerSalaries/${month}/${id}`));
+      delete paid[id];
+    } else {
+      const rec = { amount, paidAt: Date.now(),
+                    by: (window.__centerAuth?.user?.name) || "—" };
+      await set(ref(rtdb, `centerSalaries/${month}/${id}`), rec);
+      paid[id] = rec;
+    }
+    PAYMENTS[month] = paid;
+    renderSalaries();
+  } catch (e) { toast("ما انحفظ", "bad"); }
+}
+
+/* تعديل موظف موجود — الاسم والراتب وشهر بداية العمل.
+   شهر البداية مهم: هو الي يقرر على أي أشهر ينحسب راتبه، فإذا
+   الموظف يشتغل من زمان لازم ترجّعه حتى أرباح الأشهر القديمة
+   تطلع صح. */
+async function editStaff(id) {
+  const s = STAFF[id]; if (!s) return;
+  const name = prompt("اسم الموظف:", s.name || "");
+  if (name === null) return;
+  const salary = prompt("الراتب الشهري (د.ع):", String(Number(s.salary) || 0));
+  if (salary === null) return;
+  const cur = s.from || (s.createdAt ? monthKeyOf(s.createdAt) : monthKeyOf(Date.now()));
+  const from = prompt("يشتغل من شهر (سنة-شهر، مثال 2026-01):", cur);
+  if (from === null) return;
+
+  const n = name.trim(), sal = Number(salary) || 0;
+  if (!n) return toast("الاسم فارغ", "bad");
+  if (sal <= 0) return toast("الراتب لازم أكبر من صفر", "bad");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(from.trim()))
+    return toast("صيغة الشهر غلط — اكتبها مثل 2026-01", "bad");
+
+  const patch = { name: n, salary: sal, from: from.trim() };
+  try {
+    await update(ref(rtdb, "centerStaff/" + id), patch);
+    Object.assign(STAFF[id], patch);
+    renderAll();
+    toast("انحفظ التعديل ✓", "good");
+  } catch (e) { toast("ما انحفظ", "bad"); }
+}
+
+async function toggleActive(id, isActive) {
+  /* الإيقاف يثبّت آخر شهر اشتغل بيه، فالأشهر الي بعده ما ينحسب
+     عليها راتبه — والأشهر الي قبله تبقى صحيحة */
+  const patch = isActive
+    ? { active: false, to: monthKeyOf(Date.now()) }
+    : { active: true, to: null };
+  try {
+    await update(ref(rtdb, "centerStaff/" + id), patch);
+    Object.assign(STAFF[id], patch);
+    if (!isActive) delete STAFF[id].to;
+    renderAll();
+  } catch (e) { toast("ما انحفظ", "bad"); }
+}
+
+async function delStaff(id) {
+  const s = STAFF[id];
+  if (!s) return;
+  if (!confirm(`حذف ${s.name} نهائياً؟ سجلات الرواتب القديمة تبقى.`)) return;
+  try {
+    await remove(ref(rtdb, "centerStaff/" + id));
+    delete STAFF[id];
+    renderAll();
+    toast("انحذف", "good");
+  } catch (e) { toast("ما انحذف", "bad"); }
+}
+
+/* ════════ تقرير الشهر ════════ */
+function reportSheets(k) {
+  const t = monthTotals(k);
+
+  const summary = [
+    ["تقرير سنتر المراد", monthLabel(k)],
+    [],
+    ["البند", "المبلغ (د.ع)"],
+    ["المبيعات (بعد الإرجاع)", Math.round(t.netRevenue)],
+    ["كلفة البضاعة", -Math.round(t.netCost)],
+    ["الربح من البضاعة", Math.round(t.profit)],
+    ["الرواتب", -Math.round(t.salaries)],
+    ["المصاريف", -Math.round(t.expenses)],
+    ["صافي الربح الحقيقي", Math.round(t.net)],
+    [],
+    ["عدد الفواتير", t.sales],
+    ["عدد الإرجاعات", t.returns],
+    ["قيمة الإرجاعات", Math.round(t.retValue)],
+    ["معدل الفاتورة", Math.round(t.avgTicket)],
+    ["هامش البضاعة %", Number(t.margin.toFixed(1))],
+    ["هامش الصافي الحقيقي %", t.netRevenue > 0 ? Number(((t.net / t.netRevenue) * 100).toFixed(1)) : 0]
+  ];
+
+  /* المبيعات اليومية */
+  const byDay = {};
+  for (const inv of t.invoiceRows) {
+    const d = bDate(inv.createdAt).toISOString().slice(0, 10);
+    (byDay[d] ||= []).push(inv);
+  }
+  const daily = [["اليوم", "الفواتير", "المبيعات", "كلفة البضاعة", "ربح البضاعة"]];
+  Object.keys(byDay).sort().forEach(d => {
+    const a = computeProfit(byDay[d], DATA.costOf);
+    daily.push([d, a.sales, Math.round(a.netRevenue), Math.round(a.netCost), Math.round(a.profit)]);
+  });
+
+  /* المنتجات */
+  const prod = {};
+  for (const inv of t.invoiceRows) {
+    const isRet = inv.type === "return";
+    for (const it of (Array.isArray(inv.items) ? inv.items
+        : inv.items && typeof inv.items === "object" ? Object.values(inv.items) : [])) {
+      const n = clean(it?.product); if (!n) continue;
+      const q = Number(it.qty) || 0, aq = Math.abs(q);
+      const line = Math.abs(Number(it.total) || 0);
+      const bp = DATA.costOf(it);
+      prod[n] = prod[n] || { qty: 0, rev: 0, cost: 0, ret: 0 };
+      if (isRet || q < 0) { prod[n].ret += aq; prod[n].rev -= line; prod[n].cost -= bp * aq; }
+      else { prod[n].qty += q; prod[n].rev += line; prod[n].cost += bp * q; }
+    }
+  }
+  const products = [["المنتج", "الكمية", "الإيراد", "التكلفة", "الربح", "الهامش %", "مرتجع"]];
+  Object.entries(prod).map(([n, v]) => ({ n, ...v, p: v.rev - v.cost }))
+    .sort((a, b) => b.p - a.p)
+    .forEach(v => products.push([v.n, v.qty, Math.round(v.rev), Math.round(v.cost),
+      Math.round(v.p), v.rev > 0 ? Number(((v.p / v.rev) * 100).toFixed(1)) : 0, v.ret]));
+
+  /* المصاريف */
+  const exps = [["التاريخ", "البند", "ملاحظة", "المبلغ", "سجّله"]];
+  expensesOf(k).forEach(e => exps.push([e.date, e.category || "أخرى", e.note || "",
+    Math.round(Number(e.amount) || 0), e.by || ""]));
+  exps.push([]);
+  exps.push(["", "", "المجموع", Math.round(t.expenses), ""]);
+
+  /* الرواتب */
+  const sals = [["الموظف", "الراتب", "الحالة", "مدفوع هذا الشهر"]];
+  salariesOf(k).filter(s => s.worked).forEach(s => sals.push([s.name, s.salary,
+    s.active ? "فعّال" : "موقوف", s.isPaid ? s.paid : 0]));
+  sals.push([]);
+  sals.push(["المجموع المستحق", Math.round(t.salaries), "", ""]);
+
+  return [
+    { name: "الملخص", rows: summary },
+    { name: "المبيعات اليومية", rows: daily },
+    { name: "المنتجات", rows: products },
+    { name: "المصاريف", rows: exps },
+    { name: "الرواتب", rows: sals }
+  ];
+}
+
+function download(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+async function exportMonth() {
+  const btn = $("exportBtn");
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = "⏳ جاري التجهيز...";
+  const sheets = reportSheets(month);
+  const base = `تقرير-سنتر-المراد-${month}`;
+
+  try {
+    const XLSX = await loadXlsx();
+    const wb = XLSX.utils.book_new();
+    for (const s of sheets) {
+      const ws = XLSX.utils.aoa_to_sheet(s.rows);
+      /* ملاحظة: مكتبة الإكسل ما تكتب اتجاه الورقة من اليمين، فحبيناها
+         أو كرهناها الورقة تنفتح من اليسار. المحتوى العربي يطلع صح،
+         وإذا تريدها من اليمين: تبويب "تخطيط الصفحة" ← "ورقة من اليمين لليسار". */
+      ws["!cols"] = (s.rows[0] || []).map((_, i) => ({ wch: i === 0 ? 34 : 15 }));
+      XLSX.utils.book_append_sheet(wb, ws, s.name);
+    }
+    XLSX.writeFile(wb, base + ".xlsx");
+    toast("نزّل ملف الإكسل ✓", "good");
+  } catch (e) {
+    /* المكتبة ما وصلت — ننزّل CSV، يفتح بالإكسل عادي */
+    const csv = sheets.map(s =>
+      "### " + s.name + "\r\n" +
+      s.rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n")
+    ).join("\r\n\r\n");
+    download(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }), base + ".csv");
+    toast("نزّل الملف بصيغة CSV", "good");
+  } finally {
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+
+let _xlsxP = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (!_xlsxP) _xlsxP = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error("no XLSX"));
+    s.onerror = () => rej(new Error("تعذّر تحميل مكتبة الإكسل"));
+    document.head.appendChild(s);
+    setTimeout(() => rej(new Error("انتهى الوقت")), 12000);
+  });
+  return _xlsxP;
+}
+
+/* ════════ التهيئة ════════ */
+function syncMonthSel() {
+  const keys = allMonths();
+  $("monthSel").innerHTML = keys.slice().reverse()
+    .map(k => `<option value="${k}"${k === month ? " selected" : ""}>${monthLabel(k)}</option>`).join("");
+}
+
+function todayIraq() { return bDate(Date.now()).toISOString().slice(0, 10); }
+
+async function start() {
+  try {
+    [DATA] = await Promise.all([loadCenterData(), loadLedger()]);
+  } catch (e) {
+    $("loading").innerHTML =
+      `<div style="font-size:40px">⚠️</div><div>ما وصلنا للبيانات — تأكد من الإنترنت</div>`;
+    return;
+  }
+  $("expCat").innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join("");
+  $("expDate").value = todayIraq();
+  $("stFrom").value = monthKeyOf(Date.now());
+  month = monthKeyOf(Date.now());
+  syncMonthSel();
+  renderAll();
+  $("loading").style.display = "none";
+}
+
+$("monthSel").addEventListener("change", e => { month = e.target.value; renderAll(); });
+$("expAdd").addEventListener("click", addExpense);
+$("stAdd").addEventListener("click", addStaff);
+$("exportBtn").addEventListener("click", exportMonth);
+$("expAmt").addEventListener("keydown", e => { if (e.key === "Enter") addExpense(); });
+$("expNote").addEventListener("keydown", e => { if (e.key === "Enter") addExpense(); });
+$("stSalary").addEventListener("keydown", e => { if (e.key === "Enter") addStaff(); });
+$("stFrom").addEventListener("keydown", e => { if (e.key === "Enter") addStaff(); });
+
+if (window.__centerAuth?.ready) {
+  window.__centerAuth.ready.then(start);
+} else {
+  $("loading").innerHTML =
+    '<div style="font-size:42px">🔒</div><div>ملف القفل ما انحمّل<br>' +
+    '<span style="font-size:13px;opacity:.8">تأكد أن center-auth.js موجود جنب الصفحة</span></div>';
+}
+</script>
+
+<!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-nav.js"></script>
+</body>
+</html>

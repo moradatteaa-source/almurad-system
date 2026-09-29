@@ -23,6 +23,7 @@
     { file: "cashier.html",   icon: "🧾", label: "الكاشير" },
     { file: "analytics.html", icon: "📊", label: "التحليلات" },
     { file: "profits.html",   icon: "💵", label: "الأرباح" },
+    { file: "expenses.html",  icon: "💸", label: "المصاريف" },
     { file: "accounts.html",  icon: "💼", label: "الحسابات" },
     { file: "debts.html",     icon: "📒", label: "الديون" }
   ];
@@ -66,9 +67,9 @@
     "  }",
     "  .cnav a{",
     "    flex:1; flex-direction:column; gap:2px; justify-content:center;",
-    "    padding:6px 2px; font-size:10.5px; border-radius:11px; text-align:center;",
+    "    padding:6px 1px; font-size:9.5px; border-radius:10px; text-align:center;",
     "  }",
-    "  .cnav a .cnav-ic{font-size:18px}",
+    "  .cnav a .cnav-ic{font-size:17px}",
     "  body{padding-bottom:64px !important}",
     "}",
     /* الطبع ما يحتاج شريط تنقّل */
