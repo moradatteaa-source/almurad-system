@@ -30,14 +30,31 @@
   var SESSION_HOURS = 8;
   var LS_KEY = "_center_auth_v1";
   var DB_URL = "https://almurad-system-default-rtdb.firebaseio.com";
+  /* لازم تكون مطابقة حرفياً لإعدادات بقية الصفحات.
+     فايربيس يرمي app/duplicate-app إذا انطلق مرتين بإعدادات
+     مختلفة — وهذا كان يكسر سكربت صفحة التحليلات كامل. */
   var FB_CONFIG = {
     apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
     authDomain: "almurad-system.firebaseapp.com",
     databaseURL: DB_URL,
-    projectId: "almurad-system"
+    projectId: "almurad-system",
+    storageBucket: "almurad-system.firebasestorage.app",
+    messagingSenderId: "911755824405",
+    appId: "1:911755824405:web:c5520c00c11e336148ad1c"
   };
 
-  window.__centerAuth = { page: PAGE, user: null };
+  /* وعد يُحلّ عند فتح القفل.
+     ليش وعد مو حدث لحاله: هذا الملف سكربت عادي بالـ<head> فيشتغل
+     قبل أي سكربت module بالصفحة. لكن الفتح نفسه قد يصير بسرعة
+     (إذا الجلسة محفوظة) فتنطلق الإشارة قبل ما الصفحة تسجّل
+     نفسها للاستماع — وتضل تنتظر للأبد. الوعد ما يفوت: حتى لو
+     انحلّ قبل، .then() تشتغل على طول. */
+  var _readyResolve;
+  window.__centerAuth = {
+    page: PAGE,
+    user: null,
+    ready: new Promise(function (res) { _readyResolve = res; })
+  };
 
   /* ── إخفاء الصفحة فوراً قبل ما يظهر أي شي ── */
   var lockCss = document.createElement("style");
@@ -157,6 +174,7 @@
     document.documentElement.classList.remove("cauth-locked");
     if (box.parentNode) box.parentNode.removeChild(box);
     addKeyButton(username, name);
+    _readyResolve(window.__centerAuth.user);
     document.dispatchEvent(new CustomEvent("center-auth-ready", {
       detail: { username: username, name: name }
     }));

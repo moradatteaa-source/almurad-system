@@ -363,7 +363,7 @@ svg{display:block;width:100%;height:auto;overflow:visible}
 
 <div id="tip"></div>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -375,7 +375,11 @@ const firebaseConfig = {
   messagingSenderId: "911755824405",
   appId: "1:911755824405:web:c5520c00c11e336148ad1c"
 };
-const rtdb = getDatabase(initializeApp(firebaseConfig));
+/* نعيد استعمال تطبيق فايربيس إذا كان مشغّل (القفل يشغّله قبلنا).
+   بدون هذا الحارس يرمي app/duplicate-app ويموت سكربت الصفحة كله
+   قبل ما يبدأ — فالتحميل يفتر للأبد. */
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const rtdb = getDatabase(app);
 
 /* ════════ أدوات ════════ */
 const IRAQ_MS = 3 * 60 * 60 * 1000;               // توقيت بغداد
@@ -1201,9 +1205,18 @@ async function boot() {
 }
 
 /* ما نبدأ التحميل قبل ما ينفتح القفل — حتى ما ننزّل بيانات
-   الأرباح لواحد ما عنده صلاحية */
-if (window.__centerAuth && window.__centerAuth.user) boot();
-else document.addEventListener("center-auth-ready", boot, { once: true });
+   الأرباح لواحد ما عنده صلاحية.
+   نستعمل الوعد مو الحدث: الحدث ممكن ينطلق قبل ما نوصل لهنا
+   (لما تكون الجلسة محفوظة والقفل ينفتح فوراً) فنضل ننتظر للأبد. */
+if (window.__centerAuth && window.__centerAuth.ready) {
+  window.__centerAuth.ready.then(boot);
+} else {
+  document.getElementById("loadingOverlay").innerHTML =
+    '<div style="font-size:42px">🔒</div>' +
+    '<div class="loading-text">ملف القفل ما انحمّل<br>' +
+    '<span style="font-size:13px;font-weight:500;opacity:.8">' +
+    'تأكد أن center-auth.js موجود جنب الصفحة</span></div>';
+}
 </script>
 <!-- 🧭 شريط تنقّل السنتر المشترك -->
 <script src="center-nav.js"></script>

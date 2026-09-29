@@ -543,8 +543,14 @@ async function start() {
   $("loading").style.display = "none";
 }
 
-if (window.__centerAuth?.user) start();
-else document.addEventListener("center-auth-ready", start, { once: true });
+if (window.__centerAuth?.ready) {
+  window.__centerAuth.ready.then(start);
+} else {
+  $("loading").innerHTML =
+    '<div style="font-size:42px">🔒</div>' +
+    '<div>ملف القفل ما انحمّل<br>' +
+    '<span style="font-size:13px;opacity:.8">تأكد أن center-auth.js موجود جنب الصفحة</span></div>';
+}
 </script>
 
 <!-- 🧭 شريط تنقّل السنتر المشترك -->
