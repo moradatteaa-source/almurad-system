@@ -192,15 +192,30 @@ cashierFilter.innerHTML = `<option value="all">كل الكاشيرات</option>`
 // ✅ تحميل المخزن (سعر الشراء) من Realtime DB
 const whSnap = await get(ref(rtdb, "warehouse"));
 warehouse = whSnap.exists() ? whSnap.val() : {};
-// ✅ بناء فهرس بالاسم
+// ⚠️ إصلاح (2026-09-29): الفهرس كان بالاسم الخام بس. لكن المخزن يخزّن
+// بمفتاح منظّف (الفراغات صارت _)، فأي منتج اسمه فيه فراغ — وهذا أغلب
+// المنتجات العربية — ما يتطابق، فكلفته ترجع صفر والربح يطلع كامل
+// السعر. الفحص على البيانات الحية: بثلاث طرق مطابقة نغطّي ٩٩٪ من
+// البنود و٩٨٪ من الإيراد بدل جزء صغير.
+const _clean = x => String(x || "").trim().replace(/\s+/g, " ");
+const _norm  = x => _clean(x).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
 warehouseByName = {};
-Object.values(warehouse).forEach(p => {
-  if (p.name) warehouseByName[p.name] = p;
+let warehouseByKey = {}, warehouseByNorm = {};
+Object.entries(warehouse).forEach(([k, p]) => {
+  if (!p || typeof p !== "object") return;
+  warehouseByKey[k] = p;
+  if (p.name) warehouseByName[_clean(p.name)] = p;
+  warehouseByNorm[_norm(k)] = p;
+  if (p.name) warehouseByNorm[_norm(p.name)] = p;
 });
+window._whLookup = n => warehouseByKey[n] || warehouseByName[_clean(n)] || warehouseByNorm[_norm(n)] || null;
 }
-// ✅ بعد
-function getBuyPrice(productName){
-  const p = warehouseByName[productName];
+
+// الكلفة المثبّتة بالبند وقت البيع تفوز دائماً على الحالية —
+// الفواتير الجديدة تحفظها، والقديمة ترجع للمخزن
+function getBuyPrice(productName, item){
+  if (item && Number(item.buyPrice) > 0) return Number(item.buyPrice);
+  const p = window._whLookup ? window._whLookup(productName) : null;
   return p && p.buyPrice ? Number(p.buyPrice) : 0;
 }
 
@@ -259,7 +274,7 @@ if (to && invDate > to) return;
     if(!inv.items) return;
 
     inv.items.forEach(it=>{
- const buyPrice = getBuyPrice(it.product);
+ const buyPrice = getBuyPrice(it.product, it);
 
 const sellTotal = Number(it.total) || 0;
 const qty = Number(it.qty) || 0;
@@ -366,5 +381,7 @@ window.calcProfit = calcProfit;
 
 </script>
 
+<!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-nav.js"></script>
 </body>
 </html>

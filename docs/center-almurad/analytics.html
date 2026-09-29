@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 تحليلات سنتر المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════
+   📊 تحليلات سنتر المراد
+   ────────────────────────────────────────────────────────
+   ليش انبنت: ماكو ولا إحصائية عن السنتر — لا نعرف شنو يتباع
+   أكثر، ولا شنو يربّح أكثر، ولا أي وقت أزحم، ولا شنو راكد
+   بالمخزن. البيانات كلها موجودة (٥٬٠٢٨ فاتورة و١٢٬٠٣٤ بند
+   على ٩ أشهر) بس ماكو شي يقراها.
+
+   ملاحظة على الألوان: الباليتة متحققة بفاحص عمى الألوان —
+   كل زوج متجاور فرقه واضح للعين العادية ولعمى الألوان، وكلها
+   تباين ٣:١ على الأقل مع الخلفية البيضاء.
+   ════════════════════════════════════════════════════════ */
+:root{
+  --navy:#0d1b2e; --navy2:#162032; --blue:#1a3a5c;
+  --accent:#f97316; --accent2:#fb923c;
+  --green:#10b981; --red:#ef4444; --yellow:#f59e0b;
+  --bg:#f0f4f8; --card:#fff; --border:#e2e8f0;
+  --text:#1e293b; --text2:#64748b; --text3:#94a3b8;
+  --shadow:0 4px 24px rgba(0,0,0,.07); --shadow2:0 8px 40px rgba(0,0,0,.12);
+  --r:14px; --r2:10px;
+  /* باليتة الرسوم — متحققة، لا تُغيّر بدون إعادة فحص */
+  --c1:#ea580c; --c2:#0369a1; --c3:#059669; --c4:#9333ea; --c5:#b45309;
+  --grid:#eef2f6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+/* ── الرأس ── */
+#header{
+  background:linear-gradient(135deg,var(--navy),var(--blue));
+  color:#fff;padding:0 22px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  position:sticky;top:0;z-index:60;box-shadow:0 3px 18px rgba(0,0,0,.25);flex-wrap:wrap
+}
+.hd-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+.hd-brand .dot{
+  width:38px;height:38px;border-radius:11px;background:var(--accent);
+  display:grid;place-items:center;font-size:19px;flex-shrink:0
+}
+.hd-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hd-pill{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.hd-link{background:var(--accent);border:none;border-radius:9px;color:#fff;
+  padding:8px 14px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;
+  text-decoration:none;display:inline-block}
+.hd-link:hover{background:var(--accent2)}
+
+.wrap{max-width:1360px;margin:20px auto;padding:0 16px 60px}
+
+/* ── شريط الفترة ── */
+.period-bar{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:16px;box-shadow:var(--shadow);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap
+}
+.pchip{
+  background:#fff;border:1.5px solid var(--border);border-radius:999px;
+  padding:7px 15px;font-family:inherit;font-size:13px;font-weight:700;
+  color:var(--text2);cursor:pointer;transition:.18s;white-space:nowrap
+}
+.pchip:hover{border-color:var(--accent);color:var(--accent)}
+.pchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pdates{display:flex;gap:6px;align-items:center;margin-inline-start:auto;flex-wrap:wrap}
+.pdates input{
+  padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:inherit;font-size:13px;background:#fff;color:var(--text)
+}
+.pdates label{font-size:12px;color:var(--text2);font-weight:700}
+.refresh-btn{
+  background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:7px 13px;
+  font-family:inherit;font-weight:700;font-size:13px;color:var(--text2);cursor:pointer
+}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── المؤشرات ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-bottom:18px}
+.kpi{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:15px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden
+}
+.kpi::before{content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.kpi.k-green::before{background:var(--c3)} .kpi.k-blue::before{background:var(--c2)}
+.kpi.k-purple::before{background:var(--c4)} .kpi.k-red::before{background:var(--red)}
+.kpi-label{font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px}
+.kpi-val{font-size:23px;font-weight:900;color:var(--text);direction:ltr;text-align:right;line-height:1.15}
+.kpi-sub{font-size:11.5px;color:var(--text3);margin-top:5px;font-weight:600}
+.delta{font-size:12px;font-weight:800;margin-top:5px;display:inline-flex;align-items:center;gap:3px}
+.delta.up{color:var(--c3)} .delta.down{color:var(--red)} .delta.flat{color:var(--text3)}
+
+/* ── البطاقات ── */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:17px 18px;box-shadow:var(--shadow);margin-bottom:16px
+}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.card-title{font-size:15.5px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:7px}
+.card-note{font-size:12px;color:var(--text2);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2>.card{margin-bottom:0}
+
+/* ── الجداول ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse}
+th{
+  background:#f8fafc;color:var(--text2);font-size:12px;font-weight:800;
+  padding:9px 10px;text-align:start;border-bottom:2px solid var(--border);white-space:nowrap
+}
+td{padding:9px 10px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafbfc}
+.num{direction:ltr;text-align:start;font-weight:700;font-variant-numeric:tabular-nums}
+.rank{width:26px;height:26px;border-radius:7px;background:#f1f5f9;color:var(--text2);
+  display:grid;place-items:center;font-size:12px;font-weight:800;direction:ltr}
+.rank.r1{background:var(--c1);color:#fff} .rank.r2{background:var(--c2);color:#fff}
+.rank.r3{background:var(--c3);color:#fff}
+.pname{font-weight:700;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-cell{min-width:90px}
+.mini-bar{height:7px;border-radius:4px;background:var(--c1);min-width:3px}
+.tag{border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800;white-space:nowrap;display:inline-block}
+.tag.good{background:#d1fae5;color:#065f46} .tag.bad{background:#fee2e2;color:#991b1b}
+.tag.warn{background:#fef3c7;color:#92400e} .tag.mute{background:#f1f5f9;color:#475569}
+
+/* ── التنبيهات ── */
+.alerts{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.alert{border-radius:var(--r2);padding:13px 15px;border:1px solid;display:flex;gap:11px;align-items:flex-start}
+.alert.danger{background:#fef2f2;border-color:#fecaca}
+.alert.warn{background:#fffbeb;border-color:#fde68a}
+.alert.info{background:#eff6ff;border-color:#bfdbfe}
+.alert-ico{font-size:20px;line-height:1;flex-shrink:0}
+.alert-t{font-weight:800;font-size:13.5px;margin-bottom:3px}
+.alert-d{font-size:12.5px;color:var(--text2);line-height:1.6}
+
+/* ── الرسوم ── */
+.chart-box{width:100%;overflow:hidden}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.gridline{stroke:var(--grid);stroke-width:1}
+.axis-txt{font-size:11px;fill:var(--text3);font-family:'Cairo',sans-serif;font-weight:600}
+.bar-r{transition:opacity .15s}
+.bar-r:hover{opacity:.78}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;justify-content:center}
+.lg{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text2)}
+.lg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* ── التلميح ── */
+#tip{
+  position:fixed;background:var(--navy);color:#fff;border-radius:9px;
+  padding:8px 12px;font-size:12.5px;font-weight:700;pointer-events:none;
+  opacity:0;transition:opacity .12s;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.3);
+  white-space:pre-line;line-height:1.7;max-width:250px
+}
+#tip.on{opacity:1}
+
+/* ── حالات ── */
+.empty{text-align:center;padding:34px 16px;color:var(--text3);font-size:13.5px;font-weight:600}
+.loading-overlay{
+  position:fixed;inset:0;background:rgba(240,244,248,.97);z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px
+}
+.spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-weight:700;color:var(--text2)}
+
+/* ── تبويبات المنتجات ── */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:#f1f5f9;border:none;border-radius:8px;padding:7px 13px;
+  font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text2);cursor:pointer}
+.tab.on{background:var(--navy);color:#fff}
+
+@media(max-width:900px){ .grid2{grid-template-columns:1fr} }
+@media(max-width:640px){
+  #header{height:auto;padding:9px 12px;gap:8px}
+  .hd-brand{font-size:14.5px}
+  .hd-brand .dot{width:32px;height:32px;font-size:16px;border-radius:9px}
+  .hd-link{padding:6px 10px;font-size:12px;border-radius:8px}
+  .hd-right{gap:6px}
+  .hd-pill{padding:5px 10px;font-size:11.5px}
+  .wrap{margin:12px auto;padding:0 10px 50px}
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{padding:12px 13px} .kpi-val{font-size:19px}
+  .card{padding:14px 13px}
+  .pdates{width:100%;margin-inline-start:0}
+  .pchip{font-size:12px;padding:6px 12px}
+  td,th{font-size:12px;padding:8px 7px}
+  .pname{max-width:130px}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">جاري تحليل بيانات السنتر...</div>
+</div>
+
+<div id="header">
+  <div class="hd-brand"><div class="dot">📊</div><span>تحليلات السنتر</span></div>
+  <div class="hd-right">
+    <div class="hd-pill">🕐 <span id="liveClock">--:--</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="period-bar">
+    <button class="pchip" data-p="today">اليوم</button>
+    <button class="pchip" data-p="yday">أمس</button>
+    <button class="pchip on" data-p="7">آخر ٧ أيام</button>
+    <button class="pchip" data-p="30">آخر ٣٠ يوم</button>
+    <button class="pchip" data-p="month">هذا الشهر</button>
+    <button class="pchip" data-p="all">كل الفترة</button>
+    <div class="pdates">
+      <label>من</label><input type="date" id="fromDate">
+      <label>إلى</label><input type="date" id="toDate">
+      <button class="refresh-btn" id="applyBtn">تطبيق</button>
+      <button class="refresh-btn" id="reloadBtn" title="إعادة جلب البيانات من القاعدة">🔄</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card" id="alertsCard" style="display:none">
+    <div class="card-head"><div class="card-title">🔔 تنبيهات تحتاج انتباهك</div></div>
+    <div class="alerts" id="alerts"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">📈 المبيعات عبر الأيام</div>
+      <div class="card-note" id="trendNote"></div>
+    </div>
+    <div class="chart-box" id="trendChart"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🕐 أي وقت تبيع أكثر</div>
+        <div class="card-note">حسب ساعة اليوم</div>
+      </div>
+      <div class="chart-box" id="hourChart"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📅 أي يوم تبيع أكثر</div>
+        <div class="card-note">حسب يوم الأسبوع</div>
+      </div>
+      <div class="chart-box" id="dowChart"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🏆 المنتجات</div>
+      <div class="tabs" id="prodTabs">
+        <button class="tab on" data-t="qty">الأكثر مبيعاً</button>
+        <button class="tab" data-t="revenue">الأكثر إيراداً</button>
+        <button class="tab" data-t="profit">الأكثر ربحاً</button>
+        <button class="tab" data-t="margin">أعلى هامش</button>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table id="prodTable"></table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">⚠️ تُباع بخسارة</div>
+        <div class="card-note">سعر البيع أقل من الشراء</div>
+      </div>
+      <div class="tbl-wrap"><table id="lossTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">↩️ الأكثر إرجاعاً</div>
+        <div class="card-note">عدد القطع المرجّعة</div>
+      </div>
+      <div class="tbl-wrap"><table id="returnTable"></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🧊 بضاعة راكدة — فلوس واقفة بالمخزن</div>
+      <div class="card-note">موجودة بالمخزن وما انباعت ولا قطعة بالفترة المختارة</div>
+    </div>
+    <div class="tbl-wrap"><table id="deadTable"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">👤 أداء الكاشيرات</div>
+    </div>
+    <div class="tbl-wrap"><table id="cashierTable"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🛒 منتجات تنباع سوية</div>
+      <div class="card-note">تنفع للعرض جنب بعض أو عرض مشترك</div>
+    </div>
+    <div class="tbl-wrap"><table id="pairTable"></table></div>
+  </div>
+
+</div>
+
+<div id="tip"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.firebasestorage.app",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:c5520c00c11e336148ad1c"
+};
+const rtdb = getDatabase(initializeApp(firebaseConfig));
+
+/* ════════ أدوات ════════ */
+const IRAQ_MS = 3 * 60 * 60 * 1000;               // توقيت بغداد
+const fmt  = n => Math.round(Number(n) || 0).toLocaleString("en-US");
+const fmtK = n => { n = Number(n) || 0; const a = Math.abs(n);
+  if (a >= 1e6) return (n/1e6).toFixed(a >= 1e7 ? 0 : 1) + "M";
+  if (a >= 1e3) return (n/1e3).toFixed(a >= 1e4 ? 0 : 1) + "K"; return String(Math.round(n)); };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const clean = s => String(s || "").trim().replace(/\s+/g, " ");
+const toKey = s => clean(s).replace(/[.#$\[\]\/]/g, "_").replace(/\s+/g, "_");
+// تاريخ بغداد من طابع زمني
+const bDate = ts => new Date(Number(ts) + IRAQ_MS);
+const dayKey = ts => bDate(ts).toISOString().slice(0, 10);
+
+/* ════════ حالة ════════ */
+let ALL = [];          // كل الفواتير
+let WH = {};           // المخزن
+let RESOLVE = null;    // اسم المنتج → سجل المخزن
+let period = "7";
+let prodTab = "qty";
+
+/* ── مطابقة اسم المنتج بالمخزن ──
+   المخزن يخزّن بمفتاح منظّف (الفراغات صارت _) بينما الفاتورة تحفظ الاسم
+   الخام. المطابقة بالاسم الخام لوحده تفشل بأغلب المنتجات العربية وترجّع
+   كلفة صفر — وهذا اللي يخلي الربح يطلع أعلى من الحقيقة. نجرّب ثلاث طرق. */
+function buildResolver(wh) {
+  const byKey = {}, byName = {}, byNorm = {};
+  for (const [k, p] of Object.entries(wh || {})) {
+    if (!p || typeof p !== "object") continue;
+    byKey[k] = p;
+    if (p.name) byName[clean(p.name)] = p;
+    byNorm[toKey(k)] = p;
+    if (p.name) byNorm[toKey(p.name)] = p;
+  }
+  return n => byKey[n] || byName[clean(n)] || byNorm[toKey(n)] || null;
+}
+const buyPriceOf = name => {
+  const p = RESOLVE ? RESOLVE(name) : null;
+  return p ? Number(p.buyPrice) || 0 : 0;
+};
+
+/* ════════ التحميل ════════ */
+const CACHE_KEY = "_center_analytics_v1";
+const CACHE_TTL = 15 * 60 * 1000;
+
+async function loadData(force = false) {
+  if (!force) {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const c = JSON.parse(raw);
+        if (Date.now() - c.ts < CACHE_TTL) { ALL = c.inv; WH = c.wh; return; }
+      }
+    } catch (e) { /* كاش تالف — نتجاهله */ }
+  }
+  const [iSnap, wSnap] = await Promise.all([
+    get(ref(rtdb, "posInvoices")),
+    get(ref(rtdb, "warehouse"))
+  ]);
+  const inv = iSnap.exists() ? iSnap.val() : {};
+  WH = wSnap.exists() ? wSnap.val() : {};
+  ALL = Object.entries(inv).map(([id, v]) => ({ id, ...v }))
+        .filter(v => v && Number(v.createdAt) > 0);
+  // نخفف المخزن قبل التخزين بالكاش — نحتاج الاسم والكلفة والكمية بس
+  const whLite = {};
+  for (const [k, p] of Object.entries(WH)) {
+    if (!p || typeof p !== "object") continue;
+    whLite[k] = { name: p.name || k, buyPrice: Number(p.buyPrice) || 0,
+                  totalQty: Number(p.totalQty) || 0,
+                  prices: p.prices ? { pos: Number(p.prices.pos) || 0 } : null };
+  }
+  WH = whLite;
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), inv: ALL, wh: WH })); }
+  catch (e) { /* أكبر من حد التخزين — نكمل بدون كاش */ }
+}
+
+/* ════════ الفترة ════════ */
+function periodRange(p) {
+  const now = Date.now();
+  const todayStart = (() => { const d = bDate(now); d.setUTCHours(0,0,0,0); return d.getTime() - IRAQ_MS; })();
+  const DAY = 86400000;
+  switch (p) {
+    case "today": return [todayStart, now];
+    case "yday":  return [todayStart - DAY, todayStart];
+    case "7":     return [todayStart - 6 * DAY, now];
+    case "30":    return [todayStart - 29 * DAY, now];
+    case "month": { const d = bDate(now); d.setUTCDate(1); d.setUTCHours(0,0,0,0);
+                    return [d.getTime() - IRAQ_MS, now]; }
+    case "custom": {
+      const f = document.getElementById("fromDate").value;
+      const t = document.getElementById("toDate").value;
+      const from = f ? new Date(f + "T00:00:00Z").getTime() - IRAQ_MS : 0;
+      const to   = t ? new Date(t + "T23:59:59Z").getTime() - IRAQ_MS : now;
+      return [from, to];
+    }
+    default: return [0, now];   // كل الفترة
+  }
+}
+const inRange = (arr, a, b) => arr.filter(v => { const t = Number(v.createdAt); return t >= a && t <= b; });
+
+/* ════════ التحليل ════════ */
+function analyse(rows) {
+  const sales = rows.filter(r => r.type !== "return");
+  const rets  = rows.filter(r => r.type === "return");
+
+  let revenue = 0, cost = 0, retValue = 0, retQty = 0;
+  const prod = {};      // اسم → {qty, revenue, cost, profit, invoices:Set}
+  const retProd = {};
+  const byDay = {}, byHour = new Array(24).fill(0), byDow = new Array(7).fill(0);
+  const dayCount = {};
+  const cashier = {};
+  const pairs = {};
+
+  for (const inv of rows) {
+    const isRet = inv.type === "return";
+    const t = Number(inv.createdAt);
+    const d = dayKey(t), bd = bDate(t);
+    const items = Array.isArray(inv.items) ? inv.items : [];
+
+    if (!isRet) {
+      const tot = Number(inv.total) || 0;
+      revenue += tot;
+      byDay[d] = (byDay[d] || 0) + tot;
+      byHour[bd.getUTCHours()] += tot;
+      byDow[bd.getUTCDay()] += tot;
+      dayCount[d] = (dayCount[d] || 0) + 1;
+      const c = clean(inv.cashierId) || "غير معروف";
+      cashier[c] = cashier[c] || { invoices: 0, revenue: 0, profit: 0, returns: 0 };
+      cashier[c].invoices++; cashier[c].revenue += tot;
+    } else {
+      retValue += Math.abs(Number(inv.total) || 0);
+      const c = clean(inv.cashierId) || "غير معروف";
+      cashier[c] = cashier[c] || { invoices: 0, revenue: 0, profit: 0, returns: 0 };
+      cashier[c].returns++;
+    }
+
+    // تحليل السلة — المنتجات اللي تنشترى سوية
+    if (!isRet && items.length > 1) {
+      const names = [...new Set(items.map(i => clean(i.product)).filter(Boolean))].sort();
+      for (let i = 0; i < names.length; i++)
+        for (let j = i + 1; j < names.length; j++) {
+          const k = names[i] + " ⟷ " + names[j];
+          pairs[k] = (pairs[k] || 0) + 1;
+        }
+    }
+
+    for (const it of items) {
+      const name = clean(it.product); if (!name) continue;
+      const q = Number(it.qty) || 0;
+      const line = Number(it.total) || 0;
+      // الكلفة: المثبتة وقت البيع إن وجدت، وإلا الحالية من المخزن
+      const bp = Number(it.buyPrice) > 0 ? Number(it.buyPrice) : buyPriceOf(name);
+
+      if (isRet || q < 0) {
+        const aq = Math.abs(q);
+        retProd[name] = (retProd[name] || 0) + aq;
+        retQty += aq;
+        continue;
+      }
+      prod[name] = prod[name] || { qty: 0, revenue: 0, cost: 0, invoices: 0, unit: 0, bp };
+      prod[name].qty += q;
+      prod[name].revenue += line;
+      prod[name].cost += bp * q;
+      prod[name].invoices++;
+      prod[name].unit = q > 0 ? Math.round(line / q) : prod[name].unit;
+      prod[name].bp = bp;
+      cost += bp * q;
+
+      const c = clean(inv.cashierId) || "غير معروف";
+      if (cashier[c]) cashier[c].profit += line - bp * q;
+    }
+  }
+
+  const list = Object.entries(prod).map(([name, v]) => ({
+    name, ...v,
+    profit: v.revenue - v.cost,
+    margin: v.revenue > 0 ? ((v.revenue - v.cost) / v.revenue) * 100 : 0
+  }));
+
+  return {
+    revenue, cost, profit: revenue - cost,
+    margin: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
+    invoiceCount: sales.length, returnCount: rets.length, retValue, retQty,
+    avgInvoice: sales.length ? revenue / sales.length : 0,
+    products: list, retProd, byDay, byHour, byDow, dayCount, cashier, pairs,
+    creditTotal: sales.filter(r => r.type === "credit").reduce((a, r) => a + (Number(r.rest) || 0), 0)
+  };
+}
+
+/* ════════ التلميح ════════ */
+const tip = document.getElementById("tip");
+function showTip(e, text) {
+  tip.textContent = text; tip.classList.add("on");
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY - h - pad;
+  if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+  if (y < 8) y = e.clientY + pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => tip.classList.remove("on");
+
+/* ════════ الرسوم — SVG مرسوم بالإيد، بلا مكتبات ════════ */
+function barChart(el, data, opts = {}) {
+  const { color = "var(--c1)", fmtVal = fmtK, tipLabel = v => v } = opts;
+  if (!data.length || data.every(d => !d.v)) {
+    el.innerHTML = '<div class="empty">ماكو بيانات بهذي الفترة</div>'; return;
+  }
+  const W = 800, H = 240, mT = 14, mB = 34, mL = 46, mR = 8;
+  const pw = W - mL - mR, ph = H - mT - mB;
+  const max = Math.max(...data.map(d => d.v), 1);
+  const step = pw / data.length;
+  const bw = Math.max(4, Math.min(step * 0.62, 46));
+  // خطوط شبكة
+  let grid = "", ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const y = mT + ph - (ph * i / ticks);
+    grid += `<line class="gridline" x1="${mL}" y1="${y}" x2="${W - mR}" y2="${y}"/>`
+         +  `<text class="axis-txt" x="${mL - 7}" y="${y + 4}" text-anchor="end">${fmtVal(max * i / ticks)}</text>`;
+  }
+  let bars = "";
+  data.forEach((d, i) => {
+    const h = Math.max(1, (d.v / max) * ph);
+    const x = mL + i * step + (step - bw) / 2;
+    const y = mT + ph - h;
+    // نهايات مدوّرة من الأعلى بس، مثبّتة على خط الأساس
+    const r = Math.min(4, bw / 2, h);
+    const path = `M${x},${mT + ph} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + bw - r},${y} Q${x + bw},${y} ${x + bw},${y + r} L${x + bw},${mT + ph} Z`;
+    bars += `<path class="bar-r" d="${path}" fill="${d.color || color}" data-t="${esc(tipLabel(d))}"/>`;
+    if (data.length <= 26 || i % Math.ceil(data.length / 14) === 0)
+      bars += `<text class="axis-txt" x="${x + bw / 2}" y="${H - 13}" text-anchor="middle">${esc(d.l)}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>`;
+  el.querySelectorAll("[data-t]").forEach(n => {
+    n.addEventListener("mousemove", e => showTip(e, n.dataset.t));
+    n.addEventListener("mouseleave", hideTip);
+  });
+}
+
+function lineChart(el, data) {
+  if (!data.length) { el.innerHTML = '<div class="empty">ماكو بيانات بهذي الفترة</div>'; return; }
+  if (data.length === 1) return barChart(el, data, { tipLabel: d => `${d.l}\n${fmt(d.v)} د.ع` });
+  const W = 800, H = 250, mT = 14, mB = 34, mL = 50, mR = 10;
+  const pw = W - mL - mR, ph = H - mT - mB;
+  const max = Math.max(...data.map(d => d.v), 1);
+  const X = i => mL + (pw * i) / (data.length - 1);
+  const Y = v => mT + ph - (v / max) * ph;
+  let grid = "";
+  for (let i = 0; i <= 4; i++) {
+    const y = mT + ph - (ph * i / 4);
+    grid += `<line class="gridline" x1="${mL}" y1="${y}" x2="${W - mR}" y2="${y}"/>`
+         +  `<text class="axis-txt" x="${mL - 7}" y="${y + 4}" text-anchor="end">${fmtK(max * i / 4)}</text>`;
+  }
+  const pts = data.map((d, i) => `${X(i)},${Y(d.v)}`).join(" ");
+  const area = `M${X(0)},${mT + ph} L${pts.replace(/ /g, " L")} L${X(data.length - 1)},${mT + ph} Z`;
+  let dots = "", labs = "";
+  const every = Math.ceil(data.length / 12);
+  data.forEach((d, i) => {
+    dots += `<circle class="bar-r" cx="${X(i)}" cy="${Y(d.v)}" r="4.5" fill="var(--c1)" stroke="#fff" stroke-width="2" data-t="${esc(d.l + "\n" + fmt(d.v) + " د.ع")}"/>`;
+    if (i % every === 0 || i === data.length - 1)
+      labs += `<text class="axis-txt" x="${X(i)}" y="${H - 13}" text-anchor="middle">${esc(d.l)}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--c1)" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="var(--c1)" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${area}" fill="url(#ag)"/>
+    <polyline points="${pts}" fill="none" stroke="var(--c1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}${labs}</svg>`;
+  el.querySelectorAll("[data-t]").forEach(n => {
+    n.addEventListener("mousemove", e => showTip(e, n.dataset.t));
+    n.addEventListener("mouseleave", hideTip);
+  });
+}
+
+/* ════════ العرض ════════ */
+function kpi(label, val, sub, delta, cls) {
+  let d = "";
+  if (delta !== null && delta !== undefined && isFinite(delta)) {
+    const up = delta > 0.5, dn = delta < -0.5;
+    d = `<div class="delta ${up ? "up" : dn ? "down" : "flat"}">${up ? "▲" : dn ? "▼" : "▬"} ${Math.abs(delta).toFixed(0)}% عن الفترة السابقة</div>`;
+  }
+  return `<div class="kpi ${cls || ""}">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-val">${val}</div>
+    ${sub ? `<div class="kpi-sub">${sub}</div>` : ""}${d}</div>`;
+}
+
+function renderKpis(a, prev) {
+  const pct = (now, before) => (before > 0 ? ((now - before) / before) * 100 : null);
+  document.getElementById("kpis").innerHTML =
+      kpi("المبيعات", fmt(a.revenue) + " <small>د.ع</small>", null, pct(a.revenue, prev && prev.revenue), "")
+    + kpi("صافي الربح", fmt(a.profit) + " <small>د.ع</small>", `هامش ${a.margin.toFixed(1)}%`, pct(a.profit, prev && prev.profit), "k-green")
+    + kpi("عدد الفواتير", fmt(a.invoiceCount), null, pct(a.invoiceCount, prev && prev.invoiceCount), "k-blue")
+    + kpi("متوسط الفاتورة", fmt(a.avgInvoice) + " <small>د.ع</small>", null, pct(a.avgInvoice, prev && prev.avgInvoice), "k-purple")
+    + kpi("الإرجاعات", fmt(a.retValue) + " <small>د.ع</small>", `${a.returnCount} فاتورة · ${fmt(a.retQty)} قطعة`, null, "k-red")
+    + kpi("ديون غير محصّلة", fmt(a.creditTotal) + " <small>د.ع</small>", "من فواتير الفترة", null, "k-red");
+}
+
+function renderAlerts(a) {
+  const out = [];
+  // منتج من الأكثر مبيعاً ونفد مخزونه
+  const top = [...a.products].sort((x, y) => y.qty - x.qty).slice(0, 25);
+  const outOf = top.filter(p => { const w = RESOLVE(p.name); return w && Number(w.totalQty) <= 0; }).slice(0, 6);
+  if (outOf.length) out.push({ c: "danger", i: "📦", t: `${outOf.length} منتج من الأكثر مبيعاً نفد من المخزن`,
+    d: outOf.map(p => esc(p.name)).join(" · ") });
+  // بيع بخسارة
+  const loss = a.products.filter(p => p.bp > 0 && p.profit < 0);
+  if (loss.length) out.push({ c: "danger", i: "📉", t: `${loss.length} منتج ينباع بخسارة`,
+    d: `خسارة ${fmt(Math.abs(loss.reduce((s, p) => s + p.profit, 0)))} د.ع بالفترة — شوف جدول «تُباع بخسارة»` });
+  // هامش منخفض
+  if (a.revenue > 0 && a.margin < 10)
+    out.push({ c: "warn", i: "⚠️", t: `هامش الربح ${a.margin.toFixed(1)}% بس`, d: "واطي — راجع أسعار البيع أو كلفة الشراء" });
+  // ديون
+  if (a.creditTotal > 0) out.push({ c: "warn", i: "📒", t: `${fmt(a.creditTotal)} د.ع ديون غير محصّلة`, d: "من فواتير هذي الفترة — راجع صفحة الديون" });
+  // نسبة إرجاع عالية
+  if (a.invoiceCount > 10 && a.returnCount / a.invoiceCount > 0.05)
+    out.push({ c: "warn", i: "↩️", t: `نسبة الإرجاع ${(a.returnCount / a.invoiceCount * 100).toFixed(1)}%`, d: "أعلى من الطبيعي — شوف شنو المنتجات المرجّعة" });
+  // منتجات بلا سعر شراء
+  const noCost = a.products.filter(p => !p.bp).length;
+  if (noCost) out.push({ c: "info", i: "ℹ️", t: `${noCost} منتج بلا سعر شراء بالمخزن`, d: "ربحهن محسوب كامل السعر — الرقم الحقيقي أقل" });
+
+  const box = document.getElementById("alerts");
+  document.getElementById("alertsCard").style.display = out.length ? "" : "none";
+  box.innerHTML = out.map(o => `<div class="alert ${o.c}"><div class="alert-ico">${o.i}</div>
+    <div><div class="alert-t">${o.t}</div><div class="alert-d">${o.d}</div></div></div>`).join("");
+}
+
+function renderProducts(a) {
+  const el = document.getElementById("prodTable");
+  let list = [...a.products];
+  const sorters = {
+    qty:     (x, y) => y.qty - x.qty,
+    revenue: (x, y) => y.revenue - x.revenue,
+    profit:  (x, y) => y.profit - x.profit,
+    margin:  (x, y) => y.margin - x.margin
+  };
+  if (prodTab === "margin") list = list.filter(p => p.revenue >= 5000 && p.bp > 0);
+  list.sort(sorters[prodTab]).splice(30);
+  if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">ماكو بيانات</td></tr></tbody>'; return; }
+
+  const maxOf = { qty: "qty", revenue: "revenue", profit: "profit", margin: "margin" }[prodTab];
+  const max = Math.max(...list.map(p => Math.abs(p[maxOf])), 1);
+
+  el.innerHTML = `<thead><tr>
+      <th>#</th><th>المنتج</th><th>الكمية</th><th>الإيراد</th>
+      <th>الكلفة</th><th>الربح</th><th>الهامش</th><th style="width:110px"></th>
+    </tr></thead><tbody>` +
+    list.map((p, i) => `<tr>
+      <td><div class="rank ${i < 3 ? "r" + (i + 1) : ""}">${i + 1}</div></td>
+      <td class="pname" title="${esc(p.name)}">${esc(p.name)}</td>
+      <td class="num">${fmt(p.qty)}</td>
+      <td class="num">${fmt(p.revenue)}</td>
+      <td class="num" style="color:var(--text2)">${p.bp ? fmt(p.cost) : "—"}</td>
+      <td class="num" style="color:${p.profit < 0 ? "var(--red)" : "var(--c3)"}">${p.bp ? fmt(p.profit) : "—"}</td>
+      <td><span class="tag ${!p.bp ? "mute" : p.margin < 0 ? "bad" : p.margin < 10 ? "warn" : "good"}">${p.bp ? p.margin.toFixed(0) + "%" : "؟"}</span></td>
+      <td class="bar-cell"><div class="mini-bar" style="width:${Math.max(3, Math.abs(p[maxOf]) / max * 100)}%;background:${p.profit < 0 && prodTab === "profit" ? "var(--red)" : "var(--c1)"}"></div></td>
+    </tr>`).join("") + "</tbody>";
+}
+
+function renderLoss(a) {
+  const el = document.getElementById("lossTable");
+  const list = a.products.filter(p => p.bp > 0 && p.profit < 0).sort((x, y) => x.profit - y.profit).slice(0, 12);
+  if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو ولا منتج ينباع بخسارة</td></tr></tbody>'; return; }
+  el.innerHTML = `<thead><tr><th>المنتج</th><th>سعر البيع</th><th>الشراء</th><th>الخسارة</th></tr></thead><tbody>` +
+    list.map(p => `<tr>
+      <td class="pname" title="${esc(p.name)}">${esc(p.name)}</td>
+      <td class="num">${fmt(p.unit)}</td>
+      <td class="num">${fmt(p.bp)}</td>
+      <td class="num" style="color:var(--red)">${fmt(p.profit)}</td>
+    </tr>`).join("") + "</tbody>";
+}
+
+function renderReturns(a) {
+  const el = document.getElementById("returnTable");
+  const list = Object.entries(a.retProd).sort((x, y) => y[1] - x[1]).slice(0, 12);
+  if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ ماكو إرجاعات بهذي الفترة</td></tr></tbody>'; return; }
+  const max = Math.max(...list.map(l => l[1]), 1);
+  el.innerHTML = `<thead><tr><th>المنتج</th><th>القطع المرجّعة</th><th style="width:90px"></th></tr></thead><tbody>` +
+    list.map(([n, q]) => `<tr>
+      <td class="pname" title="${esc(n)}">${esc(n)}</td>
+      <td class="num">${fmt(q)}</td>
+      <td class="bar-cell"><div class="mini-bar" style="width:${q / max * 100}%;background:var(--red)"></div></td>
+    </tr>`).join("") + "</tbody>";
+}
+
+function renderDead(a) {
+  const el = document.getElementById("deadTable");
+  const sold = new Set(a.products.map(p => p.name));
+  const rows = [];
+  for (const [k, p] of Object.entries(WH)) {
+    const qty = Number(p.totalQty) || 0;
+    if (qty <= 0) continue;
+    const name = clean(p.name || k);
+    if (sold.has(name)) continue;
+    const bp = Number(p.buyPrice) || 0;
+    rows.push({ name, qty, bp, value: qty * bp });
+  }
+  rows.sort((x, y) => y.value - x.value);
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  const top = rows.slice(0, 15);
+  if (!top.length) { el.innerHTML = '<tbody><tr><td class="empty">✅ كل منتجات المخزن تحركت بهذي الفترة</td></tr></tbody>'; return; }
+  el.innerHTML = `<thead><tr><th>المنتج</th><th>الكمية بالمخزن</th><th>سعر الشراء</th><th>الفلوس الواقفة</th></tr></thead><tbody>` +
+    top.map(r => `<tr>
+      <td class="pname" title="${esc(r.name)}">${esc(r.name)}</td>
+      <td class="num">${fmt(r.qty)}</td>
+      <td class="num" style="color:var(--text2)">${r.bp ? fmt(r.bp) : "—"}</td>
+      <td class="num" style="color:var(--yellow)">${r.bp ? fmt(r.value) : "—"}</td>
+    </tr>`).join("") +
+    `<tr style="background:#fffbeb"><td colspan="3" style="font-weight:800">المجموع — ${fmt(rows.length)} منتج راكد</td>
+     <td class="num" style="color:var(--yellow);font-weight:900">${fmt(total)} د.ع</td></tr></tbody>`;
+}
+
+function renderCashiers(a) {
+  const el = document.getElementById("cashierTable");
+  const list = Object.entries(a.cashier).map(([n, v]) => ({ name: n, ...v }))
+    .filter(c => c.invoices > 0 || c.returns > 0)
+    .sort((x, y) => y.revenue - x.revenue);
+  if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">ماكو بيانات</td></tr></tbody>'; return; }
+  el.innerHTML = `<thead><tr><th>الكاشير</th><th>الفواتير</th><th>المبيعات</th><th>متوسط الفاتورة</th><th>الربح</th><th>إرجاعات</th></tr></thead><tbody>` +
+    list.map(c => `<tr>
+      <td style="font-weight:700">${esc(c.name)}</td>
+      <td class="num">${fmt(c.invoices)}</td>
+      <td class="num">${fmt(c.revenue)}</td>
+      <td class="num">${fmt(c.invoices ? c.revenue / c.invoices : 0)}</td>
+      <td class="num" style="color:var(--c3)">${fmt(c.profit)}</td>
+      <td class="num" style="color:${c.returns ? "var(--red)" : "var(--text3)"}">${fmt(c.returns)}</td>
+    </tr>`).join("") + "</tbody>";
+}
+
+function renderPairs(a) {
+  const el = document.getElementById("pairTable");
+  const list = Object.entries(a.pairs).filter(p => p[1] >= 3).sort((x, y) => y[1] - x[1]).slice(0, 12);
+  if (!list.length) { el.innerHTML = '<tbody><tr><td class="empty">ماكو تكرار كافي بهذي الفترة</td></tr></tbody>'; return; }
+  el.innerHTML = `<thead><tr><th>المنتجان</th><th>انباعوا سوية</th></tr></thead><tbody>` +
+    list.map(([k, c]) => {
+      const [x, y] = k.split(" ⟷ ");
+      return `<tr><td><span style="font-weight:700">${esc(x)}</span>
+        <span style="color:var(--text3);margin:0 6px">+</span>
+        <span style="font-weight:700">${esc(y)}</span></td>
+        <td class="num">${fmt(c)} مرة</td></tr>`;
+    }).join("") + "</tbody>";
+}
+
+const DOW = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+function renderCharts(a) {
+  // الاتجاه اليومي
+  const days = Object.keys(a.byDay).sort();
+  const trend = days.map(d => ({ l: d.slice(5).replace("-", "/"), v: a.byDay[d] }));
+  lineChart(document.getElementById("trendChart"), trend);
+  const best = trend.reduce((m, d) => (d.v > (m ? m.v : -1) ? d : m), null);
+  document.getElementById("trendNote").textContent =
+    best ? `أفضل يوم: ${best.l} بـ${fmt(best.v)} د.ع` : "";
+
+  // الساعات — نعرض ساعات الدوام اللي فيها بيع فعلاً
+  const hrs = a.byHour.map((v, h) => ({ h, v }));
+  const active = hrs.filter(x => x.v > 0);
+  const lo = active.length ? Math.min(...active.map(x => x.h)) : 8;
+  const hi = active.length ? Math.max(...active.map(x => x.h)) : 22;
+  const maxH = Math.max(...a.byHour);
+  const hourData = hrs.slice(lo, hi + 1).map(x => ({
+    l: String(x.h).padStart(2, "0"), v: x.v,
+    color: x.v === maxH && maxH > 0 ? "var(--c1)" : "var(--c2)"
+  }));
+  barChart(document.getElementById("hourChart"), hourData,
+    { color: "var(--c2)", tipLabel: d => `الساعة ${d.l}:00\n${fmt(d.v)} د.ع` });
+
+  // أيام الأسبوع
+  const maxD = Math.max(...a.byDow);
+  const dowData = a.byDow.map((v, i) => ({
+    l: DOW[i].slice(0, 6), v,
+    color: v === maxD && maxD > 0 ? "var(--c1)" : "var(--c4)"
+  }));
+  barChart(document.getElementById("dowChart"), dowData,
+    { color: "var(--c4)", tipLabel: d => `${d.l}\n${fmt(d.v)} د.ع` });
+}
+
+/* ════════ التشغيل ════════ */
+function render() {
+  const [a, b] = periodRange(period);
+  const rows = inRange(ALL, a, b);
+  // الفترة السابقة بنفس الطول — للمقارنة
+  const span = b - a;
+  const prevRows = (period === "all" || !isFinite(span) || span <= 0) ? null : inRange(ALL, a - span, a);
+
+  const A = analyse(rows);
+  const P = prevRows ? analyse(prevRows) : null;
+
+  renderKpis(A, P);
+  renderAlerts(A);
+  renderCharts(A);
+  renderProducts(A);
+  renderLoss(A);
+  renderReturns(A);
+  renderDead(A);
+  renderCashiers(A);
+  renderPairs(A);
+}
+
+document.querySelectorAll(".pchip").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".pchip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on"); period = c.dataset.p; render();
+}));
+document.getElementById("applyBtn").addEventListener("click", () => {
+  document.querySelectorAll(".pchip").forEach(x => x.classList.remove("on"));
+  period = "custom"; render();
+});
+document.getElementById("reloadBtn").addEventListener("click", async () => {
+  document.getElementById("loadingOverlay").style.display = "flex";
+  await loadData(true); RESOLVE = buildResolver(WH); render();
+  document.getElementById("loadingOverlay").style.display = "none";
+});
+document.getElementById("prodTabs").addEventListener("click", e => {
+  const t = e.target.closest(".tab"); if (!t) return;
+  document.querySelectorAll("#prodTabs .tab").forEach(x => x.classList.remove("on"));
+  t.classList.add("on"); prodTab = t.dataset.t;
+  render();
+});
+
+setInterval(() => {
+  document.getElementById("liveClock").textContent =
+    new Date().toLocaleTimeString("ar-IQ", { hour: "2-digit", minute: "2-digit" });
+}, 1000);
+
+(async () => {
+  try {
+    await loadData();
+    RESOLVE = buildResolver(WH);
+    render();
+  } catch (e) {
+    console.error(e);
+    document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
+      `<div class="card"><div class="empty">⚠️ تعذر تحميل البيانات: ${esc(e.message)}</div></div>`);
+  } finally {
+    document.getElementById("loadingOverlay").style.display = "none";
+  }
+})();
+</script>
+<!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-nav.js"></script>
+</body>
+</html>

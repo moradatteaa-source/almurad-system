@@ -2175,7 +2175,14 @@ const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
       product: name,
       qty: isReturnMode ? -qty : qty,
       price: unitAfterDiscount,
-      total: cellTotal
+      total: cellTotal,
+      // 🔒 كلفة الشراء وقت البيع — مثبّتة بالفاتورة عمداً.
+      // قبل، الأرباح كانت تنحسب بسعر الشراء *الحالي* وقت فتح التقرير،
+      // يعني أي تغيير بسعر الشراء اليوم يغيّر أرباح الأشهر الماضية
+      // بأثر رجعي. وإذا انتغيّر اسم المنتج بالمخزن، الفواتير القديمة
+      // تصير كلفتها صفر فيطلع ربح وهمي بكامل السعر.
+      buyPrice: Number(data.buyPrice) || 0,
+      productKey: prod?._key || name
     });
   }
 
@@ -2435,5 +2442,7 @@ window.multiplyRow = multiplyRow;
 window.handleBarcode = handleBarcode;
 
 </script>
+<!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-nav.js"></script>
 </body>
 </html>
