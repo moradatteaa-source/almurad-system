@@ -27,7 +27,17 @@
   var PAGE = (SCRIPT && SCRIPT.getAttribute("data-page")) || "private";
   var PAGE_LABEL = { profits: "الأرباح", analytics: "التحليلات" }[PAGE] || "هذه الصفحة";
 
-  var SESSION_HOURS = 8;
+  /* ⚠️ تغيّر (2026-09-30): الجلسة كانت تنحفظ بـlocalStorage ٨ ساعات —
+     يعني فتحة وحدة على لابتوب مشترك تخلي الصفحة مفتوحة ٨ ساعات لأي
+     واحد يستعمل نفس اللابتوب بدون ما تطلب رمز. وهذا الي صار فعلاً:
+     الموظفين لكوها مفتوحة.
+     هسه:
+       • الجلسة بـsessionStorage = تخص التبويب نفسه. تسكّر التبويب
+         أو المتصفح ← تنقفل.
+       • قفل تلقائي بعد ١٠ دقائق بلا حركة ← تبتعد عن اللابتوب تنقفل.
+       • زر 🔒 يقفلها فوراً بضغطة. */
+  var IDLE_MINUTES = 10;
+  var MAX_HOURS = 8;
   var LS_KEY = "_center_auth_v1";
   var DB_URL = "https://almurad-system-default-rtdb.firebaseio.com";
   /* لازم تكون مطابقة حرفياً لإعدادات بقية الصفحات.
@@ -94,6 +104,9 @@
     "border-radius:50%;border:none;background:#0f1c2f;color:#fff;font-size:18px;cursor:pointer;" +
     "box-shadow:0 6px 20px rgba(0,0,0,.3)}" +
     ".cauth-key:hover{background:#f97316}" +
+    ".cauth-lock{inset-inline-start:66px;background:#b91c1c}" +
+    ".cauth-lock:hover{background:#dc2626}" +
+    "@media(max-width:820px){.cauth-lock{inset-inline-start:66px}}" +
     "@media(max-width:820px){.cauth-key{bottom:74px}}" +
     "@media print{#cauth,.cauth-key{display:none !important}}";
   (document.head || document.documentElement).appendChild(lockCss);
@@ -120,19 +133,33 @@
   /* ── الجلسة المحفوظة ── */
   function readSession() {
     try {
-      var s = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+      var s = JSON.parse(sessionStorage.getItem(LS_KEY) || "null");
       if (!s || !s.exp || Date.now() > s.exp) return null;
+      if (!s.seen || Date.now() - s.seen > IDLE_MINUTES * 60e3) return null;  // خمول
       return s;
     } catch (e) { return null; }
   }
   function writeSession(username, name) {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({
-        u: username, n: name, exp: Date.now() + SESSION_HOURS * 3600e3
+      sessionStorage.setItem(LS_KEY, JSON.stringify({
+        u: username, n: name,
+        exp: Date.now() + MAX_HOURS * 3600e3,
+        seen: Date.now()
       }));
     } catch (e) {}
   }
-  function clearSession() { try { localStorage.removeItem(LS_KEY); } catch (e) {} }
+  function touchSession() {
+    try {
+      var s = JSON.parse(sessionStorage.getItem(LS_KEY) || "null");
+      if (!s) return;
+      s.seen = Date.now();
+      sessionStorage.setItem(LS_KEY, JSON.stringify(s));
+    } catch (e) {}
+  }
+  function clearSession() {
+    try { sessionStorage.removeItem(LS_KEY); } catch (e) {}
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}   // ننظّف القديمة
+  }
 
   /* ── قاعدة البيانات ── */
   var dbP = null;
@@ -268,13 +295,48 @@
 
   /* ── زر تغيير الرمز (بعد الدخول) ── */
   function addKeyButton(username, name) {
+    // 🔒 قفل فوري — لمن تترك اللابتوب أو يجي موظف يستعمله
+    var lock = document.createElement("button");
+    lock.className = "cauth-key cauth-lock";
+    lock.type = "button";
+    lock.title = "اقفل الصفحة الآن";
+    lock.textContent = "🔒";
+    lock.addEventListener("click", lockNow);
+    (document.body || document.documentElement).appendChild(lock);
+
     var btn = document.createElement("button");
     btn.className = "cauth-key";
     btn.type = "button";
-    btn.title = "تغيير رمز الدخول / خروج";
+    btn.title = "تغيير رمز الدخول";
     btn.textContent = "🔑";
     btn.addEventListener("click", function () { changeScreen(username, name); });
     (document.body || document.documentElement).appendChild(btn);
+
+    startIdleWatch();
+  }
+
+  function lockNow() {
+    clearSession();
+    location.reload();
+  }
+
+  /* مراقبة الخمول: كل حركة من المستخدم تجدّد الجلسة، وإذا مرّت
+     IDLE_MINUTES بلا ولا حركة تنقفل الصفحة لحالها. */
+  var idleTimer = null;
+  function startIdleWatch() {
+    var events = ["mousedown", "keydown", "touchstart", "scroll", "click"];
+    var bump = function () {
+      touchSession();
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(lockNow, IDLE_MINUTES * 60e3);
+    };
+    events.forEach(function (e) {
+      document.addEventListener(e, bump, { passive: true });
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && !readSession()) lockNow();   // رجعنا بعد خمول طويل
+    });
+    bump();
   }
 
   function changeScreen(username, name) {

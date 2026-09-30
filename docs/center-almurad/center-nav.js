@@ -19,14 +19,27 @@
   if (window.__centerNavLoaded) return;
   window.__centerNavLoaded = true;
 
+  /* private: صفحات تعرض الأرباح — ما تظهر بالشريط إلا للمالك.
+     ليش: الشريط كان يبيّن «الأرباح» و«التحليلات» بكل صفحة، فالموظف
+     على الكاشير يشوفهن ويضغط. الصفحة نفسها مقفلة برمز، بس الأفضل
+     ما نغري أحد أصلاً — الي ما يعرف بيها ما يدق عليها. */
   var PAGES = [
     { file: "cashier.html",   icon: "🧾", label: "الكاشير" },
-    { file: "analytics.html", icon: "📊", label: "التحليلات" },
-    { file: "profits.html",   icon: "💵", label: "الأرباح" },
-    { file: "expenses.html",  icon: "💸", label: "المصاريف" },
+    { file: "analytics.html", icon: "📊", label: "التحليلات", private: true },
+    { file: "profits.html",   icon: "💵", label: "الأرباح",   private: true },
+    { file: "expenses.html",  icon: "💸", label: "المصاريف",  private: true },
     { file: "accounts.html",  icon: "💼", label: "الحسابات" },
     { file: "debts.html",     icon: "📒", label: "الديون" }
   ];
+
+  /* المالك يوصلهن بثلاث طرق: (١) لمن يكون داخل بصفحة محمية،
+     (٢) بالضغط المطوّل على شعار الكاشير، (٣) بكتابة الرابط. */
+  function ownerMode() {
+    try {
+      if (window.__centerAuth && window.__centerAuth.user) return true;
+      return sessionStorage.getItem("_center_owner_nav") === "1";
+    } catch (e) { return false; }
+  }
 
   /* اسم الملف الحالي — بدون مسار ولا باراميترات */
   function currentFile() {
@@ -86,7 +99,9 @@
   nav.className = "cnav";
   nav.setAttribute("aria-label", "أقسام السنتر");
 
+  var showOwner = ownerMode();
   PAGES.forEach(function (p) {
+    if (p.private && !showOwner && p.file !== CUR) return;
     var a = document.createElement("a");
     a.href = p.file;
     if (p.file === CUR) {
@@ -115,9 +130,29 @@
     }
   }
 
+  /* ضغطة مطوّلة (٣ ثواني) على شعار الرأس تبيّن الأقسام الخاصة
+     بالشريط لهذا التبويب — حتى المالك ما يحتاج يكتب الرابط بيده. */
+  function armOwnerGesture() {
+    var brand = document.querySelector("#header .hd-brand, #header .header-brand, #header .logo-dot");
+    if (!brand) return;
+    var t = null;
+    var start = function () {
+      t = setTimeout(function () {
+        try { sessionStorage.setItem("_center_owner_nav", "1"); } catch (e) {}
+        var old = document.querySelector(".cnav");
+        if (old) old.remove();
+        window.__centerNavLoaded = false;
+        location.reload();
+      }, 3000);
+    };
+    var stop = function () { if (t) { clearTimeout(t); t = null; } };
+    ["mousedown", "touchstart"].forEach(function (e) { brand.addEventListener(e, start, { passive: true }); });
+    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach(function (e) { brand.addEventListener(e, stop, { passive: true }); });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mount);
+    document.addEventListener("DOMContentLoaded", function () { mount(); armOwnerGesture(); });
   } else {
-    mount();
+    mount(); armOwnerGesture();
   }
 })();
