@@ -1595,12 +1595,19 @@ if(newImgs.length) {
   }
 
   // بناء المخزون
-  const stock = {};
-  if(prodVariants.length) {
-    prodVariants.forEach(v=>{ stock[`${v.type} | ${v.val}`]=v.qty; });
+  /* ⚠️ إصلاح (2026-09-30): الفرع الثاني كان ياخذ **أول قيمة فقط** من
+     كل المتغيرات ويكتبها default. يعني منتج بخمس ألوان (١٠+٢٠+٣٠+٤٠+٥٠)
+     تفتحه لتعدّل الوصف بس → يصير {default: 10} و**١٤٠ قطعة تنمحي**.
+     هسه: إذا ما انعرضت متغيرات بالفورم نخلّي مخزون المنتج مثل ما هو. */
+  const _existing = editProdKey ? (allProds[editProdKey]?.stock || null) : null;
+  let stock;
+  if (prodVariants.length) {
+    stock = {};
+    prodVariants.forEach(v => { stock[`${v.type} | ${v.val}`] = Number(v.qty) || 0; });
+  } else if (_existing && Object.keys(_existing).length) {
+    stock = { ..._existing };          // ما نلمس الكميات الموجودة
   } else {
-    const existQty = editProdKey ? (Object.values(allProds[editProdKey]?.stock||{})[0]||0) : 0;
-    stock['default'] = Number(existQty);
+    stock = { default: 0 };
   }
 
   const toKey = s => s.trim().replace(/[.#$\[\]\/]/g,'_').replace(/\s+/g,'_');
@@ -1622,6 +1629,12 @@ const data = {
   // إذا تغير الاسم احذف القديم
   if(editProdKey && editProdKey!==key) await remove(ref(db,'warehouse/'+editProdKey));
 
+    /* الباركودات ما كانت ضمن data، فالـset يمحيها كلها → الكاشير
+     ما يكدر يمسح المنتج بعدها. نحافظ عليها وعلى بقية الحقول. */
+  const _prev = editProdKey ? (allProds[editProdKey] || {}) : {};
+  if (_prev.barcodes && !data.barcodes) data.barcodes = _prev.barcodes;
+  if (_prev.processedOrders && !data.processedOrders) data.processedOrders = _prev.processedOrders;
+  if (_prev.lastAudit && !data.lastAudit) data.lastAudit = _prev.lastAudit;
   await set(ref(db,'warehouse/'+key),data);
   allProds[key]=data;
   if(editProdKey && editProdKey!==key) delete allProds[editProdKey];

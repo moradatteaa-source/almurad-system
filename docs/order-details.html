@@ -235,7 +235,7 @@
     ::-webkit-scrollbar-thumb:hover { background: var(--main-blue-dark); }
   
 /* منسدلات المتغيرات — ظاهرة دائماً وواضحة */
-#variantsContainer{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+#variantsContainer{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px}
 #variantsContainer .variant-group{flex:1 1 170px;min-width:150px}
 #variantsContainer .variant-group label{
   display:block;font-size:12.5px;font-weight:800;color:#0369a1;margin-bottom:4px}
@@ -331,6 +331,10 @@
         <div id="product"></div>
         <div id="productTagsContainer"></div>
       </div>
+      <!-- المتغيرات مباشرة تحت اسم المنتج — هي جزء من هوية المنتج
+           مو من تسعيره. قبل كانت تحت السعر والكمية، فالموظف يشوف
+           الأرقام أول ويدوّر على اللون بالآخر. -->
+      <div id="variantsContainer"></div>
       <div class="row" style="margin-top: 14px;">
         <div class="field small">
           <label>💰 السعر</label>
@@ -341,7 +345,6 @@
           <input id="quantity" type="text" inputmode="numeric" placeholder="1">
         </div>
       </div>
-      <div id="variantsContainer"></div>
     </div>
 
     <div class="card">

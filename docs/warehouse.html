@@ -927,9 +927,7 @@ body {
 // ════════════════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-getDatabase, ref, get, set, update, remove, onValue, runTransaction,
-query, orderByKey, startAfter, limitToFirst
-
+  getDatabase, ref, get, set, update, remove, onValue, runTransaction, query, orderByKey, startAfter, limitToFirst
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import * as XLSX from "https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs";
 
@@ -1656,19 +1654,25 @@ window.confirmAddQty = async function() {
   const p = warehouseData[addQtyProductKey];
   if (!p) return;
 
-  const currentQty = Number(p.stock?.[addQtyVariantKey]) || 0;
-
-  let newQty;
-  if (addQtyOperation === "add") newQty = currentQty + amount;
-  else if (addQtyOperation === "sub") newQty = Math.max(0, currentQty - amount);
-  else newQty = amount; // set
-
-  const newStock = { ...p.stock, [addQtyVariantKey]: newQty };
-  const newTotal = calcTotal(newStock);
-
+  /* ⚠️ أُعيدت كتابتها (2026-09-30).
+     الكود القديم يقرا الكمية من warehouseData — وهي **لقطة** انجلبت
+     لمن انفتحت الصفحة وما تتحدث لحالها. تفتح الصفحة الصبح (المخزن
+     ٥٠)، الكاشير يبيع ١٢ خلال اليوم (الحقيقي ٣٨)، وبالمساء تضغط
+     «إضافة ١٠» → يكتب ٦٠ بدل ٤٨، وبيعات اليوم كلها تنمحي.
+     هسه التعديل يصير بـ runTransaction على القيمة الحية. */
+  const _amt = Number(amount) || 0;
+  await runTransaction(
+    ref(db, `warehouse/${addQtyProductKey}/stock/${addQtyVariantKey}`),
+    cur => {
+      const before = Number(cur) || 0;
+      if (addQtyOperation === "add") return before + _amt;
+      if (addQtyOperation === "sub") return Math.max(0, before - _amt);
+      return _amt;                                // تعيين مباشر
+    }
+  );
+  const _fresh = (await get(ref(db, `warehouse/${addQtyProductKey}/stock`))).val() || {};
   await update(ref(db, "warehouse/" + addQtyProductKey), {
-    [`stock/${addQtyVariantKey}`]: newQty,
-    totalQty: newTotal,
+    totalQty: Object.values(_fresh).reduce((a, b) => a + (Number(b) || 0), 0),
     lastUpdate: new Date().toISOString()
   });
 toast(`✅ تم تحديث الكمية: ${currentQty} ← ${newQty}`);
@@ -1716,12 +1720,14 @@ window.confirmAudit = async function() {
   if (isNaN(realQty) || realQty < 0) return toast("أدخل الكمية الفعلية", "error");
 
   const p = warehouseData[auditProductKey];
-  const newStock = { ...p.stock, [auditVariantKey]: realQty };
-  const newTotal = calcTotal(newStock);
+  if (!p) return;
 
+  /* الجرد كتابة مطلقة مقصودة — بس المجموع لازم ينحسب من الأرقام
+     الحية مو من اللقطة، وإلا بقية المتغيرات تنحسب بقيم قديمة. */
+  await set(ref(db, `warehouse/${auditProductKey}/stock/${auditVariantKey}`), Number(realQty) || 0);
+  const _fs = (await get(ref(db, `warehouse/${auditProductKey}/stock`))).val() || {};
   await update(ref(db, "warehouse/" + auditProductKey), {
-    [`stock/${auditVariantKey}`]: realQty,
-    totalQty: newTotal,
+    totalQty: Object.values(_fs).reduce((a, b) => a + (Number(b) || 0), 0),
     lastAudit: new Date().toISOString(),
     lastUpdate: new Date().toISOString()
   });

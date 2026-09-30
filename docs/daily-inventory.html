@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#043B64">
   <title>📅 الجرد اليومي - نظام المراد</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="orderCredit.js"></script>
+  <script src="stockLedger.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
@@ -632,8 +634,8 @@
           </table>
         </div>
         <div class="btn-row">
-          <button class="btn btn-primary" id="deductBtn" onclick="deductStock()" title="المخزن ينخصم تلقائياً عند التثبيت">
-            ✅ خصم من المخزن
+          <button class="btn btn-primary" id="deductBtn" onclick="deductStock()" title="البضاعة انخصمت عند التثبيت — هذا للتجهيز والتقرير">
+            📄 جدول التجهيز
           </button>
         </div>
       </div>
@@ -661,8 +663,8 @@
           </table>
         </div>
         <div class="btn-row">
-          <button class="btn btn-green" id="returnBtn" onclick="addReturnStock()" title="البضاعة ترجع تلقائياً عند استلام الراجع">
-            🔄 إرجاع للمخزن
+          <button class="btn btn-green" id="returnBtn" onclick="addReturnStock()" title="ينقل الطلبات المضروب باركودها إلى «تم استلام الراجع» ويرجّع بضاعتها">
+            ✅ تأكيد استلام الراجع
           </button>
         </div>
       </div>
@@ -702,7 +704,7 @@
 <!-- ====================================================== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set, update, remove, runTransaction, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
@@ -717,8 +719,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// 📦 دفتر المخزن — الإرجاع يمر من هنا حتى ما ينحسب مرتين
+initStockLedger({ db, ref, get, update, runTransaction });
+
 // ===== STATE =====
 let manualOut = [], manualReturn = [], manualErrors = [];
+// الطلبات الراجعة المضروب باركودها: رقم الطلب → بياناته ومساره.
+// نحتاجها حتى ننقلها لـ«تم استلام الراجع» لمن الموظف يأكّد.
+let scannedReturns = new Map();
 let autoOut = [], autoReturn = [], autoErrors = [];
 let scannedShipments = new Set();
 let isProcessing = false;
@@ -986,7 +994,10 @@ async function getOrderByReceipt(shipmentId) {
   for (const path of paths) {
     let snap = await get(query(ref(db, path), orderByChild('receiptNum'), equalTo(shipmentId)));
     if (!snap.exists()) snap = await get(query(ref(db, path), orderByChild('receiptNum'), equalTo(Number(shipmentId))));
-    if (snap.exists()) return Object.values(snap.val())[0];
+    if (snap.exists()) {
+      const [id, order] = Object.entries(snap.val())[0];
+      return { id, order, path };      // نحتاج المسار والمعرّف حتى ننقل الطلب
+    }
   }
   return null;
 }
@@ -1002,25 +1013,41 @@ async function processBarcode(shipmentId) {
     isProcessing = false; return;
   }
 
-  const order = await getOrderByReceipt(shipmentId);
-  if (!order) {
+  const hit = await getOrderByReceipt(shipmentId);
+  if (!hit) {
     setMsg('scanMsg', '❌ رقم الوصل غير موجود في النظام', 'error');
     isProcessing = false; return;
   }
+  const { id: orderId, order, path: orderPath } = hit;
 
   scannedShipments.add(shipmentId);
   barcodeInput.classList.add('pulse');
   setTimeout(() => barcodeInput.classList.remove('pulse'), 400);
 
   const products = getProductsList(order);
-  const status = (order.status||'').trim();
+  const status = (order.status || '').trim();
+
+  // ⚠️ إصلاح (2026-09-30): الشرط القديم `status.includes('راجع')` كان
+  // يطابق "راجع" و"تم استلام الراجع" سوية. يعني طلب لسه بيد المندوب
+  // (راجع) يدخل التقرير كأن بضاعته رجعت للمخزن — وهي ما رجعت.
+  // التدفق الصحيح: الطلب يصير "راجع" لمن يرجع للشركة، وبعدها موظفنا
+  // يضرب باركوده هنا فيصير "تم استلام الراجع" — وهذي بس الي تدخل
+  // التقرير وترجع بضاعتها للمخزن.
+  const isReturn = status === 'راجع';
+  const isOut = status.includes('توصيل') || status.includes('تجهيز') || status.includes('تم التسليم');
+
+  if (status === 'تم استلام الراجع') {
+    setMsg('scanMsg', `⚠️ الوصل ${shipmentId} مستلم مسبقاً — بضاعته رجعت للمخزن`, 'warning');
+    isProcessing = false; return;
+  }
 
   products.forEach(p => {
     if (!p.name) return;
     const item = buildItemData(p, shipmentId);
-    if (status.includes('توصيل') || status.includes('تجهيز') || status.includes('تم التسليم')) manualOut.push(item);
-    if (status.includes('راجع')) manualReturn.push(item);
+    if (isOut) manualOut.push(item);
+    if (isReturn) manualReturn.push(item);
   });
+  if (isReturn) scannedReturns.set(String(orderId), { order, path: orderPath });
 
   updateManualTables();
   setMsg('scanMsg', `✅ تمت إضافة الوصل ${shipmentId} (${order.status})`, 'success');
@@ -1078,16 +1105,65 @@ async function findProductRef(name) {
 
 // ===== DEDUCT STOCK (Manual) =====
 window.deductStock = async function() {
-  /* ⛔ معطّلة (2026-09-30) — كانت تخصم مرة ثانية.
-     البضاعة تنخصم من المخزن أول ما الطلب يصير "مثبت" (عبر
-     stockLedger.js). وهذي الصفحة كانت تخصمها مرة ثانية عند
-     "تجهيز/توصيل/تم التسليم" — وهذي كلها حالات **بعد** مثبت.
-     يعني كل طلب تمسح وصله هنا كان ينخصم مرتين.
-     والأسوأ: شرط الإرجاع status.includes('راجع') كان يطابق
-     "تم استلام الراجع" هم — وهي نفس الحالة الي الدفتر يرجّع
-     بيها، فالبضاعة ترجع مرتين.
-     المسح والتقرير باقيين — بس ما نلمس المخزن. */
-  showToast('المخزن ينخصم تلقائياً عند تثبيت الطلب — ماكو داعي للخصم اليدوي', 'warning');
+  /* المخزن ينخصم تلقائياً أول ما الطلب يصير "مثبت" (عبر stockLedger).
+     هذي الصفحة كانت تخصمه مرة ثانية عند "تجهيز/توصيل/تسليم" — وهذي
+     كلها حالات **بعد** مثبت، يعني خصم مزدوج بكل وصل تمسحه.
+     المسح والتقرير باقيين — هذا جدول تجهيز للمندوب، مو حركة مخزن. */
+  showToast('البضاعة انخصمت أصلاً عند التثبيت — هذا الجدول للتجهيز والتقرير', 'info');
+};
+
+window.addReturnStock = async function() {
+  if (!scannedReturns.size) { showToast('ماكو طلبات راجعة مضروب باركودها', 'warning'); return; }
+
+  const btn = document.getElementById('returnBtn');
+  btn.disabled = true;
+  const label = btn.innerHTML;
+  btn.innerHTML = '<span class="loader"></span> جاري الاستلام...';
+
+  /* موظفنا يضرب باركود الطلبات الي رجعت للمخزن فعلاً. الضربة هي
+     فعل الاستلام: ننقل الطلب من "راجع" إلى "تم استلام الراجع"،
+     ودفتر المخزن يرجّع بضاعته لحاله. ما نلمس الكميات هنا إطلاقاً —
+     قبل، هذي الصفحة كانت تزيد الكمية بيدها بلا علم الدفتر،
+     فالبضاعة ترجع مرتين. */
+  const NEW_STATUS = 'تم استلام الراجع';
+  const userName = localStorage.getItem('userName') || localStorage.getItem('username') || 'موظف المخزن';
+  const now = new Date().toISOString();
+
+  let done = 0;
+  const failed = [], stockNotes = [];
+
+  for (const [orderId, rec] of scannedReturns) {
+    try {
+      const order = rec.order;
+      const fields = (typeof OrderCredit !== 'undefined' && OrderCredit.buildStatusChangeFields)
+        ? OrderCredit.buildStatusChangeFields(order, NEW_STATUS, userName, now)
+        : { status: NEW_STATUS, updatedAt: now, updatedBy: userName };
+      const updated = { ...order, ...fields };
+
+      // النقل بعملية وحدة: يا ينتقل كامل يا ما ينتقل
+      const atomic = {};
+      atomic[`ordersTest/${NEW_STATUS}/${orderId}`] = updated;
+      atomic[`${rec.path}/${orderId}`] = null;
+      await update(ref(db), atomic);
+
+      const r = await applyStockForStatus({ id: orderId, productsDetailed: getProductsList(updated) }, NEW_STATUS);
+      if (r && !r.ok) stockNotes.push(`الطلب ${orderId}: ${r.problems.join(' · ')}`);
+      done++;
+    } catch (e) {
+      console.warn('return', orderId, e);
+      failed.push(orderId);
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = label;
+
+  if (done) showToast(`✅ تم استلام ${done} طلب راجع — بضاعتها رجعت للمخزن`, 'success');
+  if (failed.length) showToast(`❌ ما انتقلت: ${failed.join('، ')}`, 'error');
+  if (stockNotes.length) showToast('⚠️ ' + stockNotes.slice(0, 2).join(' | '), 'warning');
+
+  // الي انتقل صار "تم استلام الراجع" فما ينضرب مرة ثانية
+  if (done) { scannedReturns.clear(); manualReturn = []; updateManualTables(); }
 };
 
 window.addReturnStock = async function() {

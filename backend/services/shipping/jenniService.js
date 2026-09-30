@@ -16,6 +16,7 @@ import { ref, get, update } from "firebase/database";
 import { db } from "../../firebase.js";
 import fetch from "node-fetch";
 import { addHistory } from "./statusHistory.js";
+import { applyStockForStatus } from "./stockLedger.js";
 
 // ============================================================
 // ثوابت
@@ -317,9 +318,17 @@ export async function updateJenniStatusesFromFirebase(preloadedBranches = null) 
       [`${oldPath.split("/").slice(0, 2).join("/")}/_meta/lastModified`]: Date.now()
     });
 
-    // ✅ إرجاع المخزن عند تم استلام الراجع فعلياً
-    if (mapped === "تم استلام الراجع" && current !== "تم استلام الراجع") {
-      await restoreStockForOrder(order.productsDetailed || []);
+    /* 📦 موازنة المخزن مع الحالة الجديدة عبر الدفتر المشترك.
+       قبل، كان يرجّع البضاعة بكوده الخاص بدون تنسيق مع دفتر المخزن
+       الي تشتغل بيه الصفحات: سجل الخصم يبقى موجود، فأي نقل لاحق
+       لنفس الحالة من صفحة الطلبات يرجّع الكمية **مرة ثانية**.
+       وكذلك كان يدهس totalQty بقيمة default وحدها، ويفقد الإضافة
+       الأولى إذا الطلب فيه بندان لنفس المنتج. */
+    try {
+      const st = await applyStockForStatus({ id: order.id, ...order }, mapped);
+      if (st && !st.ok) console.warn(`⚠️ مخزن الطلب ${order.id}: ${st.problems.join(" · ")}`);
+    } catch (e) {
+      console.error(`❌ تعذّرت موازنة مخزن الطلب ${order.id}:`, e.message);
     }
 
     console.log(`✅ ${order.id}: ${current} → ${mapped} (Jenni: ${shipment.current_step})`);
@@ -334,65 +343,3 @@ export async function updateJenniStatusesFromFirebase(preloadedBranches = null) 
 // (كررناها هنا بدل مشاركتها لتبقى كل ملفات الشحن مستقلة عن بعضها،
 // نفس القاعدة المتبعة أصلاً بالمشروع)
 // ============================================================
-async function restoreStockForOrder(productsDetailed) {
-  if (!productsDetailed?.length) return;
-
-  const allSnap = await get(ref(db, "warehouse"));
-  if (!allSnap.exists()) return;
-  const warehouse = allSnap.val();
-
-  const nameToKey = new Map();
-  for (const [key, val] of Object.entries(warehouse)) {
-    const name = (val.name || "").trim().replace(/\s+/g, " ");
-    if (name) nameToKey.set(name, key);
-  }
-
-  const normalize = t => t.split("|").map(s => s.trim()).filter(Boolean).sort().join("|");
-
-  for (const item of productsDetailed) {
-    if (!item.name || !item.qty) continue;
-
-    const name = item.name.trim().replace(/\s+/g, " ");
-    const productKey = nameToKey.get(name);
-    if (!productKey) { console.warn(`⚠️ منتج غير موجود: ${name}`); continue; }
-
-    const stock = warehouse[productKey]?.stock || {};
-    const variants = item.variants || {};
-    const hasVariants = Object.keys(stock).some(k => k.includes("|"));
-
-    if (!hasVariants) {
-      const current = Number(stock.default || 0);
-      const newQty = current + item.qty;
-      await update(ref(db, `warehouse/${productKey}`), {
-        "stock/default": newQty,
-        totalQty: newQty,
-        lastUpdate: new Date().toISOString()
-      });
-    } else {
-      const variantText = Object.entries(variants)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([k, v]) => `${k} | ${v}`).join(" | ");
-
-      let matchedKey = null;
-      for (const stockKey of Object.keys(stock)) {
-        if (normalize(stockKey) === normalize(variantText)) {
-          matchedKey = stockKey; break;
-        }
-      }
-      if (!matchedKey) { console.warn(`⚠️ متغير غير موجود: ${variantText}`); continue; }
-
-      const current = Number(stock[matchedKey] || 0);
-      const newQty = current + item.qty;
-      const updatedStock = { ...stock, [matchedKey]: newQty };
-      const newTotal = Object.values(updatedStock).reduce((s, v) => s + (Number(v) || 0), 0);
-
-      await update(ref(db, `warehouse/${productKey}`), {
-        [`stock/${matchedKey}`]: newQty,
-        totalQty: newTotal,
-        lastUpdate: new Date().toISOString()
-      });
-    }
-
-    console.log(`✅ رجع المخزن: ${name} +${item.qty}`);
-  }
-}

@@ -1170,7 +1170,9 @@ header .header-actions button.cart-flash {
 /* =========================
    🔧 إعداد Firebase
 ========================= */
-import { update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import {
+  update, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { getCached, invalidateCache } from "./sharedCache.js";
@@ -2833,12 +2835,27 @@ window.receivePurchase = async function(id) {
   if (!p) return alert("⚠️ الفاتورة غير موجودة");
   if (p.status !== "pending") return alert("⚠️ هذه الفاتورة تمت معالجتها مسبقاً");
 
+  /* ⚠️ الحاجز فوق يقرا من كاش عمره ٧٥ ثانية — اثنان يضغطان "استلام"
+     بنفس الدقيقة وكلاهما يمر، فالبضاعة تنضاف مرتين. وكذلك الحالة
+     كانت تنكتب **بعد** كل كتابات المخزون، فأي انقطاع بالنص يخلي
+     الفاتورة pending والضغط الثاني يضيف المُضاف مرة ثانية.
+     هسه نحجز الفاتورة بعملية ذرّية قبل ما نلمس المخزن: أول واحد
+     يحجزها يكمّل، والثاني يتوقف. */
+  const claim = await runTransaction(ref(db, "purchases/" + id + "/status"),
+    cur => (cur === "pending" || cur === null || cur === undefined) ? "receiving" : undefined);
+  if (!claim.committed || claim.snapshot.val() !== "receiving") {
+    p.status = claim.snapshot.val() || p.status;
+    return alert("⚠️ هذه الفاتورة تمت معالجتها أو قيد المعالجة من جهاز ثاني");
+  }
+
   const loggedUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
   const userName = loggedUser?.username || loggedUser?.name || "غير معروف";
 
   if (!confirm(`تأكيد استلام الفاتورة؟\nسيضاف المخزون بواسطة: ${userName}`)) return;
 
   try {
+    // إذا انقطع شي بالنص نرجّع الحالة pending حتى ينعاد الاستلام بأمان
+
     for (const it of p.items) {
 // البحث عن المنتج بالاسم داخل كل المخزون
 const warehouseSnap = await get(ref(db, "warehouse"));
@@ -2930,8 +2947,10 @@ if (snap && snap.exists()) {
     alert(`✅ تم الاستلام وإضافة المخزون بواسطة: ${userName}`);
 
   } catch (err) {
+    // نرجّع الحالة pending حتى ينعاد الاستلام بأمان بدل ما تعلق "receiving"
+    await update(ref(db, "purchases/" + id), { status: "pending" }).catch(() => {});
     console.error(err);
-    alert("❌ حدث خطأ أثناء الاستلام");
+    alert("❌ حدث خطأ أثناء الاستلام — الفاتورة رجعت «قيد الانتظار»، جرّب مرة ثانية");
   }
 };
 
