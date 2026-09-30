@@ -233,7 +233,19 @@
     ::-webkit-scrollbar-track { background: var(--background-gray); }
     ::-webkit-scrollbar-thumb { background: var(--main-blue); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--main-blue-dark); }
-  </style>
+  
+/* منسدلات المتغيرات — ظاهرة دائماً وواضحة */
+#variantsContainer{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+#variantsContainer .variant-group{flex:1 1 170px;min-width:150px}
+#variantsContainer .variant-group label{
+  display:block;font-size:12.5px;font-weight:800;color:#0369a1;margin-bottom:4px}
+#variantsContainer .variant-group input{
+  width:100%;border:2px solid #bae6fd;border-radius:10px;padding:9px 11px;
+  font-family:inherit;font-size:14px;font-weight:700;background:#f0f9ff;color:#0c4a6e}
+#variantsContainer .variant-group input:focus{outline:none;border-color:#0284c7;background:#fff}
+.variant-avail{flex:1 1 100%;font-size:12.5px;font-weight:700;padding:2px 2px 0}
+.va-ok{color:#059669} .va-bad{color:#dc2626} .va-warn{color:#b45309}
+</style>
 </head>
 <body>
 
@@ -781,52 +793,90 @@ input.addEventListener('focus', () => {
       if (!container) return;
       container.innerHTML = '';
       try {
-   // عرض فقط بالقائمة المنسدلة — الفحص الفعلي الدقيق للكمية يصير عند
-   // التثبيت الفعلي بقراءة مباشرة بدون كاش (بالأسفل بدالة _adjustStock
-   // وبفحص الحفظ)، فاستخدام بيانات مخزّنة مؤقتاً هنا آمن تماماً.
-   const warehouseDataForVariants = await getWarehouseCached(db);
+        /* ⚠️ أُعيدت كتابتها (2026-09-30).
+           قبل، المنسدلات كانت متسلسلة: البُعد الثاني ما يظهر إلا بعد
+           ما تختار الأول، وإذا الفلترة ما لگت شي ما تظهر ولا منسدلة
+           (`if (!available.size) return`) — فالموظف يفتح الطلب وما
+           يشوف المتغير أصلاً ولا يكدر يغيّره.
+
+           هسه: كل الأبعاد تظهر دائماً وبكل قيمها، فالموظف يكدر يغيّر
+           أي بُعد لحاله أو الاثنين سوية بأي ترتيب. وجنب كل تركيبة
+           تظهر الكمية المتوفرة حتى يعرف قبل ما يثبّت. */
+        const warehouseDataForVariants = await getWarehouseCached(db);
         if (!warehouseDataForVariants) return;
+
         let stock = {};
         for (const val of Object.values(warehouseDataForVariants)) {
-          if ((val.name || '').trim() === productName.trim()) { stock = val.stock || {}; break; }
+          if ((val.name || '').trim() === (productName || '').trim()) { stock = val.stock || {}; break; }
         }
-        // ✅ نعرض كل المتغيرات حتى لو الكمية صفر — التثبيت يبقى محظور بالتحقق
-        // اللاحق عند اختيار حالة "مثبت"، فيقدر الموظف يسجل الطلب "بانتظار البضاعة"
         const activeKeys = Object.keys(stock).filter(k => k !== 'إجمالي الكمية' && k !== 'default');
         if (!activeKeys.length) return;
 
+        // نفك كل مفتاح مخزن لأزواج: "اللون | احمر | القياس | L" → {اللون:احمر, القياس:L}
+        const parseKey = key => {
+          const p = String(key).split('|').map(x => x.trim()).filter(Boolean);
+          const o = {};
+          for (let i = 0; i + 1 < p.length; i += 2) o[p[i]] = p[i + 1];
+          return o;
+        };
+        const combos = activeKeys.map(k => ({ key: k, dims: parseKey(k), qty: Number(stock[k]) || 0 }));
+
+        const dimNames = [];
+        combos.forEach(c => Object.keys(c.dims).forEach(d => { if (!dimNames.includes(d)) dimNames.push(d); }));
+        if (!dimNames.length) return;
+
+        // الاختيار الحالي: من المحفوظ، وإلا من بنود الطلب نفسها
         const savedSnap = await get(ref(db, `${state.currentPath}/selectedVariants`));
-        const savedVariants = savedSnap.exists() ? savedSnap.val() : {};
-        const variantsMap = {};
-        activeKeys.forEach(key => {
-          key.split('|').map(s => s.trim()).forEach((v, i, arr) => {
-            if (i % 2 === 0 && arr[i+1]) { if (!variantsMap[v]) variantsMap[v] = new Set(); variantsMap[v].add(arr[i+1]); }
-          });
-        });
-
-        const variantNames = Object.keys(variantsMap);
-        const selected = { ...savedVariants };
-
-        function renderDropdown(level = 0) {
-          Array.from(container.querySelectorAll('.variant-group')).slice(level).forEach(el => el.remove());
-          const name = variantNames[level]; if (!name) return;
-          const filteredKeys = activeKeys.filter(key => Object.entries(selected).every(([k, v]) => key.includes(`${k} | ${v}`)));
-          const available = new Set();
-          filteredKeys.forEach(key => {
-            key.split('|').map(s => s.trim()).forEach((v, i, arr) => { if (v === name && arr[i+1]) available.add(arr[i+1]); });
-          });
-          if (!available.size) return;
-          const wrapper = document.createElement('div'); wrapper.className = 'variant-group field single';
-          const label = document.createElement('label'); label.textContent = name;
-          wrapper.appendChild(label);
-          wrapper.appendChild(createDropdown([...available], selected[name] || '', (val) => {
-            selected[name] = val;
-            update(ref(db, `${state.currentPath}/selectedVariants`), selected);
-            renderDropdown(level + 1);
-          }));
-          container.appendChild(wrapper);
+        const selected = { ...(savedSnap.exists() ? savedSnap.val() : {}) };
+        if (!Object.keys(selected).length) {
+          const first = (state.orderData?.productsDetailed || [])[0];
+          if (first && first.variants) Object.assign(selected, first.variants);
         }
-        renderDropdown(0);
+
+        const comboFor = sel => combos.find(c =>
+          dimNames.every(d => !sel[d] || c.dims[d] === sel[d]));
+
+        function render() {
+          container.innerHTML = '';
+
+          dimNames.forEach(dim => {
+            const values = [...new Set(combos.map(c => c.dims[dim]).filter(Boolean))];
+            const wrapper = document.createElement('div');
+            wrapper.className = 'variant-group field single';
+
+            const label = document.createElement('label');
+            label.textContent = dim;
+            wrapper.appendChild(label);
+
+            wrapper.appendChild(createDropdown(values, selected[dim] || '', val => {
+              selected[dim] = val;
+              update(ref(db, `${state.currentPath}/selectedVariants`), selected).catch(() => {});
+              render();
+            }));
+            container.appendChild(wrapper);
+          });
+
+          // سطر التوفر — يبيّن كمية التركيبة المختارة
+          const chosen = dimNames.filter(d => selected[d]);
+          const info = document.createElement('div');
+          info.className = 'variant-avail';
+          if (chosen.length < dimNames.length) {
+            info.innerHTML = `<span class="va-warn">اختر ${
+              dimNames.filter(d => !selected[d]).join(' و')} حتى نعرف الكمية</span>`;
+          } else {
+            const c = comboFor(selected);
+            if (!c) {
+              info.innerHTML = `<span class="va-bad">⚠️ هذي التركيبة مو موجودة بالمخزن</span>`;
+            } else {
+              const q = c.qty;
+              info.innerHTML = `<span class="${q > 0 ? 'va-ok' : 'va-bad'}">` +
+                (q > 0 ? `✓ متوفر ${q} بالمخزن` : '⚠️ نفدت من المخزن') + `</span>`;
+            }
+          }
+          container.appendChild(info);
+        }
+
+        render();
       } catch (err) { console.warn('فشل تحميل المتغيرات:', err); }
     }
 
