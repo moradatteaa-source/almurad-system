@@ -809,6 +809,16 @@ header .header-actions button.cart-flash {
 }
 .p-card-sup { font-weight: 800; color: var(--blue); font-size: 14.5px; }
 .p-card-date { font-size: 12px; color: var(--text-muted); direction: ltr; }
+/* أسماء منتجات الفاتورة بالموبايل */
+.p-card-items{
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;
+  padding:8px 10px;margin:8px 0;display:flex;flex-direction:column;gap:5px
+}
+.p-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px}
+.p-item-n{font-weight:700;color:#1e293b;word-break:break-word;flex:1}
+.p-item-n i{font-style:normal;font-weight:600;color:#64748b;font-size:11.5px}
+.p-item-q{font-weight:800;color:#0f172a;direction:ltr;white-space:nowrap}
+.p-item-more{font-size:11.5px;color:#64748b;font-weight:600;padding-top:2px}
 .p-card-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
 .p-card-rows div { font-size: 12.5px; color: var(--text-muted); }
 .p-card-rows b { color: var(--text); font-weight: 700; direction: ltr; display: inline-block; }
@@ -2331,15 +2341,33 @@ function renderMobilePurchases(list) {
       : `<button style="background:var(--success)" onclick="receivePurchase('${id}')">✅ استلام</button>
          <button style="background:#e67e22" onclick="rejectPurchase('${id}')">❌ رفض</button>`;
 
+    // أسماء المنتجات — كانت البطاقة تعرض عددهم بس، فالموظف ما
+    // يعرف شنو بالفاتورة إلا إذا فتحها
+    const items = Array.isArray(p.items) ? p.items
+                : (p.items && typeof p.items === "object" ? Object.values(p.items) : []);
+    const esc = t => String(t ?? "").replace(/[&<>"]/g,
+      c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+    const SHOW = 4;
+    const lines = items.slice(0, SHOW).map(it => {
+      const v = it.variant && it.variant !== "-" ? ` <i>${esc(it.variant)}</i>` : "";
+      return `<div class="p-item"><span class="p-item-n">${esc(it.product)}${v}</span>` +
+             `<span class="p-item-q">×${Number(it.quantity) || 0}</span></div>`;
+    }).join("");
+    const more = items.length > SHOW
+      ? `<div class="p-item-more">+ ${items.length - SHOW} منتج إضافي</div>` : "";
+    const itemsBox = items.length
+      ? `<div class="p-card-items">${lines}${more}</div>` : "";
+
     return `
       <div class="p-card ${cls}">
         <div class="p-card-top">
           <span class="p-card-sup">${p.supplierName || "-"}</span>
           <span class="p-card-date">${dateStr}</span>
         </div>
+        ${itemsBox}
         <div class="p-card-rows">
           <div>المشتري: <b>${p.buyer || "-"}</b></div>
-          <div>المنتجات: <b>${p.items?.length || 0}</b></div>
+          <div>المنتجات: <b>${items.length}</b></div>
           <div>الكمية: <b>${p.totalQty ?? 0}</b></div>
           <div>الإجمالي: <b class="p-card-total">${total}</b></div>
         </div>
