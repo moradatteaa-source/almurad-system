@@ -138,10 +138,6 @@
   }
 
   // ── مفاتيح العلامات بالمخزن ──
-  // الحالات اللي البضاعة فيها طالعة من المخزن فعلياً — نستخدمها بس
-  // للطلبات القديمة اللي انثبتت قبل هذا النظام وماكو عندها علامة خصم
-  const STOCK_OUT_STATUSES = ["مثبت", "قيد التجهيز", "قيد التوصيل", "تم التسليم", "راجع"];
-
   // ⚠️ العلامات انتقلت خارج warehouse (2026-09-23): كانت تنخزن تحت
   // warehouse/<المنتج>/processedOrders، وهذا يعني إن كل زبون يفتح المتجر
   // ينزّل كل علامات كل الطلبات اللي مرّت على كل منتج — وهي تكبر للأبد مع
@@ -214,118 +210,205 @@
     return { ok: true };
   }
 
-  // ── خصم بضاعة الطلب من المخزن ──
-  // آمن للتكرار: إذا الطلب مخصوم أصلاً ما يصير شي
-  async function deductStockForOrder(order) {
-    ensureReady();
-    const { db, ref, get, update, runTransaction } = FB;
-    const orderId = order && order.id;
-    if (!orderId) { console.warn("⚠️ stockLedger: خصم بدون رقم طلب — تم التجاهل"); return; }
+  // ════════════════════════════════════════════════════════
+  // 🔄 الموازنة — قلب الدفتر الجديد (2026-09-30)
+  // ────────────────────────────────────────────────────────
+  // ليش انتغيّر: النظام القديم كان يشتغل بـ"علامات" لكل بند
+  // (deduct_<الطلب>_<المنتج>_<المتغير>). العلامة تمنع الخصم مرتين —
+  // بس هي بنفس الوقت تمنع أي تصحيح:
+  //
+  //   • موظف يغيّر متغير طلب مثبت (الدب أحمر ← أزرق):
+  //     الأزرق ينخصم (ماكو علامة له)، والأحمر يبقى مخصوم للأبد
+  //     (علامته موجودة وما أحد يشيلها). قطعة تضيع كل مرة.
+  //   • موظف يغيّر الكمية من ٢ إلى ٥: العلامة موجودة → ما يصير
+  //     ولا شي. المخزن ناقص ٢ والطلب يقول ٥.
+  //   • موظف يبدّل المنتج كلياً: المنتج القديم يبقى ناقص والجديد
+  //     ينخصم — خسارة مزدوجة.
+  //
+  // الحل: بدل "علامة موجودة/مو موجودة"، نسجّل بالضبط **شنو مخصوم
+  // حالياً لهذا الطلب** بسجل واحد:
+  //     stockApplied/<رقم الطلب> = { items: { "<منتج>::<متغير>": كمية } }
+  // وكل مرة ننادي الدفتر، نحسب **شنو لازم يكون مخصوم** حسب بنود
+  // الطلب وحالته، ونطبّق **الفرق** بس.
+  //
+  // هيچي دورة وحدة تعالج كل شي: إنشاء، تعديل كمية، تبديل متغير،
+  // تبديل منتج، حذف بند، رفض، إرجاع، حذف الطلب. ومناداتها مرتين
+  // ما تسوي شي (الفرق = صفر).
+  // ════════════════════════════════════════════════════════
 
-    for (const { name, vkey, qty } of orderItems(order)) {
-      const found = await findWarehouseKey(name);
-      if (!found) { console.warn(`⚠️ stockLedger: المنتج غير موجود بالمخزن — ${name}`); continue; }
-      const pkey = found.key;
+  const APPLIED_ROOT = "stockApplied";
+  const SEP = "::";
 
-      const mark = deductMarker(orderId, name, vkey);
-      const already = await readMark(pkey, mark);
-      if (already.exists) continue; // مخصوم أصلاً
+  // الحالات اللي البضاعة فيها **طالعة** من المخزن فعلياً.
+  // أي حالة غيرها = البضاعة **بالمخزن**. ما نحتاج قائمتين تتناقضان.
+  //   طالعة : مثبت، قيد التجهيز، قيد التوصيل، تم التسليم، راجع
+  //   بالمخزن: جديد، قيد المعالجة، بانتظار البضاعة،
+  //            تم استلام الراجع، رفض، ملغي
+  // ملاحظة "راجع": البضاعة بيد المندوب لسه ما وصلت، فتبقى مخصومة
+  // لحد "تم استلام الراجع".
+  const STOCK_OUT_STATUSES = ["مثبت", "قيد التجهيز", "قيد التوصيل", "تم التسليم", "راجع"];
+  const isStockOut = st => STOCK_OUT_STATUSES.includes(String(st || "").trim());
 
-      const stock = (found.snap.val() || {}).stock || {};
-      const stockKey = matchStockKey(stock, vkey);
-      if (!stockKey) { console.warn(`⚠️ stockLedger: المتغير غير موجود — ${name} (${vkey})`); continue; }
-
-      await runTransaction(ref(db, `warehouse/${pkey}/stock/${stockKey}`),
-        cur => Math.max(0, (Number(cur) || 0) - qty));
-
-      // ✅ نخزن الكمية المخصومة داخل العلامة نفسها، حتى لو انعدّلت بنود
-      // الطلب بعدين يرجع بالضبط اللي انخصم، مو اللي بالطلب هسه
-      await writeMarks(pkey, { [mark]: qty, [legacyReturnMarker(orderId, name, vkey)]: null });
-      await refreshTotal(pkey);
-    }
+  async function readApplied(orderId) {
+    const { db, ref, get } = FB;
+    const snap = await get(ref(db, `${APPLIED_ROOT}/${sanitize(orderId)}`));
+    if (!snap.exists()) return null;          // null = ما عندنا سجل، نجرب القديم
+    return (snap.val() || {}).items || {};
   }
 
-  // ── إرجاع بضاعة الطلب للمخزن ──
-  // آمن للتكرار: إذا الطلب مو مخصوم (أو رجع أصلاً) ما يصير شي
-  // prevStatus (اختياري): الحالة اللي كان بيها الطلب قبل الانتقال — نحتاجها
-  // بس للطلبات القديمة اللي انثبتت قبل هذا النظام
-  async function restoreStockForOrder(order, prevStatus) {
-    ensureReady();
-    const { db, ref, get, update, runTransaction } = FB;
-    const orderId = order && order.id;
-    if (!orderId) { console.warn("⚠️ stockLedger: إرجاع بدون رقم طلب — تم التجاهل"); return; }
+  async function writeApplied(orderId, items) {
+    const { db, ref, update } = FB;
+    const val = (items && Object.keys(items).length)
+      ? { items, at: Date.now() } : null;
+    await update(ref(db, APPLIED_ROOT), { [sanitize(orderId)]: val });
+  }
 
-    for (const { name, vkey, qty } of orderItems(order)) {
-      const found = await findWarehouseKey(name);
+  // ── الطلبات القديمة ──
+  // انثبتت قبل هذا النظام فعندها علامات بدل سجل. نبني منها الحالة
+  // الحالية حتى ما ننخصم مرتين، ونشيلها بعد أول موازنة ناجحة.
+  async function seedFromLegacy(orderId, order) {
+    const items = {}, marks = [];
+    for (const it of orderItems(order)) {
+      const found = await findWarehouseKey(it.name);
       if (!found) continue;
-      const pkey = found.key;
-
-      const mark = deductMarker(orderId, name, vkey);
-      const markSnap = await readMark(pkey, mark);
-
-      if (!markSnap.exists) {
-        // ⚠️ طلب قديم: انثبت قبل ما يصير عدنا دفتر مخزن، فبضاعته انخصمت
-        // بدون ما تنسجل أي علامة (صفحة تفاصيل الطلب وصفحة الإضافة ما كانوا
-        // يسجلون). ما نقدر نتجاهله وإلا البضاعة ما ترجع أبداً. نعتمد على
-        // الحالة السابقة: إذا كان بحالة بضاعتها طالعة من المخزن، يعني
-        // مخصوم فعلاً ونرجّعه — مرة وحدة بس (علامة legacyRestored تمنع التكرار).
-        if (!prevStatus || !STOCK_OUT_STATUSES.includes(prevStatus)) continue;
-
-        const legacyMark = legacyRestoredMarker(orderId, name, vkey);
-        const legacyDone = await readMark(pkey, legacyMark);
-        if (legacyDone.exists) continue;
-
-        const stockNow = (found.snap.val() || {}).stock || {};
-        const key = matchStockKey(stockNow, vkey);
-        if (!key) continue;
-
-        await runTransaction(ref(db, `warehouse/${pkey}/stock/${key}`), cur => (Number(cur) || 0) + qty);
-        await writeMarks(pkey, { [legacyMark]: qty });
-        await refreshTotal(pkey);
-        console.log(`↩️ stockLedger: رجّعنا ${qty} من "${name}" لطلب قديم #${orderId} (كان بحالة ${prevStatus})`);
-        continue;
-      }
-
-      // حالة قديمة: النظام السابق خصم ورجّع وخلّى العلامتين. نشيل علامة
-      // الخصم بس بدون ما نضيف كمية (البضاعة رجعت فعلاً قبل)، حتى الطلب
-      // يقدر ينخصم من جديد إذا انثبت مرة ثانية.
-      const legacy = legacyReturnMarker(orderId, name, vkey);
-      const legacySnap = await readMark(pkey, legacy);
-      if (legacySnap.exists) {
-        await writeMarks(pkey, { [mark]: null, [legacy]: null });
-        continue;
-      }
-
-      const stored = Number(markSnap.val);
-      const back = (!isNaN(stored) && stored > 0) ? stored : qty;
-
-      await runTransaction(ref(db, `warehouse/${pkey}/stock/${matchStockKey((found.snap.val() || {}).stock || {}, vkey) || vkey}`),
-        cur => (Number(cur) || 0) + back);
-
-      await writeMarks(pkey, { [mark]: null });
-      await refreshTotal(pkey);
+      const stock = (found.snap.val() || {}).stock || {};
+      const sk = matchStockKey(stock, it.vkey);
+      if (!sk) continue;
+      const mark = deductMarker(orderId, it.name, it.vkey);
+      const m = await readMark(found.key, mark);
+      if (!m.exists) continue;
+      const id = found.key + SEP + sk;
+      const q = Number(m.val);
+      items[id] = (items[id] || 0) + (q > 0 ? q : it.qty);
+      marks.push({ pkey: found.key, mark });
     }
+    return { items, marks };
   }
 
-  // ── الحالات اللي ترجّع البضاعة للمخزن ──
-  // (الاستدعاء آمن دائماً، فما نحتاج نتأكد من الحالة السابقة)
+  // ── الموازنة ──
+  // shouldBeOut = true  → بضاعة الطلب لازم تكون مخصومة
+  // shouldBeOut = false → بضاعة الطلب لازم تكون بالمخزن
+  // ترجّع { ok, problems: [نص] } — المشاكل تنعرض للموظف بدل ما
+  // تنبلع بصمت مثل قبل
+  async function reconcileStockForOrder(order, shouldBeOut) {
+    ensureReady();
+    const { db, ref, runTransaction } = FB;
+    const orderId = order && order.id;
+    if (!orderId) return { ok: false, problems: ["ماكو رقم طلب — ما قدرنا نعدّل المخزن"] };
+
+    const problems = [];
+
+    // (١) شنو مخصوم حالياً
+    let applied = await readApplied(orderId);
+    let legacyMarks = [];
+    if (applied === null) {
+      const seed = await seedFromLegacy(orderId, order);
+      applied = seed.items;
+      legacyMarks = seed.marks;
+    }
+
+    // (٢) شنو **لازم** يكون مخصوم
+    const desired = {};
+    if (shouldBeOut) {
+      for (const it of orderItems(order)) {
+        const found = await findWarehouseKey(it.name);
+        if (!found) {
+          problems.push(`المنتج مو موجود بالمخزن: ${it.name}`);
+          continue;
+        }
+        const stock = (found.snap.val() || {}).stock || {};
+        const sk = matchStockKey(stock, it.vkey);
+        if (!sk) {
+          problems.push(`المتغير مو موجود بالمخزن: ${it.name} (${it.vkey})`);
+          continue;
+        }
+        const id = found.key + SEP + sk;
+        desired[id] = (desired[id] || 0) + it.qty;
+      }
+    }
+
+    // (٣) نطبّق الفرق بس
+    const ids = new Set([...Object.keys(applied), ...Object.keys(desired)]);
+    const touched = new Set();
+    const next = {};
+
+    for (const id of ids) {
+      const was = Number(applied[id]) || 0;
+      const want = Number(desired[id]) || 0;
+      const at = id.indexOf(SEP);
+      const pkey = id.slice(0, at), sk = id.slice(at + SEP.length);
+      touched.add(pkey);
+
+      const delta = want - was;      // موجب = نخصم زيادة، سالب = نرجّع
+      if (delta === 0) { if (want > 0) next[id] = want; continue; }
+
+      let actual = 0;
+      let res = null;
+      try {
+        res = await runTransaction(ref(db, `warehouse/${pkey}/stock/${sk}`), cur => {
+          const before = Number(cur) || 0;
+          // ما ننزل تحت الصفر، ونسجّل الي انخصم **فعلاً** مو الي طلبناه —
+          // بدون هذا، رفض الطلب لاحقاً يرجّع أكثر مما أخذ ويخلق بضاعة
+          // من العدم
+          const after = Math.max(0, before - delta);
+          actual = before - after;
+          return after;
+        });
+      } catch (e) {
+        problems.push(`ما قدرنا نعدّل: ${pkey} (${sk})`);
+        continue;
+      }
+      if (res && res.committed === false) {
+        problems.push(`ما انحفظ التعديل: ${pkey} (${sk})`);
+        continue;
+      }
+
+      const now = was + actual;
+      if (now > 0) next[id] = now;
+      if (delta > 0 && actual < delta) {
+        problems.push(
+          `الكمية ما تكفي: ${pkey}${sk !== "default" ? " (" + sk + ")" : ""} — ` +
+          `انخصم ${actual} من ${delta} المطلوبة`
+        );
+      }
+    }
+
+    // (٤) نثبّت الحالة الجديدة
+    await writeApplied(orderId, next);
+    for (const { pkey, mark } of legacyMarks) {
+      await writeMarks(pkey, { [mark]: null }).catch(() => {});
+    }
+    for (const pkey of touched) await refreshTotal(pkey).catch(() => {});
+
+    return { ok: problems.length === 0, problems };
+  }
+
+  // ── الواجهات ── نفس الأسماء القديمة حتى ما تنكسر الصفحات ──
+  const deductStockForOrder  = order => reconcileStockForOrder(order, true);
+  const restoreStockForOrder = order => reconcileStockForOrder(order, false);
+  // تُنادى عند حذف الطلب — ترجّع بضاعته للمخزن
+  const releaseStockForOrder = order => reconcileStockForOrder(order, false);
+
+  // نقطة وحدة تنادى بعد أي تغيير حالة **أو أي تعديل على البنود**
+  async function applyStockForStatus(order, newStatus /*, prevStatus */) {
+    return reconcileStockForOrder(order, isStockOut(newStatus));
+  }
+
+  // للتوافق مع الكود القديم
   const STOCK_RETURN_STATUSES = ["رفض", "ملغي", "بانتظار البضاعة", "تم استلام الراجع"];
   const STOCK_DEDUCT_STATUSES = ["مثبت"];
 
-  // نقطة وحدة تنادى بعد أي تغيير حالة — هي اللي تقرر يخصم لو يرجّع
-  async function applyStockForStatus(order, newStatus, prevStatus) {
-    if (STOCK_DEDUCT_STATUSES.includes(newStatus)) return deductStockForOrder(order);
-    if (STOCK_RETURN_STATUSES.includes(newStatus)) return restoreStockForOrder(order, prevStatus);
-  }
-
-  global.initStockLedger        = initStockLedger;
-  global.getStockKey            = getStockKey;
-  global.findWarehouseKey       = findWarehouseKey;
-  global.checkStockAvailable    = checkStockAvailable;
-  global.deductStockForOrder    = deductStockForOrder;
-  global.restoreStockForOrder   = restoreStockForOrder;
-  global.applyStockForStatus    = applyStockForStatus;
-  global.STOCK_RETURN_STATUSES  = STOCK_RETURN_STATUSES;
-  global.STOCK_OUT_STATUSES     = STOCK_OUT_STATUSES;
-  global.STOCK_DEDUCT_STATUSES  = STOCK_DEDUCT_STATUSES;
+  global.initStockLedger         = initStockLedger;
+  global.getStockKey             = getStockKey;
+  global.findWarehouseKey        = findWarehouseKey;
+  global.checkStockAvailable     = checkStockAvailable;
+  global.deductStockForOrder     = deductStockForOrder;
+  global.restoreStockForOrder    = restoreStockForOrder;
+  global.releaseStockForOrder    = releaseStockForOrder;
+  global.reconcileStockForOrder  = reconcileStockForOrder;
+  global.applyStockForStatus     = applyStockForStatus;
+  global.isStockOut              = isStockOut;
+  global.STOCK_RETURN_STATUSES   = STOCK_RETURN_STATUSES;
+  global.STOCK_OUT_STATUSES      = STOCK_OUT_STATUSES;
+  global.STOCK_DEDUCT_STATUSES   = STOCK_DEDUCT_STATUSES;
 })(window);

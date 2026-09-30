@@ -363,6 +363,22 @@ body{font-family:'Tajawal',sans-serif;background:#ffffff;color:var(--tx);overflo
 
 <script src="iraqiPhone.js"></script>
 <script type="module">
+/* المتغير المختار ينحفظ بنفس شكل المخزن: { "اللون": "احمر" }
+   قبل، كان ينحفظ { "المتغير": "اللون | احمر" } — فالدفتر يبني منه
+   "المتغير | اللون | احمر" وما يطابق ولا مفتاح بالمخزن، فطلبات
+   الموقع ما تنخصم من المخزن إطلاقاً. */
+function variantToPairs(key) {
+  const parts = String(key || "").split("|").map(s => s.trim()).filter(Boolean);
+  const out = {};
+  if (!parts.length) return out;
+  if (parts.length % 2 === 0) {
+    for (let i = 0; i < parts.length; i += 2) out[parts[i]] = parts[i + 1];
+  } else {
+    out["المتغير"] = parts.join(" | ");   // شكل غير متوقع — نخليه كما هو
+  }
+  return out;
+}
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
@@ -731,7 +747,7 @@ const productsDetailed = orderData.map(c => ({
     price:    (c.price || 0) * (c.qty || 1),
     qty:      c.qty     || 1,
     img:      c.img     || '',
-    variants: c.variant ? { 'المتغير': c.variant } : {},
+    variants: c.variant ? variantToPairs(c.variant) : {},
   }));
 
 const extraProducts = extraItems.map(c => ({
