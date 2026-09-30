@@ -127,6 +127,7 @@
     const html = orders.map((o, i) => buildLabelHTML(o, o.__pageNum || `${i + 1} / ${orders.length}`)).join("");
     document.body.insertAdjacentHTML("beforeend", html);
     attachLogoFallback(document.body);
+  fitLabelContent(document.body);   // نصغّر المحتوى لو فاض عن الليبل
 
     await waitForLabelImages(document.body, 3000);
     // ✅ نفس تصغير-إذا-فاض المستخدم بالطباعة المباشرة بالضبط

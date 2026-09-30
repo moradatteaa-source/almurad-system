@@ -815,6 +815,7 @@ function printLabelsIsolated(labelsHTML, onAfterPrint) {
   doc.head.appendChild(pageStyle);
 
   attachLogoFallback(doc.body);
+  fitLabelContent(doc.body);   // نصغّر المحتوى لو فاض عن الليبل
 
   // ⚠️ ما نقدر نعرف بالتأكيد 100% إذا الموظف "طبع فعلاً" أو "لغى نافذة
   // الطباعة" — المتصفح ما يعطينا هذا الفرق. أقرب إشارة متوفرة هي حدث

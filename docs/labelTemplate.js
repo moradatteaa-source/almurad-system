@@ -135,9 +135,44 @@ function buildLabelHTML(order, pageNum) {
       <tbody>${rowsHTML}</tbody>
     </table>
 
+    <!-- ⚠️ تنبيه الزبون — سياسة الفحص عند الاستلام.
+         السبب: إذا الزبون استلم البضاعة وراح المندوب، أجرة التوصيل
+         تنحسب علينا، وإذا رجّعها بعدين ندفع أجرة توصيل ثانية. أما
+         إذا فحصها والمندوب واگف ورجّعها على طول، ما نخسر ولا دينار
+         والمندوب ما يحق ياخذ أي مبلغ. -->
+    <div class="label-warn">
+      <b>افحص الطلب قبل ما يمشي المندوب</b>
+      <span>أي خلل — رجّعها بيده فوراً وما تدفع ولا دينار.
+      بعد ما يمشي، الإرجاع بأجور توصيل عليك.
+      والمندوب ما يحق ياخذ فلوس على الفحص.</span>
+    </div>
+
     <div class="label-page-num">${pageNum}</div>
     </div>
   </div>`;
+}
+
+// 📐 ملاءمة المحتوى داخل الليبل ٨٠×١٢٠ ملم
+// الليبل ورقة ثابتة القياس، والمحتوى يتغير: طلب بمنتج واحد يسع مرتاح،
+// وطلب بستة منتجات يفيض فينقص من أسفل الليبل بصمت — وهذا كان يصير
+// حتى قبل ما نضيف تنبيه الفحص. بدل ما نخلي شي ينقص، نصغّر المحتوى
+// شوي لمن يفيض حتى يسع كامل. ما ننزل تحت ٧٢٪ حتى يبقى مقروء.
+function fitLabelContent(scope) {
+  const doc = scope.ownerDocument || document;
+  const pages = scope.querySelectorAll ? scope.querySelectorAll(".label-page") : [];
+  pages.forEach(page => {
+    const inner = page.querySelector(".label-page-inner");
+    if (!inner) return;
+    inner.style.transform = "";
+    inner.style.transformOrigin = "";
+    const avail = page.clientHeight;
+    const need = inner.scrollHeight;
+    if (avail > 0 && need > avail + 1) {
+      const k = Math.max(0.72, avail / need);
+      inner.style.transformOrigin = "top center";
+      inner.style.transform = `scale(${k})`;
+    }
+  });
 }
 
 // إذا ملف شعار شركة التوصيل غير موجود بعد على الاستضافة، نستبدله تلقائياً
@@ -282,16 +317,28 @@ const LABEL_STYLE_CSS = `
   .label-qr { width:27mm; height:27mm; object-fit:contain; }
   .label-page hr { margin:1.5mm 0; border:none; border-top:1px solid #000; }
   .label-boxes { display:flex; gap:2mm; }
-  .label-box { flex:1; border:1px solid #000; border-radius:1mm; padding:1.5mm; font-size:9px; line-height:1.55; }
-  .label-box b { display:block; margin-bottom:0.8mm; font-size:9.5px; }
-  .label-notes { border:1px solid #000; border-radius:1mm; padding:1.5mm; margin-top:1.5mm; font-size:9px; line-height:1.5; }
+  .label-box { flex:1; border:1px solid #000; border-radius:1mm; padding:1.2mm; font-size:8.4px; line-height:1.4; }
+  .label-box b { display:block; margin-bottom:0.5mm; font-size:9px; }
+  .label-notes { border:1px solid #000; border-radius:1mm; padding:1.1mm; margin-top:1.2mm; font-size:8.2px; line-height:1.35; }
   .label-notes b { display:block; margin-bottom:0.5mm; }
-  .label-table { width:100%; border-collapse:collapse; font-size:8.5px; margin-top:1.5mm; }
-  .label-table th, .label-table td { border:1px solid #000; padding:1mm; text-align:center; }
-  .label-page-num { text-align:center; font-size:10px; margin-top:2mm; }
+  .label-table { width:100%; border-collapse:collapse; font-size:8px; margin-top:1.2mm; }
+  .label-table th, .label-table td { border:1px solid #000; padding:0.7mm; text-align:center; }
+  /* التنبيه لازم يسع بالليبل ٨٠×١٢٠ ملم بدون ما يدفع المحتوى برّا،
+     فخليناه فقرة وحدة مضغوطة بدل ثلاث أسطر منفصلة */
+  .label-warn {
+    border:1.4pt solid #000; border-radius:0.8mm; padding:0.9mm 1.4mm; margin-top:1.2mm;
+    font-size:7.9px; line-height:1.35; text-align:center;
+  }
+  .label-warn b {
+    display:block; font-size:9.2px; font-weight:900; margin-bottom:0.6mm;
+    background:#000; color:#fff; padding:0.5mm 1mm; border-radius:0.5mm;
+  }
+  .label-warn span { display:block; }
+  .label-page-num { text-align:center; font-size:9px; margin-top:1mm; }
   .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
   .label-receipt-title, .label-box b, .label-notes b, .label-table th, .label-branch-code { font-weight: 900 !important; }
-  .label-page hr, .label-box, .label-notes, .label-table th, .label-table td { border-color: #000 !important; }
+  .label-page hr, .label-box, .label-notes, .label-warn, .label-table th, .label-table td { border-color: #000 !important; }
+  .label-warn b { background:#000 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .label-courier-fallback { background: #fff !important; border: 1px solid #000; }
   .label-page { page-break-after: always; }
   .label-page:last-child { page-break-after: auto; }
