@@ -141,10 +141,8 @@ function buildLabelHTML(order, pageNum) {
          إذا فحصها والمندوب واگف ورجّعها على طول، ما نخسر ولا دينار
          والمندوب ما يحق ياخذ أي مبلغ. -->
     <div class="label-warn">
-      <b>افحص الطلب قبل ما يمشي المندوب</b>
-      <span>أي خلل — رجّعها بيده فوراً وما تدفع ولا دينار.
-      بعد ما يمشي، الإرجاع بأجور توصيل عليك.
-      والمندوب ما يحق ياخذ فلوس على الفحص.</span>
+      <b>افحص بوجود المندوب</b>
+      <span>افحص المنتج بالكامل بحضور المندوب، أي خلل بالمنتج استرجع الطلب بدون دفع أي أجور توصيل.</span>
     </div>
 
     <div class="label-page-num">${pageNum}</div>
@@ -325,15 +323,20 @@ const LABEL_STYLE_CSS = `
   .label-table th, .label-table td { border:1px solid #000; padding:0.7mm; text-align:center; }
   /* التنبيه لازم يسع بالليبل ٨٠×١٢٠ ملم بدون ما يدفع المحتوى برّا،
      فخليناه فقرة وحدة مضغوطة بدل ثلاث أسطر منفصلة */
+  /* تنبيه الفحص — لازم يكون أوضح شي بالليبل بعد رقم الوصل، فالزبون
+     ما يكدر يقول "ما شفته". عريض غامق وبإطار سميك. */
   .label-warn {
-    border:1.4pt solid #000; border-radius:0.8mm; padding:0.9mm 1.4mm; margin-top:1.2mm;
-    font-size:7.9px; line-height:1.35; text-align:center;
+    border:1.8pt solid #000; border-radius:0.8mm; padding:1.1mm 1.6mm; margin-top:1.4mm;
+    text-align:center;
   }
   .label-warn b {
-    display:block; font-size:9.2px; font-weight:900; margin-bottom:0.6mm;
-    background:#000; color:#fff; padding:0.5mm 1mm; border-radius:0.5mm;
+    display:block; font-size:10.5px; font-weight:900; margin-bottom:0.8mm;
+    background:#000; color:#fff; padding:0.7mm 1mm; border-radius:0.5mm;
+    letter-spacing:0.2px;
   }
-  .label-warn span { display:block; }
+  .label-warn span {
+    display:block; font-size:9px; font-weight:900; line-height:1.4; color:#000;
+  }
   .label-page-num { text-align:center; font-size:9px; margin-top:1mm; }
   .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
   .label-receipt-title, .label-box b, .label-notes b, .label-table th, .label-branch-code { font-weight: 900 !important; }
