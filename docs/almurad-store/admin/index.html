@@ -1029,9 +1029,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <script src="imageTools.js"></script>
 
 <script src="../orderCredit.js"></script>
+<script src="../../stockLedger.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get, set, update, remove, push } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { getDatabase, ref, get, set, update, remove, push, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 const firebaseConfig = {
@@ -1045,6 +1046,14 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+/* 📦 نربط دفتر المخزن — هذي الصفحة كانت تغيّر حالة الطلب (مثبت،
+   رفض، تم استلام الراجع...) بدون ما تلمس المخزن إطلاقاً. يعني طلب
+   موقع يتثبّت من هنا ويُشحن وبضاعته ما تنخصم أبداً، وطلب مثبت
+   يُرفض من هنا وبضاعته ما ترجع. */
+if (typeof initStockLedger === "function") {
+  initStockLedger({ db, ref, get, update, runTransaction });
+}
 const storage = getStorage(app);
 
 // ══════════════════════════════════════
@@ -2172,8 +2181,16 @@ window.changeWoStatus = async (orderId, oldStatus, newStatus) => {
 
     await set(ref(db, `ordersTest/${newStatus}/${orderId}`), orderData);
     await remove(ref(db, `ordersTest/${oldStatus}/${orderId}`));
-    
-    toast(`✅ تم تغيير الحالة إلى "${newStatus}"`, 's');
+
+    // 📦 خصم/إرجاع البضاعة حسب الحالة الجديدة
+    let stockMsg = '';
+    if (typeof applyStockForStatus === 'function') {
+      const r = await applyStockForStatus(
+        { id: orderId, productsDetailed: orderData.productsDetailed || [] }, newStatus);
+      if (r && !r.ok) stockMsg = ' ⚠️ ' + (r.problems || []).join(' · ');
+    }
+
+    toast(`✅ تم تغيير الحالة إلى "${newStatus}"${stockMsg}`, stockMsg ? 'e' : 's');
     loadWebOrders();
   } catch(e) {
     toast('❌ حدث خطأ','e');

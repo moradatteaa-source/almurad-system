@@ -632,7 +632,7 @@
           </table>
         </div>
         <div class="btn-row">
-          <button class="btn btn-primary" id="deductBtn" onclick="deductStock()">
+          <button class="btn btn-primary" id="deductBtn" onclick="deductStock()" title="المخزن ينخصم تلقائياً عند التثبيت">
             ✅ خصم من المخزن
           </button>
         </div>
@@ -661,7 +661,7 @@
           </table>
         </div>
         <div class="btn-row">
-          <button class="btn btn-green" id="returnBtn" onclick="addReturnStock()">
+          <button class="btn btn-green" id="returnBtn" onclick="addReturnStock()" title="البضاعة ترجع تلقائياً عند استلام الراجع">
             🔄 إرجاع للمخزن
           </button>
         </div>
@@ -1078,97 +1078,22 @@ async function findProductRef(name) {
 
 // ===== DEDUCT STOCK (Manual) =====
 window.deductStock = async function() {
-  if (!manualOut.length) { showToast('لا توجد طلبات للخصم','warning'); return; }
-  const btn = document.getElementById('deductBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="loader"></span> جاري الخصم...';
-
-  const totals = buildTotalsMap(manualOut);
-  manualErrors = [];
-
-  for (const [fullKey, qty] of totals.entries()) {
-    const [name, variantPart] = fullKey.split('||');
-    const found = await findProductRef(name);
-
-    if (!found) {
-      manualErrors.push({ name, variant:variantPart||'-', problem:'المنتج غير موجود بالمخزن', qty });
-      continue;
-    }
-
-    const { pRef, snap } = found;
-    const stock = snap.val().stock || {};
-    const hasVariants = Object.keys(stock).some(k=>k.includes('|'));
-
-    if (!variantPart && hasVariants) {
-      manualErrors.push({ name, variant:'-', problem:'يجب تحديد المتغير', qty });
-      continue;
-    }
-
-    if (!variantPart) {
-      const cur = Number(typeof stock==='number'?stock:(stock.default||0));
-      const newQty = Math.max(0, cur-qty);
-      await update(pRef, { stock:{default:newQty}, totalQty:newQty, lastUpdate:new Date().toISOString() });
-    } else {
-      const vKey = findVariantKey(stock, variantPart);
-      if (!vKey) { manualErrors.push({ name, variant:variantPart, problem:'متغير غير موجود', qty }); continue; }
-      const cur = Number(stock[vKey]||0);
-      const newQty = Math.max(0, cur-qty);
-      if (cur-qty < 0) manualErrors.push({ name, variant:vKey, problem:'كمية سالبة', qty:cur-qty });
-      const updated = {...stock, [vKey]:newQty};
-      const total = Object.values(updated).reduce((s,v)=>s+(Number(v)||0),0);
-      await update(pRef, { stock:updated, totalQty:total, lastUpdate:new Date().toISOString() });
-    }
-  }
-
-  renderErrors(manualErrors, 'errorTable', 'errorSection');
-  await generatePDF('manual');
-  manualOut = []; scannedShipments = new Set();
-  updateManualTables();
-  showToast('✅ تم الخصم من المخزن بنجاح','success');
-  btn.disabled = false; btn.innerHTML = '✅ خصم من المخزن';
+  /* ⛔ معطّلة (2026-09-30) — كانت تخصم مرة ثانية.
+     البضاعة تنخصم من المخزن أول ما الطلب يصير "مثبت" (عبر
+     stockLedger.js). وهذي الصفحة كانت تخصمها مرة ثانية عند
+     "تجهيز/توصيل/تم التسليم" — وهذي كلها حالات **بعد** مثبت.
+     يعني كل طلب تمسح وصله هنا كان ينخصم مرتين.
+     والأسوأ: شرط الإرجاع status.includes('راجع') كان يطابق
+     "تم استلام الراجع" هم — وهي نفس الحالة الي الدفتر يرجّع
+     بيها، فالبضاعة ترجع مرتين.
+     المسح والتقرير باقيين — بس ما نلمس المخزن. */
+  showToast('المخزن ينخصم تلقائياً عند تثبيت الطلب — ماكو داعي للخصم اليدوي', 'warning');
 };
 
-// ===== ADD RETURN STOCK (Manual) =====
 window.addReturnStock = async function() {
-  if (!manualReturn.length) { showToast('لا توجد طلبات للإرجاع','warning'); return; }
-  const btn = document.getElementById('returnBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="loader"></span> جاري الإرجاع...';
-
-  const totals = buildTotalsMap(manualReturn);
-
-  for (const [fullKey, qty] of totals.entries()) {
-    const [name, variantPart] = fullKey.split('||');
-    const found = await findProductRef(name);
-    if (!found) { manualErrors.push({ name, variant:variantPart||'-', problem:'المنتج غير موجود', qty }); continue; }
-
-    const { pRef, snap } = found;
-    const stock = snap.val().stock || {};
-    const hasVariants = Object.keys(stock).some(k=>k.includes('|'));
-
-    if (!variantPart && hasVariants) {
-      manualErrors.push({ name, variant:'-', problem:'يجب تحديد المتغير', qty });
-      continue;
-    }
-
-    if (!variantPart) {
-      const cur = Number(typeof stock==='number'?stock:(stock.default||0));
-      const newQty = cur+qty;
-      await update(pRef, { stock:{default:newQty}, totalQty:newQty, lastUpdate:new Date().toISOString() });
-    } else {
-      const vKey = findVariantKey(stock, variantPart);
-      if (!vKey) { manualErrors.push({ name, variant:variantPart, problem:'متغير غير موجود', qty }); continue; }
-      const cur = Number(stock[vKey]||0);
-      const updated = {...stock, [vKey]:cur+qty};
-      const total = Object.values(updated).reduce((s,v)=>s+(Number(v)||0),0);
-      await update(pRef, { stock:updated, totalQty:total, lastUpdate:new Date().toISOString() });
-    }
-  }
-
-  renderErrors(manualErrors, 'errorTable', 'errorSection');
-  await generatePDF('manual');
-  manualReturn = []; scannedShipments = new Set();
-  updateManualTables();
-  showToast('✅ تم إرجاع المخزن بنجاح','success');
-  btn.disabled = false; btn.innerHTML = '🔄 إرجاع للمخزن';
+  /* ⛔ معطّلة — نفس السبب. البضاعة ترجع تلقائياً لمن الطلب يصير
+     "تم استلام الراجع". */
+  showToast('البضاعة ترجع تلقائياً عند "تم استلام الراجع" — ماكو داعي للإرجاع اليدوي', 'warning');
 };
 
 function buildTotalsMap(items) {

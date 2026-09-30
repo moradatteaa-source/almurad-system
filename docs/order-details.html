@@ -1127,10 +1127,28 @@ const selectedArea = document.querySelector('#area input')?.value.trim() || stat
         const totalQty = cleanedDetails.reduce((s, item) => s + (Number(item.qty) || 0), 0);
         const finalProductName = [...new Set(cleanedDetails.map(i => i.name.trim()))].join('، ');
 
+        // ملاحظات المنتجات تنكتب تلقائياً، وملاحظة الموظف تجي بعد ||
+        // ⚠️ إصلاح (2026-09-30): الكود القديم يشيل أول مقطع قبل || — بس
+        // فقط إذا || موجودة. وإذا الموظف ما كتب ملاحظة، النص كله يكون
+        // تلقائي وبلا ||، فبالحفظة الجاية ينقرأ كأنه ملاحظة موظف
+        // وينضاف مرة ثانية → اسم المنتج والمتغير ينكتبون مرتين.
+        // هسه نشيل أي مقطع يطابق النص التلقائي، فالمتغير ينكتب مرة
+        // وحدة مهما انحفظ الطلب.
         const autoNotes = notesArray.join(' | ').trim();
-        let userNotes = document.getElementById('notes').value.trim();
-        if (userNotes.includes('||')) userNotes = userNotes.split('||').slice(1).join('||').trim();
-        userNotes = userNotes.split('||').map(p => p.trim()).filter(Boolean).join(' || ').trim();
+        const _rawNotes = document.getElementById('notes').value.trim();
+        const _norm = t => String(t || '').replace(/\s+/g, ' ').trim();
+        const _autoN = _norm(autoNotes);
+        // سطر المنتج التلقائي شكله دائماً: «اسم ×كمية (بُعد: قيمة)».
+        // نشيل أي مقطع بهذا الشكل — مو بس المطابق حرفياً — وإلا لمن
+        // الموظف يغيّر المتغير يبقى السطر القديم بالملاحظات جنب الجديد.
+        const _looksAuto = seg => _norm(seg).split('|')
+          .map(x => x.trim()).filter(Boolean)
+          .every(x => /^.+\s*×\s*\d+(\s*\(.*\))?$/.test(x));
+        const userNotes = _rawNotes.split('||')
+          .map(p => p.trim())
+          .filter(p => p && _norm(p) !== _autoN && !_looksAuto(p))
+          .join(' || ')
+          .trim();
         const finalNotes = userNotes ? `${autoNotes} || ${userNotes}` : autoNotes;
 
         // --- الحالة الجديدة ---
@@ -1213,7 +1231,8 @@ state.currentPath = newPath;
           // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
           // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
           // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
-          await applyStockForStatus(stockOrder, newStatus, oldStatus);
+          const _st = await applyStockForStatus(stockOrder, newStatus, oldStatus);
+          if (_st && !_st.ok) showToast('⚠️ المخزن: ' + _st.problems.join(' · '), 'error', 7000);
           state.orderData = fullOrderData;
           setupAutoRefresh(newPath);
           showToast(`✅ تم الحفظ ونقل الطلب إلى "${newStatus}"`, 'success');
@@ -1230,7 +1249,8 @@ state.currentPath = newPath;
           // بانتظار البضاعة/تم استلام الراجع" يرجّعون البضاعة للمخزن.
           // ما نحتاج نفحص الحالة السابقة — الدفتر يعرف بنفسه إذا الطلب
           // مخصوم حالياً أو لا، فالاستدعاء الزايد ما يأثر بشي.
-          await applyStockForStatus(stockOrder, newStatus, oldStatus);
+          const _st2 = await applyStockForStatus(stockOrder, newStatus, oldStatus);
+          if (_st2 && !_st2.ok) showToast('⚠️ المخزن: ' + _st2.problems.join(' · '), 'error', 7000);
           state.orderData = { ...state.orderData, ...fullOrderData };
           showToast('✅ تم الحفظ بنجاح', 'success');
         }

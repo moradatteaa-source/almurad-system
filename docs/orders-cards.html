@@ -1722,6 +1722,25 @@ document.getElementById("deleteSelectedBtn").addEventListener("click", async () 
 
     await update(ref(db), atomicUpdate);
 
+    // 📦 نرجّع بضاعة الطلبات المحذوفة للمخزن.
+    // قبل، حذف طلب مثبت كان يترك بضاعته مخصومة للأبد بلا أي طلب
+    // مقابلها — البضاعة تضيع من الأرقام ولا أحد يدري.
+    const stockProblems = [];
+    for (const id of S.selectedOrders) {
+      const rec = atomicUpdate[`deletedOrders/${id}`];
+      if (!rec) continue;
+      try {
+        const r = await releaseStockForOrder({
+          id, productsDetailed: rec.productsDetailed || [],
+          productName: rec.productName, totalQty: rec.totalQty
+        });
+        if (r && !r.ok) stockProblems.push(...(r.problems || []));
+      } catch (e) { stockProblems.push(`الطلب ${id}: ما رجعت بضاعته`); }
+    }
+    if (stockProblems.length) {
+      showToast("⚠️ " + stockProblems.slice(0, 3).join(" · "), "error", 6000);
+    }
+
     S.selectedOrders.forEach(id => Cache.updateOrder(dataPath, id, null));
 
     const deletedIds = new Set(S.selectedOrders);
