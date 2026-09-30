@@ -140,10 +140,7 @@ function buildLabelHTML(order, pageNum) {
          تنحسب علينا، وإذا رجّعها بعدين ندفع أجرة توصيل ثانية. أما
          إذا فحصها والمندوب واگف ورجّعها على طول، ما نخسر ولا دينار
          والمندوب ما يحق ياخذ أي مبلغ. -->
-    <div class="label-warn">
-      <b>افحص بوجود المندوب</b>
-      <span>افحص المنتج بالكامل بحضور المندوب، أي خلل بالمنتج استرجع الطلب بدون دفع أي أجور توصيل.</span>
-    </div>
+    <div class="label-warn"><b>افحص بوجود المندوب</b><span>أي خلل بالمنتج استرجع الطلب بدون دفع أي أجور توصيل.</span></div>
 
     <div class="label-page-num">${pageNum}</div>
     </div>
@@ -323,19 +320,19 @@ const LABEL_STYLE_CSS = `
   .label-table th, .label-table td { border:1px solid #000; padding:0.7mm; text-align:center; }
   /* التنبيه لازم يسع بالليبل ٨٠×١٢٠ ملم بدون ما يدفع المحتوى برّا،
      فخليناه فقرة وحدة مضغوطة بدل ثلاث أسطر منفصلة */
-  /* تنبيه الفحص — لازم يكون أوضح شي بالليبل بعد رقم الوصل، فالزبون
-     ما يكدر يقول "ما شفته". عريض غامق وبإطار سميك. */
+  /* تنبيه الفحص — سطر واحد صغير ما ياخذ من الورقة، بس عريض غامق
+     حتى يبقى مقروء على الطابعة الحرارية */
   .label-warn {
-    border:1.8pt solid #000; border-radius:0.8mm; padding:1.1mm 1.6mm; margin-top:1.4mm;
-    text-align:center;
+    border:1.2pt solid #000; border-radius:0.6mm; padding:0.7mm 1mm; margin-top:1.2mm;
+    display:flex; align-items:center; justify-content:center; gap:1.2mm;
+    white-space:nowrap; overflow:hidden;
   }
   .label-warn b {
-    display:block; font-size:10.5px; font-weight:900; margin-bottom:0.8mm;
-    background:#000; color:#fff; padding:0.7mm 1mm; border-radius:0.5mm;
-    letter-spacing:0.2px;
+    flex:none; font-size:7.4px; font-weight:900; color:#fff; background:#000;
+    padding:0.5mm 1.1mm; border-radius:0.5mm;
   }
   .label-warn span {
-    display:block; font-size:9px; font-weight:900; line-height:1.4; color:#000;
+    font-size:7.4px; font-weight:900; color:#000; line-height:1.25;
   }
   .label-page-num { text-align:center; font-size:9px; margin-top:1mm; }
   .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
