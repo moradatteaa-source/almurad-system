@@ -1025,218 +1025,251 @@ document.getElementById('btnArchive').onclick = async () => {
   await showConfirmModal();
 };
 
-async function showConfirmModal() {
-  // الشهر المنتهي = الشهر السابق للشهر الحالي
-  const now = new Date();
-  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const targetKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth()+1).padStart(2,'0')}`;
+/* ════════════════════════════════════════════════════════
+   📦 الأرشفة — تكنس كل الأشهر المنتهية، مو الشهر السابق بس
+   ────────────────────────────────────────────────────────
+   🚨 الخلل الي كان: الزر يأرشف **الشهر السابق بس**. أي طلب
+   نهائي (تم التسليم / تم استلام الراجع / رفض) من شهر أقدم —
+   مثلاً تموز وآب — يضل بـordersTest للأبد، لأن ماكو ولا طريقة
+   ترجع تأرشفه. وهذا يخرّب الرواتب: عدّاد stats/deliveredBy
+   ينقص بس لمن ينحذف الطلب من فرع "تم التسليم"، فالطلبات
+   القديمة الباقية تضل تنحسب براتب هذا الشهر.
 
-  // احسب عدد الطلبات المؤهلة (النهائية بتاريخ الشهر المنتهي)
-  let eligible = 0;
-  const dbRef = ref(db);
-  // جمع كل الطلبات من ordersTest ومساراتها الفرعية
-  try {
-    const allPathsSnap = await get(ref(db, 'ordersTest'));
-    if (allPathsSnap.exists()) {
-      Object.entries(allPathsSnap.val()).forEach(([statusPath, orders]) => {
-        if (!orders || typeof orders !== 'object') return;
-        Object.entries(orders).forEach(([id, o]) => {
-          if (id === '_meta' || !o || typeof o !== 'object') return;
-          if (!FINAL_STATUSES.includes(statusPath)) return;
-          const monthKey = getMonthKey(o.orderDate || o.createdAt);
-          if (monthKey === targetKey) eligible++;
-        });
+   هسه: نجمع كل الطلبات النهائية الي شهرها **أقدم من الشهر
+   الحالي**، ونوزّعها كل واحد على أرشيف شهره هو، وبعدها
+   نحذفهن كلهن. النتيجة: فرع "تم التسليم" ما يضل بي غير
+   طلبات الشهر الحالي — وهو بالضبط الي الراتب ينحسب عليه.
+
+   ⚠️ الشهر الحالي ما ينلمس أبداً. لو أرشفناه، راتب الشهر
+   الي احنه بي ينصفّر بنفس اللحظة.
+   ⚠️ الكتابة بـupdate مو set: لو شهر مؤرشف من قبل، الطلبات
+   الجديدة تنضاف لأرشيفه بلا ما تمسح الي موجود.
+   ════════════════════════════════════════════════════════ */
+
+// مفتاح الشهر الحالي بتوقيت بغداد
+function currentMonthKey() {
+  return new Date(Date.now() + IRAQ_OFFSET_MS).toISOString().slice(0, 7);
+}
+
+/* يجمع كل الطلبات النهائية المؤهلة، مجموعة حسب شهر كل طلب.
+   يرجّع: { byMonth: { "2026-08": {orders:{}, delivered, returned, rejected} }, noDate } */
+async function collectFinalOrders() {
+  const CUR = currentMonthKey();
+  const byMonth = {};
+  let noDate = 0, skippedCurrent = 0;
+
+  const snap = await get(ref(db, 'ordersTest'));
+  if (snap.exists()) {
+    Object.entries(snap.val()).forEach(([statusPath, orders]) => {
+      if (!FINAL_STATUSES.includes(statusPath)) return;
+      if (!orders || typeof orders !== 'object') return;
+      Object.entries(orders).forEach(([id, o]) => {
+        if (id === '_meta' || !o || typeof o !== 'object') return;
+        // نجرب كل حقول التاريخ الموجودة بالنظام قبل ما نعتبر الطلب بلا تاريخ
+        const mk = getMonthKey(o.orderDate || o.createdAt || o.updatedAt || o.deliveredAt);
+        if (!mk) { noDate++; return; }
+        if (mk >= CUR) { skippedCurrent++; return; }   // الشهر الحالي وأي تاريخ مستقبلي
+        const b = byMonth[mk] || (byMonth[mk] = { orders: {}, delivered: 0, returned: 0, rejected: 0 });
+        b.orders[id] = { ...o, _archivedFrom: `ordersTest/${statusPath}` };
+        if (statusPath === 'تم التسليم') b.delivered++;
+        else if (statusPath === 'تم استلام الراجع') b.returned++;
+        else if (statusPath === 'رفض') b.rejected++;
       });
-    }
-  } catch(e) { console.error(e); }
+    });
+  }
+  return { byMonth, noDate, skippedCurrent };
+}
 
-  // هل الشهر مؤرشف مسبقاً؟
-  const existing = await get(ref(db, `archive/${targetKey}`));
+/* نفس الشي للمشتريات المكتملة */
+const PURCHASE_FINAL_STATUSES = ["received", "rejected"];
+async function collectFinalPurchases() {
+  const CUR = currentMonthKey();
+  const byMonth = {};
+  const snap = await get(ref(db, 'purchases'));
+  if (!snap.exists()) return byMonth;
+  Object.entries(snap.val()).forEach(([id, p]) => {
+    if (!p || typeof p !== 'object') return;
+    if (!PURCHASE_FINAL_STATUSES.includes(p.status)) return;
+    const mk = getMonthKey(p.date || p.createdAt);
+    if (!mk || mk >= CUR) return;
+    (byMonth[mk] || (byMonth[mk] = {}))[id] = p;
+  });
+  return byMonth;
+}
 
-  document.getElementById('confirmInfo').innerHTML = `
-    <div class="info-row"><span>الشهر المستهدف</span><strong>${monthLabel(targetKey)}</strong></div>
-    <div class="info-row"><span>الطلبات المؤهلة للأرشفة</span><strong>${eligible} طلب</strong></div>
-    <div class="info-row"><span>الحالات: </span><strong>تم التسليم • تم استلام الراجع • رفض</strong></div>
-    ${existing.exists() ? '<div class="info-row" style="color:var(--red)"><span>⚠️ تحذير</span><strong>هذا الشهر مؤرشف مسبقاً</strong></div>' : ''}
-  `;
-  document.getElementById('confirmDesc').textContent =
-    `سيتم أرشفة الطلبات النهائية لشهر ${monthLabel(targetKey)} بناءً على تاريخ الطلب (orderDate) وحذفها من الجدول الأصلي.`;
-
-  // حفظ targetKey للاستخدام في executeArchive
-  window._archiveTargetKey = targetKey;
-
+async function showConfirmModal() {
+  document.getElementById('confirmInfo').innerHTML =
+    `<div class="info-row"><span>جاري الفحص...</span><strong>—</strong></div>`;
   document.getElementById('confirmModal').classList.add('open');
+
+  let res = { byMonth: {}, noDate: 0, skippedCurrent: 0 }, pByMonth = {};
+  try {
+    res = await collectFinalOrders();
+    pByMonth = await collectFinalPurchases();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('confirmInfo').innerHTML =
+      `<div class="info-row" style="color:var(--red)"><span>❌ فشل الفحص</span><strong>${e.message || ''}</strong></div>`;
+    return;
+  }
+
+  const months = Object.keys(res.byMonth).sort();
+  const totalOrders = months.reduce((a, k) => a + Object.keys(res.byMonth[k].orders).length, 0);
+  const totalPurch  = Object.values(pByMonth).reduce((a, o) => a + Object.keys(o).length, 0);
+
+  let existingIdx = {};
+  try {
+    const s = await get(ref(db, 'archiveMonths'));
+    if (s.exists()) existingIdx = s.val() || {};
+  } catch {}
+
+  const rows = months.map(k => {
+    const b = res.byMonth[k];
+    const n = Object.keys(b.orders).length;
+    const already = existingIdx[k] ? ' <span style="opacity:.7">(مؤرشف سابقاً — ينضاف عليه)</span>' : '';
+    return `<div class="info-row"><span>${k}${already}</span><strong>${n} طلب — مسلّم ${b.delivered} • راجع ${b.returned} • رفض ${b.rejected}</strong></div>`;
+  }).join('');
+
+  document.getElementById('confirmInfo').innerHTML = totalOrders || totalPurch ? `
+    ${rows}
+    <div class="info-row"><span>المجموع</span><strong>${totalOrders} طلب • ${totalPurch} مشترى</strong></div>
+    <div class="info-row"><span>الحالات: </span><strong>تم التسليم • تم استلام الراجع • رفض</strong></div>
+    <div class="info-row"><span>شهر ${currentMonthKey()} (الحالي)</span><strong>${res.skippedCurrent} طلب — ما ينأرشف</strong></div>
+    ${res.noDate ? `<div class="info-row" style="color:var(--red)"><span>⚠️ بلا تاريخ صالح</span><strong>${res.noDate} طلب — ما ينأرشف</strong></div>` : ''}
+  ` : `<div class="info-row"><span>ماكو شي للأرشفة</span><strong>كل الطلبات النهائية مؤرشفة</strong></div>`;
+
+  document.getElementById('confirmDesc').textContent =
+    `تنأرشف كل الطلبات النهائية للأشهر المنتهية — كل طلب يروح لأرشيف شهره — وتنحذف من الجدول الأصلي. طلبات شهر ${currentMonthKey()} تضل بمكانها حتى راتب هذا الشهر ينحسب صح.`;
+
+  // نخزن النتيجة للتنفيذ حتى ما نقرا القاعدة مرتين
+  window._archivePlan = { orders: res.byMonth, purchases: pByMonth, totalOrders };
 }
 
 window.closeConfirm = () => document.getElementById('confirmModal').classList.remove('open');
 
 // ===== تنفيذ الأرشفة =====
 window.executeArchive = async function() {
+  const plan = window._archivePlan;
   closeConfirm();
-  const targetKey = window._archiveTargetKey;
-  if (!targetKey) return;
+  if (!plan || !plan.totalOrders && !Object.keys(plan.purchases || {}).length) {
+    showToast('ماكو شي للأرشفة', '');
+    return;
+  }
 
   document.getElementById('progressOverlay').classList.add('open');
-  setProgress(5, 'جاري جمع الطلبات...', 'لا تغلق الصفحة');
+  setProgress(5, 'جاري حفظ الأرشيف...', 'لا تغلق الصفحة');
 
   try {
-    // 1. جمع الطلبات النهائية للشهر المستهدف
-    const finalOrders = {};
-    let delivered = 0, returned = 0, rejected = 0;
+    const months = Array.from(new Set([
+      ...Object.keys(plan.orders),
+      ...Object.keys(plan.purchases)
+    ])).sort();
 
-    // قراءة كل مسارات ordersTest
-    try {
-      const allPathsSnap = await get(ref(db, 'ordersTest'));
-      if (allPathsSnap.exists()) {
-        Object.entries(allPathsSnap.val()).forEach(([statusPath, orders]) => {
-          if (!FINAL_STATUSES.includes(statusPath)) return;
-          if (!orders || typeof orders !== 'object') return;
-          Object.entries(orders).forEach(([id, o]) => {
-            if (id === '_meta' || !o || typeof o !== 'object') return;
-            const monthKey = getMonthKey(o.orderDate || o.createdAt);
-        // 🚨 إصلاح حرج (2026-09-26): هنا كان مكتوب `if (true)` بدل
-        // الشرط الحقيقي. يعني الزر كان يؤرشف **ويحذف** كل الطلبات
-        // النهائية من كل الأشهر دفعة وحدة — بينما نافذة التأكيد
-        // تعرض عدد طلبات الشهر المستهدف بس (مثلاً "٥ طلبات مؤهلة").
-        // ضغطة وحدة كانت تمسح كل تاريخ الطلبات من ordersTest.
-        if (monthKey === targetKey) {
-              finalOrders[id] = { ...o, _archivedFrom: `ordersTest/${statusPath}` };
-              if (statusPath === 'تم التسليم') delivered++;
-              else if (statusPath === 'تم استلام الراجع') returned++;
-              else if (statusPath === 'رفض') rejected++;
-            }
-          });
-        });
-      }
-    } catch(e) { console.error('orders read error:', e); }
-
-    setProgress(25, `تم جمع ${Object.keys(finalOrders).length} طلب`, 'جاري حفظ الأرشيف...');
-
-    // 2. جمع المشتريات المكتملة (مستلمة/مرفوضة) للشهر المستهدف
-    const PURCHASE_FINAL_STATUSES = ["received", "rejected"];
-    const purchasesSnap = await get(ref(db, 'purchases'));
-    const allPurchases = purchasesSnap.exists() ? purchasesSnap.val() : {};
-    const monthPurchases = {};
-    Object.entries(allPurchases).forEach(([id, p]) => {
-      const mk = getMonthKey(p.date || p.createdAt);
-      if (mk === targetKey && PURCHASE_FINAL_STATUSES.includes(p.status)) {
-        monthPurchases[id] = p;
-      }
-    });
-
-    setProgress(40, 'جاري حفظ الأرشيف...', 'يرجى الانتظار');
-
-    // 3. جلب إحصائيات المخزن
+    // 1. المخزن: نسخة وحدة بس، باسم أحدث شهر منأرشفه
+    const latest = months[months.length - 1];
     let warehouseStats = {};
     try {
       const wsSnap = await get(ref(db, 'stats/warehouse'));
       if (wsSnap.exists()) warehouseStats = wsSnap.val();
     } catch {}
-
-    const totalPurchaseAmount = Object.values(monthPurchases).reduce((a, p) => a + (+p.totalAmount || 0), 0);
-    const totalPurchaseQty = Object.values(monthPurchases).reduce((a, p) => a + (+p.totalQty || +p.quantity || 0), 0);
-
-    // 4. حفظ الأرشيف
-    await set(ref(db, `archiveMonths/${targetKey}`), true);   // فهرس خفيف لقائمة الأشهر
-    await set(ref(db, `archive/${targetKey}/orders`), finalOrders);
-    await set(ref(db, `archive/${targetKey}/purchases`), monthPurchases);
-    await set(ref(db, `archive/${targetKey}/stats`), {
-      totalProducts: warehouseStats.totalProducts || 0,
-      totalQty: warehouseStats.totalQty || 0,
-      totalBuy: warehouseStats.totalBuy || 0,
-      totalSell: warehouseStats.totalSell || 0,
-      lastUpdate: warehouseStats.lastUpdate || new Date().toISOString()
-    });
-
-    // 4-ب. نسخة كاملة من المخزن — بلا ما نلمسه ولا نصفّره
-    // (الأرشفة تشيل الطلبات والمشتريات من مكانهن، أما المخزن فينضل
-    //  متل ما هو بالضبط — هذي نسخة للقراءة بس، احتياط لو انمسح شي)
-    // تنخزن بفرع backups مستقل، مو تحت archive، لأن صفحة الأرشيف
-    // تقرا فرع archive كامل — فلو حطيناها هنا صارت كل فتحة تنزّل
-    // كل النسخ.
-    let backupNote = '';
     try {
-      const bk = await snapshotWarehouse(targetKey);
-      backupNote = `${bk.meta.products} منتج`;
-      await set(ref(db, `archive/${targetKey}/warehouseBackup`), {
-        path: `backups/warehouse/${targetKey}`,
+      const bk = await snapshotWarehouse(latest);
+      await set(ref(db, `archive/${latest}/warehouseBackup`), {
+        path: `backups/warehouse/${latest}`,
         products: bk.meta.products,
         totalQty: bk.meta.totalQty,
         createdAt: bk.meta.createdAt
       });
-      // ننزّلها ملف بعد — النسخة اللي بالقاعدة ما تحمي لو راحت القاعدة
-      downloadJson({ meta: bk.meta, warehouse: bk.data }, `نسخة-المخزن-${targetKey}.json`);
-    } catch (e) {
-      console.warn('نسخة المخزن:', e.message);
-    }
+      downloadJson({ meta: bk.meta, warehouse: bk.data }, `نسخة-المخزن-${latest}.json`);
+    } catch (e) { console.warn('نسخة المخزن:', e.message); }
 
-    setProgress(65, 'جاري حفظ التقرير...', '');
-
-    // 5. حفظ التقرير
-    await set(ref(db, `archive/${targetKey}/report`), {
-      createdAt: new Date().toISOString(),
-      targetMonth: targetKey,
-      totalOrders: Object.keys(finalOrders).length,
-      delivered,
-      returned,
-      rejected,
-      totalPurchases: Object.keys(monthPurchases).length,
-      totalPurchaseAmount,
-      totalPurchaseQty,
-      totalBuyCapital: warehouseStats.totalBuy || 0,
-      totalSellCapital: warehouseStats.totalSell || 0,
-      totalProducts: warehouseStats.totalProducts || 0,
-      totalStockQty: warehouseStats.totalQty || 0
-    });
-
-    setProgress(80, 'جاري حذف الطلبات المؤرشفة...', '');
-
-    // 6. حذف الطلبات المؤرشفة من ordersTest
-    const orderIds = Object.keys(finalOrders);
+    // 2. كل شهر لحاله
+    let done = 0;
     const deleteUpdates = {};
-    orderIds.forEach(id => {
-      const o = finalOrders[id];
-      const path = o._archivedFrom;
-      if (path) deleteUpdates[`${path}/${id}`] = null;
-    });
 
-    if (Object.keys(deleteUpdates).length > 0) {
-      // حذف على دفعات لتجنب timeout
-      const batchSize = 50;
-      const entries = Object.entries(deleteUpdates);
-      for (let i = 0; i < entries.length; i += batchSize) {
-        const batch = Object.fromEntries(entries.slice(i, i + batchSize));
-        await update(ref(db), batch);
-        setProgress(80 + (i / entries.length) * 15, 'جاري الحذف...', `${i + batchSize}/${entries.length}`);
+    for (const mk of months) {
+      const b = plan.orders[mk] || { orders: {}, delivered: 0, returned: 0, rejected: 0 };
+      const orders = b.orders;
+      const purch  = plan.purchases[mk] || {};
+
+      // الطلبات — update مو set، وعلى دفعات حتى ما تصير كتابة ضخمة
+      const oEntries = Object.entries(orders);
+      for (let i = 0; i < oEntries.length; i += 50) {
+        await update(ref(db, `archive/${mk}/orders`), Object.fromEntries(oEntries.slice(i, i + 50)));
       }
+      const pEntries = Object.entries(purch);
+      for (let i = 0; i < pEntries.length; i += 50) {
+        await update(ref(db, `archive/${mk}/purchases`), Object.fromEntries(pEntries.slice(i, i + 50)));
+      }
+
+      // إحصائيات المخزن تنكتب بس إذا الشهر ماعنده — ما نخرب أرقام شهر قديم
+      // بأرقام مخزن اليوم.
+      const stSnap = await get(ref(db, `archive/${mk}/stats`));
+      if (!stSnap.exists()) {
+        await set(ref(db, `archive/${mk}/stats`), {
+          totalProducts: warehouseStats.totalProducts || 0,
+          totalQty: warehouseStats.totalQty || 0,
+          totalBuy: warehouseStats.totalBuy || 0,
+          totalSell: warehouseStats.totalSell || 0,
+          lastUpdate: warehouseStats.lastUpdate || new Date().toISOString()
+        });
+      }
+
+      // التقرير — نجمع على الموجود إذا الشهر مؤرشف سابقاً
+      const rSnap = await get(ref(db, `archive/${mk}/report`));
+      const prev = rSnap.exists() ? (rSnap.val() || {}) : {};
+      const pAmount = Object.values(purch).reduce((a, p) => a + (+p.totalAmount || 0), 0);
+      const pQty    = Object.values(purch).reduce((a, p) => a + (+p.totalQty || +p.quantity || 0), 0);
+      await update(ref(db, `archive/${mk}/report`), {
+        createdAt: prev.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        targetMonth: mk,
+        totalOrders: (+prev.totalOrders || 0) + oEntries.length,
+        delivered:   (+prev.delivered   || 0) + b.delivered,
+        returned:    (+prev.returned    || 0) + b.returned,
+        rejected:    (+prev.rejected    || 0) + b.rejected,
+        totalPurchases:      (+prev.totalPurchases      || 0) + pEntries.length,
+        totalPurchaseAmount: (+prev.totalPurchaseAmount || 0) + pAmount,
+        totalPurchaseQty:    (+prev.totalPurchaseQty    || 0) + pQty,
+        totalBuyCapital:  prev.totalBuyCapital  != null ? prev.totalBuyCapital  : (warehouseStats.totalBuy  || 0),
+        totalSellCapital: prev.totalSellCapital != null ? prev.totalSellCapital : (warehouseStats.totalSell || 0),
+        totalProducts:    prev.totalProducts    != null ? prev.totalProducts    : (warehouseStats.totalProducts || 0),
+        totalStockQty:    prev.totalStockQty    != null ? prev.totalStockQty    : (warehouseStats.totalQty || 0)
+      });
+
+      await set(ref(db, `archiveMonths/${mk}`), true);
+
+      // نجمع مسارات الحذف — ما نحذف ولا طلب قبل ما يُحفظ بالأرشيف
+      oEntries.forEach(([id, o]) => {
+        if (o._archivedFrom) deleteUpdates[`${o._archivedFrom}/${id}`] = null;
+      });
+      pEntries.forEach(([id]) => { deleteUpdates[`purchases/${id}`] = null; });
+
+      done++;
+      setProgress(10 + (done / months.length) * 60, 'جاري حفظ الأرشيف...', `${mk} — ${done}/${months.length} شهر`);
     }
 
-      setProgress(95, 'جاري حذف المشتريات المؤرشفة...', '');
-
-    // 7. حذف المشتريات المؤرشفة من purchases نهائياً
-    const purchaseIds = Object.keys(monthPurchases);
-    if (purchaseIds.length > 0) {
-      const purchaseDeleteUpdates = {};
-      purchaseIds.forEach(id => { purchaseDeleteUpdates[`purchases/${id}`] = null; });
-      const batchSize = 50;
-      const pEntries = Object.entries(purchaseDeleteUpdates);
-      for (let i = 0; i < pEntries.length; i += batchSize) {
-        const batch = Object.fromEntries(pEntries.slice(i, i + batchSize));
-        await update(ref(db), batch);
-      }
+    // 3. الحذف — هنا ينقص عدّاد stats/deliveredBy ويصير الراتب صح
+    setProgress(75, 'جاري حذف المؤرشف من الجدول الأصلي...', '');
+    const dEntries = Object.entries(deleteUpdates);
+    for (let i = 0; i < dEntries.length; i += 50) {
+      await update(ref(db), Object.fromEntries(dEntries.slice(i, i + 50)));
+      setProgress(75 + (i / Math.max(1, dEntries.length)) * 24, 'جاري الحذف...',
+                  `${Math.min(i + 50, dEntries.length)}/${dEntries.length}`);
     }
 
     setProgress(100, 'اكتملت الأرشفة ✓', '');
     await new Promise(r => setTimeout(r, 800));
 
     document.getElementById('progressOverlay').classList.remove('open');
-    showToast(`✅ تمت أرشفة ${orderIds.length} طلب لشهر ${monthLabel(targetKey)}`, 'success');
+    showToast(`✅ تمت أرشفة ${plan.totalOrders} طلب على ${months.length} شهر`, 'success');
+    window._archivePlan = null;
     await loadArchive();
 
   } catch (err) {
     console.error('Archive error:', err);
     document.getElementById('progressOverlay').classList.remove('open');
-    showToast('❌ حدث خطأ أثناء الأرشفة', 'error');
+    showToast('❌ حدث خطأ أثناء الأرشفة — جرّب مرة ثانية', 'error');
   }
 };
 // ===== إصلاح يدوي مؤقت =====
