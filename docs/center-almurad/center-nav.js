@@ -24,7 +24,8 @@
      على الكاشير يشوفهن ويضغط. الصفحة نفسها مقفلة برمز، بس الأفضل
      ما نغري أحد أصلاً — الي ما يعرف بيها ما يدق عليها. */
   var PAGES = [
-    { file: "cashier.html",   icon: "🧾", label: "الكاشير" },
+    { file: "cashier.html",       icon: "🧾", label: "الكاشير" },
+    { file: "daily-expenses.html", icon: "🧾", label: "مصاريف اليوم" },
     { file: "analytics.html", icon: "📊", label: "التحليلات", private: true },
     { file: "profits.html",   icon: "💵", label: "الأرباح",   private: true },
     { file: "expenses.html",  icon: "💸", label: "المصاريف",  private: true },

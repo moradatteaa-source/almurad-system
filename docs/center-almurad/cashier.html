@@ -893,6 +893,49 @@ body.return-mode #saveBtn { background: linear-gradient(135deg, var(--red) 0%, #
 ══════════════════════════════ */
 input, select, textarea { font-size: 16px !important; -webkit-text-size-adjust: 100%; }
 html, body { touch-action: manipulation; }
+
+/* ⚡ البيع المباشر */
+.hbtn.direct { background: #7c3aed; }
+.hbtn.direct:hover { background: #8b5cf6; }
+.dm-overlay{
+  position:fixed; inset:0; background:rgba(13,27,46,.72); z-index:9500;
+  display:none; align-items:center; justify-content:center; padding:18px;
+}
+.dm-overlay.show{ display:flex; }
+.dm-box{
+  background:#fff; border-radius:18px; padding:22px 20px; width:100%; max-width:420px;
+  box-shadow:0 22px 60px rgba(0,0,0,.4); font-family:'Tajawal',sans-serif;
+}
+.dm-head{ font-size:19px; font-weight:800; color:#0f1c2f; margin-bottom:3px; }
+.dm-note{ font-size:12.5px; color:#64748b; margin-bottom:16px; }
+.dm-lbl{ display:block; font-size:12.5px; font-weight:700; color:#475569; margin:0 0 5px 2px; }
+.dm-inp{
+  width:100%; padding:12px 13px; border:1.8px solid #e2e8f0; border-radius:11px;
+  font-family:inherit; font-size:16px; font-weight:600; background:#f8fafc; color:#0f1c2f;
+  margin-bottom:12px;
+}
+.dm-inp:focus{ outline:none; border-color:#7c3aed; background:#fff; }
+.dm-inp.err{ border-color:#dc2626; background:#fef2f2; }
+.dm-row{ display:flex; gap:10px; }
+.dm-total{
+  background:#f1f5f9; border-radius:11px; padding:11px 14px; text-align:center;
+  font-size:16px; font-weight:900; color:#0f1c2f; margin:4px 0 16px;
+}
+.dm-acts{ display:flex; gap:9px; }
+.dm-btn{
+  flex:1; padding:13px; border:none; border-radius:11px; font-family:inherit;
+  font-weight:800; font-size:15px; cursor:pointer;
+}
+.dm-btn.ok{ background:#7c3aed; color:#fff; }
+.dm-btn.ok:hover{ background:#8b5cf6; }
+.dm-btn.no{ background:#f1f5f9; color:#475569; }
+/* صف البيع المباشر بجدول الفاتورة */
+tr[data-direct="1"] { background:#faf5ff; }
+tr[data-direct="1"] .row-name-input { border-color:#c4b5fd; font-weight:800; }
+.direct-tag{
+  display:inline-block; background:#7c3aed; color:#fff; border-radius:999px;
+  padding:1px 8px; font-size:10.5px; font-weight:800; margin-inline-start:6px;
+}
 </style>
 </head>
 <body>
@@ -917,6 +960,7 @@ html, body { touch-action: manipulation; }
   </div>
 
   <div class="header-actions">
+    <button class="hbtn direct" onclick="openDirectSale()">⚡ بيع مباشر</button>
     <button class="hbtn cam" onclick="startCameraScan()">📷 كاميرا</button>
     <button class="hbtn stop" onclick="stopCameraScan()">⛔ إيقاف</button>
   </div>
@@ -1099,6 +1143,38 @@ html, body { touch-action: manipulation; }
   </div>
 </div>
 <!-- PRINT AREA -->
+<!-- ⚡ بيع مباشر — منتج مو موجود بالمخزن.
+     ينضاف للفاتورة والحسابات عادي، بس ما يلمس المخزن إطلاقاً
+     وربحه صفر (نثبّت كلفته = سعر بيعه) — لأن ما نعرف كلفته،
+     فما نكدر نحسبه ربح. الهدف إن الصندوق يطابق. -->
+<div id="directModal" class="dm-overlay">
+  <div class="dm-box">
+    <div class="dm-head">⚡ بيع مباشر</div>
+    <div class="dm-note">منتج مو بالمخزن — ينحسب بالمبيعات بدون ربح</div>
+
+    <label class="dm-lbl">اسم المنتج</label>
+    <input id="dmName" class="dm-inp" placeholder="اكتب اسم المنتج" autocomplete="off">
+
+    <div class="dm-row">
+      <div style="flex:1">
+        <label class="dm-lbl">سعر البيع (د.ع)</label>
+        <input id="dmPrice" class="dm-inp" type="number" inputmode="numeric" placeholder="0">
+      </div>
+      <div style="width:110px">
+        <label class="dm-lbl">الكمية</label>
+        <input id="dmQty" class="dm-inp" type="number" inputmode="numeric" value="1">
+      </div>
+    </div>
+
+    <div class="dm-total" id="dmTotal">المجموع: 0 د.ع</div>
+
+    <div class="dm-acts">
+      <button class="dm-btn ok" onclick="confirmDirectSale()">➕ أضف للفاتورة</button>
+      <button class="dm-btn no" onclick="closeDirectSale()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- قالب الفاتورة انتقل لـ center-receipt.js -->
 
 <!-- ZXing -->
@@ -1498,6 +1574,107 @@ function addRow() {
 
   updateRowNumbers();
   updateItemCount();
+  return tr;
+}
+
+/* ════════════════════════════════════════════════════
+   ⚡ البيع المباشر
+   ────────────────────────────────────────────────────
+   منتج مو موجود بالمخزن — الموظف يكتب اسمه وسعره وكميته.
+   ينضاف للفاتورة مثل أي بند، بس:
+     • ما يلمس المخزن إطلاقاً (ما ينخصم ولا يندور عليه)
+     • كلفته = سعر بيعه، يعني ربحه **صفر** بكل التقارير
+       (ما نعرف كلفته الحقيقية فما نكدر ندّعي ربح)
+   الهدف: الصندوق والحسابات يطابقون.
+   ════════════════════════════════════════════════════ */
+window.openDirectSale = function () {
+  document.getElementById("dmName").value = "";
+  document.getElementById("dmPrice").value = "";
+  document.getElementById("dmQty").value = "1";
+  document.querySelectorAll("#directModal .dm-inp").forEach(i => i.classList.remove("err"));
+  updateDirectTotal();
+  document.getElementById("directModal").classList.add("show");
+  setTimeout(() => document.getElementById("dmName").focus(), 80);
+};
+
+window.closeDirectSale = function () {
+  document.getElementById("directModal").classList.remove("show");
+};
+
+function updateDirectTotal() {
+  const p = Number(document.getElementById("dmPrice").value) || 0;
+  const q = Number(document.getElementById("dmQty").value) || 0;
+  document.getElementById("dmTotal").textContent =
+    "المجموع: " + (p * q).toLocaleString("en-US") + " د.ع";
+}
+
+["dmPrice", "dmQty"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener("input", updateDirectTotal);
+    el.addEventListener("keydown", e => { if (e.key === "Enter") confirmDirectSale(); });
+  }
+});
+const _dmName = document.getElementById("dmName");
+if (_dmName) _dmName.addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("dmPrice").focus();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("directModal")?.classList.contains("show"))
+    closeDirectSale();
+});
+
+window.confirmDirectSale = function () {
+  const nameEl = document.getElementById("dmName");
+  const priceEl = document.getElementById("dmPrice");
+  const qtyEl = document.getElementById("dmQty");
+
+  const name = nameEl.value.trim();
+  const price = Number(priceEl.value) || 0;
+  const qty = Number(qtyEl.value) || 0;
+
+  nameEl.classList.toggle("err", !name);
+  priceEl.classList.toggle("err", price <= 0);
+  qtyEl.classList.toggle("err", qty <= 0);
+  if (!name) { nameEl.focus(); return showToast("اكتب اسم المنتج", "error"); }
+  if (price <= 0) { priceEl.focus(); return showToast("اكتب سعر البيع", "error"); }
+  if (qty <= 0) { qtyEl.focus(); return showToast("الكمية غير صحيحة", "error"); }
+
+  addDirectRow(name, price, qty);
+  closeDirectSale();
+  showToast(`⚡ انضاف: ${name}`, "success");
+};
+
+/* صف بيع مباشر — بلا بحث بالمخزن وبلا متغيرات */
+function addDirectRow(name, price, qty) {
+  const tr = document.createElement("tr");
+  tr.dataset.direct = "1";
+  tr.dataset.unitPrice = String(price);
+
+  tr.innerHTML = `
+    <td>
+      <input class="row-name-input" value="${String(name).replace(/"/g, "&quot;")}" readonly>
+      <span class="direct-tag">بيع مباشر</span>
+    </td>
+    <td class="price-cell">${price.toLocaleString("en-US")} د.ع</td>
+    <td><span class="stock-badge">—</span></td>
+    <td><input type="text" class="row-qty-input" value="${qty}"></td>
+    <td class="total-cell">0 د.ع</td>
+    <td class="row-idx"></td>
+    <td><button class="del-row-btn" onclick="removeRow(this)">✕</button></td>
+  `;
+
+  body.appendChild(tr);
+  tr.addEventListener("click", () => { lastSelectedRow = tr; });
+
+  const qtyInput = tr.querySelector(".row-qty-input");
+  qtyInput.addEventListener("keydown", e => handleRowQtyKey(e, qtyInput));
+  qtyInput.addEventListener("blur", () => normalizeRowQty(qtyInput));
+  qtyInput.setAttribute("data-last", String(qty));
+
+  updateRowNumbers();
+  updateItemCount();
+  calc();
   return tr;
 }
 
@@ -2110,6 +2287,24 @@ async function saveInvoice(printAfter = false) {
     const qty = Number(r.querySelector(".row-qty-input")?.value || 0);
     if (qty <= 0) { showToast("الكمية غير صحيحة", "error"); isSaving = false; return; }
 
+    /* ⚡ بيع مباشر: ما نلمس المخزن إطلاقاً — المنتج أصلاً مو موجود
+       بيه. وكلفته = سعر بيعه، يعني ربحه صفر بكل التقارير بدل ما
+       يطلع ربح وهمي بكامل المبلغ. */
+    if (r.dataset.direct === "1") {
+      const dTotal = Number(r.cells[4].textContent.replace(/[^\d\-]/g, ""));
+      const dUnit = qty > 0 ? Math.round(dTotal / qty) : 0;
+      items.push({
+        product: name,
+        qty: isReturnMode ? -qty : qty,
+        price: dUnit,
+        total: dTotal,
+        buyPrice: dUnit,        // ربح صفر
+        directSale: true,
+        productKey: null
+      });
+      continue;
+    }
+
 const prod = products.find(x => x.name === name);
 
 const productRef = ref(rtdb, "warehouse/" + (prod?._key || name));
@@ -2238,16 +2433,37 @@ localTime: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-
   setTimeout(() => { isSaving = false; }, 800);
 }
 
+/* حزام أمان: أي انهيار غير متوقع بالحفظ ما يخلي الكاشير معلّق */
+const _saveInvoiceRaw = saveInvoice;
+saveInvoice = async function (printAfter) {
+  try { return await _saveInvoiceRaw(printAfter); }
+  catch (e) {
+    console.error("saveInvoice:", e);
+    isSaving = false;
+    showToast("❌ صار خطأ بالحفظ — جرّب مرة ثانية", "error");
+  }
+};
+
 function resetInvoice() {
-  while (body.rows.length > 1) body.deleteRow(0);
+  /* ⚠️ صف البيع المباشر ماكو بيه منسدلة متغيرات، فالتصفير القديم
+     كان ينهار عليه (querySelector يرجّع null) — والانهيار يصير
+     **قبل** ما ينرجع isSaving لصفر، يعني الكاشير يعلق وما يكدر
+     يحفظ ولا فاتورة لحد ما تحدّث الصفحة.
+     هسه: نشيل كل الصفوف (بضمنها المباشرة) ونبني صف جديد نظيف. */
+  while (body.rows.length) body.deleteRow(0);
+  addRow();
   const r = body.rows[0];
   if (r) {
-    r.querySelector(".row-name-input").value = "";
-    r.querySelector(".row-variant-select").innerHTML = `<option value="">— المتغير —</option>`;
-    r.cells[1].textContent = "0 د.ع";
-    r.querySelector(".row-qty-input").value = 1;
-    r.cells[4].textContent = "0 د.ع";
-    r.querySelector(".stock-badge").textContent = "0";
+    const nameEl = r.querySelector(".row-name-input");
+    const varEl = r.querySelector(".row-variant-select");
+    const qtyEl = r.querySelector(".row-qty-input");
+    const stockEl = r.querySelector(".stock-badge");
+    if (nameEl) nameEl.value = "";
+    if (varEl) varEl.innerHTML = `<option value="">— المتغير —</option>`;
+    if (r.cells[1]) r.cells[1].textContent = "0 د.ع";
+    if (qtyEl) qtyEl.value = 1;
+    if (r.cells[4]) r.cells[4].textContent = "0 د.ع";
+    if (stockEl) stockEl.textContent = "0";
     r.dataset.unitPrice = 0;
     r.dataset.loadedProduct = "";
   }

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧾 مصاريف اليوم — سنتر المراد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════
+   🧾 مصاريف اليوم — صفحة الموظفين
+   ────────────────────────────────────────────────────────
+   صفحة expenses.html مقفلة برمز لأنها تعرض الأرباح. وهذي
+   مفتوحة للموظفين: يسجّلون المصروف بس — ولا رقم ربح ولا
+   مبيعات ولا أي شي ثاني.
+   تكتب بنفس المكان (centerExpenses) فصفحة المالك تشوفها فوراً.
+   ════════════════════════════════════════════════════════ */
+:root{
+  --navy:#0d1b2e; --blue:#1a3a5c;
+  --accent:#f97316; --accent2:#fb923c;
+  --green:#059669; --red:#dc2626;
+  --bg:#f0f4f8; --card:#fff; --border:#e2e8f0;
+  --text:#1e293b; --text2:#64748b; --text3:#94a3b8;
+  --shadow:0 4px 24px rgba(0,0,0,.07); --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+#header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:0 20px;
+  height:62px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:60;box-shadow:0 3px 18px rgba(0,0,0,.25);flex-wrap:wrap}
+.hd-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16.5px}
+.hd-brand .dot{width:36px;height:36px;border-radius:11px;background:var(--accent);
+  display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.hd-who{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer}
+
+.wrap{max-width:820px;margin:16px auto;padding:0 14px 80px}
+
+/* ── مجموع اليوم ── */
+.today{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.today .lbl{font-size:13px;color:var(--text2);font-weight:700}
+.today .val{font-size:30px;font-weight:900;color:var(--red);line-height:1.1}
+.today .cnt{font-size:12.5px;color:var(--text2);font-weight:600;margin-top:3px}
+.daypick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.daypick input{border:1.5px solid var(--border);border-radius:10px;padding:8px 11px;
+  font-family:inherit;font-size:14px;background:#fff;color:var(--text)}
+.chip{background:#fff;border:1.5px solid var(--border);border-radius:999px;padding:7px 14px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── نموذج الإضافة ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 17px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{font-size:15.5px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.form{display:grid;grid-template-columns:1.8fr 1fr auto;gap:10px;align-items:end}
+.fld label{display:block;font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:5px}
+.fld input{width:100%;border:1.8px solid var(--border);border-radius:11px;padding:12px 13px;
+  font-family:inherit;font-size:16px;background:#fff;color:var(--text);font-weight:600}
+.fld input:focus{outline:none;border-color:var(--accent);background:#fffaf5}
+.fld input.err{border-color:var(--red);background:#fef2f2}
+.btn{background:var(--accent);border:none;border-radius:11px;color:#fff;padding:13px 22px;
+  font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--accent2)}
+.btn:disabled{background:#cbd5e1;cursor:default}
+.btn.sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
+.btn.ghost{background:#fff;border:1.5px solid var(--border);color:var(--text2)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn.danger{background:#fef2f2;color:var(--red);border:1.5px solid #fecaca}
+.btn.danger:hover{background:#fee2e2}
+
+/* ── قائمة المصاريف ── */
+.rows{display:flex;flex-direction:column;gap:9px}
+.row{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row .nm{flex:1;min-width:130px;font-weight:800;font-size:14.5px;word-break:break-word}
+.row .meta{display:block;font-size:11.5px;color:var(--text3);font-weight:600;margin-top:2px}
+.row .amt{font-weight:900;font-size:16px;color:var(--red);direction:ltr;white-space:nowrap}
+.row .acts{display:flex;gap:6px}
+.empty{text-align:center;color:var(--text2);padding:34px 10px;font-size:14px}
+
+#toast{position:fixed;bottom:22px;inset-inline-end:22px;z-index:900;background:var(--navy);
+  color:#fff;padding:13px 20px;border-radius:12px;font-weight:700;font-size:14px;
+  opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;max-width:85vw}
+#toast.on{opacity:1;transform:translateY(0)}
+#toast.bad{background:var(--red)} #toast.good{background:var(--green)}
+
+#loading{position:fixed;inset:0;background:rgba(240,244,248,.96);z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spin{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+@media(max-width:620px){
+  #header{height:auto;padding:9px 12px}
+  .wrap{margin:12px auto;padding:0 10px 80px}
+  .form{grid-template-columns:1fr 1fr}
+  .form .btn{grid-column:1/-1;width:100%}
+  .today .val{font-size:25px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><div>جاري التحميل...</div></div>
+
+<div id="header">
+  <div class="hd-brand"><div class="dot">🧾</div><span>مصاريف اليوم</span></div>
+  <button class="hd-who" id="whoBtn">👤 —</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ══ مجموع اليوم المعروض ══ -->
+  <div class="today">
+    <div>
+      <div class="lbl" id="dayLabel">مصاريف اليوم</div>
+      <div class="val" id="dayTotal">0 د.ع</div>
+      <div class="cnt" id="dayCount">—</div>
+    </div>
+    <div class="daypick">
+      <button class="chip on" id="todayChip">اليوم</button>
+      <input type="date" id="dayPick">
+    </div>
+  </div>
+
+  <!-- ══ إضافة مصروف ══ -->
+  <div class="card">
+    <h3>➕ سجّل مصروف</h3>
+    <div class="form">
+      <div class="fld">
+        <label>اسم الصرف</label>
+        <input id="expName" placeholder="مثلاً: غداء العمال" autocomplete="off">
+      </div>
+      <div class="fld">
+        <label>المبلغ (د.ع)</label>
+        <input id="expAmt" type="number" inputmode="numeric" placeholder="0">
+      </div>
+      <button class="btn" id="addBtn">حفظ</button>
+    </div>
+  </div>
+
+  <!-- ══ المصاريف ══ -->
+  <div class="card">
+    <h3>📋 المسجّل</h3>
+    <div class="rows" id="list"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, push, set, update, remove }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtEJYJrmyP45qS2da8Cuc6y6Jv5VD0Uhc",
+  authDomain: "almurad-system.firebaseapp.com",
+  databaseURL: "https://almurad-system-default-rtdb.firebaseio.com",
+  projectId: "almurad-system",
+  storageBucket: "almurad-system.firebasestorage.app",
+  messagingSenderId: "911755824405",
+  appId: "1:911755824405:web:c5520c00c11e336148ad1c"
+};
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const rtdb = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(Number(n) || 0).toLocaleString("en-US");
+const money = n => fmt(n) + " د.ع";
+const esc = s => String(s ?? "").replace(/[&<>"]/g,
+  c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+/* توقيت بغداد — نفس الي يستعمله باقي النظام، حتى المصروف
+   الي ينسجل ١٢:٣٠ ليلاً ما ينحسب على اليوم الغلط */
+const IRAQ_MS = 3 * 60 * 60 * 1000;
+const todayIraq = () => new Date(Date.now() + IRAQ_MS).toISOString().slice(0, 10);
+
+let EXPENSES = {};     // كل المصاريف
+let day = todayIraq(); // اليوم المعروض
+let who = "";          // اسم الموظف
+
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "on " + (kind || "");
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ""; }, 2600);
+}
+
+/* ── اسم الموظف ──
+   نستعمل نفس الاسم الي يسجّل بيه بالكاشير، وإذا ماكو نسأله مرة */
+function loadWho() {
+  who = (localStorage.getItem("cashierUsername") || "").trim();
+  if (!who) askWho(true);
+  $("whoBtn").textContent = "👤 " + (who || "اضغط لتسجيل اسمك");
+}
+function askWho(first) {
+  const v = prompt(first ? "شنو اسمك؟ (ينسجل مع كل مصروف تضيفه)" : "تغيير الاسم:", who || "");
+  if (v === null) return;
+  who = v.trim();
+  if (who) localStorage.setItem("cashierUsername", who);
+  $("whoBtn").textContent = "👤 " + (who || "اضغط لتسجيل اسمك");
+}
+
+async function loadExpenses() {
+  const snap = await get(ref(rtdb, "centerExpenses"));
+  EXPENSES = snap.exists() ? snap.val() : {};
+}
+
+const ofDay = d => Object.entries(EXPENSES)
+  .map(([id, v]) => ({ id, ...v }))
+  .filter(v => String(v.date || "") === d)
+  .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+function render() {
+  const list = ofDay(day);
+  const total = list.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  $("dayTotal").textContent = money(total);
+  $("dayCount").textContent = list.length ? `${fmt(list.length)} مصروف` : "ماكو مصاريف";
+  $("dayLabel").textContent = day === todayIraq() ? "مصاريف اليوم" : "مصاريف " + day;
+  $("todayChip").classList.toggle("on", day === todayIraq());
+  $("dayPick").value = day;
+
+  if (!list.length) {
+    $("list").innerHTML = `<div class="empty">ماكو مصاريف مسجّلة بهذا اليوم</div>`;
+    return;
+  }
+
+  $("list").innerHTML = list.map(e => {
+    const t = e.createdAt
+      ? new Date(Number(e.createdAt) + IRAQ_MS).toISOString().slice(11, 16) : "";
+    return `<div class="row">
+      <div class="nm">${esc(e.category || "مصروف")}
+        <span class="meta">${t ? "🕐 " + t : ""}${e.by ? " · 👤 " + esc(e.by) : ""}</span>
+      </div>
+      <div class="amt">${money(e.amount)}</div>
+      <div class="acts">
+        <button class="btn sm ghost" data-edit="${esc(e.id)}">✏️ تعديل</button>
+        <button class="btn sm danger" data-del="${esc(e.id)}">حذف</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  $("list").querySelectorAll("[data-edit]").forEach(b =>
+    b.addEventListener("click", () => editExpense(b.dataset.edit)));
+  $("list").querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => delExpense(b.dataset.del)));
+}
+
+async function addExpense() {
+  const name = $("expName").value.trim();
+  const amt = Number($("expAmt").value) || 0;
+
+  $("expName").classList.toggle("err", !name);
+  $("expAmt").classList.toggle("err", amt <= 0);
+  if (!name) { $("expName").focus(); return toast("اكتب اسم الصرف", "bad"); }
+  if (amt <= 0) { $("expAmt").focus(); return toast("اكتب مبلغ أكبر من صفر", "bad"); }
+  if (!who) { askWho(true); if (!who) return toast("لازم تسجّل اسمك أول", "bad"); }
+
+  const btn = $("addBtn");
+  btn.disabled = true;
+  try {
+    /* التاريخ تلقائي — يوم التسجيل بتوقيت بغداد. الموظف ما
+       يحتاج يختاره ولا يكدر يغيّره بالغلط. */
+    const r = push(ref(rtdb, "centerExpenses"));
+    const rec = {
+      amount: amt,
+      category: name,          // اسم الصرف — صفحة المالك تعرضه بعمود البند
+      note: "",
+      date: todayIraq(),
+      createdAt: Date.now(),
+      by: who
+    };
+    await set(r, rec);
+    EXPENSES[r.key] = rec;
+
+    $("expName").value = ""; $("expAmt").value = "";
+    $("expName").classList.remove("err"); $("expAmt").classList.remove("err");
+    $("expName").focus();
+
+    if (day !== rec.date) day = rec.date;   // نوديه لليوم الي انسجل بيه
+    render();
+    toast("انحفظ ✓", "good");
+  } catch (e) {
+    toast("ما انحفظ — تأكد من الإنترنت", "bad");
+  } finally { btn.disabled = false; }
+}
+
+async function editExpense(id) {
+  const e = EXPENSES[id];
+  if (!e) return;
+  const name = prompt("اسم الصرف:", e.category || "");
+  if (name === null) return;
+  const amt = prompt("المبلغ (د.ع):", String(Number(e.amount) || 0));
+  if (amt === null) return;
+
+  const n = name.trim(), a = Number(amt) || 0;
+  if (!n) return toast("الاسم فارغ", "bad");
+  if (a <= 0) return toast("المبلغ لازم أكبر من صفر", "bad");
+
+  try {
+    const patch = { category: n, amount: a, editedAt: Date.now(), editedBy: who || "—" };
+    await update(ref(rtdb, "centerExpenses/" + id), patch);
+    Object.assign(EXPENSES[id], patch);
+    render();
+    toast("انحفظ التعديل ✓", "good");
+  } catch (err) { toast("ما انحفظ", "bad"); }
+}
+
+async function delExpense(id) {
+  const e = EXPENSES[id];
+  if (!e) return;
+  if (!confirm(`حذف «${e.category}» بمبلغ ${fmt(e.amount)} د.ع؟`)) return;
+  try {
+    await remove(ref(rtdb, "centerExpenses/" + id));
+    delete EXPENSES[id];
+    render();
+    toast("انحذف", "good");
+  } catch (err) { toast("ما انحذف", "bad"); }
+}
+
+/* ── الأحداث ── */
+$("addBtn").addEventListener("click", addExpense);
+$("expName").addEventListener("keydown", e => { if (e.key === "Enter") $("expAmt").focus(); });
+$("expAmt").addEventListener("keydown", e => { if (e.key === "Enter") addExpense(); });
+$("whoBtn").addEventListener("click", () => askWho(false));
+$("todayChip").addEventListener("click", () => { day = todayIraq(); render(); });
+$("dayPick").addEventListener("change", e => { day = e.target.value || todayIraq(); render(); });
+
+/* ── البداية ── */
+(async () => {
+  loadWho();
+  try {
+    await loadExpenses();
+  } catch (e) {
+    $("loading").innerHTML = `<div style="font-size:38px">⚠️</div><div>ما وصلنا للبيانات — تأكد من الإنترنت</div>`;
+    return;
+  }
+  render();
+  $("loading").style.display = "none";
+  $("expName").focus();
+})();
+</script>
+
+<!-- 🧭 شريط تنقّل السنتر المشترك -->
+<script src="center-nav.js"></script>
+</body>
+</html>
