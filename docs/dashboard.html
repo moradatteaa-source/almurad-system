@@ -1127,6 +1127,54 @@ function updateCacheBadge(state) {
 }
 
 // ============================================================
+// 🚨 إنذار تجمّد العدّادات
+// ------------------------------------------------------------
+// اللوحة تقرا أرقام جاهزة من stats/ordersCounts تكتبها دالة
+// syncOrderCounts بالسيرفر. إذا وقفت الدالة — مثل ما صار لمن
+// انقطعت فاتورة فايربيس ٩ تشرين الأول الساعة ٢:١٣ فجراً — الأرقام
+// تضل معروضة مثل ما هي وماكو شي يبيّن إنها قديمة، فتشتغل على
+// أرقام غلط يوم كامل بلا ما تدري.
+// هسه الدالة تسجّل وقت آخر تحديث، وهذا الشريط يطلع إذا الوقت
+// تجاوز الحد. الفحص رقم واحد بس — ما يكلف شي.
+// ============================================================
+const STALE_HOURS = 6;
+let lastCountsTs = 0;
+
+function renderStaleWarning(ts) {
+  let bar = document.getElementById("countersStale");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "countersStale";
+    bar.style.cssText =
+      "display:none;margin:10px 14px;padding:11px 14px;border-radius:12px;" +
+      "background:#b91c1c;color:#fff;font-weight:800;font-size:13px;" +
+      "line-height:1.75;text-align:center;direction:rtl;" +
+      "font-family:'Cairo',Tahoma,sans-serif;" +
+      "box-shadow:0 2px 12px rgba(185,28,28,.32)";
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
+  // ما عدنا بصمة بعد (أول نشر، قبل ما يتحرك أي طلب) — ما ننذر على
+  // شي ما نعرفه. أول تغيير حالة يكتب البصمة وتشتغل الحماية.
+  if (!ts) { bar.style.display = "none"; return; }
+  const hrs = (Date.now() - ts) / 3600000;
+  if (hrs > STALE_HOURS) {
+    bar.innerHTML =
+      `⚠️ عدّادات الطلبات متوقفة — آخر تحديث قبل ${Math.floor(hrs)} ساعة. ` +
+      "الأرقام المعروضة قديمة ولا تعتمد عليها. راجع فاتورة فايربيس.";
+    bar.style.display = "block";
+  } else {
+    bar.style.display = "none";
+  }
+}
+
+onValue(ref(db, "stats/countsUpdatedAt"), snap => {
+  lastCountsTs = snap.exists() ? (Number(snap.val()) || 0) : 0;
+  renderStaleWarning(lastCountsTs);
+});
+// نعيد الفحص كل ٥ دقائق حتى الشريط يطلع لو الصفحة مفتوحة من زمان
+setInterval(() => renderStaleWarning(lastCountsTs), 5 * 60 * 1000);
+
+// ============================================================
 // 💬 الجملة التحفيزية
 // ============================================================
 const quotes = [

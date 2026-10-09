@@ -613,6 +613,9 @@ async function loadOrders() {
       } else {
         // مجلد حالة — كل عنصر داخله طلب
         Object.entries(val).forEach(([orderId, order]) => {
+          // _meta مفتاح خدمي (وقت آخر تعديل الفرع) مو طلب — كان ينحسب
+          // طلب وهمي بكل حالة ويزيد الأرقام غلط.
+          if(orderId === "_meta") return;
           if(order && typeof order === "object") {
             allOrders.push({ ...order, status: order.status || key });
           }

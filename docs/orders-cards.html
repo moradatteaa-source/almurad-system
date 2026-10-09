@@ -749,6 +749,14 @@ function updateStats(n, filtered = false) {
   bar.textContent = filtered ? `🔍 ${n} طلب (نتائج الفلتر)` : `📊 ${n} طلب`;
 }
 
+// ⚠️ كل فرع حالة بـordersTest بي مفتاح خدمي اسمه _meta (يخزّن وقت آخر
+// تعديل حتى الصفحات تعرف إذا تغير شي بلا ما تنزّل الفرع كامل). هو مو
+// طلب، بس الصفحة كانت تمرّه مثل باقي المفاتيح — فيطلع "طلب وهمي" بلا
+// اسم ولا تلفون ولا سعر بآخر كل حالة. هسه نستبعده من أي قائمة.
+function isRealOrder(id, o) {
+  return id !== "_meta" && o && typeof o === "object" && !Array.isArray(o);
+}
+
 // ✅ إصلاح: تطبيع الأرقام + حذف الفراغات والشرطات
 function normalizeNum(s) {
   if (!s) return "";
@@ -980,7 +988,7 @@ async function loadOrders(forceRefresh = false) {
 
     const ordersMap = new Map();
     Object.entries(snap.val()).forEach(([id, o]) => {
-      if (!o.isDeleted) ordersMap.set(id, { id, ...o });
+      if (isRealOrder(id, o) && !o.isDeleted) ordersMap.set(id, { id, ...o });
     });
 
     const sorted = Array.from(ordersMap.values())
@@ -1034,7 +1042,7 @@ async function ensureAllLoaded() {
     const ordersMap = new Map();
     if (snap && snap.exists()) {
       Object.entries(snap.val()).forEach(([id, o]) => {
-        if (!o.isDeleted) ordersMap.set(id, { id, ...o });
+        if (isRealOrder(id, o) && !o.isDeleted) ordersMap.set(id, { id, ...o });
       });
     }
 
@@ -1081,7 +1089,7 @@ async function loadMore() {
     const existingIds = new Set(S.masterOrders.map(o => o.id));
 
     Object.entries(snap.val()).forEach(([id, o]) => {
-      if (!o.isDeleted && !existingIds.has(id))
+      if (isRealOrder(id, o) && !o.isDeleted && !existingIds.has(id))
         newMap.set(id, { id, ...o });
     });
 

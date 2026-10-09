@@ -314,6 +314,10 @@ exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async
   // تعديل بيانات طلب موجود ما يأثر على العدد.
   if (existedBefore !== existsAfter) {
     await bump(`stats/ordersCounts/${status}`, existsAfter ? 1 : -1);
+    // 🚨 بصمة وقت: اللوحة تقراها وتعرف إذا العدّاد توقف. بدونها، لو
+    // وقفت الدوال (مثل ما صار لمن انقطعت الفاتورة ٩ تشرين الأول)
+    // تضل الأرقام معروضة مثل ما هي وماكو شي يدل إنها قديمة.
+    await admin.database().ref("stats/countsUpdatedAt").set(Date.now());
   }
 
   // عدّاد المسلّم لكل موظف — يهم فرع "تم التسليم" بس
