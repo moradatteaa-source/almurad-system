@@ -300,10 +300,31 @@ function fixArabicKey(v) {
   return str;                                           // مو عربي أصلاً
 }
 
+// ════════════════════════════════════════════════════════
+// 🔖 بصمة التغيير (stats/touch/*)
+// ────────────────────────────────────────────────────────
+// ليش: صفحات مثل إحصائيات الموظفين والمشتريات وإضافة الطلب كانت
+// تنزّل الفرع كامل كل دقيقتين (٣ ميكا للطلبات، ٥١٦ كيلو للمخزن،
+// ١.٢ ميكا للمشتريات) — يعني ~١ غيغا تنزيل باليوم بينما القاعدة
+// كلها ٥٤ ميكا. وأغلب فترات الدقيقتين ما يصير بيها أي تعديل أصلاً.
+//
+// هسه السيرفر يكتب رقم واحد (وقت آخر تعديل) لكل فرع، والصفحة تقرا
+// هذا الرقم قبل ما تنزّل: إذا ما تغير، تستخدم نسختها وما تنزّل شي.
+// نفس سرعة التحديث بالضبط — الموظف ما ينتبه لأي فرق — بس بايتات
+// بدل ميكابايتات.
+// ════════════════════════════════════════════════════════
+function touch(branch) {
+  return admin.database().ref(`stats/touch/${branch}`).set(Date.now())
+    .catch(e => { console.warn("touch " + branch + ":", e.message); });
+}
+
 exports.syncOrderCounts = onValueWritten("/ordersTest/{status}/{orderId}", async (event) => {
   const status = fixArabicKey(event.params.status);
   const { orderId } = event.params;
   if (orderId === "_meta") return;
+
+  // بصمة: أي تعديل على أي طلب — مو بس تغيير العدد
+  await touch("orders");
 
   const beforeVal = event.data.before.val();
   const afterVal  = event.data.after.val();
@@ -521,6 +542,8 @@ exports.syncStoreCatalog = onValueWritten("/warehouse/{pkey}", async (event) => 
   const before = event.data.before.val();
   const after = event.data.after.val();
 
+  await touch("warehouse");
+
   // 1) نسخة المتجر
   const entry = toCatalogEntry(after);
   await db.ref(`storeCatalog/${safeKey(pkey)}`).set(entry); // null = ينشال
@@ -539,6 +562,11 @@ exports.syncStoreCatalog = onValueWritten("/warehouse/{pkey}", async (event) => 
   if (after && fromKey && fromKey !== newName) {
     await db.ref(`warehouseIndex/${safeKey(fromKey)}`).set(pkey);
   }
+});
+
+// المشتريات ماكو عليها مشغّل أصلاً — هذا أخف واحد ممكن: يكتب رقم بس.
+exports.syncPurchasesTouch = onValueWritten("/purchases/{purchaseId}", async () => {
+  await touch("purchases");
 });
 
 // ── بناء الفرعين من الصفر (تنطلب مرة وحدة بعد النشر) ──

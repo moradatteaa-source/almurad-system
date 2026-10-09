@@ -30,6 +30,50 @@ import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-da
 // بالعمل، لأن المخزون والطلبات ما تتغير بشكل يحتاج دقة أقل من دقيقة لهالاستخدامات.
 const CACHE_TTL_MS = 75 * 1000;
 
+/* ════════════════════════════════════════════════════════
+   🔖 بوابة بصمة التغيير
+   ────────────────────────────────────────────────────────
+   🚨 المشكلة الي انكشفت (٩ تشرين الأول ٢٠٢٦): القاعدة كلها ٥٤.٦ ميكا،
+   بس التنزيل اليومي ~١ غيغا — يعني القاعدة تنزّلت ١٨ مرة باليوم.
+   السبب: ثلاث صفحات فيها setInterval كل ١٢٠ ثانية تنزّل الفرع كامل
+   (stats-employees → ordersTest ٣ ميكا، purchases → ١.٢ ميكا،
+   add-order → warehouse ٥١٦ كيلو). ومدة الكاش فوق ٧٥ ثانية — أقل من
+   الـ١٢٠ — فالكاش كان ينتهي دائماً قبل ما يوصل الدور وما منع ولا
+   تنزيلة وحدة.
+
+   الحل: السيرفر يكتب رقم واحد لكل فرع (stats/touch/*) بأي تعديل.
+   قبل ما ننزّل ٣ ميكا، نقرا هذا الرقم (بايتات): إذا ما تغير عن آخر
+   مرة نزّلنا بيها، نرجّع نسختنا وما ننزّل شي. التحديث يضل كل دقيقتين
+   بالضبط والموظف ما ينتبه لأي فرق.
+
+   ⚠️ أمان: لو وقف السيرفر (مثل انقطاع الفاتورة) البصمة تتجمد، ولو
+   اعتمدنا عليها لحالها راح نخدم نسخة قديمة للأبد. لذلك أكو سقف:
+   بعد MAX_GATED_AGE_MS من آخر تنزيل حقيقي، ننزّل على أي حال.
+   ولو البصمة مو موجودة أصلاً (قبل نشر الدوال) البوابة تنطفي
+   والسلوك يرجع مثل ما كان بالضبط.
+   ════════════════════════════════════════════════════════ */
+const MAX_GATED_AGE_MS = 15 * 60 * 1000;
+
+// أي مسار عنده بصمة بالسيرفر. المسارات الثانية ما تتأثر إطلاقاً.
+const TOUCH_BRANCH = {
+  ordersTest: "orders",
+  warehouse:  "warehouse",
+  purchases:  "purchases"
+};
+
+async function readTouch(db, path) {
+  const branch = TOUCH_BRANCH[path];
+  if (!branch) return null;
+  try {
+    const snap = await get(ref(db, `stats/touch/${branch}`));
+    if (!snap.exists()) return null;
+    const v = Number(snap.val());
+    return Number.isFinite(v) ? v : null;
+  } catch (e) {
+    return null; // ما نكسر القراءة بسبب البصمة — نرجع للسلوك القديم
+  }
+}
+
 // نستخدم sessionStorage عشان النسخة المخزنة تنفع حتى لو الموظف تنقل
 // من صفحة لصفحة ثانية (كل صفحة HTML منفصلة، الذاكرة العادية تنمسح
 // بمجرد ما ينتقل الموظف لصفحة ثانية، لكن sessionStorage يضل موجود
@@ -42,15 +86,18 @@ function readSession(key) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.ts !== "number") return null;
+    // at = وقت آخر تنزيل حقيقي. النسخ القديمة ما عندها، فنعتبرها = ts.
+    if (typeof parsed.at !== "number") parsed.at = parsed.ts;
+    if (typeof parsed.touch !== "number") parsed.touch = null;
     return parsed;
   } catch (e) {
     return null;
   }
 }
 
-function writeSession(key, data) {
+function writeSession(key, data, at, touch) {
   try {
-    sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+    sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), at, touch, data }));
   } catch (e) {
     // sessionStorage ممكن يفشل (وضع خاص بالمتصفح، أو البيانات كبيرة جداً) —
     // ما مشكلة، بس نتجاهل ونعتمد على memoryCache بس بهالحالة.
@@ -60,10 +107,12 @@ function writeSession(key, data) {
 /**
  * getCached(db, path)
  * يرجع بيانات المسار المحدد (كامل الشجرة تحته)، من الذاكرة المؤقتة إذا
- * كانت حديثة (أقل من CACHE_TTL_MS)، وإلا يجيبها من فايربيس ويخزنها.
+ * كانت حديثة (أقل من CACHE_TTL_MS)، وإلا يسأل بصمة التغيير أول،
+ * وإذا تغيرت فعلاً يجيبها من فايربيس ويخزنها.
  */
 export async function getCached(db, path) {
   const now = Date.now();
+  const key = "sharedCache:" + path;
 
   // 1) تحقق من ذاكرة الصفحة الحالية أول (أسرع شي، بدون أي I/O)
   const mem = memoryCache.get(path);
@@ -73,18 +122,35 @@ export async function getCached(db, path) {
 
   // 2) تحقق من sessionStorage (تشمل بيانات محمّلة من صفحة ثانية فتحها
   //    نفس الموظف بنفس التبويب خلال المدة المسموحة)
-  const stored = readSession("sharedCache:" + path);
+  const stored = readSession(key);
   if (stored && (now - stored.ts) < CACHE_TTL_MS) {
-    memoryCache.set(path, { ts: stored.ts, data: stored.data });
+    memoryCache.set(path, { ts: stored.ts, at: stored.at, touch: stored.touch, data: stored.data });
     return stored.data;
   }
 
-  // 3) ما فيه نسخة حديثة — نجيبها فعلياً من فايربيس (هذا هو الطلب الفعلي الوحيد)
+  // 3) عدنا نسخة بس انتهت مدتها — قبل ما ننزّل الفرع كامل، نسأل
+  //    السيرفر رقم واحد: هل تغير شي أصلاً من آخر تنزيل؟
+  const cached = mem || stored;
+  if (cached && cached.touch != null && (now - cached.at) < MAX_GATED_AGE_MS) {
+    const live = await readTouch(db, path);
+    if (live != null && live === cached.touch) {
+      // ما تغير ولا شي — نجدد ختم الفحص (مو ختم التنزيل) ونرجّع نفس النسخة
+      memoryCache.set(path, { ts: now, at: cached.at, touch: cached.touch, data: cached.data });
+      writeSession(key, cached.data, cached.at, cached.touch);
+      return cached.data;
+    }
+  }
+
+  // 4) تنزيل فعلي.
+  //    ⚠️ نقرا البصمة **قبل** التنزيل مو بعده: لو صار تعديل أثناء
+  //    التنزيل، نخزن البصمة القديمة فالقراءة الجاية تنزّل من جديد.
+  //    الخطأ بهذا الاتجاه = تنزيلة زايدة، والاتجاه الثاني = بيانات قديمة.
+  const touchNow = await readTouch(db, path);
   const snap = await get(ref(db, path));
   const data = snap.exists() ? snap.val() : {};
 
-  memoryCache.set(path, { ts: now, data });
-  writeSession("sharedCache:" + path, data);
+  memoryCache.set(path, { ts: now, at: now, touch: touchNow, data });
+  writeSession(key, data, now, touchNow);
 
   return data;
 }
