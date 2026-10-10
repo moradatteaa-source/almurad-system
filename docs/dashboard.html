@@ -271,6 +271,66 @@
     .page { padding: 26px; flex: 1; overflow-x: hidden; max-width: 1440px; width: 100%; margin: 0 auto; }
 
     /* ====== Quote / Hero Box ====== */
+    /* ════════ 🔍 بحث سريع بالداشبورد ════════
+       ليش: الموظف كان لازم يفتح صفحة الطلبات ويختار حالة ويبحث.
+       هسه يبحث من هنا مباشرة ويفوت على الطلب بضغطة. */
+    .qs-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 22px;
+      box-shadow: var(--shadow);
+    }
+    .qs-head { display:flex; align-items:center; gap:9px; margin-bottom:13px; }
+    .qs-head .qs-ttl { font-weight:800; font-size:15px; color:var(--text); }
+    .qs-types { display:flex; gap:6px; margin-right:auto; flex-wrap:wrap; }
+    .qs-type {
+      border:1px solid var(--border); background:transparent; cursor:pointer;
+      padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700;
+      color:var(--text-muted); font-family:inherit; transition:var(--trans);
+    }
+    .qs-type:hover { border-color:var(--navy-light); color:var(--navy); }
+    .qs-type.on { background:var(--navy); border-color:var(--navy); color:#fff; }
+    .qs-row { display:flex; gap:9px; }
+    .qs-input {
+      flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      padding:12px 14px; font-size:15px; font-family:inherit; color:var(--text);
+      background:#fbfcfe; outline:none; transition:var(--trans); direction:rtl;
+    }
+    .qs-input:focus { border-color:var(--navy-light); background:#fff;
+      box-shadow:0 0 0 3px rgba(18,115,187,.12); }
+    .qs-btn {
+      background:var(--orange); color:#fff; border:none; cursor:pointer;
+      padding:0 22px; border-radius:var(--radius-sm); font-weight:800;
+      font-size:14px; font-family:inherit; transition:var(--trans); white-space:nowrap;
+    }
+    .qs-btn:hover { background:var(--orange-dark); }
+    .qs-btn:disabled { opacity:.55; cursor:default; }
+    .qs-out { margin-top:13px; display:none; }
+    .qs-out.show { display:block; }
+    .qs-note { font-size:12.5px; color:var(--text-muted); padding:9px 2px; }
+    .qs-hit {
+      display:flex; align-items:center; gap:12px; width:100%; text-align:right;
+      background:#fbfcfe; border:1px solid var(--border); border-radius:var(--radius-sm);
+      padding:11px 13px; margin-bottom:7px; cursor:pointer; font-family:inherit;
+      transition:var(--trans);
+    }
+    .qs-hit:hover { background:#fff; border-color:var(--navy-light);
+      transform:translateX(-3px); box-shadow:var(--shadow-xs); }
+    .qs-hit-no { font-weight:900; font-size:15px; color:var(--navy); min-width:62px; }
+    .qs-hit-mid { flex:1; min-width:0; }
+    .qs-hit-name { font-weight:700; font-size:13.5px; color:var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .qs-hit-sub { font-size:11.5px; color:var(--text-muted); margin-top:2px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .qs-hit-st { font-size:11px; font-weight:800; padding:4px 10px;
+      border-radius:999px; background:rgba(4,59,100,.07); color:var(--navy); white-space:nowrap; }
+    .qs-hit-go { color:var(--text-muted); font-size:16px; }
+    @media(max-width:700px){
+      .qs-head { flex-wrap:wrap; }
+      .qs-types { margin-right:0; width:100%; }
+      .qs-btn { padding:0 16px; }
+      .qs-hit-st { display:none; }
+    }
+
     .quote-box {
       background: var(--brand-gradient);
       border-radius: var(--radius-lg); padding: 26px 28px; margin-bottom: 26px;
@@ -812,6 +872,24 @@
         </div>
       </div>
 
+      <!-- 🔍 بحث سريع -->
+      <div class="qs-card">
+        <div class="qs-head">
+          <span>🔍</span>
+          <span class="qs-ttl">بحث سريع عن طلب</span>
+          <div class="qs-types">
+            <button class="qs-type on" data-qt="orderId">رقم الطلب</button>
+            <button class="qs-type" data-qt="phone">رقم الهاتف</button>
+            <button class="qs-type" data-qt="receiptNum">رقم الوصل</button>
+          </div>
+        </div>
+        <div class="qs-row">
+          <input class="qs-input" id="qsInput" placeholder="اكتب رقم الطلب واضغط Enter" inputmode="numeric" autocomplete="off">
+          <button class="qs-btn" id="qsBtn">بحث</button>
+        </div>
+        <div class="qs-out" id="qsOut"></div>
+      </div>
+
       <!-- Stats Section -->
       <div class="section-header">
         <div class="section-title">إحصائيات الطلبات</div>
@@ -1166,6 +1244,204 @@ function renderStaleWarning(ts) {
     bar.style.display = "none";
   }
 }
+
+/* ════════════════════════════════════════════════════════
+   🔍 بحث سريع عن طلب — من الداشبورد مباشرة
+   ────────────────────────────────────────────────────────
+   كان الموظف لازم يفتح صفحة الطلبات، يختار حالة، وبعدين يبحث —
+   وإذا الطلب بحالة ثانية ما يلكاه. هسه يبحث من هنا بكل الحالات
+   مرة وحدة ويفوت على الطلب بضغطة.
+
+   كيف يشتغل بلا ما يكلف تنزيل:
+   ١. يقرا فهرس البحث الخفيف (orderIndex ≈ ٢٦٠ كيلو) ويطابق محلياً.
+   ٢. إذا ماكو نتيجة، يجيب نسخة طازة من الفهرس ويعيد — لأن نسخة
+      المتصفح ممكن عمرها لحد عشر دقائق.
+   ٣. إذا باقي ماكو والبحث برقم طلب، يفحص المسار المباشر بالعشر
+      حالات: عشر قراءات صغيرة جداً. هذي شبكة الأمان حتى لو الفهرس
+      فاته الطلب — مثل الي صار بطلب ٦٦٠٤.
+   ما ننزّل الفروع كاملة أبداً.
+   ════════════════════════════════════════════════════════ */
+const QS_STATUSES = [
+  'تم التسليم','قيد المعالجة','جديد','مثبت','قيد التجهيز',
+  'بانتظار البضاعة','قيد التوصيل','راجع','تم استلام الراجع','رفض'
+];
+const QS_IDX_TTL = 10 * 60 * 1000;
+let _qsIdx = null, _qsIdxTs = 0, _qsType = "orderId", _qsBusy = false;
+
+// تطبيع: أرقام عربية → إنكليزية، وحذف الفراغات والشرطات
+function qsNorm(v) {
+  const ar = "٠١٢٣٤٥٦٧٨٩", en = "0123456789";
+  return String(v == null ? "" : v)
+    .split("").map(c => { const i = ar.indexOf(c); return i >= 0 ? en[i] : c; }).join("")
+    .replace(/[\s\-_]/g, "");
+}
+
+async function qsGetIndex(fresh) {
+  if (!fresh && _qsIdx && Date.now() - _qsIdxTs < QS_IDX_TTL) return _qsIdx;
+  try {
+    const snap = await get(ref(db, "orderIndex"));
+    if (!snap.exists()) return null;
+    const v = snap.val();
+    if (!v || !Object.keys(v).length) return null;
+    _qsIdx = v; _qsIdxTs = Date.now();
+    return v;
+  } catch (e) { console.warn("orderIndex:", e.message); return null; }
+}
+
+// فحص مباشر برقم الطلب بكل الحالات — قراءات صغيرة، مو تنزيل فروع
+async function qsProbeById(id) {
+  const clean = qsNorm(id);
+  if (!clean || !/^\d+$/.test(clean)) return [];
+  const out = [];
+  await Promise.all(QS_STATUSES.map(async st => {
+    try {
+      const snap = await get(ref(db, `ordersTest/${st}/${clean}`));
+      if (snap.exists()) {
+        const v = snap.val();
+        if (v && typeof v === "object" && !v.isDeleted) out.push({ id: clean, status: st, ...v });
+      }
+    } catch (e) { /* حالة وحدة فشلت — نكمل */ }
+  }));
+  return out;
+}
+
+function qsMatch(idx, q) {
+  const hits = [];
+  for (const id in idx) {
+    const e = idx[id];
+    if (!e) continue;
+    let ok = false;
+    if (_qsType === "orderId")         ok = qsNorm(id).includes(q);
+    else if (_qsType === "phone")      ok = String(e.p || "").includes(q);
+    else if (_qsType === "receiptNum") ok = String(e.r || "").includes(q);
+    if (ok) hits.push([id, e]);
+  }
+  hits.sort((a, b) => (b[1].e || 0) - (a[1].e || 0));
+  return hits.slice(0, 25);   // ٢٥ نتيجة تكفي — ما نجيب أكثر
+}
+
+function qsRender(html) {
+  const out = document.getElementById("qsOut");
+  out.innerHTML = html;
+  out.classList.add("show");
+}
+
+function qsEsc(v) {
+  return String(v == null ? "" : v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function qsOpen(id) {
+  try { localStorage.setItem("selectedOrder", String(id)); } catch (e) {}
+  // نمرر الرقم بالرابط بعد، احتياط لو ما اشتغل التخزين
+  window.location.href = "order-details.html?id=" + encodeURIComponent(id);
+}
+
+function qsShowResults(orders) {
+  if (!orders.length) {
+    qsRender('<div class="qs-note">ماكو نتيجة — تأكد من الرقم أو جرّب نوع بحث ثاني.</div>');
+    return;
+  }
+  const rows = orders.map(o => {
+    const name = o.customerName || o.productName || "بلا اسم";
+    const bits = [];
+    if (o.phone1) bits.push(qsEsc(o.phone1));
+    if (o.city)   bits.push(qsEsc(o.city));
+    if (o.receiptNum) bits.push("وصل " + qsEsc(o.receiptNum));
+    return `<button class="qs-hit" data-go="${qsEsc(o.id)}">
+      <span class="qs-hit-no">#${qsEsc(o.id)}</span>
+      <span class="qs-hit-mid">
+        <span class="qs-hit-name">${qsEsc(name)}</span>
+        <span class="qs-hit-sub">${bits.join(" · ") || "—"}</span>
+      </span>
+      <span class="qs-hit-st">${qsEsc(o.status || "")}</span>
+      <span class="qs-hit-go">‹</span>
+    </button>`;
+  }).join("");
+  qsRender(rows + `<div class="qs-note">${orders.length} نتيجة — اضغط على الطلب حتى تفتحه.</div>`);
+  document.querySelectorAll("#qsOut .qs-hit").forEach(b => {
+    b.addEventListener("click", () => qsOpen(b.dataset.go));
+  });
+}
+
+async function qsSearch() {
+  if (_qsBusy) return;
+  const raw = document.getElementById("qsInput").value;
+  const q = qsNorm(raw).toLowerCase();
+  if (!q) { qsRender('<div class="qs-note">اكتب رقم أول.</div>'); return; }
+
+  _qsBusy = true;
+  document.getElementById("qsBtn").disabled = true;
+  qsRender('<div class="qs-note">جاري البحث...</div>');
+
+  try {
+    let hits = [];
+    let idx = await qsGetIndex(false);
+    if (idx) hits = qsMatch(idx, q);
+
+    // ماكو نتيجة؟ نسخة طازة من الفهرس قبل ما نقول ماكو
+    if (!hits.length) {
+      idx = await qsGetIndex(true);
+      if (idx) hits = qsMatch(idx, q);
+    }
+
+    if (hits.length) {
+      const orders = [];
+      for (let i = 0; i < hits.length; i += 10) {
+        const chunk = hits.slice(i, i + 10);
+        const got = await Promise.all(chunk.map(async ([id, e]) => {
+          try {
+            const snap = await get(ref(db, `ordersTest/${e.s}/${id}`));
+            return snap.exists() ? { id, status: e.s, ...snap.val() } : null;
+          } catch (err) { return null; }
+        }));
+        got.forEach(x => { if (x && !x.isDeleted) orders.push(x); });
+      }
+      qsShowResults(orders);
+      return;
+    }
+
+    // شبكة الأمان: فحص مباشر برقم الطلب
+    if (_qsType === "orderId") {
+      const direct = await qsProbeById(q);
+      if (direct.length) {
+        console.warn("طلب موجود بالقاعدة ومو بالفهرس:", q);
+        qsShowResults(direct);
+        return;
+      }
+    }
+
+    qsRender('<div class="qs-note">ماكو نتيجة — تأكد من الرقم أو جرّب نوع بحث ثاني.</div>');
+
+  } catch (err) {
+    console.error("qsSearch:", err);
+    qsRender('<div class="qs-note">صار خطأ بالبحث — جرّب مرة ثانية.</div>');
+  } finally {
+    _qsBusy = false;
+    document.getElementById("qsBtn").disabled = false;
+  }
+}
+
+(function qsWire() {
+  const input = document.getElementById("qsInput");
+  const btn   = document.getElementById("qsBtn");
+  if (!input || !btn) return;
+  btn.addEventListener("click", qsSearch);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") qsSearch(); });
+  document.querySelectorAll(".qs-type").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".qs-type").forEach(x => x.classList.remove("on"));
+      t.classList.add("on");
+      _qsType = t.dataset.qt;
+      input.placeholder = _qsType === "phone" ? "اكتب رقم الهاتف واضغط Enter"
+                        : _qsType === "receiptNum" ? "اكتب رقم الوصل واضغط Enter"
+                        : "اكتب رقم الطلب واضغط Enter";
+      input.focus();
+      const out = document.getElementById("qsOut");
+      out.classList.remove("show"); out.innerHTML = "";
+    });
+  });
+})();
 
 onValue(ref(db, "stats/countsUpdatedAt"), snap => {
   lastCountsTs = snap.exists() ? (Number(snap.val()) || 0) : 0;

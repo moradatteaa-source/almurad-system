@@ -1208,8 +1208,30 @@ function finishSearch(results, queryText) {
   showToast(`🔍 ${results.length} نتيجة`, results.length > 0 ? "success" : "warning");
 }
 
+/* 🔎 شبكة أمان: فحص مباشر برقم الطلب بكل الحالات.
+   ليش: البحث يعتمد على فهرس (orderIndex) يبنيه السيرفر. إذا الفهرس
+   فاته طلب لأي سبب، الصفحة كانت تقول "ماكو نتيجة" والطلب موجود
+   بالقاعدة — وهذا الي صار بطلب ٦٦٠٤. هسه قبل ما نقول ماكو، نفحص
+   المسار المباشر بكل حالة: عشر قراءات صغيرة جداً (رقم واحد بكل
+   وحدة)، مو تنزيل الفروع. */
+async function probeOrderById(id) {
+  const clean = String(id || "").trim();
+  if (!clean || !/^\d+$/.test(clean)) return [];
+  const found = [];
+  await Promise.all(ALL_STATUSES.map(async st => {
+    try {
+      const snap = await get(ref(db, `ordersTest/${st}/${clean}`));
+      if (snap.exists()) {
+        const v = snap.val();
+        if (v && typeof v === "object" && !v.isDeleted) found.push({ id: clean, ...v });
+      }
+    } catch (e) { /* حالة وحدة فشلت — نكمل الباقي */ }
+  }));
+  return found;
+}
+
 // يرجّع مصفوفة الطلبات المطابقة، أو null إذا ما ينفع نستخدم الفهرس
-async function searchViaIndex(normalizedQ) {
+async function searchViaIndex(normalizedQ, isRetry) {
   const idx = await getOrderIndex();
   if (!idx) return null;
 
@@ -1226,6 +1248,25 @@ async function searchViaIndex(normalizedQ) {
     if (match) hits.push([id, e]);
   }
   if (hits.length > SEARCH_DIRECT_LIMIT) return null; // بحث واسع — الطريقة القديمة أرخص
+
+  /* ماكو ولا نتيجة بالفهرس — ممكن النسخة الي بالمتصفح قديمة (عمرها
+     لحد ١٠ دقائق)، أو الفهرس نفسه فاته الطلب. ما نقول "ماكو" قبل ما
+     نتأكد. */
+  if (!hits.length && !isRetry) {
+    _orderIdx = null; _orderIdxTs = 0;              // نجيب نسخة طازة (~٢٦٠ كيلو)
+    return await searchViaIndex(normalizedQ, true);
+  }
+  if (!hits.length && isRetry) {
+    if (S.searchType === "orderId") {
+      const direct = await probeOrderById(normalizedQ);
+      if (direct.length) {
+        console.warn("طلب موجود بالقاعدة ومو بالفهرس:", normalizedQ);
+        return direct;
+      }
+      return [];                                     // فعلاً ماكو — بلا مسح كامل
+    }
+    return null;                                     // تلفون/وصل — نرجع للمسح الكامل
+  }
 
   hits.sort((a, b) => (b[1].e || 0) - (a[1].e || 0));
 
