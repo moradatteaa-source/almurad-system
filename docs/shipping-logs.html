@@ -543,11 +543,16 @@ function courierColorFromProvider(provider) {
 // بالخلفية قبل ما الموظف يضغط طباعة، حتى يكون جاهز وينزل فوراً بدل
 // انتظار 10-15 ثانية. ما ننتظر الرد (fire-and-forget)، وما نعيد الطلب
 // لنفس الدفعة مرتين بنفس الجلسة.
+/* ⚠️ كل نداءات الـPDF تحت تحمل `_=${Date.now()}` و cache:"no-store".
+   السبب: متصفح الموبايل كان يحتفظ بالملف لنفس الرابط (نفس logId)
+   ويرجّعه بالطباعة الجاية، فالموظف يطبع التصميم القديم حتى بعد ما
+   السيرفر صار يبني الجديد. اللابتوب ما يمر من هذا المسار إطلاقاً —
+   يطبع بالمتصفح مباشرة — ولذلك كان يطلع صح والموبايل لا. */
 const prewarmedLogs = new Set();
 function prewarmBatchPdf(logId) {
   if (!logId || prewarmedLogs.has(logId)) return;
   prewarmedLogs.add(logId);
-  fetch(`https://almurad.onrender.com/api/prewarm-labels-pdf?logId=${encodeURIComponent(logId)}`)
+  fetch(`https://almurad.onrender.com/api/prewarm-labels-pdf?logId=${encodeURIComponent(logId)}&_=${Date.now()}`, { cache: "no-store" })
     .catch(() => {});
 }
 
@@ -892,7 +897,7 @@ async function handlePrintInvoice(logId, btnEl, log) {
     if (isMobileDevice() && navigator.share) {
       const progress = showProgressToast("جاري تجهيز ملف الطباعة للمشاركة...");
       try {
-        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}`);
+        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?logId=${encodeURIComponent(logId)}&_=${Date.now()}`, { cache: "no-store" });
         progress.close();
         if (res.ok) {
           const pdfBlob = await res.blob();
@@ -952,7 +957,7 @@ async function handlePrintSingleOrder(orderId, receiptNum, btnEl, logId, orderKe
       const progress = showProgressToast("جاري تجهيز ملف الوصل للمشاركة...");
       try {
         const qs = `orderId=${encodeURIComponent(orderId)}${receiptNum ? `&receiptNum=${encodeURIComponent(receiptNum)}` : ""}`;
-        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?${qs}`);
+        const res = await fetch(`https://almurad.onrender.com/api/print-labels-pdf?${qs}&_=${Date.now()}`, { cache: "no-store" });
         progress.close();
         if (res.ok) {
           const pdfBlob = await res.blob();

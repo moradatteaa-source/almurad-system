@@ -19,6 +19,7 @@ import path      from "path";
 import { fileURLToPath } from "url";
 import puppeteer from "puppeteer";
 import crypto    from "crypto";
+import fs        from "fs";
 import { PDFDocument, PDFDict, PDFArray, PDFRef, PDFRawStream } from "pdf-lib";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -311,8 +312,28 @@ const PDF_CACHE_MAX = 12;             // أقصى عدد ملفات محفوظة
 const pdfCache = new Map();
 const pdfInFlight = new Map();
 
+/* 🏷️ بصمة تصميم الليبل.
+   🚨 المشكلة (١٠ تشرين الأول ٢٠٢٦): الموبايل يطبع عن طريق هذا السيرفر
+   (PDF مولّد بـPuppeteer)، والسيرفر يحفظ الملف الجاهز بالذاكرة. فبعد
+   ما نعدّل تصميم الليبل، أي دفعة ملفها محفوظ تضل تطبع **التصميم
+   القديم** لحد ما تنتهي صلاحية الحفظ. اللابتوب ما يمر من هنا أصلاً،
+   فيطلع الجديد فوراً — ولذلك كان الفرق بين الاثنين.
+   الحل: نضيف بصمة ملف القالب لمفتاح الحفظ. أي تعديل على
+   labelTemplate.js يغيّر البصمة، فكل الملفات المحفوظة تصير بمفاتيح
+   قديمة وتنبني من جديد تلقائياً. */
+const LABEL_BUILD = (() => {
+  try {
+    const f = path.join(__dirname, "../docs/labelTemplate.js");
+    const st = fs.statSync(f);
+    return `${st.size}.${Math.floor(st.mtimeMs)}`;
+  } catch (e) {
+    return String(Date.now()); // ما قدرنا نقرا الملف — نعتبر كل تشغيل نسخة جديدة
+  }
+})();
+
 function pdfCacheKey({ logId, orderId, receiptNum }) {
-  return logId ? `log:${logId}` : `order:${orderId}:${receiptNum || ""}`;
+  const base = logId ? `log:${logId}` : `order:${orderId}:${receiptNum || ""}`;
+  return `${LABEL_BUILD}|${base}`;
 }
 
 function pdfCacheGet(key) {
@@ -470,7 +491,13 @@ app.get("/api/print-labels-pdf", async (req, res) => {
     const pdfBuffer = cached || await getOrBuildLabelsPdf({ logId, orderId, receiptNum, baseUrl });
 
     res.set("Content-Type", "application/pdf");
+    // ⚠️ بدون هذا، متصفح الموبايل يحتفظ بالملف لنفس الرابط ويرجّعه
+    // بالطباعة الجاية — حتى لو السيرفر بنى نسخة جديدة. نفس الرابط
+    // (logId واحد) يعني نفس الملف عنده.
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.set("Pragma", "no-cache");
     res.set("X-Pdf-Source", cached ? "cache" : "fresh"); // للتشخيص: جاهز مسبقاً لو انبنى الآن
+    res.set("X-Label-Build", LABEL_BUILD);               // للتشخيص: أي نسخة تصميم
     res.send(pdfBuffer);
   } catch (err) {
     console.error("❌ print-labels-pdf:", err.message);
