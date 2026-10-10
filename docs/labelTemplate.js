@@ -163,7 +163,9 @@ function fitLabelContent(scope) {
     const avail = page.clientHeight;
     const need = inner.scrollHeight;
     if (avail > 0 && need > avail + 1) {
-      const k = Math.max(0.72, avail / need);
+      // الأرضية ٠.٧٨: الحجوم الجديدة أكبر ~٣٠٪، فحتى بأقصى تصغير
+      // يبقى الخط بحجم الي كان عليه قبل التعديل — ما ينزل تحته.
+      const k = Math.max(0.78, avail / need);
       inner.style.transformOrigin = "top center";
       inner.style.transform = `scale(${k})`;
     }
@@ -296,30 +298,56 @@ function findOrderInTree(tree, orderId) {
 // shipping-logs.html، وأيضاً كنمط الصفحة الرئيسي بـ labels-print.html
 // (المصدر الوحيد لتصميم الليبل الفعلي، حتى ما ينحرف بين المسارين)
 const LABEL_STYLE_CSS = `
+  /* ════════════════════════════════════════════════════════
+     🖨️ خط الليبل — إصلاح الوضوح (١٠ تشرين الأول ٢٠٢٦)
+     ────────────────────────────────────────────────────────
+     المشكلة الي كان يشتكي منها المجهّز: الخط باهت ومو واضح
+     فيخربط بالقراءة. السبب سببين مو واحد:
+
+     ١) الخط. الصفحة كانت تحمّل Tajawal-Regular.ttf **بس** — ملف
+        وزن عادي واحد، ماكو ملف عريض. ولمن الستايل يطلب
+        font-weight:700/900، المتصفح ما يلكى وجه عريض حقيقي
+        فيسوي "عريض صناعي": يوسّع حروف الوزن العادي برمجياً.
+        وهذا بالعربي يطلع مشوّه وباهت، وعلى الطابعة أسوأ.
+        هسه نستخدم Tahoma — موجود بكل أجهزة الويندوز وعنده وجه
+        **عريض حقيقي**، وعربيته واضحة ومضبوطة بالطباعة. بلا
+        تحميل ولا إنترنت ولا تغيير بالتصميم.
+
+     ٢) الحجم. نصوص الصندوق والجدول كانت ٨–٨.٤ بكسل — صغيرة
+        جداً على ورقة ٨٠ ملم. كبّرناها ~٣٠٪. وحتى تسع، صغّرنا
+        مربع الـQR من ٢٧ لـ٢٢ ملم (باقي ينمسح عادي) وضيّقنا
+        المسافات بين الأسطر.
+
+     الترتيب والتصميم ما تغير ولا شي — نفس الصناديق ونفس
+     الجدول ونفس المواضع بالضبط.
+     ════════════════════════════════════════════════════════ */
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Tajawal','Segoe UI',sans-serif; background:#fff; direction: rtl; }
-  .label-page { width:80mm; height:120mm; overflow:hidden; position:relative; color:#000; background:#fff; }
+  body { font-family:Tahoma,'Segoe UI','Tajawal',sans-serif; background:#fff; direction: rtl; }
+  .label-page {
+    width:80mm; height:120mm; overflow:hidden; position:relative;
+    color:#000; background:#fff;
+    font-family:Tahoma,'Segoe UI','Tajawal',sans-serif;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
   .label-page-inner { width:80mm; box-sizing:border-box; padding:3mm; transform-origin: top right; }
   .label-top { display:flex; justify-content:space-between; align-items:center; }
   .label-almurad img { width:20mm; height:auto; }
   .label-courier { text-align:center; }
   .label-courier img { width:16mm; height:auto; }
-  .label-courier-fallback { display:inline-flex; align-items:center; justify-content:center; width:16mm; height:10mm; border-radius:2mm; color:#fff; font-size:8px; font-weight:700; }
-  .label-branch-code { font-size:13px; font-weight:900; margin-top:1mm; letter-spacing:0.5px; }
-  .label-receipt-title { text-align:center; font-size:11px; font-weight:700; margin-top:0.5mm; }
-  .label-meta-row { display:flex; justify-content:space-between; font-size:10px; margin-top:1mm; }
+  .label-courier-fallback { display:inline-flex; align-items:center; justify-content:center; width:16mm; height:10mm; border-radius:2mm; color:#fff; font-size:9px; font-weight:700; }
+  .label-branch-code { font-size:14px; font-weight:700; margin-top:1mm; letter-spacing:0.5px; }
+  .label-receipt-title { text-align:center; font-size:14.5px; font-weight:700; margin-top:0.5mm; }
+  .label-meta-row { display:flex; justify-content:space-between; font-size:11.5px; margin-top:1mm; }
   .label-qr-wrap { text-align:center; margin-top:0.5mm; margin-bottom:0.5mm; }
-  .label-qr { width:27mm; height:27mm; object-fit:contain; }
-  .label-page hr { margin:1.5mm 0; border:none; border-top:1px solid #000; }
+  .label-qr { width:22mm; height:22mm; object-fit:contain; }
+  .label-page hr { margin:1.3mm 0; border:none; border-top:1.2pt solid #000; }
   .label-boxes { display:flex; gap:2mm; }
-  .label-box { flex:1; border:1px solid #000; border-radius:1mm; padding:1.2mm; font-size:8.4px; line-height:1.4; }
-  .label-box b { display:block; margin-bottom:0.5mm; font-size:9px; }
-  .label-notes { border:1px solid #000; border-radius:1mm; padding:1.1mm; margin-top:1.2mm; font-size:8.2px; line-height:1.35; }
+  .label-box { flex:1; border:1.2pt solid #000; border-radius:1mm; padding:1.3mm; font-size:11px; line-height:1.32; }
+  .label-box b { display:block; margin-bottom:0.6mm; font-size:11.5px; }
+  .label-notes { border:1.2pt solid #000; border-radius:1mm; padding:1.3mm; margin-top:1.2mm; font-size:11px; line-height:1.3; }
   .label-notes b { display:block; margin-bottom:0.5mm; }
-  .label-table { width:100%; border-collapse:collapse; font-size:8px; margin-top:1.2mm; }
-  .label-table th, .label-table td { border:1px solid #000; padding:0.7mm; text-align:center; }
-  /* التنبيه لازم يسع بالليبل ٨٠×١٢٠ ملم بدون ما يدفع المحتوى برّا،
-     فخليناه فقرة وحدة مضغوطة بدل ثلاث أسطر منفصلة */
+  .label-table { width:100%; border-collapse:collapse; font-size:10.5px; margin-top:1.2mm; }
+  .label-table th, .label-table td { border:1.2pt solid #000; padding:0.9mm 0.6mm; text-align:center; }
   /* تنبيه الفحص — سطر واحد صغير ما ياخذ من الورقة، بس عريض غامق
      حتى يبقى مقروء على الطابعة الحرارية */
   .label-warn {
@@ -328,16 +356,18 @@ const LABEL_STYLE_CSS = `
     white-space:nowrap; overflow:hidden;
   }
   .label-warn b {
-    flex:none; font-size:7.4px; font-weight:900; color:#fff; background:#000;
+    flex:none; font-size:7.4px; font-weight:700; color:#fff; background:#000;
     padding:0.5mm 1.1mm; border-radius:0.5mm;
   }
   .label-warn span {
-    font-size:7.4px; font-weight:900; color:#000; line-height:1.25;
+    font-size:7.4px; font-weight:700; color:#000; line-height:1.25;
   }
-  .label-page-num { text-align:center; font-size:9px; margin-top:1mm; }
-  .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
-  .label-receipt-title, .label-box b, .label-notes b, .label-table th, .label-branch-code { font-weight: 900 !important; }
-  .label-page hr, .label-box, .label-notes, .label-warn, .label-table th, .label-table td { border-color: #000 !important; }
+  .label-page-num { text-align:center; font-size:8.5px; margin-top:0.8mm; }
+  /* ⚠️ كل النصوص بوزن ٧٠٠ بالضبط — هذا هو وجه Tahoma العريض
+     الحقيقي. ما نطلب ٨٠٠ ولا ٩٠٠ لأن ماكو وجه أعرض منه، وبعض
+     المتصفحات تضيف "عريض صناعي" فوقه فيرجع يطيح الوضوح. */
+  .label-page, .label-page * { color:#000 !important; font-weight:700 !important; }
+  .label-page hr, .label-box, .label-notes, .label-warn, .label-table th, .label-table td { border-color:#000 !important; }
   .label-warn b { background:#000 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .label-courier-fallback { background: #fff !important; border: 1px solid #000; }
   .label-page { page-break-after: always; }

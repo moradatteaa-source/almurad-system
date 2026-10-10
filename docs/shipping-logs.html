@@ -255,11 +255,15 @@
     #printArea { display: none; }
     #printArea.capturing { display: block; position: fixed; top: 0; left: -99999px; }
 
+    /* نسخة المعاينة داخل الصفحة — لازم تطابق LABEL_STYLE_CSS
+       بـlabelTemplate.js حرف بحرف بالقياسات، وإلا الي تشوفه
+       بالشاشة يختلف عن الي ينطبع. */
     .label-page {
       width: 80mm; height: 120mm; box-sizing: border-box;
       overflow: hidden; position: relative;
-      font-family: 'Tajawal', sans-serif; color: #000;
+      font-family: Tahoma, 'Segoe UI', 'Tajawal', sans-serif; color: #000;
       background: #fff;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
     .label-page-inner {
       width: 80mm; box-sizing: border-box; padding: 3mm;
@@ -272,33 +276,43 @@
     .label-courier-fallback {
       display: inline-flex; align-items: center; justify-content: center;
       width: 16mm; height: 10mm; border-radius: 2mm; color: #fff;
-      font-size: 8px; font-weight: 700;
+      font-size: 9px; font-weight: 700;
     }
-      .label-branch-code { font-size: 13px; font-weight: 900; margin-top: 1mm; letter-spacing: 0.5px; }
-    .label-receipt-title { text-align: center; font-size: 11px; font-weight: 700; margin-top: 0.5mm; }
-    .label-meta-row { display: flex; justify-content: space-between; font-size: 10px; margin-top: 1mm; }
+    .label-branch-code { font-size: 14px; font-weight: 700; margin-top: 1mm; letter-spacing: 0.5px; }
+    .label-receipt-title { text-align: center; font-size: 14.5px; font-weight: 700; margin-top: 0.5mm; }
+    .label-meta-row { display: flex; justify-content: space-between; font-size: 11.5px; margin-top: 1mm; }
     .label-qr-wrap { text-align: center; margin-top: 0.5mm; margin-bottom: 0.5mm; }
-    .label-qr { width: 27mm; height: 27mm; object-fit: contain; }
-    .label-page hr { margin: 1.5mm 0; border: none; border-top: 1px solid #000; }
+    .label-qr { width: 22mm; height: 22mm; object-fit: contain; }
+    .label-page hr { margin: 1.3mm 0; border: none; border-top: 1.2pt solid #000; }
     .label-boxes { display: flex; gap: 2mm; }
     .label-box {
-      flex: 1; border: 1px solid #000; border-radius: 1mm;
-      padding: 1.5mm; font-size: 9px; line-height: 1.55;
+      flex: 1; border: 1.2pt solid #000; border-radius: 1mm;
+      padding: 1.3mm; font-size: 11px; line-height: 1.32;
     }
-    .label-box b { display: block; margin-bottom: 0.8mm; font-size: 9.5px; }
+    .label-box b { display: block; margin-bottom: 0.6mm; font-size: 11.5px; }
     .label-notes {
-      border: 1px solid #000; border-radius: 1mm; padding: 1.5mm;
-      margin-top: 1.5mm; font-size: 9px; line-height: 1.5;
+      border: 1.2pt solid #000; border-radius: 1mm; padding: 1.3mm;
+      margin-top: 1.2mm; font-size: 11px; line-height: 1.3;
     }
     .label-notes b { display: block; margin-bottom: 0.5mm; }
-    .label-table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-top: 1.5mm; }
-    .label-table th, .label-table td { border: 1px solid #000; padding: 1mm; text-align: center; }
-    .label-page-num { text-align: center; font-size: 10px; margin-top: 2mm; }
-    
+    .label-table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 1.2mm; }
+    .label-table th, .label-table td { border: 1.2pt solid #000; padding: 0.9mm 0.6mm; text-align: center; }
+    .label-warn {
+      border: 1.2pt solid #000; border-radius: 0.6mm; padding: 0.7mm 1mm; margin-top: 1.2mm;
+      display: flex; align-items: center; justify-content: center; gap: 1.2mm;
+      white-space: nowrap; overflow: hidden;
+    }
+    .label-warn b {
+      flex: none; font-size: 7.4px; font-weight: 700; color: #fff; background: #000;
+      padding: 0.5mm 1.1mm; border-radius: 0.5mm;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .label-warn span { font-size: 7.4px; font-weight: 700; color: #000; line-height: 1.25; }
+    .label-page-num { text-align: center; font-size: 8.5px; margin-top: 0.8mm; }
+
         /* ===== وضوح الطباعة الحرارية ===== */
     .label-page, .label-page * { color: #000 !important; font-weight: 700 !important; }
-    .label-receipt-title, .label-box b, .label-notes b, .label-table th { font-weight: 900 !important; }
-    .label-page hr, .label-box, .label-notes, .label-table th, .label-table td { border-color: #000 !important; }
+    .label-page hr, .label-box, .label-notes, .label-warn, .label-table th, .label-table td { border-color: #000 !important; }
   </style>
 </head>
 
