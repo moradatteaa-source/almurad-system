@@ -270,12 +270,16 @@
       transform-origin: top right;
     }
     .label-top { display: flex; justify-content: space-between; align-items: center; }
-    .label-almurad img { width: 20mm; height: auto; }
+    .label-almurad svg { width: 20mm; height: auto; display: block; }
     .label-courier { text-align: center; }
-    .label-courier img { width: 16mm; height: auto; }
+    /* الشعار صورة مضمّنة بـlabelTemplate.js — هنا بس الأبعاد.
+       الستايل الفعلي (background-image) يجي من LABEL_STYLE_CSS. */
+    .label-courier-mark { width: 16mm; height: 16mm; background-repeat: no-repeat;
+      background-position: center; background-size: contain; margin: 0 auto; }
     .label-courier-fallback {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 16mm; height: 10mm; border-radius: 2mm; color: #fff;
+      width: 16mm; height: 10mm; border-radius: 2mm; color: #000;
+      border: 1px solid #000; background: #fff;
       font-size: 9px; font-weight: 700;
     }
     .label-branch-code { font-size: 14px; font-weight: 700; margin-top: 1mm; letter-spacing: 0.5px; }

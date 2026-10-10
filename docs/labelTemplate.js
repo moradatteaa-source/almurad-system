@@ -53,6 +53,8 @@ function generateQrSvg(value) {
 
 // شركات التوصيل: نفس المفاتيح المستخدمة بكل النظام (send-shipping.html وغيره)
 const COURIER_LOGO  = { waseet: "alwaseet-logo.png", prime: "prime-logo.png", jenni: "jenni-logo.png" };
+// الشركات الي عندها شعار مضمّن بالستايل. الباقي يطلع بشارة نص.
+const COURIER_MARK_CLASS = { waseet: "cm-waseet" };
 const COURIER_LABEL = { waseet: "الوسيط",           prime: "برايم",          jenni: "Jenni" };
 const COURIER_COLOR = { waseet: "#e63946",           prime: "#8e44ad",        jenni: "#e67e22" };
 
@@ -63,9 +65,20 @@ function escHtml(v) {
 // 🧾 بناء الليبل — نفس تصميم الوصل المعتمد بالضبط، شعار الشركة فقط يتغير
 function buildLabelHTML(order, pageNum) {
   const company  = order.shippingCompany || "waseet";
-  const logoFile = COURIER_LOGO[company]  || COURIER_LOGO.waseet;
   const label    = COURIER_LABEL[company] || "";
-  const color    = COURIER_COLOR[company] || "#043B64";
+
+  /* 🖼️ شعار شركة التوصيل — بلا أي طلب شبكة.
+     كان <img src="alwaseet-logo.png"> وأخواته. ثلاث مشاكل:
+       • prime-logo.png و jenni-logo.png **مو موجودين أصلاً** بالمجلد،
+         فكل ليبل برايم أو جيني يرسل طلب يرجع ٤٠٤.
+       • على الموبايل والشبكة البطيئة الصورة تتأخر، والطباعة تنتظرها.
+       • لو الصورة ما وصلت، الليبل ينطبع بلا شعار.
+     هسه شعار الوسيط مضمّن بالستايل نفسه (صورة أبيض/أسود ١.٤ كيلو،
+     تنكتب مرة وحدة بالستايل مهما كان عدد الليبلات)، والشركات الي
+     ماكو عندها ملف تطلع بشارة نص — بلا أي محاولة تحميل. */
+  const courierMark = COURIER_MARK_CLASS[company]
+    ? `<div class="label-courier-mark ${COURIER_MARK_CLASS[company]}" role="img" aria-label="${escHtml(label)}"></div>`
+    : `<div class="label-courier-fallback">${escHtml(label || company)}</div>`;
 
   const today = new Date().toLocaleDateString("ar-IQ");
   // ✅ كود QR يُبنى من رقم الوصل نفسه لكل طلب (مو رقم ثابت بالكود) — يتغير
@@ -90,11 +103,10 @@ function buildLabelHTML(order, pageNum) {
   <div class="label-page">
     <div class="label-page-inner">
     <div class="label-top">
-      <div class="label-almurad"><img src="almurad-logo-bw.svg" alt="AL-MURAD"></div>
+      <div class="label-almurad"><svg viewBox="0 0 701 419" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AL-MURAD"><path fill="#000" fill-rule="evenodd" d="M232.3 411.9C230.6 411.4 228.1 409.7 226.7 408.1C225.4 406.5 217.2 392.2 208.5 376.4C159 286.1 143.1 257.3 137.2 246.5C131.5 236.3 130.5 233.8 130.5 229.7C130.5 225.5 130.9 224.5 133.8 221.9L137 219L181 219L225 219L228 221.8C229.6 223.3 235.3 232.4 240.6 242C262.6 281.8 283.8 320.4 291.5 334.5C296 342.8 304.6 358.3 310.5 369C325.2 395.5 326 397.3 326 401.5C326 404.3 325.2 406 322.8 408.4L319.5 411.7L301.5 412.3C275 413.2 236 413 232.3 411.9ZM384.3 410.6C382.6 409.8 380 407.4 378.7 405.3C377.4 403.2 363.1 377.6 347 348.5C330.9 319.4 314.1 289 309.7 281C305.3 273 297.7 259.4 292.7 250.6C283.1 233.6 281.8 229.3 284.4 224.2C287.6 218 287.6 218 334 218C369.7 218 376.7 218.2 379.4 219.5C383.2 221.3 384 222.7 403.8 259C412 274.1 425.7 299.1 434.2 314.5C466.2 372.1 477.9 393.9 478.9 397.5C480.1 401.9 478.7 406.3 475 409.5C472.9 411.4 471.2 411.5 430.1 411.7C395.4 411.9 386.9 411.7 384.3 410.6ZM539 408.2C535.4 406.4 533.4 403.1 500 342.5C486.2 317.4 462.9 275.4 449.1 251C435.1 226.1 434.5 224.1 440.6 218.4L444.1 215L490.3 215C543.6 214.9 547.5 214.5 561 207.9C576.5 200.3 588.2 185.6 592.1 169C593.7 162.1 593.7 148.2 592.1 141C589.6 130.5 584.2 121.2 575.5 112.5C566.3 103.3 558.8 98.9 547.4 96C539.8 94 535.4 94 297.5 94L55.3 94L51.1 91.7C46.2 89.2 45.9 88.8 23.2 49.1C14.8 34.6 7.6 21.1 7 19.2C5.8 14.6 7.8 9.7 11.9 7.5C14.7 6.1 40.6 6 289.7 6.3L564.5 6.6L574.5 8.8C588.1 12 597.6 15.2 609.6 20.9C654.2 42.2 684.8 82.5 693.1 131.2C695.8 146.7 695.3 169.9 692.1 185.2C680.8 237.7 641.2 281.4 589.7 298.1C584.4 299.8 580.2 301.5 580.4 301.9C580.6 302.2 585.5 310.8 591.2 321C610.3 354.7 628 386.8 630.6 392.5C633 397.6 633.1 398.6 632.1 402.2C631.3 404.8 629.8 406.7 627.7 408C624.7 409.9 622.4 410 583.5 410C546.5 410 542.2 409.8 539 408.2Z"/></svg></div>
       ${qrSvg ? `<div class="label-qr-wrap">${qrSvg}</div>` : ""}
       <div class="label-courier">
-        <img src="${logoFile}" alt="${escHtml(label)}"
-             data-fallback-color="${color}" data-fallback-label="${escHtml(label)}">
+        ${courierMark}
         <div class="label-branch-code">${escHtml(order.branchCode || "KRK9")}</div>
       </div>
     </div>
@@ -331,9 +343,11 @@ const LABEL_STYLE_CSS = `
   }
   .label-page-inner { width:80mm; box-sizing:border-box; padding:3mm; transform-origin: top right; }
   .label-top { display:flex; justify-content:space-between; align-items:center; }
-  .label-almurad img { width:20mm; height:auto; }
+  .label-almurad svg { width:20mm; height:auto; display:block; }
   .label-courier { text-align:center; }
-  .label-courier img { width:16mm; height:auto; }
+  .label-courier-mark { width:16mm; height:16mm; background-repeat:no-repeat;
+    background-position:center; background-size:contain; margin:0 auto; }
+  .cm-waseet { background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADIAQAAAACFI5MzAAAFdUlEQVR42u2Yu47kxhWGP7KJIYOFmmEHA5OBH2ABJxsYaMKxH2IiwaEzKzA0JegF9Ah6EEHgLARow4ViwyhBArTKaiUF3DGnfgd14aV7YiXqYIZdP8+pv06daxfimU/JH8jvgKgoquvIa3jql69FvjmVQOGvyPwCoOEK8gUAby+1KbyzqMsyj0BtkVm4xo/lEzoPXVrIiDlMnOWo94inc0ieQ0LKvI11BRTmac9gOmBLYGDYIW9vGStgxO6QsYcGMLzbsUaikzyZQpTRAdHDI/itzFRrRpLjE7bncZ3mQpItPPcbba5nDowKvtxws0N4tBXGbZAHw1QB44lh2jA4SCO1xFnusNmn4vuBD40YaDas/TEo/2uhwDGznv8U3ztInjWSNuUgKR4o7DNBh3wwjRlX+zg6fSY5uJfGbqXN1lIhyXCUbLfSZqdw5oHfoHUrG9QQPfIJ3LRC3gAVMN5hsPOKQSfNtSQz08kcVgw6aT5KKmRqUSwMtATU3ay9x88tqOT0lMiUAFPyvoobPgWXGfwoaToHFpzgX3mfn4PpoIHxHeOibQaSP7+k6L/JyHcrFg1l66/mkBte8GNm8BdJVpI7S6KbbhMDVTs590xG6qvSRMS/AgrADaAUWhcyHldOY0TmNi2b4C5F4jZJ0g+R38RBdRe5TWttU+2DTfI+FvgeoLkPtKtIazlLOxjzIsq47XF6/LRo+6wY4hdLu9yC5cHwlKgPjR0SUj4NwPuBERhNvLAyxsYErwmWrRxJ9QjUJvpWQTkp2eBzSfrWQy2pkOrxYZX5oMgh8O9+Z+ujeQxe6LPHHyTpW2nmLF9LDzZpq7InvwGgQ2ttDRR8wDfQXt5pRwgK01/ctn0H0LTB+1n1Drcf5hYYXWcWmR7gYIbMaOc7d2+A0l4gPSf6Z3y0Jt/+3hNHm/xuj/TvAGP3yADt46rK+HmNysDAeC1KxiXDzrmASXL2KNnxvL7T+Dn99kwX4G6e4jVcyBSY5zqH8UveJ8RvRHoX+F3KnKbntFWPzyEHPdu7GJMzxa6JvMuRtRdrrWW4qq1xVd7HbMmF+Lkic5ivciuBT9+QvG7coue/X5Npk7uC5DnHC/1B+lWSuyVEVpEbjPj/xXyh7evIok9xynFpFn6V5F+irYcoHTnnHTOl5Broe1fs9pmxodKbbS2BKebA+SKyXMy1RchtwODTcYLw45hllHzdLwUDJI2pVwD9T9JP1PE8fSAjolf+tLqffA2mYp132nRQGEvgvzRZxqZTWYCvMoMpmNRBejhuLeqWstJmbVNSOS/nCdlyTgR9eGXJfD5ZWKszSPLpbyy8cL8wMCkmzRIa4aVz6q3O0hwWo8dbmOAEFuaQ4MpVpebP4PKZyuArUwIncGGxTM6Bhb+lh4z0eBjhH4SHKnNzcK94ZfLRrrmLFhT/MWD8Olc18NZD+fUA47zObxVM86poLNWshMcJqvs+XMaQGfhw1o/4JxxTT1emdN9CSwPvt9nfbKJknauC4tvYHJWrv33ES9hVpnYTP82qt5yiP9ahRK562AqgsJFKf7EbzMPCJ05XAOW4eMnS4ZtY4yx5MCFNWcEuDtI8VS4urqio2eTrBvgoNs3tBrmJZCvgbjcZwStO3C4r5VL3XvExv8BhN01ZsIgjOdklmRMFBWbKBLJdbsCWDLPJBFZzo6lli7HYT4fcVZxo6W8uptCp5qwZ213I1DUDJV/cXciEuSeNbJsc4ovVhLPJo/MNMNgryNQAL69O7y3QuCuI64FquoLYAShXPUlm+ZCGwQvWr9claCMTXMZekWlWvr9hoLDWmAvEBz+vxgtkDkuHS22pZb+7+ssCa8st2rITXfzqsTb5VeSPX5h+B+T/K5j8gRxSKdkAAAAASUVORK5CYII="); }
   .label-courier-fallback { display:inline-flex; align-items:center; justify-content:center; width:16mm; height:10mm; border-radius:2mm; color:#fff; font-size:9px; font-weight:700; }
   .label-branch-code { font-size:14px; font-weight:700; margin-top:1mm; letter-spacing:0.5px; }
   .label-receipt-title { text-align:center; font-size:14.5px; font-weight:700; margin-top:0.5mm; }

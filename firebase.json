@@ -11,6 +11,17 @@
         "**/.*",
         "**/node_modules/**",
         "almurad-store/**"
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(png|jpg|jpeg|gif|svg|webp|ico|ttf|otf|woff|woff2|mp3)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000"
+            }
+          ]
+        }
       ]
     },
     {
@@ -26,6 +37,17 @@
           "source": "/l/**",
           "function": "landing",
           "region": "us-central1"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(png|jpg|jpeg|gif|svg|webp|ico|ttf|otf|woff|woff2|mp3)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000"
+            }
+          ]
         }
       ]
     }
