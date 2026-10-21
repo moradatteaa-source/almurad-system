@@ -215,7 +215,7 @@ style="margin-bottom:10px;background:red;color:white;padding:8px 12px;border:non
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, push, get, set, remove, onValue } 
+import { getDatabase, ref, push, get, set, remove, onValue, runTransaction } 
 from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -230,6 +230,45 @@ appId:"1:911755824405:web:2bfbd18ddcf038ca48ad1c"
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+/* ════════════════════════════════════════════════════════
+   🚨 إصلاح حرج (٢١ تشرين الأول ٢٠٢٦) — سبب "الأعداد تخرب كل فترة"
+   ────────────────────────────────────────────────────────
+   هنا كان الكود يسوي:
+       const stats = (await get(ref(db,"stats"))).val();
+       await set(ref(db,"stats"), { ...stats, totalXxx: ... });
+   يعني يقرا فرع stats **كامل** ويكتبه **كامل** من جديد.
+
+   بس فرع stats مو إله بس — بيه:
+     • ordersCounts   → أعداد الطلبات الي تعرضها الداشبورد
+     • deliveredBy    → عدّاد توصيلات كل موظف (أساس العمولة)
+     • touch/*        → بصمات تمنع إعادة تنزيل البيانات (توفير الباكدويث)
+     • countsUpdatedAt→ وقت آخر تحديث للعدّاد
+   وكلها يكتبها السيرفر لحظياً.
+
+   فأي إضافة مصروف أو إعلان كانت تاخذ نسخة من الفرع وقت ما انفتحت
+   الصفحة، وتكتبها فوق الحالي — فتمسح كل تعديل صار بينهن. النتيجة:
+     • أعداد الداشبورد ترجع لأرقام قديمة (ولذلك تخرب كل فترة)
+     • بصمات touch تنمحي → الصفحات ترجع تنزّل كل شي → غيغا باليوم
+     • عمولات موظفين تنمحي
+   وأسوأ شي: الاستيراد من واتساب كان يسوي هذا **بكل سطر** — ٥٠ سطر
+   يعني ٥٠ مسحة.
+
+   الحل: ما نكتب على فرع stats إطلاقاً. نعدّل **الرقم المقصود بس**
+   بمعاملة ذرية (runTransaction) — ما تلمس أي مفتاح ثاني، وما تضيع
+   لو صار تعديل بنفس اللحظة.
+   ════════════════════════════════════════════════════════ */
+async function bumpStat(path, delta, { floorZero = false } = {}) {
+  try {
+    await runTransaction(ref(db, "stats/" + path), cur => {
+      const next = (Number(cur) || 0) + delta;
+      return floorZero ? Math.max(0, next) : next;
+    });
+  } catch (e) {
+    console.error("bumpStat " + path + ":", e.message);
+  }
+}
+
 let exchangeRate = 1400;
 function format(n){
 return Number(n||0).toLocaleString("en-US");
@@ -253,14 +292,7 @@ amount,
 note,
 date:new Date().toISOString()
 });
-// تحديث stats
-const statsSnap = await get(ref(db,"stats"));
-const stats = statsSnap.val() || {};
-
-await set(ref(db,"stats"),{
-...stats,
-totalAds: (stats.totalAds || 0) + (amount * exchangeRate)
-});
+await bumpStat("totalAds", amount * exchangeRate);
 document.getElementById("amount").value="";
 document.getElementById("note").value="";
 document.getElementById("employee").value="";
@@ -298,14 +330,7 @@ amount, // دولار
 note,
 date:new Date().toISOString()
 });
-// تحديث stats
-const statsSnap = await get(ref(db,"stats"));
-const stats = statsSnap.val() || {};
-
-await set(ref(db,"stats"),{
-...stats,
-totalAds: (stats.totalAds || 0) + (amount * exchangeRate)
-});
+await bumpStat("totalAds", amount * exchangeRate);
 }
 
 document.getElementById("whatsappText").value="";
@@ -426,14 +451,7 @@ if(!confirm("تريد حذف الإعلان؟")) return;
 
 await remove(ref(db,"ads/"+id));
 
-// تحديث stats
-const statsSnap = await get(ref(db,"stats"));
-const stats = statsSnap.val() || {};
-
-await set(ref(db,"stats"),{
-...stats,
-totalAds: Math.max((stats.totalAds || 0) - (amount * exchangeRate), 0)
-});
+await bumpStat("totalAds", -(amount * exchangeRate), { floorZero: true });
 
 }
 
@@ -461,14 +479,7 @@ totalDeleted += (amount * exchangeRate);
 
 }
 
-// تحديث stats
-const statsSnap = await get(ref(db,"stats"));
-const stats = statsSnap.val() || {};
-
-await set(ref(db,"stats"),{
-...stats,
-totalAds: Math.max((stats.totalAds || 0) - totalDeleted, 0)
-});
+await bumpStat("totalAds", -(totalDeleted), { floorZero: true });
 
 alert("تم حذف " + selected.length + " إعلان 🔥");
 
